@@ -234,13 +234,37 @@ OpenCode gerencia a interface e o loop de conversa, o OpenHarness fornece:
 | **ohmo (Personal Agent)** | Agente rodando em background via Slack/Telegram/Discord — triggers de tarefas |
 | **Plugin System** | Compativel com plugins Claude Code — hooks, comandos e agentes customizados |
 
+### ohmo — Agente Pessoal no Telegram
+
+ohmo e o agente pessoal do OpenHarness que roda em background e responde
+comandos via Telegram. Funciona como um dev companion remoto.
+
+**Setup:**
+```bash
+# 1. Criar bot no Telegram (@BotFather) e obter token
+# 2. Configurar ohmo
+ohmo init                    # Workspace em ~/.ohmo
+ohmo config                  # Escolher provider + canal Telegram
+ohmo gateway start           # Iniciar o gateway (fica ouvindo)
+```
+
+**Exemplos de uso no Telegram:**
+```
+@seu_bot /help               # Lista comandos disponiveis
+@seu_bot faz code review     # Revisa o PR atual
+@seu_bot como esta o projeto # Status via STATE.md
+@seu_bot commit "msg"        # Commit com mensagem
+```
+
+**Status atual:** Workspace criado, aguardando token do @BotFather e provider LLM.
+
 ### Comandos do Dia-a-Dia:
 ```bash
 source activate.sh    # Ativar ambiente virtual
 opencode              # Iniciar OpenCode TUI (desenvolvimento)
 oh -p "tarefa"        # OpenHarness modo prompt rapido
 oh --dry-run -p "..." # Validar configuracao sem executar
-ohmo init             # Configurar agente pessoal (background)
+ohmo gateway start    # Iniciar agente pessoal Telegram
 ```
 
 ---
