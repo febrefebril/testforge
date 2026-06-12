@@ -1,0 +1,29 @@
+#!/bin/bash
+# pre-commit hook: verify working tree state for BMAD->GSD->GIT pipeline
+
+echo "🔍 Pre-commit: verificando pipeline BMAD->GSD->GIT..."
+
+# Check if there are any staged files
+if git diff --cached --quiet; then
+    echo "⚠  Nada staged para commit"
+    exit 0
+fi
+
+# Warn if too many files changed without a plan
+STAGED_COUNT=$(git diff --cached --name-only | wc -l)
+if [ "$STAGED_COUNT" -gt 50 ]; then
+    echo "⚠  Muitos arquivos ($STAGED_COUNT) em um unico commit"
+    echo "   Pipeline pede commits atomicos"
+    echo "   Considere split com git add -p"
+    echo ""
+fi
+
+# Check for potential secrets
+if git diff --cached | grep -qE '(password|secret|token|api_key|API_KEY)\s*=\s*['\''"][^\s'\''"]{8,}'; then
+    echo "⛔  BLOQUEADO: possivel secret/credencial detectado"
+    echo "   Nao commite secrets!"
+    exit 1
+fi
+
+echo "✓  Pre-commit ok"
+exit 0

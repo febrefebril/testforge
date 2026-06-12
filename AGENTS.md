@@ -60,6 +60,24 @@ testforge-v1/
 
 6. **INVOKE THE GIT AGENT** after any code change. Use `@git` to invoke the version control subagent which will handle commits.
 
+### Enforcement (Barreiras Reais):
+
+> 🔒 **ESTAS BARREIRAS ESTAO ATIVAS E BLOQUEIAM DESVIOS**
+
+1. **Git commit-msg hook** (`.githooks/commit-msg`): Rejeita commits fora do formato `type: description`. Se o commit nao seguir conventional commits, `git commit` FALHA.
+
+2. **Git pre-commit hook** (`.githooks/pre-commit`): Detecta secrets/credenciais, alerta sobre commits com 50+ arquivos.
+
+3. **Git post-commit hook** (`.githooks/post-commit`): Lembra de verificar o status do pipeline GSD apos cada commit.
+
+4. **GSD workflow-guard hook**: Bloqueia edicao manual de arquivos `.planning/` — so agentes GSD podem mexer.
+
+5. **GSD validate-commit hook**: Verifica consistencia entre commits e estado da fase GSD.
+
+6. **Prompt injection guard**: Detecta comandos maliciosos antes da execucao.
+
+7. **Caveman mode ativo**: Respostas curtas = contexto saudavel = pipeline mantida.
+
 ### What To Do If Changes Are Lost:
 1. Check `git reflog` for dangling commits
 2. Check the `.trash/` directory for recent file versions
