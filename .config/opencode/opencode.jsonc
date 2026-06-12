@@ -1,0 +1,120 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  // ============================================================
+  // MCP SERVERS - Infraestrutura de agentes externos
+  // Para habilitar: mude "enabled" para true
+  // ============================================================
+  "mcp": {
+    // File System MCP - Refatoração em massa, análise de diretórios
+    "filesystem": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/home/febre/Projetos/testforge-v1"],
+      "enabled": false,
+      "timeout": 10000
+    },
+
+    // Context7 MCP - Documentação técnica focada, reduz alucinações
+    "context7": {
+      "type": "local",
+      "command": ["npx", "-y", "@upstash/context7-mcp"],
+      "enabled": true,
+      "timeout": 15000
+    },
+
+    // Playwright MCP - Automação de navegador, testes E2E
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp"],
+      "enabled": false,
+      "timeout": 30000
+    },
+
+    // Sentry MCP - Monitoramento de erros em tempo real
+    "sentry": {
+      "type": "local",
+      "command": ["npx", "-y", "@sentry/mcp-server-sentry"],
+      "environment": {
+        "SENTRY_AUTH_TOKEN": "${SENTRY_AUTH_TOKEN}",
+        "SENTRY_ORG": "${SENTRY_ORG}",
+        "SENTRY_PROJECT": "${SENTRY_PROJECT}"
+      },
+      "enabled": false,
+      "timeout": 15000
+    }
+  },
+
+  // ============================================================
+  // AGENTES - Equipe de agentes especializados
+  // ============================================================
+  "agent": {
+    // Build agent - Desenvolvimento primário com versionamento automático
+    "build": {
+      "description": "Primary build agent for development with auto-versioning. Commit after every change.",
+      "prompt": "You are a build agent. CRITICAL RULES:\n1. Commit EVERY code change immediately with descriptive messages\n2. NEVER leave uncommitted work at the end of a session\n3. Run `git status` and `git diff` before and after changes\n4. If you make changes and don't commit, you have FAILED\n5. Atomic commits: one logical change per commit\n6. Use conventional commits: feat:, fix:, refactor:, docs:, test:, chore:, infra:",
+      "permission": {
+        "bash": "allow",
+        "read": "allow",
+        "edit": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "task": "allow",
+        "todowrite": "allow",
+        "webfetch": "allow",
+        "websearch": "allow"
+      }
+    },
+
+    // Git - Guardião do versionamento (subagent)
+    "git": {
+      "mode": "subagent",
+      "description": "Version control guardian - ensures all code is committed. Invoke after every file change with @git.",
+      "prompt": "You are the GIT VERSIONING GUARDIAN. Your sole responsibility is preventing code loss.\n\nRULES:\n1. After ANY file change, you MUST be invoked to commit\n2. Run `git status` to see changed files\n3. Run `git diff` to review changes\n4. Commit with descriptive message in conventional commits format\n5. Never use --force or rewrite history unless explicitly asked\n6. Verify the commit succeeded with `git log --oneline -1`\n\nFailure to commit = lost work. The team depends on you.",
+      "permission": {
+        "bash": "allow",
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow"
+      }
+    },
+
+    // BMAD - Agente de metodologia ágil (subagent)
+    "bmad": {
+      "mode": "subagent",
+      "description": "BMAD Method agile development agent. Use @bmad for planning, architecture, PRDs, and structured workflows.",
+      "prompt": "You are a BMAD Method agent following the Breakthrough Method for Agile AI-Driven Development.\n\nWhen invoked:\n1. Analyze the current project phase (brainstorming, planning, architecture, implementation)\n2. Follow BMAD structured workflows for the appropriate phase\n3. Engage the right BMAD personas (PM, Architect, Developer, UX) as needed\n4. Output structured artifacts (PRDs, architecture docs, implementation plans)\n5. Always commit your outputs\n\nAvailable commands: /bmad-help, /bmad-plan, /bmad-arch, /bmad-implement, /bmad-review",
+      "permission": {
+        "bash": "allow",
+        "read": "allow",
+        "edit": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "task": "allow",
+        "webfetch": "allow"
+      }
+    }
+  },
+
+  // ============================================================
+  // PERMISSÕES GLOBAIS
+  // ============================================================
+  "permission": {
+    "bash": "allow",
+    "read": "allow",
+    "edit": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "task": "allow",
+    "todowrite": "allow",
+    "webfetch": "allow",
+    "websearch": "allow"
+  },
+
+  // ============================================================
+  // EXPERIMENTAL
+  // ============================================================
+  "experimental": {
+    "continue_loop_on_deny": true,
+    "mcp_timeout": 10000
+  }
+}
