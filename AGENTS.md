@@ -6,14 +6,19 @@ TestForge is an AI-driven development environment integrating OpenCode, OpenHarn
 ## Architecture
 ```
 testforge-v1/
-├── .config/opencode/    # OpenCode agent configuration
-├── .agents/              # Custom agent skills and prompts
-├── .bmad/                # BMAD Method workflows (after install)
+├── .config/opencode/     # OpenCode agent configuration
+│   └── opencode.jsonc    # MCP servers, agents, permissions
+├── .agents/skills/       # Custom agent skills and BMAD skills
+├── .opencode/commands/   # OpenCode slash commands (BMAD)
+├── .venv/                # Python venv (OpenHarness SDK)
+├── _bmad/                # BMAD Method core modules
+├── _bmad-output/         # BMAD artifacts (planning/implementation)
 ├── src/                  # Source code
 ├── tests/                # Test suite
 ├── docs/                 # Documentation
 ├── AGENTS.md             # This file - agent instructions
-└── opencode.jsonc        # OpenCode config (symlink)
+├── activate.sh           # Dev environment activation script
+└── .gitignore
 ```
 
 ---
