@@ -1,53 +1,30 @@
 {
   "$schema": "https://opencode.ai/config.json",
+
+  // ============================================================
+  // MCP SERVERS - Infraestrutura de agentes externos
+  // Context7: docs tecnicas em tempo real (habilitado)
+  // Playwright: testes E2E/automacao de navegador (habilitar quando necessario)
+  // ============================================================
   "mcp": {
-    "filesystem": {
-      "type": "local",
-      "command": [
-        "npx",
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "/home/febre/Projetos/testforge-v1"
-      ],
-      "enabled": false,
-      "timeout": 10000
-    },
     "context7": {
       "type": "local",
-      "command": [
-        "npx",
-        "-y",
-        "@upstash/context7-mcp"
-      ],
+      "command": ["npx", "-y", "@upstash/context7-mcp"],
       "enabled": true,
       "timeout": 15000
     },
+
     "playwright": {
       "type": "local",
-      "command": [
-        "npx",
-        "-y",
-        "@playwright/mcp"
-      ],
+      "command": ["npx", "-y", "@playwright/mcp"],
       "enabled": false,
       "timeout": 30000
-    },
-    "sentry": {
-      "type": "local",
-      "command": [
-        "npx",
-        "-y",
-        "@sentry/mcp-server-sentry"
-      ],
-      "environment": {
-        "SENTRY_AUTH_TOKEN": "${SENTRY_AUTH_TOKEN}",
-        "SENTRY_ORG": "${SENTRY_ORG}",
-        "SENTRY_PROJECT": "${SENTRY_PROJECT}"
-      },
-      "enabled": false,
-      "timeout": 15000
     }
   },
+
+  // ============================================================
+  // AGENTES - Equipe de agentes especializados
+  // ============================================================
   "agent": {
     "build": {
       "description": "Primary build agent for development with auto-versioning. Commit after every change.",
@@ -64,6 +41,7 @@
         "websearch": "allow"
       }
     },
+
     "git": {
       "mode": "subagent",
       "description": "Version control guardian - ensures all code is committed. Invoke after every file change with @git.",
@@ -75,6 +53,7 @@
         "grep": "allow"
       }
     },
+
     "bmad": {
       "mode": "subagent",
       "description": "BMAD Method agile development agent. Use @bmad for planning, architecture, PRDs, and structured workflows.",
@@ -90,6 +69,10 @@
       }
     }
   },
+
+  // ============================================================
+  // PERMISSOES GLOBAIS
+  // ============================================================
   "permission": {
     "bash": "allow",
     "read": {
@@ -106,6 +89,10 @@
       ".config/opencode/gsd-core/*": "allow"
     }
   },
+
+  // ============================================================
+  // EXPERIMENTAL
+  // ============================================================
   "experimental": {
     "continue_loop_on_deny": true,
     "mcp_timeout": 10000

@@ -72,10 +72,8 @@ testforge-v1/
 ### Active MCP Servers:
 | Server | Purpose | Status |
 |--------|---------|--------|
-| **File System MCP** | Mass refactoring, directory analysis | Disabled (OpenCode has native tools) |
 | **Context7 MCP** | Technical documentation, reduces hallucinations | **Enabled** |
 | **Playwright MCP** | Browser automation, E2E testing | Disabled (enable when needed) |
-| **Sentry MCP** | Real-time error monitoring pipeline | Disabled (requires credentials) |
 
 To enable an MCP server, set `"enabled": true` in `opencode.jsonc` → `mcp` section.
 
@@ -202,7 +200,7 @@ Retrospective
 - **OpenHarness** (`oh`): CLI para agent harness com 43+ tools
 - **BMAD Method** (`npx bmad-method`): Workflows ágeis com IA
 - **GSD Core** (`npx @opengsd/gsd-core`): Pipeline Discuss→Plan→Execute→Verify→Ship
-- **MCP Servers**: File System, Context7, Playwright, Sentry
+- **MCP Servers**: Context7, Playwright
 
 ### Comandos Úteis:
 ```bash
