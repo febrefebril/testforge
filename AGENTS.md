@@ -196,19 +196,51 @@ Retrospective
 
 ---
 
-## Ferramentas Disponíveis:
-- **OpenHarness** (`oh`): CLI para agent harness com 43+ tools
-- **BMAD Method** (`npx bmad-method`): Workflows ágeis com IA
-- **GSD Core** (`npx @opengsd/gsd-core`): Pipeline Discuss→Plan→Execute→Verify→Ship
-- **MCP Servers**: Context7, Playwright
+## Stack de Ferramentas
 
-### Comandos Úteis:
+### Como cada ferramenta se encaixa:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  OpenCode (TUI / Interface)                             │
+│  Interface principal de desenvolvimento                 │
+├─────────────────────────────────────────────────────────┤
+│  BMAD Method            GSD Core                        │
+│  Planejamento agil      Execucao estruturada            │
+│  Brainstorming, PRD,    Discuss → Plan → Execute        │
+│  Arquitetura, Epicos    → Verify → Ship                │
+├─────────────────────────────────────────────────────────┤
+│  OpenHarness (SDK de Infraestrutura)                    │
+│  Motor de ferramentas, skills, memoria e coordenacao    │
+├─────────────────────────────────────────────────────────┤
+│  MCP Servers (Context7, Playwright)                     │
+│  Capacidades externas: docs, browser                    │
+└─────────────────────────────────────────────────────────┘
+```
+
+### OpenHarness — Papel no Projeto
+
+O OpenHarness (`oh`) e o **motor Python** que roda por tras dos agentes. Enquanto o
+OpenCode gerencia a interface e o loop de conversa, o OpenHarness fornece:
+
+| Capacidade | Uso no TestForge |
+|---|---|
+| **43+ Tools** | Bash, File I/O, Search, WebFetch — executadas pelo SDK quando agentes precisam de acoes complexas |
+| **Skills System** | Carrega skills `.md` sob demanda — complementa BMAD/GSD com conhecimento de dominio |
+| **Memory (`MEMORY.md`)** | Persiste contexto entre sessoes — o agente lembra decisoes passadas |
+| **Multi-Agent Swarm** | Coordena subagentes em paralelo — complementa os subagentes GSD |
+| **Permission System** | Controle fino de acesso — security boundaries por ferramenta/caminho |
+| **Dry-Run (`oh --dry-run`)** | Valida configuracao antes de executar — segurança em pipelines |
+| **ohmo (Personal Agent)** | Agente rodando em background via Slack/Telegram/Discord — triggers de tarefas |
+| **Plugin System** | Compativel com plugins Claude Code — hooks, comandos e agentes customizados |
+
+### Comandos do Dia-a-Dia:
 ```bash
-opencode              # Iniciar OpenCode TUI
-oh                    # Iniciar OpenHarness
-source activate.sh    # Ativar ambiente de desenvolvimento
-npx bmad-method install  # Instalar/atualizar BMAD
-npx @opengsd/gsd-core@latest --opencode --global  # Atualizar GSD Core
+source activate.sh    # Ativar ambiente virtual
+opencode              # Iniciar OpenCode TUI (desenvolvimento)
+oh -p "tarefa"        # OpenHarness modo prompt rapido
+oh --dry-run -p "..." # Validar configuracao sem executar
+ohmo init             # Configurar agente pessoal (background)
 ```
 
 ---
