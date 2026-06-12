@@ -1,39 +1,44 @@
 {
   "$schema": "https://opencode.ai/config.json",
-
-  // ============================================================
-  // MCP SERVERS - Infraestrutura de agentes externos
-  // Para habilitar: mude "enabled" para true
-  // ============================================================
   "mcp": {
-    // File System MCP - Refatoração em massa, análise de diretórios
     "filesystem": {
       "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/home/febre/Projetos/testforge-v1"],
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/febre/Projetos/testforge-v1"
+      ],
       "enabled": false,
       "timeout": 10000
     },
-
-    // Context7 MCP - Documentação técnica focada, reduz alucinações
     "context7": {
       "type": "local",
-      "command": ["npx", "-y", "@upstash/context7-mcp"],
+      "command": [
+        "npx",
+        "-y",
+        "@upstash/context7-mcp"
+      ],
       "enabled": true,
       "timeout": 15000
     },
-
-    // Playwright MCP - Automação de navegador, testes E2E
     "playwright": {
       "type": "local",
-      "command": ["npx", "-y", "@playwright/mcp"],
+      "command": [
+        "npx",
+        "-y",
+        "@playwright/mcp"
+      ],
       "enabled": false,
       "timeout": 30000
     },
-
-    // Sentry MCP - Monitoramento de erros em tempo real
     "sentry": {
       "type": "local",
-      "command": ["npx", "-y", "@sentry/mcp-server-sentry"],
+      "command": [
+        "npx",
+        "-y",
+        "@sentry/mcp-server-sentry"
+      ],
       "environment": {
         "SENTRY_AUTH_TOKEN": "${SENTRY_AUTH_TOKEN}",
         "SENTRY_ORG": "${SENTRY_ORG}",
@@ -43,12 +48,7 @@
       "timeout": 15000
     }
   },
-
-  // ============================================================
-  // AGENTES - Equipe de agentes especializados
-  // ============================================================
   "agent": {
-    // Build agent - Desenvolvimento primário com versionamento automático
     "build": {
       "description": "Primary build agent for development with auto-versioning. Commit after every change.",
       "prompt": "You are a build agent. CRITICAL RULES:\n1. Commit EVERY code change immediately with descriptive messages\n2. NEVER leave uncommitted work at the end of a session\n3. Run `git status` and `git diff` before and after changes\n4. If you make changes and don't commit, you have FAILED\n5. Atomic commits: one logical change per commit\n6. Use conventional commits: feat:, fix:, refactor:, docs:, test:, chore:, infra:",
@@ -64,8 +64,6 @@
         "websearch": "allow"
       }
     },
-
-    // Git - Guardião do versionamento (subagent)
     "git": {
       "mode": "subagent",
       "description": "Version control guardian - ensures all code is committed. Invoke after every file change with @git.",
@@ -77,8 +75,6 @@
         "grep": "allow"
       }
     },
-
-    // BMAD - Agente de metodologia ágil (subagent)
     "bmad": {
       "mode": "subagent",
       "description": "BMAD Method agile development agent. Use @bmad for planning, architecture, PRDs, and structured workflows.",
@@ -94,25 +90,22 @@
       }
     }
   },
-
-  // ============================================================
-  // PERMISSÕES GLOBAIS
-  // ============================================================
   "permission": {
     "bash": "allow",
-    "read": "allow",
+    "read": {
+      ".config/opencode/gsd-core/*": "allow"
+    },
     "edit": "allow",
     "glob": "allow",
     "grep": "allow",
     "task": "allow",
     "todowrite": "allow",
     "webfetch": "allow",
-    "websearch": "allow"
+    "websearch": "allow",
+    "external_directory": {
+      ".config/opencode/gsd-core/*": "allow"
+    }
   },
-
-  // ============================================================
-  // EXPERIMENTAL
-  // ============================================================
   "experimental": {
     "continue_loop_on_deny": true,
     "mcp_timeout": 10000
