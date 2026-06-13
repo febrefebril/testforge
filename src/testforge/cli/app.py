@@ -121,8 +121,19 @@ def cmd_compile(args):
         print(f"[TestForge] ✗ Gravacao nao encontrada: {rec_dir}")
         return
 
+    # Le metadata da gravacao (app e url ja estao la)
+    meta_path = f"{rec_dir}/recording_metadata.json"
+    app = args.app
+    base_url = args.base_url
+    if os.path.exists(meta_path):
+        import json as _json
+        with open(meta_path) as f:
+            meta = _json.load(f)
+        app = app or meta.get("application", "")
+        base_url = base_url or meta.get("base_url", "")
+
     normalizer = RecordingNormalizer()
-    stc = normalizer.normalize(rec_dir, f"ST-{rec_id}", args.app or "app", args.base_url or "http://localhost")
+    stc = normalizer.normalize(rec_dir, f"ST-{rec_id}", app or "app", base_url or "http://localhost")
 
     compiler = PlaywrightCompiler()
     out_dir = args.output or f"semantic_tests/ST-{rec_id}"
