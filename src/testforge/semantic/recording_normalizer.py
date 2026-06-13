@@ -99,15 +99,20 @@ class RecordingNormalizer:
 
         # Prioridade de estrategias (score deterministico)
         if target_data.get("role"):
+            role = target_data["role"]
             name = target_data.get("accessible_name") or target_data.get("text") or ""
-            selector = f"role={target_data['role']}"
+            selector = f"role={role}"
             if name:
                 selector += f"[name=\"{name}\"]"
             candidates.append(LocatorCandidate("role", selector, 0.95, "role + accessible name"))
 
-        if target_data.get("label"):
+        if target_data.get("label") and target_data.get("id"):
             label = target_data["label"]
-            candidates.append(LocatorCandidate("label", f"label:has-text(\"{label}\")", 0.90, f"label={label}"))
+            el_id = target_data["id"]
+            candidates.append(LocatorCandidate("label", f"label[for=\"{el_id}\"]", 0.90, f"label for={el_id}"))
+        elif target_data.get("label"):
+            label = target_data["label"]
+            candidates.append(LocatorCandidate("label", f"label:has-text(\"{label}\") + input", 0.85, f"label adjacent={label}"))
 
         if target_data.get("placeholder"):
             ph = target_data["placeholder"]

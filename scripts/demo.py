@@ -18,6 +18,11 @@ APP_URL = "http://localhost:8765"
 
 
 def main():
+    # Limpa execucoes anteriores
+    import shutil
+    for d in ["recordings/DEMO-001", "evidence/DEMO-001"]:
+        if os.path.exists(d):
+            shutil.rmtree(d)
     print("=" * 60)
     print("  TestForge v1 — Demo Milestones 1-3")
     print("=" * 60)

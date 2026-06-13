@@ -50,6 +50,22 @@ class PlaywrightCompiler:
 
         return "\n".join(lines) + "\n"
 
+    def _esc(self, sel: str) -> str:
+        """Escapa seletor para string Python segura (usa aspas simples)."""
+        return "'" + sel.replace("\\", "\\\\").replace("'", "\\'") + "'"
+
+    def _fallback_selector(self, action: SemanticAction) -> str:
+        t = action.target
+        if t and t.label and t.element_id:
+            return f"label[for='{t.element_id}']"
+        if t and t.label:
+            return f"label:has-text('{t.label}') + input"
+        if t and t.placeholder:
+            return f"[placeholder='{t.placeholder}']"
+        if t and t.element_id:
+            return f"#{t.element_id}"
+        return "input"
+
     def _gen_fill(self, action: SemanticAction, idx: int) -> list[str]:
         value = action.value or ""
         candidates = action.target.candidates if action.target else []
@@ -58,22 +74,17 @@ class PlaywrightCompiler:
         sorted_candidates = sorted(candidates, key=lambda c: c.score, reverse=True)
 
         if not sorted_candidates:
-            # Fallback basico: placeholder ou label
-            if action.target and action.target.label:
-                sel = f"label:has-text(\"{action.target.label}\")"
-            elif action.target and action.target.placeholder:
-                sel = f"[placeholder=\"{action.target.placeholder}\"]"
-            else:
-                sel = "input"
-            return [
+            sel = self._fallback_selector(action)
+            lines = [
                 f"    # Step {idx}: fill {action.target.label if action.target else 'input'}",
-                f"    page.fill(\"{sel}\", \"{value}\")",
+                f"    page.fill({self._esc(sel)}, \"{value}\")",
                 f"    page.wait_for_timeout(200)",
                 "",
             ]
+            return lines
 
         lines = [f"    # Step {idx}: fill (value=\"{value[:30]}\")"]
-        selectors = [f"\"{c.selector}\"" for c in sorted_candidates[:5]]
+        selectors = [self._esc(c.selector) for c in sorted_candidates[:5]]
 
         lines.append(f"    _sels = [{', '.join(selectors)}]")
         lines.append("    for _sel in _sels:")
@@ -96,13 +107,13 @@ class PlaywrightCompiler:
             text = (action.target.text or "")[:30]
             return [
                 f"    # Step {idx}: click",
-                f"    page.click(\"text={text}\")",
+                f"    page.click({self._esc(text)})",
                 f"    page.wait_for_timeout(300)",
                 "",
             ]
 
         lines = [f"    # Step {idx}: click"]
-        selectors = [f"\"{c.selector}\"" for c in sorted_candidates[:5]]
+        selectors = [self._esc(c.selector) for c in sorted_candidates[:5]]
 
         lines.append(f"    _sels = [{', '.join(selectors)}]")
         lines.append("    for _sel in _sels:")
@@ -135,7 +146,7 @@ class PlaywrightCompiler:
             sel = "body"
 
         if assert_type == "textual" or assert_type == "automatico":
-            lines.append(f"    expect(page.locator(\"{sel}\")).to_contain_text(\"{expected}\")")
+            lines.append(f"    expect(page.locator({self._esc(sel)})).to_contain_text({self._esc(expected)})")
         elif assert_type == "estado":
             state = action.context.get("assert_state", "enabled") if action.context else "enabled"
             state_map = {
@@ -145,9 +156,9 @@ class PlaywrightCompiler:
                 "enabled": "to_be_enabled",
             }
             method = state_map.get(state, "to_be_enabled")
-            lines.append(f"    expect(page.locator(\"{sel}\")).{method}()")
+            lines.append(f"    expect(page.locator({self._esc(sel)})).{method}()")
         elif assert_type == "visivel":
-            lines.append(f"    expect(page.locator(\"{sel}\")).to_be_visible()")
+            lines.append(f"    expect(page.locator({self._esc(sel)})).to_be_visible()")
 
         lines.append("")
         return lines

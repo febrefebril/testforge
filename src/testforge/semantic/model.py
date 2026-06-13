@@ -22,12 +22,12 @@ class SemanticTarget:
     tag: Optional[str] = None
     element_id: Optional[str] = None
     name: Optional[str] = None
-    candidates: list = field(default_factory=list)  # list[LocatorCandidate]
+    candidates: list = field(default_factory=list)
 
 
 @dataclass
 class SemanticAction:
-    action: str  # fill, click, assert, navigation
+    action: str
     target: Optional[SemanticTarget] = None
     value: Optional[str] = None
     url: Optional[str] = None
@@ -42,7 +42,7 @@ class SemanticTestCase:
     application: str = ""
     base_url: str = ""
     preconditions: list = field(default_factory=list)
-    steps: list = field(default_factory=list)  # list[SemanticAction]
+    steps: list = field(default_factory=list)
 
     def to_dict(self) -> dict:
         result = {
@@ -61,37 +61,24 @@ class SemanticTestCase:
             s = {"action": step.action}
             if step.target:
                 t = {}
-                if step.target.role:
-                    t["role"] = step.target.role
-                if step.target.accessible_name:
-                    t["accessible_name"] = step.target.accessible_name
-                if step.target.label:
-                    t["label"] = step.target.label
-                if step.target.placeholder:
-                    t["placeholder"] = step.target.placeholder
-                if step.target.test_id:
-                    t["test_id"] = step.target.test_id
-                if step.target.text:
-                    t["text"] = step.target.text
-                if step.target.tag:
-                    t["tag"] = step.target.tag
-                if step.target.element_id:
-                    t["id"] = step.target.element_id
-                if step.target.name:
-                    t["name"] = step.target.name
+                if step.target.role: t["role"] = step.target.role
+                if step.target.accessible_name: t["accessible_name"] = step.target.accessible_name
+                if step.target.label: t["label"] = step.target.label
+                if step.target.placeholder: t["placeholder"] = step.target.placeholder
+                if step.target.test_id: t["test_id"] = step.target.test_id
+                if step.target.text: t["text"] = step.target.text
+                if step.target.tag: t["tag"] = step.target.tag
+                if step.target.element_id: t["id"] = step.target.element_id
+                if step.target.name: t["name"] = step.target.name
                 if step.target.candidates:
                     t["candidates"] = [
                         {"strategy": c.strategy, "selector": c.selector, "score": c.score, "reason": c.reason}
                         for c in step.target.candidates
                     ]
                 s["target"] = t
-            if step.value:
-                s["value"] = step.value
-            if step.url:
-                s["url"] = step.url
-            if step.page_title:
-                s["page_title"] = step.page_title
-            if step.context:
-                s["context"] = step.context
+            if step.value: s["value"] = step.value
+            if step.url: s["url"] = step.url
+            if step.page_title: s["page_title"] = step.page_title
+            if step.context: s["context"] = step.context
             result["semantic_test_case"]["steps"].append(s)
         return result
