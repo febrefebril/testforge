@@ -25,4 +25,4 @@ test-results/
 recordings/
 semantic_tests/
 generated_tests/
-evidence/
+/evidence/
