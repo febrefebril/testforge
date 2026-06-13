@@ -1,0 +1,48 @@
+# Mutation Matrix — Synthetic Lab
+# Cada mutacao altera o comportamento do fake-react-bank-app para simular falhas reais.
+
+mutations:
+  - code: change_id
+    technology: react
+    url_query: "?mutation=change_id"
+    description: "ID do botao Pesquisar e alterado dinamicamente"
+    expected_taxonomy: locator_resolution
+    expected_recoverable: true
+    expected_strategy: role_or_text_fallback
+    expected_oracles: [visual_dom]
+
+  - code: change_accessible_name
+    technology: react
+    url_query: "?mutation=change_accessible_name"
+    description: "Label do campo CPF muda de 'CPF' para 'Documento'"
+    expected_taxonomy: locator_resolution
+    expected_recoverable: true
+    expected_strategy: placeholder_fallback
+    expected_oracles: [visual_dom]
+
+  - code: duplicate_button_text
+    technology: react
+    url_query: "?mutation=duplicate_button_text"
+    description: "Dois botoes com o mesmo texto 'Pesquisar'"
+    expected_taxonomy: locator_resolution
+    expected_recoverable: true
+    expected_strategy: contextual_disambiguation
+    expected_oracles: [visual_dom]
+
+  - code: overlay_blocks_click
+    technology: react
+    url_query: "?mutation=overlay_blocks_click"
+    description: "Overlay modal cobre a pagina por 8 segundos"
+    expected_taxonomy: actionability
+    expected_recoverable: true
+    expected_strategy: wait_and_retry
+    expected_oracles: [visual_dom]
+
+  - code: disabled_button
+    technology: react
+    url_query: "?mutation=disabled_button"
+    description: "Botao Pesquisar fica disabled por 8 segundos"
+    expected_taxonomy: actionability
+    expected_recoverable: true
+    expected_strategy: wait_for_enabled
+    expected_oracles: [visual_dom]
