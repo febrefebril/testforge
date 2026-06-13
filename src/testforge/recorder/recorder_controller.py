@@ -205,27 +205,34 @@ class RecorderController:
         window.__tfEventCounter = 0;
         window.__tfAssertWaiting = false;
 
-        function _tf_getSelector(el) {
-            if (el.id) return '#' + CSS.escape(el.id);
-            var parts = [];
-            var current = el;
-            while (current && current !== document.body && current !== document.documentElement) {
-                var tag = current.tagName.toLowerCase();
-                var selector = tag;
-                if (current.id) {
-                    return '#' + CSS.escape(current.id) + ' ' + parts.join(' > ');
+        window._tf_getSelector = function(el) {
+            try {
+                if (!el || !el.tagName) return 'unknown';
+                if (el.id && typeof CSS !== 'undefined' && CSS.escape) return '#' + CSS.escape(el.id);
+                if (el.id) return '#' + el.id;
+                var parts = [];
+                var current = el;
+                while (current && current !== document.body && current !== document.documentElement) {
+                    var tag = current.tagName.toLowerCase();
+                    var selector = tag;
+                    if (current.id) {
+                        var escaped = (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(current.id) : current.id;
+                        return '#' + escaped + ' ' + parts.join(' > ');
+                    }
+                    if (current.className && typeof current.className === 'string') {
+                        var cls = current.className.trim().split(/\\s+/)[0];
+                        if (cls && !cls.startsWith('tf-')) selector += '.' + (typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(cls) : cls);
+                    }
+                    parts.unshift(selector);
+                    current = current.parentElement;
                 }
-                if (current.className && typeof current.className === 'string') {
-                    var cls = current.className.trim().split(/\s+/)[0];
-                    if (cls && !cls.startsWith('tf-')) selector += '.' + CSS.escape(cls);
-                }
-                parts.unshift(selector);
-                current = current.parentElement;
+                return parts.join(' > ') || el.tagName.toLowerCase();
+            } catch(e) {
+                return (el.tagName || 'unknown').toLowerCase();
             }
-            return parts.join(' > ') || el.tagName.toLowerCase();
         }
 
-        function _tf_extractTarget(el) {
+        window._tf_extractTarget = function(el) {
             if (!el || el === document.body || el === document.documentElement) return null;
             var rect = el.getBoundingClientRect ? el.getBoundingClientRect() : {};
             var labelEl = el.id ? document.querySelector('label[for="' + el.id + '"]') : null;
@@ -246,7 +253,7 @@ class RecorderController:
             };
         }
 
-        function _tf_captureAttr(el) {
+        window._tf_captureAttr = function(el) {
             var attrs = {};
             if (el && el.attributes) {
                 for (var i = 0; i < el.attributes.length; i++) {
@@ -257,7 +264,7 @@ class RecorderController:
             return attrs;
         }
 
-        function _tf_pushEvent(type, el) {
+        window._tf_pushEvent = function(type, el) {
             var target = _tf_extractTarget(el || document.activeElement);
             window.__tfEventQueue.push({
                 event_id: 'evt_' + String(++window.__tfEventCounter).padStart(4,'0'),
@@ -270,7 +277,7 @@ class RecorderController:
             });
         }
 
-        function _tf_detectState(el) {
+        window._tf_detectState = function(el) {
             var tag = (el.tagName||'').toLowerCase();
             if ((tag === 'input' && (el.type === 'checkbox' || el.type === 'radio')) || tag === 'option') {
                 return el.checked ? 'checked' : 'unchecked';
@@ -278,7 +285,7 @@ class RecorderController:
             return el.disabled ? 'disabled' : 'enabled';
         }
 
-        function _tf_getExpectedValue(el, assertType) {
+        window._tf_getExpectedValue = function(el, assertType) {
             switch(assertType) {
                 case 'textual':
                 case 'automatico':
@@ -292,23 +299,32 @@ class RecorderController:
             return '';
         }
 
-        function _tf_addStep(action, el, assertType) {
-            var selector = _tf_getSelector(el);
-            var step = {
-                action: action,
-                selector: selector,
-                tagName: (el.tagName||'').toLowerCase(),
-                text: (el.textContent||'').trim().substring(0,200),
-                value: (el.value||'').substring(0,200),
-                attrs: _tf_captureAttr(el),
-                timestamp: new Date().toISOString()
-            };
-            if (assertType) {
-                step.assert_type = assertType;
-                step.assert_state = assertType === 'estado' ? _tf_detectState(el) : '';
-                step.expected_value = _tf_getExpectedValue(el, assertType);
+        window._tf_addStep = function(action, el, assertType) {
+            try {
+                var selector = '';
+                try { selector = _tf_getSelector(el); } catch(e) { selector = el.tagName || 'unknown'; }
+                var step = {
+                    action: action,
+                    selector: selector,
+                    tagName: (el.tagName||'').toLowerCase(),
+                    text: (el.textContent||'').trim().substring(0,200),
+                    value: (el.value||'').substring(0,200),
+                    attrs: {},
+                    timestamp: new Date().toISOString()
+                };
+                try { step.attrs = _tf_captureAttr(el); } catch(e) {}
+                if (assertType) {
+                    step.assert_type = assertType;
+                    step.assert_state = assertType === 'estado' ? _tf_detectState(el) : '';
+                    step.expected_value = _tf_getExpectedValue(el, assertType);
+                }
+                window.__tfStepQueue.push(step);
+                console.log('[TestForge] _tf_addStep OK:', step.step_id || 'step', assertType, step.expected_value);
+                return true;
+            } catch(e) {
+                console.error('[TestForge] _tf_addStep ERRO:', e.message);
+                return false;
             }
-            window.__tfStepQueue.push(step);
         }
 
         // ---- Event listeners (capture phase) ----
@@ -387,7 +403,7 @@ class RecorderController:
         }, true);
 
         // ---- Overlay UI ----
-        function _tf_showOverlay() {
+        window._tf_showOverlay = function() {
             var ov = document.createElement('div');
             ov.id = 'tf-overlay';
             ov.innerHTML = '<div style="position:fixed;top:8px;right:8px;background:#1a1a2e;color:#fff;padding:8px 14px;border-radius:8px;font:14px monospace;z-index:99999;display:flex;gap:12px;align-items:center;box-shadow:0 4px 16px rgba(0,0,0,0.3)">' +
@@ -416,7 +432,7 @@ class RecorderController:
             };
         }
 
-        function _tf_showToast(msg) {
+        window._tf_showToast = function(msg) {
             var toast = document.getElementById('tf-toast');
             if (!toast) return;
             toast.textContent = msg;
@@ -424,7 +440,7 @@ class RecorderController:
             setTimeout(function() { toast.style.display = 'none'; }, 2000);
         }
 
-        function _tf_showAssertMenu(x, y) {
+        window._tf_showAssertMenu = function(x, y) {
             var el = document.getElementById('tf-assert-menu');
             if (!el) {
                 el = document.createElement('div');
@@ -468,7 +484,7 @@ class RecorderController:
             el.style.top = Math.min(y + 10, window.innerHeight - 60) + 'px';
         }
 
-        function _tf_highlight(el) {
+        window._tf_highlight = function(el) {
             var orig = el.style.outline;
             el.style.outline = '2px solid #e94560';
             el.style.outlineOffset = '2px';
