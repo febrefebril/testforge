@@ -22,3 +22,7 @@ _bmad/_config/
 .ruff_cache/
 playwright-report/
 test-results/
+recordings/
+semantic_tests/
+generated_tests/
+evidence/
