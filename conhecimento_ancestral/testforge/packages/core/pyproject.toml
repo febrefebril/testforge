@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "testforge-core"
+version = "0.1.0"
+description = "TestForge core engine — CLI, Playwright executor, overlay injection, shared models"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.9.0",
+    "playwright>=1.40.0",
+    "pydantic>=2.0.0",
+    "tomli>=2.0.0; python_version < '3.11'",
+    "tomli-w>=1.0.0",
+    "openai>=1.0.0",
+]
+
+[project.scripts]
+testforge = "testforge.core.cli.app:app"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-playwright>=0.3.0"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["testforge*"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "pytest-playwright>=0.8.0",
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "llm_real: testes que requerem Azure OpenAI (AZURE_OPENAI_KEY + AZURE_OPENAI_ENDPOINT)",
+]

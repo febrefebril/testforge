@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>PrimeFaces Widgets — Página de Teste</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/primeicons@6.0.1/primeicons.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; background: #f5f5f5; }
+h1 { margin-bottom: 8px; color: #333; }
+.sub { color: #666; margin-bottom: 32px; }
+.row { display: flex; gap: 40px; flex-wrap: wrap; }
+.col { flex: 1; min-width: 320px; background: white; border-radius: 8px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+.col h2 { font-size: 16px; color: #444; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #eee; }
+label { display: block; font-size: 13px; color: #555; margin-bottom: 4px; }
+.form-group { margin-bottom: 20px; }
+
+/* === PrimeFaces SelectOneMenu === */
+.ui-selectonemenu {
+  display: inline-block; position: relative; width: 100%;
+  border: 1px solid #ccc; border-radius: 4px;
+  cursor: pointer;
+}
+.ui-selectonemenu .ui-helper-hidden-accessible { position: absolute; left: -9999px; }
+.ui-selectonemenu .ui-selectonemenu-trigger {
+  position: absolute; right: 0; top: 0; height: 100%; width: 30px;
+  background: #f0f0f0; border-left: 1px solid #ccc;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border-radius: 0 4px 4px 0;
+}
+.ui-selectonemenu .ui-selectonemenu-label {
+  display: block; padding: 8px 40px 8px 12px; min-height: 36px;
+  background: white; border: none; cursor: pointer;
+}
+.ui-selectonemenu-panel {
+  position: absolute; z-index: 1000; background: white;
+  border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  max-height: 200px; overflow-y: auto; min-width: 200px;
+}
+.ui-selectonemenu-items { list-style: none; padding: 4px 0; }
+.ui-selectonemenu-item { padding: 8px 12px; cursor: pointer; }
+.ui-selectonemenu-item:hover { background: #e3f2fd; }
+.ui-selectonemenu-item.selected { background: #bbdefb; font-weight: 600; }
+.ui-state-highlight { background: #e3f2fd; }
+
+/* === PrimeFaces AutoComplete === */
+.ui-autocomplete { display: inline-block; position: relative; width: 100%; }
+.ui-autocomplete-input {
+  width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;
+}
+.ui-autocomplete-panel {
+  position: absolute; z-index: 1000; background: white;
+  border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  max-height: 200px; overflow-y: auto; min-width: 200px;
+}
+.ui-autocomplete-item { padding: 8px 12px; cursor: pointer; }
+.ui-autocomplete-item:hover, .ui-autocomplete-item.ui-state-highlight { background: #e3f2fd; }
+
+/* === Kendo-like DropDown === */
+.k-dropdownlist { display: inline-block; position: relative; width: 100%; }
+.k-dropdownlist .k-dropdown-wrap {
+  display: flex; align-items: center; border: 1px solid #ccc; border-radius: 4px;
+  padding: 8px 12px; cursor: pointer; background: white;
+}
+.k-dropdownlist .k-input { flex: 1; border: none; outline: none; background: transparent; }
+.k-dropdownlist .k-select { margin-left: 8px; }
+.k-popup {
+  position: absolute; z-index: 1000; background: white;
+  border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  max-height: 200px; overflow-y: auto; min-width: 200px;
+}
+.k-item { padding: 8px 12px; cursor: pointer; }
+.k-item:hover, .k-item.k-state-hover { background: #e3f2fd; }
+.k-item.k-state-selected { background: #bbdefb; font-weight: 600; }
+
+.result { margin-top: 24px; padding: 12px; background: #f0f7ff; border-radius: 4px; font-size: 13px; }
+.result code { background: #e8e8e8; padding: 1px 4px; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<h1>🧪 PrimeFaces Widgets — Página de Teste</h1>
+<p class="sub">Simula a estrutura DOM dos widgets PrimeFaces SelectOneMenu e AutoComplete. 
+Interaja com cada widget e capture com o overlay.</p>
+
+<div class="row">
+  <!-- ===== COLUNA 1: SelectOneMenu ===== -->
+  <div class="col">
+    <h2>PrimeFaces SelectOneMenu</h2>
+    <form id="form1">
+      <div class="form-group">
+        <label for="tipoImovel">Tipo de Imóvel</label>
+        <div id="tipoImovel" class="ui-selectonemenu">
+          <div class="ui-helper-hidden-accessible">
+            <select id="tipoImovelSelect">
+              <option value="">Selecione</option>
+              <option value="1">Residencial</option>
+              <option value="2">Comercial</option>
+              <option value="3">Terreno</option>
+              <option value="4">Rural</option>
+            </select>
+          </div>
+          <label class="ui-selectonemenu-label" id="tipoImovelLabel">Selecione</label>
+          <div class="ui-selectonemenu-trigger" id="tipoImovelTrigger">
+            <span class="pi pi-chevron-down" style="font-size:14px"></span>
+          </div>
+        </div>
+        <div class="ui-selectonemenu-panel" id="tipoImovelPanel" style="display:none">
+          <div class="ui-selectonemenu-items-wrapper">
+            <ul class="ui-selectonemenu-items">
+              <li class="ui-selectonemenu-item" data-value="">Selecione</li>
+              <li class="ui-selectonemenu-item" data-value="1">Residencial</li>
+              <li class="ui-selectonemenu-item" data-value="2">Comercial</li>
+              <li class="ui-selectonemenu-item" data-value="3">Terreno</li>
+              <li class="ui-selectonemenu-item" data-value="4">Rural</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Tipo de Financiamento</label>
+        <div id="financiamentoRadios">
+          <label style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;font-weight:normal">
+            <input type="radio" name="financiamento" value="financiado" id="financiadoRadio"> Financiado
+          </label>
+          <label style="display:inline-flex;align-items:center;gap:4px;font-weight:normal">
+            <input type="radio" name="financiamento" value="avista" id="avistaRadio" checked> À Vista
+          </label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="nomeInput">Nome (desabilitado)</label>
+        <input type="text" id="nomeInput" value="João Silva" disabled style="width:100%;padding:8px 12px;border:1px solid #ccc;border-radius:4px;background:#eee;color:#999;">
+      </div>
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="notificacoesCheck" checked> Receber notificações
+        </label>
+      </div>
+      <div class="form-group">
+        <label for="ufSelect">UF (com filtering)</label>
+        <div id="ufSelect" class="ui-selectonemenu">
+          <div class="ui-helper-hidden-accessible">
+            <select id="ufSelectOption">
+              <option value="">Selecione</option>
+              <option value="DF">Distrito Federal</option>
+              <option value="GO">Goiás</option>
+              <option value="MG">Minas Gerais</option>
+              <option value="SP">São Paulo</option>
+              <option value="RJ">Rio de Janeiro</option>
+              <option value="BA">Bahia</option>
+            </select>
+          </div>
+          <label class="ui-selectonemenu-label" id="ufSelectLabel">Selecione</label>
+          <div class="ui-selectonemenu-trigger" id="ufSelectTrigger">
+            <span class="pi pi-chevron-down" style="font-size:14px"></span>
+          </div>
+        </div>
+        <div class="ui-selectonemenu-panel" id="ufSelectPanel" style="display:none">
+          <div class="ui-selectonemenu-items-wrapper">
+            <ul class="ui-selectonemenu-items">
+              <li class="ui-selectonemenu-item" data-value="">Selecione</li>
+              <li class="ui-selectonemenu-item" data-value="DF">Distrito Federal</li>
+              <li class="ui-selectonemenu-item" data-value="GO">Goiás</li>
+              <li class="ui-selectonemenu-item" data-value="MG">Minas Gerais</li>
+              <li class="ui-selectonemenu-item" data-value="SP">São Paulo</li>
+              <li class="ui-selectonemenu-item" data-value="RJ">Rio de Janeiro</li>
+              <li class="ui-selectonemenu-item" data-value="BA">Bahia</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- ===== COLUNA 2: AutoComplete ===== -->
+  <div class="col">
+    <h2>PrimeFaces AutoComplete</h2>
+    <form id="form2">
+      <div class="form-group">
+        <label for="cidadeAc">Cidade</label>
+        <span id="cidadeAc" class="ui-autocomplete">
+          <input id="cidadeAcInput" class="ui-autocomplete-input" type="text" placeholder="Digite para buscar..." autocomplete="off">
+          <input type="hidden" id="cidadeAcValue" name="cidade">
+        </span>
+        <div class="ui-autocomplete-panel" id="cidadeAcPanel" style="display:none">
+          <ul class="ui-autocomplete-items">
+            <li class="ui-autocomplete-item" data-value="BSB">Brasília</li>
+            <li class="ui-autocomplete-item" data-value="GYN">Goiânia</li>
+            <li class="ui-autocomplete-item" data-value="BHZ">Belo Horizonte</li>
+            <li class="ui-autocomplete-item" data-value="SPO">São Paulo</li>
+            <li class="ui-autocomplete-item" data-value="RIO">Rio de Janeiro</li>
+            <li class="ui-autocomplete-item" data-value="SSA">Salvador</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="bancoAc">Banco</label>
+        <span id="bancoAc" class="ui-autocomplete">
+          <input id="bancoAcInput" class="ui-autocomplete-input" type="text" placeholder="Nome do banco..." autocomplete="off">
+          <input type="hidden" id="bancoAcValue" name="banco">
+        </span>
+        <div class="ui-autocomplete-panel" id="bancoAcPanel" style="display:none">
+          <ul class="ui-autocomplete-items">
+            <li class="ui-autocomplete-item" data-value="001">Banco do Brasil</li>
+            <li class="ui-autocomplete-item" data-value="237">Itaú</li>
+            <li class="ui-autocomplete-item" data-value="341">Bradesco</li>
+            <li class="ui-autocomplete-item" data-value="104">Caixa Econômica</li>
+            <li class="ui-autocomplete-item" data-value="033">Santander</li>
+          </ul>
+        </div>
+      </div>
+    </form>
+
+    <h2 style="margin-top:32px">Kendo UI DropDownList</h2>
+    <form id="form3">
+      <div class="form-group">
+        <label for="kendoCategoria">Categoria</label>
+        <div id="kendoCategoria" class="k-dropdownlist">
+          <div class="k-dropdown-wrap" id="kendoCategoriaWrap">
+            <input class="k-input" id="kendoCategoriaInput" readonly value="Selecione">
+            <span class="k-select">▼</span>
+          </div>
+          <div class="k-popup" id="kendoCategoriaPopup" style="display:none">
+            <div class="k-item" data-value="1">Eletrônicos</div>
+            <div class="k-item" data-value="2">Roupas</div>
+            <div class="k-item" data-value="3">Alimentos</div>
+            <div class="k-item" data-value="4">Móveis</div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="hiddenElement" style="display:none">Este elemento está oculto</div>
+<div class="result" id="result">
+  <strong>🖱️ Última interação:</strong> <span id="lastAction">Nenhuma</span><br>
+  <strong>📋 Hidden select value:</strong> <span id="hiddenValue">—</span>
+</div>
+
+<script>
+// === PrimeFaces API Simulation ===
+window.PrimeFaces = {
+  version: '12.0.0',
+  widgets: {},
+  ajax: {
+    AjaxRequest: function(cfg) { console.log('[PrimeFaces] AJAX request:', cfg); }
+  }
+};
+
+// === Generic dropdown logic ===
+function setupSelectOneMenu(prefix, selectId) {
+  const trigger = document.getElementById(prefix + 'Trigger');
+  const panel = document.getElementById(prefix + 'Panel');
+  const label = document.getElementById(prefix + 'Label');
+  const select = document.getElementById(selectId);
+  const items = panel.querySelectorAll('.ui-selectonemenu-item');
+
+  function togglePanel(e) {
+    e.stopPropagation();
+    const isOpen = panel.style.display !== 'none';
+    document.querySelectorAll('.ui-selectonemenu-panel').forEach(p => p.style.display = 'none');
+    panel.style.display = isOpen ? 'none' : 'block';
+  }
+
+  trigger.addEventListener('click', togglePanel);
+  label.addEventListener('click', togglePanel);
+
+  items.forEach(function(item) {
+    item.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const val = item.getAttribute('data-value');
+      const text = item.textContent;
+      select.value = val;
+      label.textContent = text;
+      panel.style.display = 'none';
+      select.dispatchEvent(new Event('change', {bubbles: true}));
+      document.getElementById('lastAction').textContent = 'select: ' + text + ' (value=' + val + ')';
+      document.getElementById('hiddenValue').textContent = 'select#' + selectId + ' = ' + select.value;
+    });
+  });
+
+  document.addEventListener('click', function() {
+    panel.style.display = 'none';
+  });
+
+  // Register as PrimeFaces widget
+  PrimeFaces.widgets[prefix + 'Widget'] = {
+    jq: trigger ? trigger.closest('.ui-selectonemenu') : null,
+    container: trigger ? trigger.closest('.ui-selectonemenu') : null,
+    selectValue: function(val) {
+      for (var i = 0; i < select.options.length; i++) {
+        if (select.options[i].value === val) {
+          select.selectedIndex = i;
+          label.textContent = select.options[i].text;
+          select.dispatchEvent(new Event('change', {bubbles: true}));
+          break;
+        }
+      }
+    }
+  };
+}
+
+setupSelectOneMenu('tipoImovel', 'tipoImovelSelect');
+setupSelectOneMenu('ufSelect', 'ufSelectOption');
+
+// === AutoComplete logic ===
+function setupAutoComplete(prefix) {
+  const input = document.getElementById(prefix + 'Input');
+  const panel = document.getElementById(prefix + 'Panel');
+  const hidden = document.getElementById(prefix + 'Value');
+  const items = panel.querySelectorAll('.ui-autocomplete-item');
+
+  function showSuggestions() {
+    const q = input.value.toLowerCase();
+    panel.style.display = 'block';
+    items.forEach(function(item) {
+      const match = item.textContent.toLowerCase().indexOf(q) !== -1;
+      item.style.display = match ? '' : 'none';
+    });
+  }
+
+  input.addEventListener('focus', showSuggestions);
+  input.addEventListener('input', showSuggestions);
+
+  items.forEach(function(item) {
+    item.addEventListener('click', function() {
+      hidden.value = item.getAttribute('data-value');
+      input.value = item.textContent;
+      panel.style.display = 'none';
+      hidden.dispatchEvent(new Event('change', {bubbles: true}));
+      input.dispatchEvent(new Event('input', {bubbles: true}));
+      document.getElementById('lastAction').textContent = 'autocomplete: ' + item.textContent + ' (value=' + hidden.value + ')';
+    });
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.ui-autocomplete')) {
+      panel.style.display = 'none';
+    }
+  });
+
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') panel.style.display = 'none';
+  });
+}
+
+setupAutoComplete('cidadeAc');
+setupAutoComplete('bancoAc');
+
+// === Kendo-like DropDown ===
+(function() {
+  const wrap = document.getElementById('kendoCategoriaWrap');
+  const popup = document.getElementById('kendoCategoriaPopup');
+  const input = document.getElementById('kendoCategoriaInput');
+  const items = popup.querySelectorAll('.k-item');
+
+  wrap.addEventListener('click', function() {
+    const isOpen = popup.style.display !== 'none';
+    document.querySelectorAll('.k-popup').forEach(p => p.style.display = 'none');
+    popup.style.display = isOpen ? 'none' : 'block';
+  });
+
+  items.forEach(function(item) {
+    item.addEventListener('click', function() {
+      input.value = item.textContent;
+      popup.style.display = 'none';
+      input.setAttribute('data-value', item.getAttribute('data-value'));
+      document.getElementById('lastAction').textContent = 'kendo-select: ' + item.textContent;
+    });
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.k-dropdownlist')) popup.style.display = 'none';
+  });
+})();
+
+console.log('[PrimeFaces Test Page] Ready. PrimeFaces.widgets:', Object.keys(PrimeFaces.widgets));
+</script>
+</body>
+</html>

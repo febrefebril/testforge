@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>FAM-02: Timing</title>
+<script src="../common.js"></script>
+<script src="error.js"></script>
+</head>
+<body>
+  <h1>FAM-02: Timing e Assincronismo</h1>
+  <div id="container">
+    <p>Aguardando carregamento...</p>
+  </div>
+  <button id="btn-acao" style="display:none">Ação</button>
+  <p id="result"></p>
+  <script>
+    setTimeout(function() {
+      document.getElementById("btn-acao").style.display = "inline-block";
+      document.getElementById("btn-acao").addEventListener("click", function() {
+        document.getElementById("result").textContent = "Ação executada!";
+      });
+    }, window.__CURATION_TEST && window.__CURATION_TEST.isError ? 5000 : 100);
+  </script>
+</body>
+</html>

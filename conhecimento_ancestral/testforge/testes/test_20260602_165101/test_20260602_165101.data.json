@@ -1,0 +1,46 @@
+{
+  "steps": [
+    {
+      "action": "click",
+      "selector": "div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > h1:nth-of-type(1)",
+      "fallbacks": [
+        "h1:has-text(\"Simulador Crédito imobiliário CAIXA, Programa Minha Casa, Minha Vida e Empréstimo com Garantia de Imóvel\")",
+        "//h1[contains(text(), \"Simulador Crédito imobiliário CAIXA, Programa Minha Casa, Minha Vida e Empréstimo com Garantia de Imóvel\")]",
+        "//h1[@*]"
+      ],
+      "tag_name": "h1",
+      "text": "Simulador Crédito imobiliário CAIXA, Programa Minha Casa, Minha Vida e Empréstimo com Garantia de Imóvel",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "click",
+      "selector": "",
+      "fallbacks": [
+        "html:has-text(\"var CONTEXTO_APP =\t'/siopiinternet-web';\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\tfunction combo() {\n\t\tjQuery(\\\"sel\")",
+        "//html[contains(text(), \"var CONTEXTO_APP =\t'/siopiinternet-web';\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\tfunction combo() {\n\t\tjQuery(\\\"sel\")]",
+        "//html[@*]"
+      ],
+      "tag_name": "html",
+      "text": "var CONTEXTO_APP =\t'/siopiinternet-web';\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\tfunction combo() {\n\t\tjQuery(\"sel",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "click",
+      "selector": "",
+      "fallbacks": [
+        "html:has-text(\"var CONTEXTO_APP =\t'/siopiinternet-web';\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\tfunction combo() {\n\t\tjQuery(\\\"sel\")",
+        "//html[contains(text(), \"var CONTEXTO_APP =\t'/siopiinternet-web';\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\tfunction combo() {\n\t\tjQuery(\\\"sel\")]",
+        "//html[@*]"
+      ],
+      "tag_name": "html",
+      "text": "var CONTEXTO_APP =\t'/siopiinternet-web';\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\tfunction combo() {\n\t\tjQuery(\"sel",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    }
+  ]
+}

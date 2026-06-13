@@ -1,0 +1,87 @@
+# TESTFORGE — Taxonomy Case Schema v1.0
+# Objetivo: contrato implementável para cadastrar casos taxonômicos do Agente Curador.
+
+TaxonomyCase:
+  required:
+    - id
+    - family
+    - case
+    - technologies
+    - priority
+    - observable_symptoms
+    - probable_causes
+    - minimum_detection
+    - primary_strategy
+    - fallback_strategies
+    - expected_output
+    - success_criteria
+    - result_states
+  fields:
+    id:
+      type: string
+      pattern: "^[A-Z]{3,4}-[0-9]{3}$"
+      examples: [SEL-001, TIM-005, CTX-002]
+    family:
+      type: string
+    case:
+      type: string
+    technologies:
+      type: list[string]
+    priority:
+      type: enum
+      values: [P0, P1, P2]
+    observable_symptoms:
+      type: list[string]
+    probable_causes:
+      type: list[string]
+    minimum_detection:
+      type: list[object]
+      description: "Sinais objetivos usados pelo classificador."
+    primary_strategy:
+      type: enum
+      values:
+        - label_proximity
+        - text_content_match
+        - aria_role_strategy
+        - semantic_locator_conversion
+        - primefaces_registry_scan
+        - frame_reacquire
+        - shadow_pierce
+        - network_idle_wait
+        - response_intercept
+        - dom_stabilization
+        - overlay_dismiss
+        - re_auth_hook
+        - llm_selector_inference
+        - download_event_capture
+        - upload_payload_binding
+        - assert_overlay_capture
+        - manual_checkpoint
+        - custom
+    fallback_strategies:
+      type: list[string]
+    expected_output:
+      type: list[string]
+    success_criteria:
+      type: list[string]
+    result_states:
+      type: object
+      allowed_values: [RESOLVED, PARTIALLY_RESOLVED, MANUAL_REQUIRED, UNRESOLVED, REJECTED]
+    evidence_requirements:
+      type: list[string]
+      recommended:
+        - screenshot
+        - trace
+        - dom_snapshot
+        - console_log
+        - network_log
+        - patch_diff
+    validator_policy:
+      type: object
+      fields:
+        max_rejections_per_patch_signature:
+          type: integer
+          default: 3
+        clean_runs_to_promote:
+          type: integer
+          default: 3

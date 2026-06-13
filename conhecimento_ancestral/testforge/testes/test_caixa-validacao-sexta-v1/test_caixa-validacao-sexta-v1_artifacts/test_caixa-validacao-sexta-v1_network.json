@@ -1,0 +1,208 @@
+[
+  {
+    "url": "https://simuladorhabitacao.caixa.gov.br/home",
+    "method": "GET",
+    "post_data": null,
+    "headers": {
+      "accept-language": "pt-BR",
+      "upgrade-insecure-requests": "1",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not/A)Brand\";v=\"99\", \"Chromium\";v=\"148\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"Windows\""
+    },
+    "resource_type": "document"
+  },
+  {
+    "url": "https://simuladorhabitacao.caixa.gov.br/styles.ecefedbd45772513.css",
+    "method": "GET",
+    "post_data": null,
+    "headers": {
+      "sec-ch-ua-platform": "\"Windows\"",
+      "referer": "https://simuladorhabitacao.caixa.gov.br/home",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not/A)Brand\";v=\"99\", \"Chromium\";v=\"148\"",
+      "accept-language": "pt-BR,pt;q=0.9,en;q=0.8",
+      "sec-ch-ua-mobile": "?0"
+    },
+    "resource_type": "stylesheet"
+  },
+  {
+    "url": "https://simuladorhabitacao.caixa.gov.br/runtime.4a9c51eb14190ad1.js",
+    "method": "GET",
+    "post_data": null,
+    "headers": {
+      "origin": "https://simuladorhabitacao.caixa.gov.br",
+      "sec-ch-ua-platform": "\"Windows\"",
+      "referer": "https://simuladorhabitacao.caixa.gov.br/home",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not/A)Brand\";v=\"99\", \"Chromium\";v=\"148\"",
+      "accept-language": "pt-BR,pt;q=0.9,en;q=0.8",
+      "sec-ch-ua-mobile": "?0"
+    },
+    "resource_type": "script"
+  },
+  {
+    "url": "https://simuladorhabitacao.caixa.gov.br/polyfills.19ea9515d96a6d63.js",
+    "method": "GET",
+    "post_data": null,
+    "headers": {
+      "origin": "https://simuladorhabitacao.caixa.gov.br",
+      "sec-ch-ua-platform": "\"Windows\"",
+      "referer": "https://simuladorhabitacao.caixa.gov.br/home",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not/A)Brand\";v=\"99\", \"Chromium\";v=\"148\"",
+      "accept-language": "pt-BR,pt;q=0.9,en;q=0.8",
+      "sec-ch-ua-mobile": "?0"
+    },
+    "resource_type": "script"
+  },
+  {
+    "url": "https://simuladorhabitacao.caixa.gov.br/main.c5efbd409e1c463d.js",
+    "method": "GET",
+    "post_data": null,
+    "headers": {
+      "origin": "https://simuladorhabitacao.caixa.gov.br",
+      "sec-ch-ua-platform": "\"Windows\"",
+      "referer": "https://simuladorhabitacao.caixa.gov.br/home",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not/A)Brand\";v=\"99\", \"Chromium\";v=\"148\"",
+      "accept-language": "pt-BR,pt;q=0.9,en;q=0.8",
+      "sec-ch-ua-mobile": "?0"
+    },
+    "resource_type": "script"
+  },
+  {
+    "url": "https://simuladorhabitacao.caixa.gov.br/CAIXAStd-Regular.38865969b166b9ed.woff2",
+    "method": "GET",
+    "post_data": null,
+    "headers": {
+      "origin": "https://simuladorhabitacao.caixa.gov.br",
+      "sec-ch-ua-platform": "\"Windows\"",
+      "referer": "https://simuladorhabitacao.caixa.gov.br/home",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not/A)Brand\";v=\"99\", \"Chromium\";v=\"148\"",
+      "accept-language": "pt-BR,pt;q=0.9,en;q=0.8",
+      "sec-ch-ua-mobile": "?0"
+    },
+    "resource_type": "font"
+  },
+  {
+    "url": "https://simuladorhabitacao.caixa.gov.br/827.626d6f4d8805eb72.js",
+    "method": "GET",
+    "post_data": null,
+    "headers": {
+      "origin": "https://simuladorhabitacao.caixa.gov.br",
+      "sec-ch-ua-platform": "\"Windows\"",
+      "referer": "https://simuladorhabitacao.caixa.gov.br/home",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not/A)Brand\";v=\"99\", \"Chromium\";v=\"148\"",
+      "accept-language": "pt-BR,pt;q=0.9,en;q=0.8",
+      "sec-ch-ua-mobile": "?0"
+    },
+    "resource_type": "script"
+  },
+  {
+    "url": "https://simuladorhabitacao.caixa.gov.br/980.244590ca6ae97720.js",
+    "method": "GET",
+    "post_data": null,
+    "headers": {
+      "origin": "https://simuladorhabitacao.caixa.gov.br",
+      "sec-ch-ua-platform": "\"Windows\"",
+      "referer": "https://simuladorhabitacao.caixa.gov.br/home",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not/A)Brand\";v=\"99\", \"Chromium\";v=\"148\"",
+      "accept-language": "pt-BR,pt;q=0.9,en;q=0.8",
+      "sec-ch-ua-mobile": "?0"
+    },
+    "resource_type": "script"
+  },
+  {
+    "url": "https://simuladorhabitacao.caixa.gov.br/assets/images/ca-caixa.png?v=1.15.9.4",
+    "method": "GET",
+    "post_data": null,
+    "headers": {
+      "sec-ch-ua-platform": "\"Windows\"",
+      "referer": "https://simuladorhabitacao.caixa.gov.br/home",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not/A)Brand\";v=\"99\", \"Chromium\";v=\"148\"",
+      "accept-language": "pt-BR,pt;q=0.9,en;q=0.8",
+      "sec-ch-ua-mobile": "?0"
+    },
+    "resource_type": "image"
+  },
+  {
+    "url": "https://simuladorhabitacao.caixa.gov.br/assets/images/background_home.png",
+    "method": "GET",
+    "post_data": null,
+    "headers": {
+      "sec-ch-ua-platform": "\"Windows\"",
+      "referer": "https://simuladorhabitacao.caixa.gov.br/home",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not/A)Brand\";v=\"99\", \"Chromium\";v=\"148\"",
+      "accept-language": "pt-BR,pt;q=0.9,en;q=0.8",
+      "sec-ch-ua-mobile": "?0"
+    },
+    "resource_type": "image"
+  },
+  {
+    "url": "https://simuladorhabitacao.caixa.gov.br/CAIXAStd-SemiBold.76913a7af502160a.woff2",
+    "method": "GET",
+    "post_data": null,
+    "headers": {
+      "origin": "https://simuladorhabitacao.caixa.gov.br",
+      "sec-ch-ua-platform": "\"Windows\"",
+      "referer": "https://simuladorhabitacao.caixa.gov.br/home",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not/A)Brand\";v=\"99\", \"Chromium\";v=\"148\"",
+      "accept-language": "pt-BR,pt;q=0.9,en;q=0.8",
+      "sec-ch-ua-mobile": "?0"
+    },
+    "resource_type": "font"
+  },
+  {
+    "url": "https://simuladorhabitacao.caixa.gov.br/material-icons-outlined.f86cb7b0aa53f0fe.woff2",
+    "method": "GET",
+    "post_data": null,
+    "headers": {
+      "origin": "https://simuladorhabitacao.caixa.gov.br",
+      "sec-ch-ua-platform": "\"Windows\"",
+      "referer": "https://simuladorhabitacao.caixa.gov.br/styles.ecefedbd45772513.css",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not/A)Brand\";v=\"99\", \"Chromium\";v=\"148\"",
+      "accept-language": "pt-BR,pt;q=0.9,en;q=0.8",
+      "sec-ch-ua-mobile": "?0"
+    },
+    "resource_type": "font"
+  },
+  {
+    "url": "https://simuladorhabitacao.caixa.gov.br/CAIXAStd-Bold.44110ff62c0c5f25.woff2",
+    "method": "GET",
+    "post_data": null,
+    "headers": {
+      "origin": "https://simuladorhabitacao.caixa.gov.br",
+      "sec-ch-ua-platform": "\"Windows\"",
+      "referer": "https://simuladorhabitacao.caixa.gov.br/home",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not/A)Brand\";v=\"99\", \"Chromium\";v=\"148\"",
+      "accept-language": "pt-BR,pt;q=0.9,en;q=0.8",
+      "sec-ch-ua-mobile": "?0"
+    },
+    "resource_type": "font"
+  },
+  {
+    "url": "https://simuladorhabitacao.caixa.gov.br/material-icons.59322316b3fd6063.woff2",
+    "method": "GET",
+    "post_data": null,
+    "headers": {
+      "origin": "https://simuladorhabitacao.caixa.gov.br",
+      "sec-ch-ua-platform": "\"Windows\"",
+      "referer": "https://simuladorhabitacao.caixa.gov.br/styles.ecefedbd45772513.css",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Not/A)Brand\";v=\"99\", \"Chromium\";v=\"148\"",
+      "accept-language": "pt-BR,pt;q=0.9,en;q=0.8",
+      "sec-ch-ua-mobile": "?0"
+    },
+    "resource_type": "font"
+  }
+]

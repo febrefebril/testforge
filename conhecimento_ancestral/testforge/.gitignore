@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.venv_*/
+.ruff_cache/
+.pytest_cache/
+*.egg
+
+# Node
+node_modules/
+package-lock.json
+
+# IDE / OS
+.DS_Store
+.*.swp
+.*.swo
+*~
+
+# Environment
+.env
+.env.local
+
+# Browser config (auto-generated)
+**/.config/
+
+# Coverage / reports (generated at runtime)
+**/trace.zip
+**/screenshots/
+**/*_report.json
+testes/*_artifacts/
+demo/*_artifacts/
+
+# Build
+dist/
+build/
+*.tsbuildinfo

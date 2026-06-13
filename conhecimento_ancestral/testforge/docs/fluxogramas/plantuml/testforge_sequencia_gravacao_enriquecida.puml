@@ -1,0 +1,333 @@
+@startuml
+title TestForge - Sequência da Gravação Enriquecida
+<size:14>Status: overlay.js ✅ | Builder fallback loop + pytest naming ✅ (2026-06-12)</size>
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+autonumber
+
+actor "Usuário" as Usuario
+participant "CLIRecord" as CLIRecord
+participant "InputValidator" as InputValidator
+participant "WorkspaceManager" as WorkspaceManager
+participant "BrowserContextManager" as BrowserContextManager
+participant "Playwright" as Playwright
+participant "BrowserContext" as BrowserContext
+participant "Page" as Page
+participant "EventListener" as EventListener
+participant "JSInjector" as JSInjector
+participant "RecorderOverlay" as RecorderOverlay
+participant "FingerprintEngine" as FingerprintEngine
+participant "TechnologyDetector" as TechnologyDetector
+participant "EvidenceCollector" as EvidenceCollector
+participant "LocatorCandidateCollector" as LocatorCandidateCollector
+participant "SmartRecorder" as SmartRecorder
+participant "SessionSerializer" as SessionSerializer
+participant "RecordingValidator" as RecordingValidator
+
+Usuario -> CLIRecord : inicia comando de gravação
+activate CLIRecord
+
+CLIRecord -> CLIRecord : recebe parâmetros\nslug, endpoint, browser, locale, timezone, viewport, políticas
+CLIRecord -> InputValidator : validar parâmetros de gravação
+activate InputValidator
+
+InputValidator -> InputValidator : valida nome, endpoint, configurações,\npolíticas, diretórios e permissões
+
+alt Entradas válidas
+  InputValidator --> CLIRecord : validação aprovada
+  deactivate InputValidator
+
+  CLIRecord -> WorkspaceManager : criar workspace output/{slug}/
+  activate WorkspaceManager
+  WorkspaceManager -> WorkspaceManager : criar manifest.json
+  WorkspaceManager -> WorkspaceManager : criar config_snapshot.yaml
+  WorkspaceManager -> WorkspaceManager : criar recording/, evidence/, generated/,\nruns/, agents/, knowledge/ e final/
+  WorkspaceManager --> CLIRecord : workspace preparado
+  deactivate WorkspaceManager
+
+  CLIRecord -> BrowserContextManager : inicializar sessão de navegador
+  activate BrowserContextManager
+
+  BrowserContextManager -> Playwright : iniciar runtime Playwright
+  activate Playwright
+  Playwright --> BrowserContextManager : runtime iniciado
+  deactivate Playwright
+
+  BrowserContextManager -> Playwright : criar browser context isolado
+  activate Playwright
+  Playwright -> BrowserContext : create_context(locale, timezone, viewport)
+  activate BrowserContext
+  BrowserContext --> Playwright : contexto criado
+  deactivate BrowserContext
+  Playwright --> BrowserContextManager : BrowserContext
+  deactivate Playwright
+
+  BrowserContextManager -> BrowserContext : configurar locale, timezone, viewport,\npermissões e storage state inicial
+  activate BrowserContext
+  BrowserContext --> BrowserContextManager : configuração aplicada
+  deactivate BrowserContext
+
+  BrowserContextManager -> BrowserContext : ativar tracing, screenshots e snapshots
+  activate BrowserContext
+  BrowserContext --> BrowserContextManager : observabilidade nativa ativada
+  deactivate BrowserContext
+
+  BrowserContextManager -> EventListener : registrar handlers nativos
+  activate EventListener
+  EventListener -> Page : on request
+  EventListener -> Page : on response
+  EventListener -> Page : on console
+  EventListener -> Page : on dialog
+  EventListener -> Page : on popup
+  EventListener -> Page : on framenavigated
+  EventListener -> Page : on frameattached
+  EventListener -> Page : on pageerror
+  EventListener --> BrowserContextManager : handlers registrados
+  deactivate EventListener
+
+  BrowserContextManager -> BrowserContext : nova página
+  activate BrowserContext
+  BrowserContext -> Page : create_page()
+  activate Page
+  Page --> BrowserContext : Page
+  deactivate Page
+  BrowserContext --> BrowserContextManager : Page criada
+  deactivate BrowserContext
+
+  BrowserContextManager -> Page : navegar para endpoint inicial
+  activate Page
+  Page --> BrowserContextManager : endpoint carregado
+  deactivate Page
+
+  BrowserContextManager -> EvidenceCollector : salvar baseline inicial\nDOM, URL, storage, cookies, frames, rede, console, screenshot
+  activate EvidenceCollector
+  EvidenceCollector --> BrowserContextManager : baseline salvo em evidence/
+  deactivate EvidenceCollector
+
+  BrowserContextManager -> FingerprintEngine : executar fingerprint inicial antes da primeira interação
+  activate FingerprintEngine
+  FingerprintEngine -> Page : inspecionar DOM, scripts, frames, shadow DOM, forms e componentes
+  activate Page
+  Page --> FingerprintEngine : sinais técnicos da página
+  deactivate Page
+
+  FingerprintEngine -> TechnologyDetector : identificar tecnologias e riscos
+  activate TechnologyDetector
+  TechnologyDetector -> TechnologyDetector : detectar JSF/PrimeFaces\nIDs dinâmicos, ViewState, AJAX, widgetVar
+  TechnologyDetector -> TechnologyDetector : detectar jQuery/jQuery UI\ndialogs, overlays, datepicker, autocomplete
+  TechnologyDetector -> TechnologyDetector : detectar Angular\ndata-*, componentes assíncronos, ausência de IDs
+  TechnologyDetector -> TechnologyDetector : detectar JSP legado\nXHR manual e timing imprevisível
+  TechnologyDetector -> TechnologyDetector : detectar Ionic/Cordova\nwebview híbrido e assincronismo
+  TechnologyDetector --> FingerprintEngine : tecnologias e riscos detectados
+  deactivate TechnologyDetector
+
+  FingerprintEngine -> SessionSerializer : salvar fingerprint_initial.json
+  activate SessionSerializer
+  SessionSerializer --> FingerprintEngine : fingerprint inicial persistido
+  deactivate SessionSerializer
+  FingerprintEngine --> BrowserContextManager : fingerprint inicial disponível
+  deactivate FingerprintEngine
+
+  note over FingerprintEngine,TechnologyDetector
+    O fingerprint começa antes da primeira interação.
+    Ele orienta os coletores específicos por tecnologia
+    e reduz dependência de correção por LLM no futuro.
+  end note
+
+  BrowserContextManager -> JSInjector : injetar recorder JS na Page
+  activate JSInjector
+  JSInjector -> Page : add_init_script / evaluate recorder runtime
+  activate Page
+  Page --> JSInjector : recorder JS ativo
+  deactivate Page
+  JSInjector --> BrowserContextManager : instrumentação JS concluída
+  deactivate JSInjector
+
+  BrowserContextManager -> RecorderOverlay : injetar controles de gravação
+  activate RecorderOverlay
+  RecorderOverlay -> Page : renderizar overlay de controle
+  activate Page
+  Page --> RecorderOverlay : overlay ativo
+  deactivate Page
+  RecorderOverlay --> BrowserContextManager : controles disponíveis
+  deactivate RecorderOverlay
+
+  BrowserContextManager -> SmartRecorder : iniciar gravação enriquecida\ncom Page, EventListener, fingerprint e políticas
+  activate SmartRecorder
+
+  note over SmartRecorder,EvidenceCollector
+    A gravação salva ação + contexto + evidência.
+    Cada step deve carregar sinais técnicos suficientes
+    para execução, diagnóstico e self-healing determinístico.
+  end note
+
+  loop Para cada ação do usuário até finalizar a gravação
+    Usuario -> Page : interage com a aplicação web
+    activate Page
+    Page -> EventListener : emitir eventos nativos\nrequest, response, console, dialog, popup, frame, pageerror
+    activate EventListener
+    EventListener --> SmartRecorder : eventos nativos correlacionáveis
+    deactivate EventListener
+
+    Page -> SmartRecorder : evento DOM observado\nclick, input, change, submit, keydown, focus, blur
+    deactivate Page
+
+    SmartRecorder -> SmartRecorder : capturar evento bruto\ne classificar intenção inicial do step
+
+    SmartRecorder -> EvidenceCollector : capturar contexto antes/depois\nDOM, screenshot, rede, console, frame, shadow DOM, storage
+    activate EvidenceCollector
+    EvidenceCollector -> Page : coletar DOM e estado visual
+    activate Page
+    Page --> EvidenceCollector : DOM, screenshot, URL e estado
+    deactivate Page
+    EvidenceCollector -> EventListener : recuperar buffer de rede, console e frames
+    activate EventListener
+    EventListener --> EvidenceCollector : sinais correlacionados por timestamp/step_id
+    deactivate EventListener
+    EvidenceCollector --> SmartRecorder : pacote de evidências do step
+    deactivate EvidenceCollector
+
+    SmartRecorder -> LocatorCandidateCollector : gerar e pontuar locators candidatos
+    activate LocatorCandidateCollector
+    LocatorCandidateCollector -> Page : inspecionar elemento alvo e vizinhança\nrole, label, text, placeholder, data-*, CSS, XPath, frame, shadow
+    activate Page
+    Page --> LocatorCandidateCollector : atributos, hierarquia e contexto do alvo
+    deactivate Page
+    LocatorCandidateCollector -> LocatorCandidateCollector : pontuar estabilidade\ne registrar alternativas determinísticas
+    LocatorCandidateCollector --> SmartRecorder : selector_candidates do step
+    deactivate LocatorCandidateCollector
+
+    SmartRecorder -> FingerprintEngine : atualizar fingerprint incremental\ncom mutações, tecnologias e componentes observados
+    activate FingerprintEngine
+    FingerprintEngine -> TechnologyDetector : reavaliar sinais relevantes se necessário
+    activate TechnologyDetector
+    TechnologyDetector --> FingerprintEngine : riscos incrementais atualizados
+    deactivate TechnologyDetector
+    FingerprintEngine --> SmartRecorder : fingerprint incremental atualizado
+    deactivate FingerprintEngine
+
+    SmartRecorder -> SmartRecorder : criar step enriquecido\nação + contexto + evidência + locators + riscos + hints
+
+    SmartRecorder -> SessionSerializer : persistir step incrementalmente\nsession_raw.json.partial
+    activate SessionSerializer
+    SessionSerializer --> SmartRecorder : step persistido
+    deactivate SessionSerializer
+  end
+
+  Usuario -> RecorderOverlay : finalizar gravação
+  activate RecorderOverlay
+  RecorderOverlay --> SmartRecorder : sinal de encerramento
+  deactivate RecorderOverlay
+
+  SmartRecorder -> EventListener : coletar eventos pendentes
+  activate EventListener
+  EventListener --> SmartRecorder : buffers finais de rede, console, frame e erros
+  deactivate EventListener
+
+  SmartRecorder -> EvidenceCollector : coletar evidências finais\nDOM final, screenshot final, storage, frames e console
+  activate EvidenceCollector
+  EvidenceCollector --> SmartRecorder : evidências finais coletadas
+  deactivate EvidenceCollector
+
+  SmartRecorder -> FingerprintEngine : executar fingerprint final
+  activate FingerprintEngine
+  FingerprintEngine -> Page : inspecionar estado final da aplicação
+  activate Page
+  Page --> FingerprintEngine : sinais finais
+  deactivate Page
+  FingerprintEngine -> SessionSerializer : salvar fingerprint_final.json
+  activate SessionSerializer
+  SessionSerializer --> FingerprintEngine : fingerprint final persistido
+  deactivate SessionSerializer
+  FingerprintEngine --> SmartRecorder : fingerprint final disponível
+  deactivate FingerprintEngine
+
+  SmartRecorder -> SessionSerializer : salvar session_raw.json\ne consolidar recording_summary.md
+  activate SessionSerializer
+  SessionSerializer --> SmartRecorder : sessão bruta consolidada
+  deactivate SessionSerializer
+
+  SmartRecorder -> RecordingValidator : validar integridade da gravação
+  activate RecordingValidator
+  RecordingValidator -> SessionSerializer : ler session_raw.json, fingerprint_initial.json\ne fingerprint_final.json
+  activate SessionSerializer
+  SessionSerializer --> RecordingValidator : artefatos de gravação
+  deactivate SessionSerializer
+
+  RecordingValidator -> RecordingValidator : verificar steps, timestamps, evidências,\nlocators, checkpoints, fingerprints e mascaramento
+
+  note right of RecordingValidator
+    A gravação enriquecida garante que o
+    CuradorAutomatico (com LLMHealer real ou Mock)
+    tenha evidências suficientes para curar falhas
+    nas 3 camadas (L1 catálogo → L2 agentes → L3 LLM).
+    EvidencePayload inclui DOM, console, network e
+    step_context para os prompts do LLMHealer.
+  end note
+
+  alt Gravação válida e suficiente
+    RecordingValidator --> SmartRecorder : gravação aprovada
+    SmartRecorder -> SessionSerializer : marcar sessão como pronta para normalização\n(etapa anterior à execução diagnóstica\nque alimenta o pipeline de cura)
+    activate SessionSerializer
+    SessionSerializer --> SmartRecorder : status atualizado
+    deactivate SessionSerializer
+    SmartRecorder --> CLIRecord : gravação promovida para normalização
+  else Gravação inválida ou insuficiente
+    RecordingValidator -> SessionSerializer : gerar relatório de gravação insuficiente
+    activate SessionSerializer
+    SessionSerializer --> RecordingValidator : relatório salvo em recording_summary.md
+    deactivate SessionSerializer
+    RecordingValidator --> SmartRecorder : gravação rejeitada com evidências do motivo
+    SmartRecorder --> CLIRecord : gravação insuficiente para normalização
+  end
+
+  deactivate RecordingValidator
+  deactivate SmartRecorder
+  deactivate BrowserContextManager
+  CLIRecord --> Usuario : exibir resultado da gravação
+  deactivate CLIRecord
+
+else Entradas inválidas
+  InputValidator --> CLIRecord : erros de validação
+  deactivate InputValidator
+  CLIRecord --> Usuario : exibir erro e não iniciar navegador
+  deactivate CLIRecord
+end
+
+note over SessionSerializer,RecordingValidator
+  A gravação somente é promovida para normalização
+  quando existe evidência suficiente para reconstruir:
+  intenção, contexto técnico, estado da aplicação,
+  locators alternativos e riscos por tecnologia.
+end note
+
+' ============================================================
+' BUG-020: Mecanismo pull-based de eventos (BUG-010) e
+'          DebugLogger (BUG-014) — substitui expose_function
+' ============================================================
+
+note over RecorderOverlay, Page
+  BUG-010 fix: OVERLAY_JS usa window.__tfEventQueue.push(ev)
+  em vez de page.expose_function callback.
+  _sendEvent() helper publica todos os eventos na fila JS.
+  BUG-018 fix: window.__tfRecordingActive + sessionStorage
+  para persistir estado entre full-page navigations.
+end note
+
+note over SmartRecorder
+  BUG-010 fix: collect_step usa PULL-based polling:
+  page.evaluate("(window.__tfEventQueue||[]).splice(0)")
+  Loop 300 × 100ms = 30s máximo por iteração.
+  BUG-019 fix: is_closed() verificado no início de cada
+  iteração antes de qualquer chamada CDP.
+  DebugLogger instrumentado a cada 10 iterações.
+  BrowserManager.close() em try/except em Recorder.finish().
+  BrowserConfig.navigation_timeout_ms configurado na inicialização.
+end note
+
+@enduml

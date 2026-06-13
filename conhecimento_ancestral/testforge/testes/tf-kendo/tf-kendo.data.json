@@ -1,0 +1,328 @@
+{
+  "steps": [
+    {
+      "action": "click",
+      "selector": "#kendoCategoriaWrap",
+      "fallbacks": [
+        "span:has-text(\"Selecione\n            ▼\")",
+        "span.k-dropdown-wrap"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#kendoCategoriaWrap"
+        },
+        {
+          "strategy": "has-text",
+          "selector": "span:has-text(\"Selecione\n            ▼\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "span.k-dropdown-wrap"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#kendoCategoriaWrap"
+        }
+      ],
+      "tag_name": "span",
+      "text": "Selecione\n            ▼",
+      "value": "",
+      "url": "http://localhost:8081/kendo-dropdown.html",
+      "intention": "",
+      "attrs": {
+        "id": "kendoCategoriaWrap",
+        "name": "",
+        "classes": "k-dropdown-wrap",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "span",
+        "parentText": "Selecione\n            ▼\n          \n          \n            \n              \n                Eletrônico",
+        "parentId": "kendoCategoria",
+        "framework": "kendo",
+        "pageTechnology": "kendo",
+        "elementRect": {
+          "x": 65,
+          "y": 224,
+          "w": 530,
+          "h": 34
+        },
+        "elementParentChain": "span#kendoCategoriaWrap"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "li:has-text(\"Roupas e Acessórios\")",
+      "fallbacks": [
+        "li.k-item",
+        "#kendoCategoriaPopup > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(2)"
+      ],
+      "strategies": [
+        {
+          "strategy": "has-text",
+          "selector": "li:has-text(\"Roupas e Acessórios\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "li.k-item"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#kendoCategoriaPopup > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(2)"
+        }
+      ],
+      "tag_name": "li",
+      "text": "Roupas e Acessórios",
+      "value": "",
+      "url": "http://localhost:8081/kendo-dropdown.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "k-item",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "ul",
+        "parentText": "Eletrônicos\n                Roupas e Acessórios\n                Alimentos e Bebidas\n                ",
+        "parentId": "",
+        "framework": "kendo",
+        "pageTechnology": "kendo",
+        "elementRect": {
+          "x": 66,
+          "y": 295,
+          "w": 528,
+          "h": 32
+        },
+        "elementParentChain": "div#kendoCategoriaPopup > div:nth-child(1) > ul:nth-child(1) > li:nth-child(2)"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#kendoCategoriaWrap",
+      "fallbacks": [
+        "span:has-text(\"Roupas e Acessórios\n            ▼\")",
+        "span.k-dropdown-wrap"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#kendoCategoriaWrap"
+        },
+        {
+          "strategy": "has-text",
+          "selector": "span:has-text(\"Roupas e Acessórios\n            ▼\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "span.k-dropdown-wrap"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#kendoCategoriaWrap"
+        }
+      ],
+      "tag_name": "span",
+      "text": "Roupas e Acessórios\n            ▼",
+      "value": "",
+      "url": "http://localhost:8081/kendo-dropdown.html",
+      "intention": "",
+      "attrs": {
+        "id": "kendoCategoriaWrap",
+        "name": "",
+        "classes": "k-dropdown-wrap",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "span",
+        "parentText": "Roupas e Acessórios\n            ▼\n          \n          \n            \n              \n                ",
+        "parentId": "kendoCategoria",
+        "framework": "kendo",
+        "pageTechnology": "kendo",
+        "elementRect": {
+          "x": 65,
+          "y": 224,
+          "w": 530,
+          "h": 34
+        },
+        "elementParentChain": "span#kendoCategoriaWrap"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "li:has-text(\"Eletrônicos\")",
+      "fallbacks": [
+        "li.k-item",
+        "#kendoCategoriaPopup > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(1)"
+      ],
+      "strategies": [
+        {
+          "strategy": "has-text",
+          "selector": "li:has-text(\"Eletrônicos\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "li.k-item"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#kendoCategoriaPopup > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(1)"
+        }
+      ],
+      "tag_name": "li",
+      "text": "Eletrônicos",
+      "value": "",
+      "url": "http://localhost:8081/kendo-dropdown.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "k-item",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "ul",
+        "parentText": "Eletrônicos\n                Roupas e Acessórios\n                Alimentos e Bebidas\n                ",
+        "parentId": "",
+        "framework": "kendo",
+        "pageTechnology": "kendo",
+        "elementRect": {
+          "x": 66,
+          "y": 263,
+          "w": 528,
+          "h": 32
+        },
+        "elementParentChain": "div#kendoCategoriaPopup > div:nth-child(1) > ul:nth-child(1) > li:nth-child(1)"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#kendoFornecedorWrap",
+      "fallbacks": [
+        "span:has-text(\"Selecione\n            ▼\")",
+        "span.k-dropdown-wrap"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#kendoFornecedorWrap"
+        },
+        {
+          "strategy": "has-text",
+          "selector": "span:has-text(\"Selecione\n            ▼\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "span.k-dropdown-wrap"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#kendoFornecedorWrap"
+        }
+      ],
+      "tag_name": "span",
+      "text": "Selecione\n            ▼",
+      "value": "",
+      "url": "http://localhost:8081/kendo-dropdown.html",
+      "intention": "",
+      "attrs": {
+        "id": "kendoFornecedorWrap",
+        "name": "",
+        "classes": "k-dropdown-wrap",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "span",
+        "parentText": "Selecione\n            ▼\n          \n          \n            \n              \n                Distribuid",
+        "parentId": "kendoFornecedor",
+        "framework": "kendo",
+        "pageTechnology": "kendo",
+        "elementRect": {
+          "x": 65,
+          "y": 299,
+          "w": 530,
+          "h": 34
+        },
+        "elementParentChain": "span#kendoFornecedorWrap"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "li:has-text(\"Distribuidora Nacional\")",
+      "fallbacks": [
+        "li.k-item",
+        "#kendoFornecedorPopup > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(1)"
+      ],
+      "strategies": [
+        {
+          "strategy": "has-text",
+          "selector": "li:has-text(\"Distribuidora Nacional\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "li.k-item"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#kendoFornecedorPopup > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(1)"
+        }
+      ],
+      "tag_name": "li",
+      "text": "Distribuidora Nacional",
+      "value": "",
+      "url": "http://localhost:8081/kendo-dropdown.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "k-item",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "ul",
+        "parentText": "Distribuidora Nacional\n                Importadora Brasil\n                Fábrica Local",
+        "parentId": "",
+        "framework": "kendo",
+        "pageTechnology": "kendo",
+        "elementRect": {
+          "x": 66,
+          "y": 338,
+          "w": 528,
+          "h": 32
+        },
+        "elementParentChain": "div#kendoFornecedorPopup > div:nth-child(1) > ul:nth-child(1) > li:nth-child(1)"
+      }
+    }
+  ]
+}

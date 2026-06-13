@@ -1,0 +1,266 @@
+{
+  "steps": [
+    {
+      "action": "click",
+      "selector": "#matCategoria",
+      "fallbacks": [
+        "div:has-text(\"Categoria\")",
+        "div.mat-select"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#matCategoria"
+        },
+        {
+          "strategy": "has-text",
+          "selector": "div:has-text(\"Categoria\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "div.mat-select"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#matCategoria"
+        }
+      ],
+      "tag_name": "div",
+      "text": "Selecione\n            ▼",
+      "value": "",
+      "url": "http://localhost:8081/angular-select.html",
+      "intention": "",
+      "attrs": {
+        "id": "matCategoria",
+        "name": "",
+        "classes": "mat-select",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "listbox",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Categoria",
+        "parentTag": "div",
+        "parentText": "Categoria\n        \n        \n          \n            Selecione\n            ▼\n          \n        \n     ",
+        "parentId": "",
+        "framework": "angular",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 64,
+          "y": 217,
+          "w": 532,
+          "h": 36
+        },
+        "elementParentChain": "div#matCategoria"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#matCategoria",
+      "fallbacks": [
+        "div:has-text(\"Categoria\")",
+        "div.mat-select"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#matCategoria"
+        },
+        {
+          "strategy": "has-text",
+          "selector": "div:has-text(\"Categoria\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "div.mat-select"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#matCategoria"
+        }
+      ],
+      "tag_name": "div",
+      "text": "Selecione\n            ▼",
+      "value": "",
+      "url": "http://localhost:8081/angular-select.html",
+      "intention": "",
+      "attrs": {
+        "id": "matCategoria",
+        "name": "",
+        "classes": "mat-select",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "listbox",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Categoria",
+        "parentTag": "div",
+        "parentText": "Categoria\n        \n        \n          \n            Selecione\n            ▼\n          \n        \n     ",
+        "parentId": "",
+        "framework": "angular",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 64,
+          "y": 217,
+          "w": 532,
+          "h": 36
+        },
+        "elementParentChain": "div#matCategoria"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "div.mat-option",
+      "fallbacks": [
+        "#matCategoriaPanel > div:nth-of-type(1)"
+      ],
+      "strategies": [
+        {
+          "strategy": "class",
+          "selector": "div.mat-option"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#matCategoriaPanel > div:nth-of-type(1)"
+        }
+      ],
+      "tag_name": "div",
+      "text": "✓\n            Eletrônicos",
+      "value": "",
+      "url": "http://localhost:8081/angular-select.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "mat-option",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "option",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "✓\n            Eletrônicos\n          \n          \n            ✓\n            Roupas\n          \n        ",
+        "parentId": "matCategoriaPanel",
+        "framework": "angular",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 64,
+          "y": 535,
+          "w": 200,
+          "h": 37
+        },
+        "elementParentChain": "div#matCategoriaPanel > div:nth-child(1)"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#matPagamento",
+      "fallbacks": [
+        "div:has-text(\"Forma de Pagamento\")",
+        "div.mat-select"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#matPagamento"
+        },
+        {
+          "strategy": "has-text",
+          "selector": "div:has-text(\"Forma de Pagamento\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "div.mat-select"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#matPagamento"
+        }
+      ],
+      "tag_name": "div",
+      "text": "Selecione\n            ▼",
+      "value": "",
+      "url": "http://localhost:8081/angular-select.html",
+      "intention": "",
+      "attrs": {
+        "id": "matPagamento",
+        "name": "",
+        "classes": "mat-select",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "listbox",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Forma de Pagamento",
+        "parentTag": "div",
+        "parentText": "Forma de Pagamento\n        \n          \n            Selecione\n            ▼\n          \n        \n     ",
+        "parentId": "",
+        "framework": "angular",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 64,
+          "y": 296,
+          "w": 532,
+          "h": 36
+        },
+        "elementParentChain": "div#matPagamento"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "div.mat-option",
+      "fallbacks": [
+        "#matPagamentoPanel > div:nth-of-type(4)"
+      ],
+      "strategies": [
+        {
+          "strategy": "class",
+          "selector": "div.mat-option"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#matPagamentoPanel > div:nth-of-type(4)"
+        }
+      ],
+      "tag_name": "div",
+      "text": "✓\n            PIX",
+      "value": "",
+      "url": "http://localhost:8081/angular-select.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "mat-option",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "option",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "✓\n            Boleto Bancário\n          \n          \n            ✓\n            Cartão de Crédito\n    ",
+        "parentId": "matPagamentoPanel",
+        "framework": "angular",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 64,
+          "y": 683,
+          "w": 200,
+          "h": 37
+        },
+        "elementParentChain": "div#matPagamentoPanel > div:nth-child(4)"
+      }
+    }
+  ]
+}

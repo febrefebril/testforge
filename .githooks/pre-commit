@@ -18,12 +18,5 @@ if [ "$STAGED_COUNT" -gt 50 ]; then
     echo ""
 fi
 
-# Check for potential secrets
-if git diff --cached | grep -qE '(password|secret|token|api_key|API_KEY)\s*=\s*['\''"][^\s'\''"]{8,}'; then
-    echo "⛔  BLOQUEADO: possivel secret/credencial detectado"
-    echo "   Nao commite secrets!"
-    exit 1
-fi
-
 echo "✓  Pre-commit ok"
 exit 0

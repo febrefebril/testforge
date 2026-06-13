@@ -1,0 +1,34 @@
+{
+  "steps": [
+    {
+      "action": "click",
+      "selector": "div:nth-of-type(1) > form:nth-of-type(1) > div:nth-of-type(1) > fieldset:nth-of-type(1)",
+      "fallbacks": [
+        "fieldset:has-text(\"Esta é uma simulação para aquisição de imóvel residencial (novo ou usado) ou par\")",
+        "fieldset:has-text(\"1\n\t\t\t\t\t\t\n\t\t\t\t\t\t\tDados iniciais\n\t\t\t\t\t\t\tInforme qual é a sua opção de financiamento ou do empréstimo com garantia de imóve\")",
+        "//fieldset[contains(text(), \"1\n\t\t\t\t\t\t\n\t\t\t\t\t\t\tDados iniciais\n\t\t\t\t\t\t\tInforme qual é a sua opção de financiamento ou do empréstimo com garantia de imóve\")]"
+      ],
+      "tag_name": "fieldset",
+      "text": "1\n\t\t\t\t\t\t\n\t\t\t\t\t\t\tDados iniciais\n\t\t\t\t\t\t\tInforme qual é a sua opção de financiamento ou do empréstimo com garantia de imóve",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "fieldset-d clearfix",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Esta é uma simulação para aquisição de imóvel residencial (novo ou usado) ou par",
+        "parentTag": "div",
+        "parentText": "1\n\t\t\t\t\t\t\n\t\t\t\t\t\t\tDados iniciais\n\t\t\t\t\t\t\tInforme qual é a sua opção de financiamento ou do empréstimo c",
+        "parentId": ""
+      }
+    }
+  ]
+}

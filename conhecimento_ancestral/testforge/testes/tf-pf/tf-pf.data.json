@@ -1,0 +1,528 @@
+{
+  "steps": [
+    {
+      "action": "click",
+      "selector": "#tipoImovelTrigger",
+      "fallbacks": [
+        "div.ui-selectonemenu-trigger"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#tipoImovelTrigger"
+        },
+        {
+          "strategy": "class",
+          "selector": "div.ui-selectonemenu-trigger"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#tipoImovelTrigger"
+        }
+      ],
+      "tag_name": "div",
+      "text": "",
+      "value": "",
+      "url": "http://localhost:8081/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "tipoImovelTrigger",
+        "name": "",
+        "classes": "ui-selectonemenu-trigger",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Selecione",
+        "parentTag": "div",
+        "parentText": "Selecione\n              Residencial\n              Comercial\n              Terreno\n              Rura",
+        "parentId": "tipoImovel",
+        "framework": "primefaces",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 565,
+          "y": 224,
+          "w": 30,
+          "h": 40
+        },
+        "elementParentChain": "div#tipoImovelTrigger"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "li:has-text(\"Residencial\")",
+      "fallbacks": [
+        "li.ui-selectonemenu-item",
+        "#tipoImovelPanel > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(2)"
+      ],
+      "strategies": [
+        {
+          "strategy": "has-text",
+          "selector": "li:has-text(\"Residencial\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "li.ui-selectonemenu-item"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#tipoImovelPanel > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(2)"
+        }
+      ],
+      "tag_name": "li",
+      "text": "Residencial",
+      "value": "",
+      "url": "http://localhost:8081/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "ui-selectonemenu-item",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "ul",
+        "parentText": "Selecione\n              Residencial\n              Comercial\n              Terreno\n              Rura",
+        "parentId": "",
+        "framework": "primefaces",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 65,
+          "y": 304,
+          "w": 198,
+          "h": 34
+        },
+        "elementParentChain": "div#tipoImovelPanel > div:nth-child(1) > ul:nth-child(1) > li:nth-child(2)"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#ufSelectTrigger",
+      "fallbacks": [
+        "div.ui-selectonemenu-trigger"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#ufSelectTrigger"
+        },
+        {
+          "strategy": "class",
+          "selector": "div.ui-selectonemenu-trigger"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#ufSelectTrigger"
+        }
+      ],
+      "tag_name": "div",
+      "text": "",
+      "value": "",
+      "url": "http://localhost:8081/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "ufSelectTrigger",
+        "name": "",
+        "classes": "ui-selectonemenu-trigger",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Selecione",
+        "parentTag": "div",
+        "parentText": "Selecione\n              Distrito Federal\n              Goiás\n              Minas Gerais\n            ",
+        "parentId": "ufSelect",
+        "framework": "primefaces",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 565,
+          "y": 305,
+          "w": 30,
+          "h": 40
+        },
+        "elementParentChain": "div#ufSelectTrigger"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "li:has-text(\"Distrito Federal\")",
+      "fallbacks": [
+        "li.ui-selectonemenu-item",
+        "#ufSelectPanel > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(2)"
+      ],
+      "strategies": [
+        {
+          "strategy": "has-text",
+          "selector": "li:has-text(\"Distrito Federal\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "li.ui-selectonemenu-item"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#ufSelectPanel > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(2)"
+        }
+      ],
+      "tag_name": "li",
+      "text": "Distrito Federal",
+      "value": "",
+      "url": "http://localhost:8081/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "ui-selectonemenu-item",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "ul",
+        "parentText": "Selecione\n              Distrito Federal\n              Goiás\n              Minas Gerais\n            ",
+        "parentId": "",
+        "framework": "primefaces",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 65,
+          "y": 385,
+          "w": 183,
+          "h": 34
+        },
+        "elementParentChain": "div#ufSelectPanel > div:nth-child(1) > ul:nth-child(1) > li:nth-child(2)"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#cidadeAcInput",
+      "fallbacks": [
+        "input[placeholder=\"Digite para buscar...\"]",
+        "input.ui-autocomplete-input"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#cidadeAcInput"
+        },
+        {
+          "strategy": "placeholder",
+          "selector": "input[placeholder=\"Digite para buscar...\"]"
+        },
+        {
+          "strategy": "class",
+          "selector": "input.ui-autocomplete-input"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#cidadeAcInput"
+        }
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "",
+      "url": "http://localhost:8081/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "cidadeAcInput",
+        "name": "",
+        "classes": "ui-autocomplete-input",
+        "type": "text",
+        "placeholder": "Digite para buscar...",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "span",
+        "parentText": "",
+        "parentId": "cidadeAc",
+        "framework": "primefaces",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 684,
+          "y": 223,
+          "w": 532,
+          "h": 34
+        },
+        "elementParentChain": "input#cidadeAcInput"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "li:has-text(\"Brasília\")",
+      "fallbacks": [
+        "li.ui-autocomplete-item",
+        "#cidadeAcPanel > ul:nth-of-type(1) > li:nth-of-type(1)"
+      ],
+      "strategies": [
+        {
+          "strategy": "has-text",
+          "selector": "li:has-text(\"Brasília\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "li.ui-autocomplete-item"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#cidadeAcPanel > ul:nth-of-type(1) > li:nth-of-type(1)"
+        }
+      ],
+      "tag_name": "li",
+      "text": "Brasília",
+      "value": "",
+      "url": "http://localhost:8081/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "ui-autocomplete-item",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "ul",
+        "parentText": "Brasília\n            Goiânia\n            Belo Horizonte\n            São Paulo\n            Rio de Jan",
+        "parentId": "",
+        "framework": "primefaces",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 685,
+          "y": 258,
+          "w": 183,
+          "h": 34
+        },
+        "elementParentChain": "div#cidadeAcPanel > ul:nth-child(1) > li:nth-child(1)"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#bancoAcInput",
+      "fallbacks": [
+        "input[placeholder=\"Nome do banco...\"]",
+        "input.ui-autocomplete-input"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#bancoAcInput"
+        },
+        {
+          "strategy": "placeholder",
+          "selector": "input[placeholder=\"Nome do banco...\"]"
+        },
+        {
+          "strategy": "class",
+          "selector": "input.ui-autocomplete-input"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#bancoAcInput"
+        }
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "",
+      "url": "http://localhost:8081/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "bancoAcInput",
+        "name": "",
+        "classes": "ui-autocomplete-input",
+        "type": "text",
+        "placeholder": "Nome do banco...",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "span",
+        "parentText": "",
+        "parentId": "bancoAc",
+        "framework": "primefaces",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 684,
+          "y": 296,
+          "w": 532,
+          "h": 34
+        },
+        "elementParentChain": "input#bancoAcInput"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "li:has-text(\"Caixa Econômica\")",
+      "fallbacks": [
+        "li.ui-autocomplete-item",
+        "#bancoAcPanel > ul:nth-of-type(1) > li:nth-of-type(4)"
+      ],
+      "strategies": [
+        {
+          "strategy": "has-text",
+          "selector": "li:has-text(\"Caixa Econômica\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "li.ui-autocomplete-item"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#bancoAcPanel > ul:nth-of-type(1) > li:nth-of-type(4)"
+        }
+      ],
+      "tag_name": "li",
+      "text": "Caixa Econômica",
+      "value": "",
+      "url": "http://localhost:8081/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "ui-autocomplete-item",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "ul",
+        "parentText": "Banco do Brasil\n            Itaú\n            Bradesco\n            Caixa Econômica\n            Santan",
+        "parentId": "",
+        "framework": "primefaces",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 685,
+          "y": 433,
+          "w": 198,
+          "h": 34
+        },
+        "elementParentChain": "div#bancoAcPanel > ul:nth-child(1) > li:nth-child(4)"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#kendoCategoriaInput",
+      "fallbacks": [
+        "input.k-input"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#kendoCategoriaInput"
+        },
+        {
+          "strategy": "class",
+          "selector": "input.k-input"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#kendoCategoriaInput"
+        }
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "Selecione",
+      "url": "http://localhost:8081/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "kendoCategoriaInput",
+        "name": "",
+        "classes": "k-input",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "▼",
+        "parentId": "kendoCategoriaWrap",
+        "framework": "kendo",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 697,
+          "y": 436,
+          "w": 482,
+          "h": 15
+        },
+        "elementParentChain": "input#kendoCategoriaInput"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#kendoCategoriaInput",
+      "fallbacks": [
+        "input.k-input"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#kendoCategoriaInput"
+        },
+        {
+          "strategy": "class",
+          "selector": "input.k-input"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#kendoCategoriaInput"
+        }
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "Selecione",
+      "url": "http://localhost:8081/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "kendoCategoriaInput",
+        "name": "",
+        "classes": "k-input",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "▼",
+        "parentId": "kendoCategoriaWrap",
+        "framework": "kendo",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 697,
+          "y": 436,
+          "w": 482,
+          "h": 15
+        },
+        "elementParentChain": "input#kendoCategoriaInput"
+      }
+    }
+  ]
+}

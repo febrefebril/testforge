@@ -1,0 +1,244 @@
+{
+  "steps": [
+    {
+      "action": "click",
+      "selector": "#grupoTipoFinanciamento_input",
+      "fallbacks": [
+        "#grupoTipoFinanciamento_input",
+        "input:has-text(\"Selecione a opção de Financiamento/Empréstimo\")",
+        "input.ui-autocomplete-input.ui-widget.ui-widget-content.ui-corner-left.combobox"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "Informe a categoria",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": "",
+      "attrs": {
+        "id": "grupoTipoFinanciamento_input",
+        "name": "",
+        "classes": "ui-autocomplete-input ui-widget ui-widget-content ui-corner-left combobox",
+        "type": "text",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Selecione a opção de Financiamento/Empréstimo",
+        "parentTag": "li",
+        "parentText": "Selecione a opção de Financiamento/Empréstimo\n\t\t\t\t\t\t\tInforme a categoria \n\t\t\t\t\t\t\t*",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#grupoTipoFinanciamento_input",
+      "fallbacks": [
+        "#grupoTipoFinanciamento_input",
+        "input:has-text(\"Selecione a opção de Financiamento/Empréstimo\")",
+        "input.ui-autocomplete-input.ui-widget.ui-widget-content.ui-corner-left.combobox"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": "",
+      "attrs": {
+        "id": "grupoTipoFinanciamento_input",
+        "name": "",
+        "classes": "ui-autocomplete-input ui-widget ui-widget-content ui-corner-left combobox",
+        "type": "text",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Selecione a opção de Financiamento/Empréstimo",
+        "parentTag": "li",
+        "parentText": "Selecione a opção de Financiamento/Empréstimo\n\t\t\t\t\t\t\tInforme a categoria \n\t\t\t\t\t\t\t*",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#tipoImovel_input",
+      "fallbacks": [
+        "#tipoImovel_input",
+        "input:has-text(\"Qual tipo de financiamento ou empréstimo com garantia de imóvel você deseja?\")",
+        "input.ui-autocomplete-input.ui-widget.ui-widget-content.ui-corner-left.combobox"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "Informe o tipo de financiamento",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": "",
+      "attrs": {
+        "id": "tipoImovel_input",
+        "name": "",
+        "classes": "ui-autocomplete-input ui-widget ui-widget-content ui-corner-left combobox",
+        "type": "text",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Qual tipo de financiamento ou empréstimo com garantia de imóvel você deseja?",
+        "parentTag": "li",
+        "parentText": "Qual tipo de financiamento ou empréstimo com garantia de imóvel você deseja?\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t\n\nInfor",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#pessoaF",
+      "fallbacks": [
+        "#pessoaF",
+        "input[name=\"pessoa\"]",
+        "//input[@*]"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "F",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": "",
+      "attrs": {
+        "id": "pessoaF",
+        "name": "pessoa",
+        "classes": "",
+        "type": "radio",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "label",
+        "parentText": "Física",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "select",
+      "selector": "#pessoaF",
+      "fallbacks": [
+        "#pessoaF",
+        "input[name=\"pessoa\"]",
+        "input:has-text(\"checked\")"
+      ],
+      "tag_name": "input",
+      "text": "checked",
+      "value": "F",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": "",
+      "attrs": {
+        "id": "pessoaF",
+        "name": "pessoa",
+        "classes": "",
+        "type": "radio",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "label",
+        "parentText": "Física",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "#pessoaF",
+      "fallbacks": [
+        "#pessoaF",
+        "input[name=\"pessoa\"]",
+        "//input[@*]"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "F",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": "",
+      "attrs": {
+        "id": "pessoaF",
+        "name": "pessoa",
+        "classes": "",
+        "type": "radio",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "label",
+        "parentText": "Física",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#tipoImovel_input",
+      "fallbacks": [
+        "#tipoImovel_input",
+        "input:has-text(\"Qual tipo de financiamento ou empréstimo com garantia de imóvel você deseja?\")",
+        "input.ui-autocomplete-input.ui-widget.ui-widget-content.ui-corner-left.combobox"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "Informe o tipo de financiamento",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": "",
+      "attrs": {
+        "id": "tipoImovel_input",
+        "name": "",
+        "classes": "ui-autocomplete-input ui-widget ui-widget-content ui-corner-left combobox",
+        "type": "text",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Qual tipo de financiamento ou empréstimo com garantia de imóvel você deseja?",
+        "parentTag": "li",
+        "parentText": "Qual tipo de financiamento ou empréstimo com garantia de imóvel você deseja?\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t\n\nInfor",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#tipoImovel_input",
+      "fallbacks": [
+        "#tipoImovel_input",
+        "input:has-text(\"Qual tipo de financiamento ou empréstimo com garantia de imóvel você deseja?\")",
+        "input.ui-autocomplete-input.ui-widget.ui-widget-content.ui-corner-left.combobox"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": "",
+      "attrs": {
+        "id": "tipoImovel_input",
+        "name": "",
+        "classes": "ui-autocomplete-input ui-widget ui-widget-content ui-corner-left combobox",
+        "type": "text",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Qual tipo de financiamento ou empréstimo com garantia de imóvel você deseja?",
+        "parentTag": "li",
+        "parentText": "Qual tipo de financiamento ou empréstimo com garantia de imóvel você deseja?\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t\n\nInfor",
+        "parentId": ""
+      }
+    }
+  ]
+}

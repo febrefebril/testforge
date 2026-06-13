@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>FAM-01: Seletor</title>
+<script src="../common.js"></script>
+<script src="error.js"></script>
+</head>
+<body>
+  <h1>FAM-01: Seletor Frágil</h1>
+  <button id="btn-salvar" data-testid="btn-salvar">Salvar</button>
+  <p id="result"></p>
+  <script>
+    document.getElementById("btn-salvar").addEventListener("click", function() {
+      document.getElementById("result").textContent = "Salvo com sucesso!";
+    });
+  </script>
+</body>
+</html>

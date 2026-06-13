@@ -1,0 +1,1523 @@
+{
+  "steps": [
+    {
+      "action": "click",
+      "selector": "input[placeholder=\"sem id, sem name\"]",
+      "fallbacks": [
+        "#secao-seletores > div:nth-of-type(1) > div:nth-of-type(1) > input:nth-of-type(1)",
+        "input[placeholder=\"sem id, sem name\"]",
+        "label:has-text(\"Campo sem ID (SEL-006)\")",
+        "span:has-text(\"Campo sem ID (SEL-006)\")"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "no-id-input",
+        "type": "text",
+        "placeholder": "sem id, sem name",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Campo sem ID (SEL-006)",
+        "parentTag": "div",
+        "parentText": "Campo sem ID (SEL-006)",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "input[placeholder=\"sem id, sem name\"]",
+      "fallbacks": [
+        "input[placeholder=\"sem id, sem name\"]",
+        "label:has-text(\"Campo sem ID (SEL-006)\")",
+        "span:has-text(\"Campo sem ID (SEL-006)\")",
+        "div:has-text(\"Campo sem ID (SEL-006)\")"
+      ],
+      "tag_name": "input",
+      "text": "Campo sem ID (SEL-006)",
+      "value": "texto sem id",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "no-id-input",
+        "type": "text",
+        "placeholder": "sem id, sem name",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Campo sem ID (SEL-006)",
+        "parentTag": "div",
+        "parentText": "Campo sem ID (SEL-006)",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#campo-label-for",
+      "fallbacks": [
+        "#campo-label-for",
+        "label:has-text(\"Label sem for (SEL-010)\")",
+        "span:has-text(\"Label sem for (SEL-010)\")",
+        "div:has-text(\"Label sem for (SEL-010)\")"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "campo-label-for",
+        "name": "",
+        "classes": "",
+        "type": "text",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Label sem for (SEL-010)",
+        "parentTag": "div",
+        "parentText": "Label sem for (SEL-010)",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "#campo-label-for",
+      "fallbacks": [
+        "#campo-label-for",
+        "label:has-text(\"Label sem for (SEL-010)\")",
+        "span:has-text(\"Label sem for (SEL-010)\")",
+        "div:has-text(\"Label sem for (SEL-010)\")"
+      ],
+      "tag_name": "input",
+      "text": "Label sem for (SEL-010)",
+      "value": "texto label for",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "campo-label-for",
+        "name": "",
+        "classes": "",
+        "type": "text",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Label sem for (SEL-010)",
+        "parentTag": "div",
+        "parentText": "Label sem for (SEL-010)",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "label:has-text(\"Opção A\")",
+      "fallbacks": [
+        "#secao-seletores > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > label:nth-of-type(1)",
+        "label:has-text(\"Opção A\")",
+        "label:has-text(\"Opção A\")",
+        "label.radio-label-custom"
+      ],
+      "tag_name": "label",
+      "text": "Opção A",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "radio-label-custom",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Opção A",
+        "parentTag": "div",
+        "parentText": "Opção A\n      Opção B",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "button:has-text(\"Confirmar\")",
+      "fallbacks": [
+        "#secao-seletores > div:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(1) > button:nth-of-type(1)",
+        "button:has-text(\"Confirmar\")",
+        "button.btn.btn-primary.acao-duplicada"
+      ],
+      "tag_name": "button",
+      "text": "Confirmar",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "btn btn-primary acao-duplicada",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Confirmar\n      Confirmar",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#btn-fora-form",
+      "fallbacks": [
+        "#btn-fora-form",
+        "button:has-text(\"Botão fora do <form> (SEL-007)\")",
+        "button:has-text(\"Ação fora do form\")",
+        "button.btn.btn-primary"
+      ],
+      "tag_name": "button",
+      "text": "Ação fora do form",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "btn-fora-form",
+        "name": "",
+        "classes": "btn btn-primary",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Botão fora do <form> (SEL-007)",
+        "parentTag": "div",
+        "parentText": "Botão fora do <form> (SEL-007)\n    Ação fora do form",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#campo-cpf",
+      "fallbacks": [
+        "#campo-cpf",
+        "input[placeholder=\"000.000.000-00\"]",
+        "label:has-text(\"Máscara de input — CPF (INP-007)\")",
+        "span:has-text(\"Máscara de input — CPF (INP-007)\")"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "campo-cpf",
+        "name": "",
+        "classes": "",
+        "type": "text",
+        "placeholder": "000.000.000-00",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Máscara de input — CPF (INP-007)",
+        "parentTag": "div",
+        "parentText": "Máscara de input — CPF (INP-007)",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "#campo-cpf",
+      "fallbacks": [
+        "#campo-cpf",
+        "input[placeholder=\"000.000.000-00\"]",
+        "label:has-text(\"Máscara de input — CPF (INP-007)\")",
+        "span:has-text(\"Máscara de input — CPF (INP-007)\")"
+      ],
+      "tag_name": "input",
+      "text": "Máscara de input — CPF (INP-007)",
+      "value": "123.456.789-01",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "campo-cpf",
+        "name": "",
+        "classes": "",
+        "type": "text",
+        "placeholder": "000.000.000-00",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Máscara de input — CPF (INP-007)",
+        "parentTag": "div",
+        "parentText": "Máscara de input — CPF (INP-007)",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#campo-data",
+      "fallbacks": [
+        "#campo-data",
+        "input[placeholder=\"dd/mm/aaaa\"]",
+        "label:has-text(\"Date picker jQuery UI (INP-009)\")",
+        "span:has-text(\"Date picker jQuery UI (INP-009)\")"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "campo-data",
+        "name": "",
+        "classes": "hasDatepicker",
+        "type": "text",
+        "placeholder": "dd/mm/aaaa",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Date picker jQuery UI (INP-009)",
+        "parentTag": "div",
+        "parentText": "Date picker jQuery UI (INP-009)",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "a:has-text(\"15\")",
+      "fallbacks": [
+        "#ui-datepicker-div > table:nth-of-type(1) > tbody:nth-of-type(1) > tr:nth-of-type(3) > td:nth-of-type(2) > a:nth-of-type(1)",
+        "a:has-text(\"15\")",
+        "a.ui-state-default.ui-state-hover"
+      ],
+      "tag_name": "a",
+      "text": "15",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "ui-state-default ui-state-hover",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "#",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "td",
+        "parentText": "15",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#campo-combobox",
+      "fallbacks": [
+        "#campo-combobox",
+        "input[placeholder=\"Digite ou selecione\"]"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "campo-combobox",
+        "name": "",
+        "classes": "",
+        "type": "text",
+        "placeholder": "Digite ou selecione",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "JavaScript\n        Python\n        Java\n        C#\n        Ruby",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "div.combobox-item",
+      "fallbacks": [
+        "#combobox-dropdown > div:nth-of-type(2)",
+        "div:has-text(\"Python\")",
+        "div.combobox-item"
+      ],
+      "tag_name": "div",
+      "text": "Python",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "combobox-item",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "JavaScript\n        Python\n        Java\n        C#\n        Ruby",
+        "parentId": "combobox-dropdown"
+      }
+    },
+    {
+      "action": "upload",
+      "selector": "#campo-upload",
+      "fallbacks": [
+        "#campo-upload",
+        "label:has-text(\"Upload de arquivo (INP-002)\")",
+        "span:has-text(\"Upload de arquivo (INP-002)\")",
+        "div:has-text(\"Upload de arquivo (INP-002)\")"
+      ],
+      "tag_name": "input",
+      "text": "[{\"name\":\"fixture_upload.txt\",\"type\":\"text/plain\",\"size\":52}]",
+      "value": "fixture_upload.txt",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "campo-upload",
+        "name": "",
+        "classes": "",
+        "type": "file",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Upload de arquivo (INP-002)",
+        "parentTag": "div",
+        "parentText": "Upload de arquivo (INP-002)",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#campo-richedit",
+      "fallbacks": [
+        "#campo-richedit",
+        "div:has-text(\"Rich text / contenteditable (INP-006)\")",
+        "div:has-text(\"Digite aqui...\")"
+      ],
+      "tag_name": "div",
+      "text": "Digite aqui...",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "campo-richedit",
+        "name": "",
+        "classes": "",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Rich text / contenteditable (INP-006)",
+        "parentTag": "div",
+        "parentText": "Rich text / contenteditable (INP-006)\n    \n      Digite aqui...",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "drag",
+      "selector": "#sortable-list > li:nth-of-type(1)",
+      "fallbacks": [
+        "#sortable-list > li:nth-of-type(1)",
+        "li:has-text(\"Item 1⠿ -> Arraste um item aqui\")"
+      ],
+      "tag_name": "li",
+      "text": "Item 1⠿ -> Arraste um item aqui",
+      "value": "#drop-zone",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "ul",
+        "parentText": "Item 1⠿\n      Item 2⠿\n      Item 3⠿",
+        "parentId": "sortable-list"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#campo-autocomplete",
+      "fallbacks": [
+        "#campo-autocomplete",
+        "input[placeholder=\"Digite uma cidade\"]",
+        "label:has-text(\"Autocomplete jQuery UI (TIM-006 / INP-010)\")",
+        "span:has-text(\"Autocomplete jQuery UI (TIM-006 / INP-010)\")"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "campo-autocomplete",
+        "name": "",
+        "classes": "ui-autocomplete-input",
+        "type": "text",
+        "placeholder": "Digite uma cidade",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Autocomplete jQuery UI (TIM-006 / INP-010)",
+        "parentTag": "div",
+        "parentText": "Autocomplete jQuery UI (TIM-006 / INP-010)",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "#campo-autocomplete",
+      "fallbacks": [
+        "#campo-autocomplete",
+        "input[placeholder=\"Digite uma cidade\"]",
+        "label:has-text(\"Autocomplete jQuery UI (TIM-006 / INP-010)\")",
+        "span:has-text(\"Autocomplete jQuery UI (TIM-006 / INP-010)\")"
+      ],
+      "tag_name": "input",
+      "text": "Autocomplete jQuery UI (TIM-006 / INP-010)",
+      "value": "Bra",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "campo-autocomplete",
+        "name": "",
+        "classes": "ui-autocomplete-input ui-autocomplete-loading",
+        "type": "text",
+        "placeholder": "Digite uma cidade",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Autocomplete jQuery UI (TIM-006 / INP-010)",
+        "parentTag": "div",
+        "parentText": "Autocomplete jQuery UI (TIM-006 / INP-010)",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#ui-id-2",
+      "fallbacks": [
+        "#ui-id-2",
+        "div:has-text(\"Brasília\")",
+        "div.ui-menu-item-wrapper"
+      ],
+      "tag_name": "div",
+      "text": "Brasília",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "ui-id-2",
+        "name": "",
+        "classes": "ui-menu-item-wrapper",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "li",
+        "parentText": "Brasília",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "#campo-autocomplete",
+      "fallbacks": [
+        "#campo-autocomplete",
+        "input[placeholder=\"Digite uma cidade\"]",
+        "label:has-text(\"Autocomplete jQuery UI (TIM-006 / INP-010)\")",
+        "span:has-text(\"Autocomplete jQuery UI (TIM-006 / INP-010)\")"
+      ],
+      "tag_name": "input",
+      "text": "Autocomplete jQuery UI (TIM-006 / INP-010)",
+      "value": "Brasília",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "campo-autocomplete",
+        "name": "",
+        "classes": "ui-autocomplete-input",
+        "type": "text",
+        "placeholder": "Digite uma cidade",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Autocomplete jQuery UI (TIM-006 / INP-010)",
+        "parentTag": "div",
+        "parentText": "Autocomplete jQuery UI (TIM-006 / INP-010)",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#campo-lazy",
+      "fallbacks": [
+        "#campo-lazy",
+        "input[placeholder=\"Campo carregado tardiamente\"]"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "campo-lazy",
+        "name": "",
+        "classes": "",
+        "type": "text",
+        "placeholder": "Campo carregado tardiamente",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Conteúdo carregado após 2s (TIM-006)",
+        "parentId": "lazy-container"
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "#campo-lazy",
+      "fallbacks": [
+        "#campo-lazy",
+        "input[placeholder=\"Campo carregado tardiamente\"]"
+      ],
+      "tag_name": "input",
+      "text": "Campo carregado tardiamente",
+      "value": "campo tardio",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "campo-lazy",
+        "name": "",
+        "classes": "",
+        "type": "text",
+        "placeholder": "Campo carregado tardiamente",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Conteúdo carregado após 2s (TIM-006)",
+        "parentId": "lazy-container"
+      }
+    },
+    {
+      "action": "select",
+      "selector": "#select-assincrono",
+      "fallbacks": [
+        "#select-assincrono",
+        "label:has-text(\"Select com opções carregadas via JS (TIM-006)\")",
+        "span:has-text(\"Select com opções carregadas via JS (TIM-006)\")",
+        "div:has-text(\"Select com opções carregadas via JS (TIM-006)\")"
+      ],
+      "tag_name": "select",
+      "text": "Opção 2",
+      "value": "opcao2",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "select-assincrono",
+        "name": "",
+        "classes": "",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Select com opções carregadas via JS (TIM-006)",
+        "parentTag": "div",
+        "parentText": "Select com opções carregadas via JS (TIM-006)\n    Selecione...Opção 1Opção 2Opção 3",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#shadow-host",
+      "fallbacks": [
+        "#shadow-host",
+        "div:has-text(\"Shadow DOM aberto (CTX-003)\")",
+        "div:has-text(\"Shadow DOM será anexado via JS\")",
+        "div.shadow-host"
+      ],
+      "tag_name": "div",
+      "text": "Shadow DOM será anexado via JS",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "shadow-host",
+        "name": "",
+        "classes": "shadow-host",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Shadow DOM aberto (CTX-003)",
+        "parentTag": "div",
+        "parentText": "Shadow DOM aberto (CTX-003)\n    \n      Shadow DOM será anexado via JS",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "#shadow-input",
+      "fallbacks": [
+        "#shadow-input",
+        "input[placeholder=\"Campo no Shadow DOM\"]"
+      ],
+      "tag_name": "input",
+      "text": "Campo no Shadow DOM",
+      "value": "texto shadow",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "shadow-input",
+        "name": "",
+        "classes": "",
+        "type": "text",
+        "placeholder": "Campo no Shadow DOM",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Shadow DOM — este elemento está dentro de um shadow root\n      \n      Clique no Shadow",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#btn-iframe",
+      "fallbacks": [
+        "#btn-iframe",
+        "button:has-text(\"Clique no iframe\")"
+      ],
+      "tag_name": "button",
+      "text": "Clique no iframe",
+      "value": "",
+      "url": "http://localhost:8000/iframe-content.html",
+      "intention": "",
+      "attrs": {
+        "id": "btn-iframe",
+        "name": "",
+        "classes": "",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "body",
+        "parentText": "Iframe (CTX-001)\nEste elemento está dentro de um iframe same-origin\n\nClique no iframe\n\n  document.ge",
+        "parentId": "",
+        "iframeSelector": "#iframe-teste"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#btn-abrir-modal",
+      "fallbacks": [
+        "#btn-abrir-modal",
+        "button:has-text(\"Modal/dialog (CTX-006)\")",
+        "button:has-text(\"Abrir Modal\")",
+        "button.btn.btn-primary"
+      ],
+      "tag_name": "button",
+      "text": "Abrir Modal",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "btn-abrir-modal",
+        "name": "",
+        "classes": "btn btn-primary",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Modal/dialog (CTX-006)",
+        "parentTag": "div",
+        "parentText": "Modal/dialog (CTX-006)\n    Abrir Modal",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#campo-modal",
+      "fallbacks": [
+        "#campo-modal",
+        "input[placeholder=\"Preencha dentro do modal\"]",
+        "label:has-text(\"Campo dentro do modal\")",
+        "span:has-text(\"Campo dentro do modal\")"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "campo-modal",
+        "name": "",
+        "classes": "",
+        "type": "text",
+        "placeholder": "Preencha dentro do modal",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Campo dentro do modal",
+        "parentTag": "div",
+        "parentText": "Campo dentro do modal",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "#campo-modal",
+      "fallbacks": [
+        "#campo-modal",
+        "input[placeholder=\"Preencha dentro do modal\"]",
+        "label:has-text(\"Campo dentro do modal\")",
+        "span:has-text(\"Campo dentro do modal\")"
+      ],
+      "tag_name": "input",
+      "text": "Campo dentro do modal",
+      "value": "texto no modal",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "campo-modal",
+        "name": "",
+        "classes": "",
+        "type": "text",
+        "placeholder": "Preencha dentro do modal",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Campo dentro do modal",
+        "parentTag": "div",
+        "parentText": "Campo dentro do modal",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#btn-confirmar-modal",
+      "fallbacks": [
+        "#btn-confirmar-modal",
+        "button:has-text(\"Confirmar\")",
+        "button.btn.btn-primary"
+      ],
+      "tag_name": "button",
+      "text": "Confirmar",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "btn-confirmar-modal",
+        "name": "",
+        "classes": "btn btn-primary",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Fechar\n      Confirmar",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#btn-mostrar-overlay",
+      "fallbacks": [
+        "#btn-mostrar-overlay",
+        "button:has-text(\"Overlay bloqueando clique (STA-002)\")",
+        "button:has-text(\"Mostrar Overlay\")",
+        "button.btn.btn-primary"
+      ],
+      "tag_name": "button",
+      "text": "Mostrar Overlay",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "btn-mostrar-overlay",
+        "name": "",
+        "classes": "btn btn-primary",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Overlay bloqueando clique (STA-002)",
+        "parentTag": "div",
+        "parentText": "Overlay bloqueando clique (STA-002)\n    Mostrar Overlay\n    Clicar (bloqueado por overlay)",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#btn-fechar-overlay",
+      "fallbacks": [
+        "#btn-fechar-overlay",
+        "button:has-text(\"Fechar Overlay\")",
+        "button.btn"
+      ],
+      "tag_name": "button",
+      "text": "Fechar Overlay",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "btn-fechar-overlay",
+        "name": "",
+        "classes": "btn",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Overlay bloqueando clique (STA-002)\n    Fechar Overlay",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#btn-alert",
+      "fallbacks": [
+        "#btn-alert",
+        "button:has-text(\"Alert\")",
+        "button.btn.btn-primary"
+      ],
+      "tag_name": "button",
+      "text": "Alert",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "btn-alert",
+        "name": "",
+        "classes": "btn btn-primary",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Alert\n      Confirm\n      Prompt",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#btn-confirm",
+      "fallbacks": [
+        "#btn-confirm",
+        "button:has-text(\"Confirm\")",
+        "button.btn.btn-primary"
+      ],
+      "tag_name": "button",
+      "text": "Confirm",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "btn-confirm",
+        "name": "",
+        "classes": "btn btn-primary",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Alert\n      Confirm\n      Prompt",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#btn-prompt",
+      "fallbacks": [
+        "#btn-prompt",
+        "button:has-text(\"Prompt\")",
+        "button.btn.btn-primary"
+      ],
+      "tag_name": "button",
+      "text": "Prompt",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "btn-prompt",
+        "name": "",
+        "classes": "btn btn-primary",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Alert\n      Confirm\n      Prompt",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "button:has-text(\"Remover\")",
+      "fallbacks": [
+        "#lista-reordenavel > div:nth-of-type(1) > button:nth-of-type(1)",
+        "button:has-text(\"Remover\")",
+        "button.btn.btn-danger"
+      ],
+      "tag_name": "button",
+      "text": "Remover",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "btn btn-danger",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Item A Remover",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#btn-reordenar",
+      "fallbacks": [
+        "#btn-reordenar",
+        "button:has-text(\"Lista reordenável (DOM-002)\")",
+        "button:has-text(\"Reordenar\")",
+        "button.btn.btn-primary"
+      ],
+      "tag_name": "button",
+      "text": "Reordenar",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "btn-reordenar",
+        "name": "",
+        "classes": "btn btn-primary",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Lista reordenável (DOM-002)",
+        "parentTag": "div",
+        "parentText": "Lista reordenável (DOM-002)\n    \n      Item A Remover\n      Item B Remover\n      Item C Remover\n    ",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#btn-carregar-conteudo",
+      "fallbacks": [
+        "#btn-carregar-conteudo",
+        "button:has-text(\"Conteúdo carregado sob demanda (DOM-005)\")",
+        "button:has-text(\"Carregar Conteúdo\")",
+        "button.btn.btn-primary"
+      ],
+      "tag_name": "button",
+      "text": "Carregar Conteúdo",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "btn-carregar-conteudo",
+        "name": "",
+        "classes": "btn btn-primary",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Conteúdo carregado sob demanda (DOM-005)",
+        "parentTag": "div",
+        "parentText": "Conteúdo carregado sob demanda (DOM-005)\n    Carregar Conteúdo",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#campo-dinamico",
+      "fallbacks": [
+        "#campo-dinamico",
+        "input[placeholder=\"Campo carregado sob demanda\"]"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "campo-dinamico",
+        "name": "",
+        "classes": "",
+        "type": "text",
+        "placeholder": "Campo carregado sob demanda",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Conteúdo carregado!Botão dinâmico",
+        "parentId": "conteudo-dinamico"
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "#campo-dinamico",
+      "fallbacks": [
+        "#campo-dinamico",
+        "input[placeholder=\"Campo carregado sob demanda\"]"
+      ],
+      "tag_name": "input",
+      "text": "Campo carregado sob demanda",
+      "value": "campo dinamico",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "campo-dinamico",
+        "name": "",
+        "classes": "",
+        "type": "text",
+        "placeholder": "Campo carregado sob demanda",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Conteúdo carregado!Botão dinâmico",
+        "parentId": "conteudo-dinamico"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#nome-completo",
+      "fallbacks": [
+        "#nome-completo",
+        "input[name=\"nome\"]",
+        "label:has-text(\"Nome completo\")",
+        "span:has-text(\"Nome completo\")"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "nome-completo",
+        "name": "nome",
+        "classes": "",
+        "type": "text",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Nome completo",
+        "parentTag": "div",
+        "parentText": "Nome completo",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "#nome-completo",
+      "fallbacks": [
+        "#nome-completo",
+        "input[name=\"nome\"]",
+        "label:has-text(\"Nome completo\")",
+        "span:has-text(\"Nome completo\")"
+      ],
+      "tag_name": "input",
+      "text": "Nome completo",
+      "value": "João Silva",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "nome-completo",
+        "name": "nome",
+        "classes": "",
+        "type": "text",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Nome completo",
+        "parentTag": "div",
+        "parentText": "Nome completo",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "#email-contato",
+      "fallbacks": [
+        "#email-contato",
+        "input[name=\"email\"]",
+        "label:has-text(\"E-mail\")",
+        "span:has-text(\"E-mail\")"
+      ],
+      "tag_name": "input",
+      "text": "E-mail",
+      "value": "joao@teste.com",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "email-contato",
+        "name": "email",
+        "classes": "",
+        "type": "email",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "E-mail",
+        "parentTag": "div",
+        "parentText": "E-mail",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "#telefone",
+      "fallbacks": [
+        "#telefone",
+        "input[name=\"telefone\"]",
+        "input[placeholder=\"(00) 00000-0000\"]",
+        "label:has-text(\"Telefone\")"
+      ],
+      "tag_name": "input",
+      "text": "Telefone",
+      "value": "11999999999",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "telefone",
+        "name": "telefone",
+        "classes": "",
+        "type": "tel",
+        "placeholder": "(00) 00000-0000",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Telefone",
+        "parentTag": "div",
+        "parentText": "Telefone",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "select",
+      "selector": "#select-estado",
+      "fallbacks": [
+        "#select-estado",
+        "select[name=\"estado\"]",
+        "label:has-text(\"Estado\")",
+        "span:has-text(\"Estado\")"
+      ],
+      "tag_name": "select",
+      "text": "São Paulo",
+      "value": "SP",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "select-estado",
+        "name": "estado",
+        "classes": "",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Estado",
+        "parentTag": "div",
+        "parentText": "Estado\n      \n        Selecione...\n        Acre\n        Alagoas\n        Distrito Federal\n        São",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "label:has-text(\"Masculino\")",
+      "fallbacks": [
+        "input[name=\"genero\"]",
+        "input[name=\"genero\"]"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "M",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "genero",
+        "classes": "",
+        "type": "radio",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "label",
+        "parentText": "Masculino",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "label:has-text(\"Tecnologia\")",
+      "fallbacks": [
+        "input[name=\"interesse\"]",
+        "input[name=\"interesse\"]"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "tech",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "interesse",
+        "classes": "",
+        "type": "checkbox",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "label",
+        "parentText": "Tecnologia",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#mensagem",
+      "fallbacks": [
+        "#mensagem",
+        "textarea[name=\"mensagem\"]",
+        "textarea[placeholder=\"Digite sua mensagem\"]",
+        "label:has-text(\"Mensagem\")"
+      ],
+      "tag_name": "textarea",
+      "text": "",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "mensagem",
+        "name": "mensagem",
+        "classes": "",
+        "type": "",
+        "placeholder": "Digite sua mensagem",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Mensagem",
+        "parentTag": "div",
+        "parentText": "Mensagem",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "#mensagem",
+      "fallbacks": [
+        "#mensagem",
+        "textarea[name=\"mensagem\"]",
+        "textarea[placeholder=\"Digite sua mensagem\"]",
+        "label:has-text(\"Mensagem\")"
+      ],
+      "tag_name": "textarea",
+      "text": "Mensagem",
+      "value": "Mensagem de teste para validação completa do formulário integrado",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "mensagem",
+        "name": "mensagem",
+        "classes": "",
+        "type": "",
+        "placeholder": "Digite sua mensagem",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Mensagem",
+        "parentTag": "div",
+        "parentText": "Mensagem",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "button:has-text(\"Enviar\")",
+      "fallbacks": [
+        "#form-completo > div:nth-of-type(1) > div:nth-of-type(8) > button:nth-of-type(1)",
+        "button:has-text(\"Enviar\")",
+        "button.btn.btn-primary"
+      ],
+      "tag_name": "button",
+      "text": "Enviar",
+      "value": "",
+      "url": "http://localhost:8000/index.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "btn btn-primary",
+        "type": "submit",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Enviar",
+        "parentId": ""
+      }
+    }
+  ]
+}

@@ -1,0 +1,214 @@
+{
+  "steps": [
+    {
+      "action": "click",
+      "selector": "div:nth-of-type(1) > div:nth-of-type(2) > p:nth-of-type(1)",
+      "fallbacks": [
+        "p:has-text(\"Início › Produtos para você › Habitação ›\")",
+        "//p[contains(text(), \"Início › Produtos para você › Habitação ›\")]",
+        "p.breadcrumb.noprint"
+      ],
+      "tag_name": "p",
+      "text": "Início › Produtos para você › Habitação ›",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "breadcrumb noprint",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Início › Produtos para você › Habitação ›\n\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\tSimulador Crédito imobiliár",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#pessoaF",
+      "fallbacks": [
+        "#pessoaF",
+        "input[name=\"pessoa\"]",
+        "//input[@*]"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "F",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": "",
+      "attrs": {
+        "id": "pessoaF",
+        "name": "pessoa",
+        "classes": "",
+        "type": "radio",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "label",
+        "parentText": "Física",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "select",
+      "selector": "#pessoaF",
+      "fallbacks": [
+        "#pessoaF",
+        "input[name=\"pessoa\"]",
+        "input:has-text(\"checked\")"
+      ],
+      "tag_name": "input",
+      "text": "checked",
+      "value": "F",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": "",
+      "attrs": {
+        "id": "pessoaF",
+        "name": "pessoa",
+        "classes": "",
+        "type": "radio",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "label",
+        "parentText": "Física",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "#pessoaF",
+      "fallbacks": [
+        "#pessoaF",
+        "input[name=\"pessoa\"]",
+        "//input[@*]"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "F",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": "",
+      "attrs": {
+        "id": "pessoaF",
+        "name": "pessoa",
+        "classes": "",
+        "type": "radio",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "label",
+        "parentText": "Física",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "div:nth-of-type(1) > form:nth-of-type(1) > div:nth-of-type(1) > fieldset:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(4) > button:nth-of-type(1)",
+      "fallbacks": [
+        "button:has-text(\"Selecione a opção de Financiamento/Empréstimo\")",
+        "button.button_combobox.ui-button.ui-widget.ui-state-default.ui-button-icon-only.ui-corner-right.ui-button-icon.ui-state-hover.ui-state-focus",
+        "//button[@*]"
+      ],
+      "tag_name": "button",
+      "text": "",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "button_combobox ui-button ui-widget ui-state-default ui-button-icon-only ui-corner-right ui-button-icon ui-state-hover ui-state-focus",
+        "type": "button",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "button",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Selecione a opção de Financiamento/Empréstimo",
+        "parentTag": "li",
+        "parentText": "Selecione a opção de Financiamento/Empréstimo\n\t\t\t\t\t\t\tInforme a categoria \n\t\t\t\t\t\t\t*",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "div:nth-of-type(1) > form:nth-of-type(1) > div:nth-of-type(1) > fieldset:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(3) > label:nth-of-type(1)",
+      "fallbacks": [
+        "label:has-text(\"Qual tipo de financiamento ou empréstimo com garantia de imóvel você deseja?\")",
+        "label:has-text(\"Qual tipo de financiamento ou empréstimo com garantia de imóvel você deseja?\")",
+        "//label[contains(text(), \"Qual tipo de financiamento ou empréstimo com garantia de imóvel você deseja?\")]"
+      ],
+      "tag_name": "label",
+      "text": "Qual tipo de financiamento ou empréstimo com garantia de imóvel você deseja?",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "label-d",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Qual tipo de financiamento ou empréstimo com garantia de imóvel você deseja?",
+        "parentTag": "li",
+        "parentText": "Qual tipo de financiamento ou empréstimo com garantia de imóvel você deseja?\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t\n\nInfor",
+        "parentId": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "div:nth-of-type(1) > form:nth-of-type(1) > div:nth-of-type(1) > fieldset:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(3)",
+      "fallbacks": [
+        "li:has-text(\"Esta é uma simulação para aquisição de imóvel residencial (novo ou usado) ou par\")",
+        "li:has-text(\"Qual tipo de financiamento ou empréstimo com garantia de imóvel você deseja?\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t\n\nInforme o tipo de financi\")",
+        "//li[contains(text(), \"Qual tipo de financiamento ou empréstimo com garantia de imóvel você deseja?\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t\n\nInforme o tipo de financi\")]"
+      ],
+      "tag_name": "li",
+      "text": "Qual tipo de financiamento ou empréstimo com garantia de imóvel você deseja?\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t\n\nInforme o tipo de financi",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "form-row clearfix",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Esta é uma simulação para aquisição de imóvel residencial (novo ou usado) ou par",
+        "parentTag": "ul",
+        "parentText": "Esta é uma simulação para aquisição de imóvel residencial (novo ou usado) ou para obtenção de emprés",
+        "parentId": ""
+      }
+    }
+  ]
+}

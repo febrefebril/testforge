@@ -1,0 +1,210 @@
+{
+  "steps": [
+    {
+      "action": "click",
+      "selector": "span:has-text(\"Selecione\")",
+      "fallbacks": [
+        "span.ui-selectmenu-text",
+        "#estadoCivil-button > span:nth-of-type(2)"
+      ],
+      "strategies": [
+        {
+          "strategy": "has-text",
+          "selector": "span:has-text(\"Selecione\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "span.ui-selectmenu-text"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#estadoCivil-button > span:nth-of-type(2)"
+        }
+      ],
+      "tag_name": "span",
+      "text": "Selecione",
+      "value": "",
+      "url": "http://localhost:8081/jqueryui-selectmenu.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "ui-selectmenu-text",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "span",
+        "parentText": "Selecione",
+        "parentId": "estadoCivil-button",
+        "framework": "jquery-ui",
+        "pageTechnology": "jquery-ui",
+        "elementRect": {
+          "x": 81,
+          "y": 220,
+          "w": 478,
+          "h": 18
+        },
+        "elementParentChain": "span#estadoCivil-button > span:nth-child(2)"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#ui-id-3",
+      "fallbacks": [
+        "div.ui-menu-item-wrapper.ui-state-active"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#ui-id-3"
+        },
+        {
+          "strategy": "class",
+          "selector": "div.ui-menu-item-wrapper.ui-state-active"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#ui-id-3"
+        }
+      ],
+      "tag_name": "div",
+      "text": "Casado(a)",
+      "value": "",
+      "url": "http://localhost:8081/jqueryui-selectmenu.html",
+      "intention": "",
+      "attrs": {
+        "id": "ui-id-3",
+        "name": "",
+        "classes": "ui-menu-item-wrapper ui-state-active",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "option",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "li",
+        "parentText": "Casado(a)",
+        "parentId": "",
+        "framework": "angular",
+        "pageTechnology": "jquery-ui",
+        "elementRect": {
+          "x": 64,
+          "y": 294,
+          "w": 532,
+          "h": 26
+        },
+        "elementParentChain": "div#ui-id-3"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "span:has-text(\"Selecione\")",
+      "fallbacks": [
+        "span.ui-selectmenu-text",
+        "#escolaridade-button > span:nth-of-type(2)"
+      ],
+      "strategies": [
+        {
+          "strategy": "has-text",
+          "selector": "span:has-text(\"Selecione\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "span.ui-selectmenu-text"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#escolaridade-button > span:nth-of-type(2)"
+        }
+      ],
+      "tag_name": "span",
+      "text": "Selecione",
+      "value": "",
+      "url": "http://localhost:8081/jqueryui-selectmenu.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "ui-selectmenu-text",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "span",
+        "parentText": "Selecione",
+        "parentId": "escolaridade-button",
+        "framework": "jquery-ui",
+        "pageTechnology": "jquery-ui",
+        "elementRect": {
+          "x": 81,
+          "y": 292,
+          "w": 478,
+          "h": 18
+        },
+        "elementParentChain": "span#escolaridade-button > span:nth-child(2)"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#ui-id-9",
+      "fallbacks": [
+        "div.ui-menu-item-wrapper.ui-state-active"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#ui-id-9"
+        },
+        {
+          "strategy": "class",
+          "selector": "div.ui-menu-item-wrapper.ui-state-active"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#ui-id-9"
+        }
+      ],
+      "tag_name": "div",
+      "text": "Ensino Superior",
+      "value": "",
+      "url": "http://localhost:8081/jqueryui-selectmenu.html",
+      "intention": "",
+      "attrs": {
+        "id": "ui-id-9",
+        "name": "",
+        "classes": "ui-menu-item-wrapper ui-state-active",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "option",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "li",
+        "parentText": "Ensino Superior",
+        "parentId": "",
+        "framework": "angular",
+        "pageTechnology": "jquery-ui",
+        "elementRect": {
+          "x": 64,
+          "y": 390,
+          "w": 532,
+          "h": 26
+        },
+        "elementParentChain": "div#ui-id-9"
+      }
+    }
+  ]
+}

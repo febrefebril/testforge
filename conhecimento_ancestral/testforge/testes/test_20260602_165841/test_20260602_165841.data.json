@@ -1,0 +1,455 @@
+{
+  "steps": [
+    {
+      "action": "click",
+      "selector": "#pessoaF",
+      "fallbacks": [
+        "#pessoaF",
+        "//input[@*]"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "F",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "select",
+      "selector": "#pessoaF",
+      "fallbacks": [
+        "#pessoaF",
+        "input:has-text(\"checked\")",
+        "//input[contains(text(), \"checked\")]"
+      ],
+      "tag_name": "input",
+      "text": "checked",
+      "value": "F",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "fill",
+      "selector": "#pessoaF",
+      "fallbacks": [
+        "#pessoaF",
+        "//input[@*]"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "F",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "click",
+      "selector": "#tipoImovel_input",
+      "fallbacks": [
+        "#tipoImovel_input",
+        "//input[@*]"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "Informe o tipo de financiamento",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "click",
+      "selector": "#ui-id-20 > a:nth-of-type(1)",
+      "fallbacks": [
+        "#ui-id-20 > a:nth-of-type(1)",
+        "a:has-text(\"Residencial\")",
+        "//a[contains(text(), \"Residencial\")]"
+      ],
+      "tag_name": "a",
+      "text": "Residencial",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "click",
+      "selector": "#grupoTipoFinanciamento_input",
+      "fallbacks": [
+        "#grupoTipoFinanciamento_input",
+        "//input[@*]"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "Informe a categoria",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "click",
+      "selector": "#ui-id-26 > a:nth-of-type(1)",
+      "fallbacks": [
+        "#ui-id-26 > a:nth-of-type(1)",
+        "a:has-text(\"Aquisição de Imóvel Usado\")",
+        "//a[contains(text(), \"Aquisição de Imóvel Usado\")]"
+      ],
+      "tag_name": "a",
+      "text": "Aquisição de Imóvel Usado",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "click",
+      "selector": "#valorImovel",
+      "fallbacks": [
+        "#valorImovel",
+        "//input[@*]"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "click",
+      "selector": "#uf_input",
+      "fallbacks": [
+        "#uf_input",
+        "//input[@*]"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "UF",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "click",
+      "selector": "#ui-id-39 > a:nth-of-type(1)",
+      "fallbacks": [
+        "#ui-id-39 > a:nth-of-type(1)",
+        "a:has-text(\"DF\")",
+        "//a[contains(text(), \"DF\")]"
+      ],
+      "tag_name": "a",
+      "text": "DF",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "click",
+      "selector": "#cidade_input",
+      "fallbacks": [
+        "#cidade_input",
+        "//input[@*]"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "Informe a cidade",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "click",
+      "selector": "#ui-id-63 > a:nth-of-type(1)",
+      "fallbacks": [
+        "#ui-id-63 > a:nth-of-type(1)",
+        "a:has-text(\"BRASILIA\")",
+        "//a[contains(text(), \"BRASILIA\")]"
+      ],
+      "tag_name": "a",
+      "text": "BRASILIA",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "click",
+      "selector": "#btn_next1",
+      "fallbacks": [
+        "#btn_next1",
+        "div:has-text(\"Próxima etapa\")",
+        "//div[contains(text(), \"Próxima etapa\")]"
+      ],
+      "tag_name": "div",
+      "text": "Próxima etapa",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "click",
+      "selector": "#nuCpfCnpjInteressado",
+      "fallbacks": [
+        "#nuCpfCnpjInteressado",
+        "//input[@*]"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "fill",
+      "selector": "#nuCpfCnpjInteressado",
+      "fallbacks": [
+        "#nuCpfCnpjInteressado",
+        "input:has-text(\"Qual é o seu CPF?\")",
+        "//input[contains(text(), \"Qual é o seu CPF?\")]"
+      ],
+      "tag_name": "input",
+      "text": "Qual é o seu CPF?",
+      "value": "0",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "fill",
+      "selector": "#nuCpfCnpjInteressado",
+      "fallbacks": [
+        "#nuCpfCnpjInteressado",
+        "input:has-text(\"Qual é o seu CPF?\")",
+        "//input[contains(text(), \"Qual é o seu CPF?\")]"
+      ],
+      "tag_name": "input",
+      "text": "Qual é o seu CPF?",
+      "value": "022",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "fill",
+      "selector": "#nuCpfCnpjInteressado",
+      "fallbacks": [
+        "#nuCpfCnpjInteressado",
+        "input:has-text(\"Qual é o seu CPF?\")",
+        "//input[contains(text(), \"Qual é o seu CPF?\")]"
+      ],
+      "tag_name": "input",
+      "text": "Qual é o seu CPF?",
+      "value": "022.442",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "fill",
+      "selector": "#nuCpfCnpjInteressado",
+      "fallbacks": [
+        "#nuCpfCnpjInteressado",
+        "input:has-text(\"Qual é o seu CPF?\")",
+        "//input[contains(text(), \"Qual é o seu CPF?\")]"
+      ],
+      "tag_name": "input",
+      "text": "Qual é o seu CPF?",
+      "value": "022.442.58",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "fill",
+      "selector": "#nuCpfCnpjInteressado",
+      "fallbacks": [
+        "#nuCpfCnpjInteressado",
+        "input:has-text(\"Qual é o seu CPF?\")",
+        "//input[contains(text(), \"Qual é o seu CPF?\")]"
+      ],
+      "tag_name": "input",
+      "text": "Qual é o seu CPF?",
+      "value": "022.442.581",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "fill",
+      "selector": "#nuCpfCnpjInteressado",
+      "fallbacks": [
+        "#nuCpfCnpjInteressado",
+        "input:has-text(\"Qual é o seu CPF?\")",
+        "//input[contains(text(), \"Qual é o seu CPF?\")]"
+      ],
+      "tag_name": "input",
+      "text": "Qual é o seu CPF?",
+      "value": "022.442.581-1",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "fill",
+      "selector": "#nuCpfCnpjInteressado",
+      "fallbacks": [
+        "#nuCpfCnpjInteressado",
+        "input:has-text(\"Qual é o seu CPF?\")",
+        "//input[contains(text(), \"Qual é o seu CPF?\")]"
+      ],
+      "tag_name": "input",
+      "text": "Qual é o seu CPF?",
+      "value": "022.442.581-14",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "click",
+      "selector": "#nuTelefoneCelular",
+      "fallbacks": [
+        "#nuTelefoneCelular",
+        "//input[@*]"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "fill",
+      "selector": "#nuTelefoneCelular",
+      "fallbacks": [
+        "#nuTelefoneCelular",
+        "input:has-text(\"Qual é o número do seu telefone celular?\")",
+        "//input[contains(text(), \"Qual é o número do seu telefone celular?\")]"
+      ],
+      "tag_name": "input",
+      "text": "Qual é o número do seu telefone celular?",
+      "value": "6",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "fill",
+      "selector": "#nuTelefoneCelular",
+      "fallbacks": [
+        "#nuTelefoneCelular",
+        "input:has-text(\"Qual é o número do seu telefone celular?\")",
+        "//input[contains(text(), \"Qual é o número do seu telefone celular?\")]"
+      ],
+      "tag_name": "input",
+      "text": "Qual é o número do seu telefone celular?",
+      "value": "(61",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "fill",
+      "selector": "#nuTelefoneCelular",
+      "fallbacks": [
+        "#nuTelefoneCelular",
+        "input:has-text(\"Qual é o número do seu telefone celular?\")",
+        "//input[contains(text(), \"Qual é o número do seu telefone celular?\")]"
+      ],
+      "tag_name": "input",
+      "text": "Qual é o número do seu telefone celular?",
+      "value": "(6-1999",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "fill",
+      "selector": "#nuTelefoneCelular",
+      "fallbacks": [
+        "#nuTelefoneCelular",
+        "input:has-text(\"Qual é o número do seu telefone celular?\")",
+        "//input[contains(text(), \"Qual é o número do seu telefone celular?\")]"
+      ],
+      "tag_name": "input",
+      "text": "Qual é o número do seu telefone celular?",
+      "value": "(61-9997",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "fill",
+      "selector": "#nuTelefoneCelular",
+      "fallbacks": [
+        "#nuTelefoneCelular",
+        "input:has-text(\"Qual é o número do seu telefone celular?\")",
+        "//input[contains(text(), \"Qual é o número do seu telefone celular?\")]"
+      ],
+      "tag_name": "input",
+      "text": "Qual é o número do seu telefone celular?",
+      "value": "(619-9974",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "fill",
+      "selector": "#nuTelefoneCelular",
+      "fallbacks": [
+        "#nuTelefoneCelular",
+        "input:has-text(\"Qual é o número do seu telefone celular?\")",
+        "//input[contains(text(), \"Qual é o número do seu telefone celular?\")]"
+      ],
+      "tag_name": "input",
+      "text": "Qual é o número do seu telefone celular?",
+      "value": "(6)19997-4198",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "fill",
+      "selector": "#nuTelefoneCelular",
+      "fallbacks": [
+        "#nuTelefoneCelular",
+        "input:has-text(\"Qual é o número do seu telefone celular?\")",
+        "//input[contains(text(), \"Qual é o número do seu telefone celular?\")]"
+      ],
+      "tag_name": "input",
+      "text": "Qual é o número do seu telefone celular?",
+      "value": "(61)99974-1984",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "click",
+      "selector": "#rendaFamiliarBruta",
+      "fallbacks": [
+        "#rendaFamiliarBruta",
+        "//input[@*]"
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "click",
+      "selector": "div:nth-of-type(1) > form:nth-of-type(1) > div:nth-of-type(1) > fieldset:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(4) > div:nth-of-type(1) > button:nth-of-type(1)",
+      "fallbacks": [
+        "div:nth-of-type(1) > form:nth-of-type(1) > div:nth-of-type(1) > fieldset:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(4) > div:nth-of-type(1) > button:nth-of-type(1)",
+        "//button[@*]"
+      ],
+      "tag_name": "button",
+      "text": "",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "click",
+      "selector": "#ui-datepicker-div > div:nth-of-type(1) > div:nth-of-type(1) > select:nth-of-type(2)",
+      "fallbacks": [
+        "#ui-datepicker-div > div:nth-of-type(1) > div:nth-of-type(1) > select:nth-of-type(2)",
+        "select:has-text(\"194519461947194819491950195119521953195419551956195719581959196019611962196319641965196619671968196919701971197219731974\")",
+        "//select[contains(text(), \"194519461947194819491950195119521953195419551956195719581959196019611962196319641965196619671968196919701971197219731974\")]"
+      ],
+      "tag_name": "select",
+      "text": "194519461947194819491950195119521953195419551956195719581959196019611962196319641965196619671968196919701971197219731974",
+      "value": "2010",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    },
+    {
+      "action": "click",
+      "selector": "#ui-datepicker-div > table:nth-of-type(1) > tbody:nth-of-type(1) > tr:nth-of-type(1) > td:nth-of-type(4) > a:nth-of-type(1)",
+      "fallbacks": [
+        "#ui-datepicker-div > table:nth-of-type(1) > tbody:nth-of-type(1) > tr:nth-of-type(1) > td:nth-of-type(4) > a:nth-of-type(1)",
+        "a:has-text(\"2\")",
+        "//a[contains(text(), \"2\")]"
+      ],
+      "tag_name": "a",
+      "text": "2",
+      "value": "",
+      "url": "https://www8.caixa.gov.br/siopiinternet-web/simulaOperacaoInternet.do?method=inicializarCasoUso",
+      "intention": ""
+    }
+  ]
+}

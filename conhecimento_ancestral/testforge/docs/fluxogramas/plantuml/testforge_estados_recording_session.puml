@@ -1,0 +1,180 @@
+@startuml
+title TestForge - Ciclo de Vida da RecordingSession
+
+skinparam shadowing false
+skinparam linetype ortho
+skinparam state {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+[*] --> CREATED : create_session
+
+state CREATED
+state VALIDATING_INPUT
+state WORKSPACE_READY
+state BROWSER_STARTING
+state BROWSER_READY
+state INITIAL_FINGERPRINTING
+state INSTRUMENTING_PAGE
+state RECORDING_ACTIVE
+state RECORDING_PAUSED
+state CHECKPOINT_CREATED
+state FINALIZING_RECORDING
+state RAW_SESSION_SAVED
+state VALIDATING_RECORDING
+state RECORDING_VALID
+state RECORDING_REPAIRABLE
+state RECORDING_INVALID
+state NORMALIZING
+state NORMALIZED
+state SCRIPT_GENERATED
+state DIAGNOSTIC_EXECUTION
+state CURATION_REQUIRED
+state STABILIZATION_REQUIRED
+state FINALIZED
+state FAILED
+
+CREATED --> VALIDATING_INPUT : start_recording_command / receive_parameters
+
+VALIDATING_INPUT --> WORKSPACE_READY : input_valid / create_output_slug_structure
+VALIDATING_INPUT --> FAILED : input_invalid / persist_validation_error
+
+WORKSPACE_READY --> BROWSER_STARTING : workspace_created / start_playwright
+
+BROWSER_STARTING --> BROWSER_READY : browser_started / create_browser_context
+BROWSER_STARTING --> FAILED : browser_start_failed / persist_startup_error
+
+BROWSER_READY --> INITIAL_FINGERPRINTING : page_ready / navigate_to_endpoint_and_save_baseline
+
+INITIAL_FINGERPRINTING --> INSTRUMENTING_PAGE : fingerprint_initial_saved / activate_technology_collectors
+INITIAL_FINGERPRINTING --> FAILED : fingerprint_failed_unrecoverable / persist_fingerprint_error
+
+INSTRUMENTING_PAGE --> RECORDING_ACTIVE : recorder_js_and_overlay_injected / start_enriched_capture
+INSTRUMENTING_PAGE --> FAILED : instrumentation_failed_unrecoverable / persist_instrumentation_error
+
+RECORDING_ACTIVE --> RECORDING_PAUSED : pause_requested / suspend_event_capture
+RECORDING_PAUSED --> RECORDING_ACTIVE : resume_requested / resume_event_capture
+
+RECORDING_ACTIVE --> CHECKPOINT_CREATED : checkpoint_requested_or_assert_hint_detected / persist_checkpoint
+CHECKPOINT_CREATED --> RECORDING_ACTIVE : checkpoint_saved / continue_recording
+
+RECORDING_ACTIVE --> FINALIZING_RECORDING : finish_requested / flush_pending_events
+RECORDING_PAUSED --> FINALIZING_RECORDING : finish_requested / flush_pending_events
+
+' BUG-019: browser fechado pelo usuário dispara finish_requested
+RECORDING_ACTIVE --> FINALIZING_RECORDING : browser_closed / page.on("close")→finish_requested
+note on link
+  BUG-019: page.on("close") detectado em collect_step.
+  is_closed() verificado no início de cada iteração (100ms).
+  Pacing via time.sleep(0.1) — não wait_for_timeout (BUG-021).
+  Recorder.finish() pula collect_final se is_closed()==True.
+  BrowserManager.close() em try/except para browser já fechado.
+end note
+
+' BUG-018: full-page navigation preserva estado recording_active
+RECORDING_ACTIVE --> RECORDING_ACTIVE : full_page_navigation / sessionStorage.__tfRecordingActive persiste
+note on link
+  BUG-018: page.add_init_script() reinjeta OVERLAY_JS em toda
+  full-page navigation. window.var é resetado, mas
+  sessionStorage.getItem('__tfRecordingActive') === 'true'
+  permite restaurar state='recording' automaticamente.
+end note
+
+FINALIZING_RECORDING --> RAW_SESSION_SAVED : pending_events_collected / save_session_raw_and_fingerprint_final
+FINALIZING_RECORDING --> FAILED : finalize_failed_unrecoverable / persist_finalize_error
+
+RAW_SESSION_SAVED --> VALIDATING_RECORDING : raw_session_saved / validate_recording_integrity
+
+VALIDATING_RECORDING --> RECORDING_VALID : validation_passed / mark_ready_for_normalization
+VALIDATING_RECORDING --> RECORDING_REPAIRABLE : validation_found_repairable_gaps / run_auto_repair
+VALIDATING_RECORDING --> RECORDING_INVALID : validation_failed_insufficient_evidence / generate_insufficient_recording_report
+
+RECORDING_REPAIRABLE --> VALIDATING_RECORDING : auto_repair_applied / revalidate_recording
+RECORDING_REPAIRABLE --> RECORDING_INVALID : auto_repair_failed / preserve_repair_evidence
+
+RECORDING_INVALID --> FAILED : invalid_recording_confirmed / stop_pipeline
+
+RECORDING_VALID --> NORMALIZING : recording_valid / parse_and_normalize_steps
+
+NORMALIZING --> NORMALIZED : normalization_completed / save_session_normalized_and_steps
+NORMALIZING --> FAILED : normalization_failed_unrecoverable / persist_normalization_error
+
+NORMALIZED --> SCRIPT_GENERATED : generate_script_v0 / save_script_metadata
+
+SCRIPT_GENERATED --> DIAGNOSTIC_EXECUTION : script_v0_created / execute_diagnostic_run
+
+DIAGNOSTIC_EXECUTION --> STABILIZATION_REQUIRED : script_passed / promote_to_stabilization
+DIAGNOSTIC_EXECUTION --> CURATION_REQUIRED : script_failed / build_failure_signature
+DIAGNOSTIC_EXECUTION --> FAILED : diagnostic_execution_error_unrecoverable / persist_run_error
+
+CURATION_REQUIRED --> DIAGNOSTIC_EXECUTION : patch_validated_and_applied / rerun_checkpoint_or_script
+CURATION_REQUIRED --> FAILED : curation_unresolved_limit_exceeded / persist_unresolved_report
+
+STABILIZATION_REQUIRED --> FINALIZED : stabilization_passed / build_final_artifacts
+STABILIZATION_REQUIRED --> CURATION_REQUIRED : stabilization_failed / classify_new_failure
+STABILIZATION_REQUIRED --> FAILED : stabilization_error_unrecoverable / persist_stabilization_error
+
+FINALIZED --> [*] : final_artifacts_ready
+FAILED --> [*] : session_closed_with_error
+
+CREATED --> FAILED : unrecoverable_error
+WORKSPACE_READY --> FAILED : unrecoverable_error
+BROWSER_READY --> FAILED : unrecoverable_error
+RECORDING_ACTIVE --> FAILED : unrecoverable_error
+RECORDING_PAUSED --> FAILED : unrecoverable_error
+CHECKPOINT_CREATED --> FAILED : unrecoverable_error
+RAW_SESSION_SAVED --> FAILED : unrecoverable_error
+RECORDING_VALID --> FAILED : unrecoverable_error
+NORMALIZED --> FAILED : unrecoverable_error
+SCRIPT_GENERATED --> FAILED : unrecoverable_error
+CURATION_REQUIRED --> FAILED : unrecoverable_error
+STABILIZATION_REQUIRED --> FAILED : unrecoverable_error
+
+note right of RECORDING_REPAIRABLE
+  RECORDING_REPAIRABLE indica que a gravação possui
+  inconsistências corrigíveis, como gaps pequenos de
+  timestamp, ordenação de eventos, referências ausentes
+  ou artefatos incrementais incompletos.
+
+  A sessão não avança para normalização enquanto a
+  autocorreção não for aplicada e a gravação não for
+  validada novamente.
+end note
+
+note right of CURATION_REQUIRED
+  CURATION_REQUIRED ocorre quando o script_v0.py falha
+  na execução diagnóstica.
+
+  A curadoria deve reutilizar a gravação e as evidências
+  originais: DOM, rede, console, screenshots, frames,
+  shadow DOM, storage, selector_candidates e fingerprints.
+
+  O LLM não é primeira opção; antes dele são usadas
+  estratégias determinísticas e agentes especializados.
+end note
+
+note right of STABILIZATION_REQUIRED
+  STABILIZATION_REQUIRED ocorre quando o script passa
+  na execução diagnóstica, mas ainda precisa ser tornado
+  robusto, determinístico e finalizável.
+
+  Nesta fase devem ser consolidados locators, healing_rules,
+  massa de teste separada, remoção de sleeps frágeis e
+  execução de rodadas limpas antes do FINALIZED.
+end note
+
+' BUG-020: Referências a componentes reais (BUG-007–BUG-014)
+note as N_BUG020
+  Componentes relevantes neste ciclo de vida:
+  - Recorder: gerencia estados RECORDING_ACTIVE→FINALIZING_RECORDING
+  - RecorderOverlay: injeta OVERLAY_JS via page.add_init_script()
+    window.__tfRecordingActive + sessionStorage (BUG-018)
+  - BrowserManager: launch() usa navigation_timeout_ms (BUG-007)
+    BrowserConfig.navigation_timeout_ms=60000 padrão
+  - DebugLogger: singleton instrumentado em cada transição de estado
+    configure(slug, output_dir, debug_mode) chamado em BROWSER_STARTING
+end note
+
+@enduml

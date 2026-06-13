@@ -1,0 +1,749 @@
+taxonomy:
+  project: TestForge / Agente Curador de Scripts
+  artifact: Taxonomia implementável para detecção, classificação, healing e geração de testes
+  version: 1.0-implementation-registry
+  result_states:
+  - RESOLVED
+  - PARTIALLY_RESOLVED
+  - MANUAL_REQUIRED
+  - UNRESOLVED
+  - REJECTED
+  strategies:
+  - label_proximity
+  - text_content_match
+  - aria_role_strategy
+  - semantic_locator_conversion
+  - primefaces_registry_scan
+  - frame_reacquire
+  - shadow_pierce
+  - network_idle_wait
+  - response_intercept
+  - dom_stabilization
+  - overlay_dismiss
+  - re_auth_hook
+  - llm_selector_inference
+  - download_event_capture
+  - upload_payload_binding
+  - assert_overlay_capture
+  - manual_checkpoint
+  - popup_context_capture
+  - native_dialog_handler
+  - file_fixture_binding
+  - precondition_validation
+  - environment_failure_classification
+  - sensitive_data_masking
+  - critical_action_checkpoint
+  - trace_evidence_capture
+  - patch_audit_trail
+  - flakiness_gate
+  - browser_policy_event_inference
+  - screen_ready_marker_wait
+  - virtual_list_scroll_search
+  - datepicker_component_selection
+  - custom_combobox_selection
+  - rich_text_editor_binding
+  - input_mask_user_typing
+  - drag_and_drop_semantic
+  cases:
+  - id: SEL-001
+    family: Seletores frágeis
+    case: ID JSF dinâmico
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: SEL-002
+    family: Seletores frágeis
+    case: ID com índice de tabela
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: SEL-003
+    family: Seletores frágeis
+    case: widgetVar instável
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: SEL-004
+    family: Seletores frágeis
+    case: XPath absoluto
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: SEL-005
+    family: Seletores frágeis
+    case: CSS baseado em classe volátil
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: SEL-006
+    family: Seletores frágeis
+    case: Elemento sem ID
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: SEL-007
+    family: Seletores frágeis
+    case: Elemento fora do formulário
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: SEL-008
+    family: Seletores frágeis
+    case: Locator por posição
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: SEL-009
+    family: Seletores frágeis
+    case: Texto duplicado
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: SEL-010
+    family: Seletores frágeis
+    case: Label não associado via for
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: TIM-001
+    family: Timing e assincronismo
+    case: Ação antes do re-render JSF
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: TIM-002
+    family: Timing e assincronismo
+    case: ViewState inválido
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: TIM-003
+    family: Timing e assincronismo
+    case: Callback jQuery sem evento DOM claro
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: TIM-004
+    family: Timing e assincronismo
+    case: Change detection assíncrono
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: TIM-005
+    family: Timing e assincronismo
+    case: waitForTimeout gravado
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: TIM-006
+    family: Timing e assincronismo
+    case: Debounce em autocomplete
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: TIM-007
+    family: Timing e assincronismo
+    case: Navegação parcial sem page load
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: CTX-001
+    family: Contexto e escopo
+    case: Iframe same-origin
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: CTX-002
+    family: Contexto e escopo
+    case: Iframe cross-origin
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: CTX-003
+    family: Contexto e escopo
+    case: Shadow DOM aberto
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: CTX-004
+    family: Contexto e escopo
+    case: Shadow DOM fechado
+    priority: P2
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: CTX-005
+    family: Contexto e escopo
+    case: Popup/nova aba
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: CTX-006
+    family: Contexto e escopo
+    case: Modal/dialog fora do escopo
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: CTX-007
+    family: Contexto e escopo
+    case: Frame recarregado
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: STA-001
+    family: Estado da aplicação
+    case: Sessão expirada
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: STA-002
+    family: Estado da aplicação
+    case: Overlay bloqueando clique
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: STA-003
+    family: Estado da aplicação
+    case: Dados sujos
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: STA-004
+    family: Estado da aplicação
+    case: Alert/confirm/prompt nativo
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: STA-005
+    family: Estado da aplicação
+    case: Permissão insuficiente
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: STA-006
+    family: Estado da aplicação
+    case: Ambiente indisponível/intermitente
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: DOM-001
+    family: DOM dinâmico
+    case: Element handle cacheado
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: DOM-002
+    family: DOM dinâmico
+    case: Lista reordenada
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: DOM-003
+    family: DOM dinâmico
+    case: Re-render substitui nó
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: DOM-004
+    family: DOM dinâmico
+    case: Virtualização de lista
+    priority: P2
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: DOM-005
+    family: DOM dinâmico
+    case: Lazy loading visual
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: INP-001
+    family: Input e interação especializada
+    case: Upload PrimeFaces
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: INP-002
+    family: Input e interação especializada
+    case: Upload HTML padrão
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: INP-003
+    family: Input e interação especializada
+    case: Download disparado por clique
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: INP-004
+    family: Input e interação especializada
+    case: Download AJAX/Blob
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: INP-005
+    family: Input e interação especializada
+    case: Drag-and-drop
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: INP-006
+    family: Input e interação especializada
+    case: Rich text editor via iframe
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: INP-007
+    family: Input e interação especializada
+    case: Máscara de input
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: INP-008
+    family: Input e interação especializada
+    case: CAPTCHA
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: INP-009
+    family: Input e interação especializada
+    case: Seleção de data em calendário
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: INP-010
+    family: Input e interação especializada
+    case: Combobox customizado
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: FILE-001
+    family: Upload e download de arquivos
+    case: Arquivo local inexistente na execução
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: FILE-002
+    family: Upload e download de arquivos
+    case: Upload com validação de extensão
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: FILE-003
+    family: Upload e download de arquivos
+    case: Upload com limite de tamanho
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: FILE-004
+    family: Upload e download de arquivos
+    case: Download com nome dinâmico
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: FILE-005
+    family: Upload e download de arquivos
+    case: Download precisa de autenticação
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: FILE-006
+    family: Upload e download de arquivos
+    case: Download bloqueado por popup/aba
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: AST-001
+    family: Asserts e validações
+    case: Assert informado antes da gravação
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: AST-002
+    family: Asserts e validações
+    case: Assert informado durante a gravação
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: AST-003
+    family: Asserts e validações
+    case: Assert informado depois da gravação
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: AST-004
+    family: Asserts e validações
+    case: Assert de texto visível
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: AST-005
+    family: Asserts e validações
+    case: Assert de URL/rota
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: AST-006
+    family: Asserts e validações
+    case: Assert de arquivo baixado
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: AST-007
+    family: Asserts e validações
+    case: Assert de estado visual
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: AST-008
+    family: Asserts e validações
+    case: Assert ambíguo
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: AST-009
+    family: Asserts e validações
+    case: Assert de tabela/lista
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: AST-010
+    family: Asserts e validações
+    case: Assert negativo
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: REC-001
+    family: Recorder, overlay e checkpoints manuais
+    case: Gravação incompleta
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: REC-002
+    family: Recorder, overlay e checkpoints manuais
+    case: Overlay captura intenção do usuário
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: REC-003
+    family: Recorder, overlay e checkpoints manuais
+    case: Usuário pausa gravação
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: REC-004
+    family: Recorder, overlay e checkpoints manuais
+    case: Navegação manual fora do fluxo
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: REC-005
+    family: Recorder, overlay e checkpoints manuais
+    case: Recon/fingerprint inicial
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: REC-006
+    family: Recorder, overlay e checkpoints manuais
+    case: Evento bloqueado por política do browser/app
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: OBS-001
+    family: Execução, evidência e observabilidade
+    case: Falha sem screenshot/trace
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: OBS-002
+    family: Execução, evidência e observabilidade
+    case: Console error relevante
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: OBS-003
+    family: Execução, evidência e observabilidade
+    case: Erro de rede relevante
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: OBS-004
+    family: Execução, evidência e observabilidade
+    case: Healing aplicado sem rastreabilidade
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: OBS-005
+    family: Execução, evidência e observabilidade
+    case: Rejeição repetida do mesmo patch
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: OBS-006
+    family: Execução, evidência e observabilidade
+    case: Flakiness não determinística
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: LIM-001
+    family: Limites técnicos e casos não automatizáveis com segurança
+    case: CAPTCHA/desafio humano
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: LIM-002
+    family: Limites técnicos e casos não automatizáveis com segurança
+    case: Cross-origin inacessível
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: LIM-003
+    family: Limites técnicos e casos não automatizáveis com segurança
+    case: Dado sensível mascarado
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: LIM-004
+    family: Limites técnicos e casos não automatizáveis com segurança
+    case: Operação irreversível
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: LIM-005
+    family: Limites técnicos e casos não automatizáveis com segurança
+    case: Dependência externa instável
+    priority: P2
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED

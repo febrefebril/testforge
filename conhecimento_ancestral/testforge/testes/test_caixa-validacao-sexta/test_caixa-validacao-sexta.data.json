@@ -1,0 +1,1270 @@
+{
+  "steps": [
+    {
+      "action": "click",
+      "selector": "#title-cg",
+      "fallbacks": [
+        "h2:has-text(\"Calculadora poder de compra\")",
+        "h2.text-size-small.font-weight-700.text-grayscale-130.min-h-[4.5rem]"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#title-cg"
+        },
+        {
+          "strategy": "has-text",
+          "selector": "h2:has-text(\"Calculadora poder de compra\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "h2.text-size-small.font-weight-700.text-grayscale-130.min-h-[4.5rem]"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#title-cg"
+        }
+      ],
+      "tag_name": "h2",
+      "text": "Calculadora poder de compra",
+      "value": "",
+      "url": "https://simuladorhabitacao.caixa.gov.br/home",
+      "intention": "",
+      "attrs": {
+        "id": "title-cg",
+        "name": "",
+        "classes": "text-size-small font-weight-700 text-grayscale-130 min-h-[4.5rem]",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Calculadora poder de compra   Veja estimativas a partir da prestação que você pretende assumir, da s",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 131,
+          "y": 432,
+          "w": 284,
+          "h": 72
+        },
+        "elementParentChain": "h2#title-cg"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "div.flex.flex-col.items-center.text-center.bg-white.rounded-2xl.border.w-full.max-w-[346px].cursor-pointer.transition.hover:border-primary-90.hover:shadow-[0_2px_8px_rgba(0,0,0,0.12)].border-grayscale-50",
+      "fallbacks": [
+        "app-root:nth-of-type(1) > app-calculadora:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1)"
+      ],
+      "strategies": [
+        {
+          "strategy": "class",
+          "selector": "div.flex.flex-col.items-center.text-center.bg-white.rounded-2xl.border.w-full.max-w-[346px].cursor-pointer.transition.hover:border-primary-90.hover:shadow-[0_2px_8px_rgba(0,0,0,0.12)].border-grayscale-50"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "app-root:nth-of-type(1) > app-calculadora:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1)"
+        }
+      ],
+      "tag_name": "div",
+      "text": "attach_money Pela prestaçãoSei quanto posso pagar por mês Descubra qual imóvel cabe no seu bolso com essa parcela",
+      "value": "",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "flex flex-col items-center text-center bg-white rounded-2xl border w-full max-w-[346px] cursor-pointer transition hover:border-primary-90 hover:shadow-[0_2px_8px_rgba(0,0,0,0.12)] border-grayscale-50",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "button",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "attach_money Pela prestaçãoSei quanto posso pagar por mês Descubra qual imóvel cabe no seu bolso com",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 106,
+          "y": 327,
+          "w": 335,
+          "h": 267
+        },
+        "elementParentChain": "app-root:nth-child(1) > app-calculadora:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1)"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "span.mat-mdc-button-touch-target",
+      "fallbacks": [
+        "app-root:nth-of-type(1) > app-calculadora:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > form:nth-of-type(1) > div:nth-of-type(1) > dsc-datepicker:nth-of-type(1) > mat-form-field:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > mat-datepicker-toggle:nth-of-type(1) > button:nth-of-type(1) > span:nth-of-type(3)"
+      ],
+      "strategies": [
+        {
+          "strategy": "class",
+          "selector": "span.mat-mdc-button-touch-target"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "app-root:nth-of-type(1) > app-calculadora:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > form:nth-of-type(1) > div:nth-of-type(1) > dsc-datepicker:nth-of-type(1) > mat-form-field:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > mat-datepicker-toggle:nth-of-type(1) > button:nth-of-type(1) > span:nth-of-type(3)"
+        }
+      ],
+      "tag_name": "span",
+      "text": "",
+      "value": "",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "mat-mdc-button-touch-target",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "button",
+        "parentText": "",
+        "parentId": "",
+        "framework": "angular",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 480,
+          "y": 663,
+          "w": 40,
+          "h": 40
+        },
+        "elementParentChain": "app-root:nth-child(1) > app-calculadora:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) > form:nth-child(1) > div:nth-child(1) > dsc-datepicker:nth-child(1) > mat-form-field:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) > mat-datepicker-toggle:nth-child(1) > button:nth-child(1) > span:nth-child(3)"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "button[aria-label=\"Previous month\"]",
+      "fallbacks": [
+        "button.mat-calendar-previous-button.mdc-icon-button.mat-mdc-icon-button.mat-unthemed.mat-mdc-button-base.cdk-focused.cdk-mouse-focused",
+        "#mat-datepicker-0 > mat-calendar-header:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(2)"
+      ],
+      "strategies": [
+        {
+          "strategy": "aria-label",
+          "selector": "button[aria-label=\"Previous month\"]"
+        },
+        {
+          "strategy": "class",
+          "selector": "button.mat-calendar-previous-button.mdc-icon-button.mat-mdc-icon-button.mat-unthemed.mat-mdc-button-base.cdk-focused.cdk-mouse-focused"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#mat-datepicker-0 > mat-calendar-header:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(2)"
+        }
+      ],
+      "tag_name": "button",
+      "text": "",
+      "value": "",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "mat-calendar-previous-button mdc-icon-button mat-mdc-icon-button mat-unthemed mat-mdc-button-base cdk-focused cdk-mouse-focused",
+        "type": "button",
+        "placeholder": "",
+        "ariaLabel": "Previous month",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "JUN 2026JUN 2026",
+        "parentId": "",
+        "framework": "angular",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 316,
+          "y": 330,
+          "w": 40,
+          "h": 40
+        },
+        "elementParentChain": "mat-calendar#mat-datepicker-0 > mat-calendar-header:nth-child(1) > div:nth-child(1) > div:nth-child(1) > button:nth-child(2)"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "button[aria-label=\"Choose month and year\"]",
+      "fallbacks": [
+        "button:has-text(\"MAI 2026\")",
+        "button.mat-calendar-period-button.mdc-button.mat-mdc-button.mat-unthemed.mat-mdc-button-base.cdk-focused.cdk-mouse-focused",
+        "#mat-datepicker-0 > mat-calendar-header:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(1)"
+      ],
+      "strategies": [
+        {
+          "strategy": "aria-label",
+          "selector": "button[aria-label=\"Choose month and year\"]"
+        },
+        {
+          "strategy": "has-text",
+          "selector": "button:has-text(\"MAI 2026\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "button.mat-calendar-period-button.mdc-button.mat-mdc-button.mat-unthemed.mat-mdc-button-base.cdk-focused.cdk-mouse-focused"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#mat-datepicker-0 > mat-calendar-header:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(1)"
+        }
+      ],
+      "tag_name": "button",
+      "text": "MAI 2026",
+      "value": "",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "mat-calendar-period-button mdc-button mat-mdc-button mat-unthemed mat-mdc-button-base cdk-focused cdk-mouse-focused",
+        "type": "button",
+        "placeholder": "",
+        "ariaLabel": "Choose month and year",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "MAI 2026MAI 2026",
+        "parentId": "",
+        "framework": "angular",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 119,
+          "y": 330,
+          "w": 106,
+          "h": 40
+        },
+        "elementParentChain": "mat-calendar#mat-datepicker-0 > mat-calendar-header:nth-child(1) > div:nth-child(1) > div:nth-child(1) > button:nth-child(1)"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "button[aria-label=\"Previous 24 years\"]",
+      "fallbacks": [
+        "button.mat-calendar-previous-button.mdc-icon-button.mat-mdc-icon-button.mat-unthemed.mat-mdc-button-base.cdk-focused.cdk-mouse-focused",
+        "#mat-datepicker-0 > mat-calendar-header:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(2)"
+      ],
+      "strategies": [
+        {
+          "strategy": "aria-label",
+          "selector": "button[aria-label=\"Previous 24 years\"]"
+        },
+        {
+          "strategy": "class",
+          "selector": "button.mat-calendar-previous-button.mdc-icon-button.mat-mdc-icon-button.mat-unthemed.mat-mdc-button-base.cdk-focused.cdk-mouse-focused"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#mat-datepicker-0 > mat-calendar-header:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(2)"
+        }
+      ],
+      "tag_name": "button",
+      "text": "",
+      "value": "",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "mat-calendar-previous-button mdc-icon-button mat-mdc-icon-button mat-unthemed mat-mdc-button-base cdk-focused cdk-mouse-focused",
+        "type": "button",
+        "placeholder": "",
+        "ariaLabel": "Previous 24 years",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "2016 to 20392016 – 2039",
+        "parentId": "",
+        "framework": "angular",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 316,
+          "y": 330,
+          "w": 40,
+          "h": 40
+        },
+        "elementParentChain": "mat-calendar#mat-datepicker-0 > mat-calendar-header:nth-child(1) > div:nth-child(1) > div:nth-child(1) > button:nth-child(2)"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "button[aria-label=\"Previous 24 years\"]",
+      "fallbacks": [
+        "button.mat-calendar-previous-button.mdc-icon-button.mat-mdc-icon-button.mat-unthemed.mat-mdc-button-base.cdk-focused.cdk-mouse-focused",
+        "#mat-datepicker-0 > mat-calendar-header:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(2)"
+      ],
+      "strategies": [
+        {
+          "strategy": "aria-label",
+          "selector": "button[aria-label=\"Previous 24 years\"]"
+        },
+        {
+          "strategy": "class",
+          "selector": "button.mat-calendar-previous-button.mdc-icon-button.mat-mdc-icon-button.mat-unthemed.mat-mdc-button-base.cdk-focused.cdk-mouse-focused"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#mat-datepicker-0 > mat-calendar-header:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(2)"
+        }
+      ],
+      "tag_name": "button",
+      "text": "",
+      "value": "",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "mat-calendar-previous-button mdc-icon-button mat-mdc-icon-button mat-unthemed mat-mdc-button-base cdk-focused cdk-mouse-focused",
+        "type": "button",
+        "placeholder": "",
+        "ariaLabel": "Previous 24 years",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "1992 to 20151992 – 2015",
+        "parentId": "",
+        "framework": "angular",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 316,
+          "y": 330,
+          "w": 40,
+          "h": 40
+        },
+        "elementParentChain": "mat-calendar#mat-datepicker-0 > mat-calendar-header:nth-child(1) > div:nth-child(1) > div:nth-child(1) > button:nth-child(2)"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "button[aria-label=\"1968\"]",
+      "fallbacks": [
+        "button:has-text(\"1968\")",
+        "button.mat-calendar-body-cell.mat-calendar-body-active",
+        "#mat-datepicker-0 > div:nth-of-type(1) > mat-multi-year-view:nth-of-type(1) > table:nth-of-type(1) > tbody:nth-of-type(1) > tr:nth-of-type(1) > td:nth-of-type(1) > button:nth-of-type(1)"
+      ],
+      "strategies": [
+        {
+          "strategy": "aria-label",
+          "selector": "button[aria-label=\"1968\"]"
+        },
+        {
+          "strategy": "has-text",
+          "selector": "button:has-text(\"1968\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "button.mat-calendar-body-cell.mat-calendar-body-active"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#mat-datepicker-0 > div:nth-of-type(1) > mat-multi-year-view:nth-of-type(1) > table:nth-of-type(1) > tbody:nth-of-type(1) > tr:nth-of-type(1) > td:nth-of-type(1) > button:nth-of-type(1)"
+        }
+      ],
+      "tag_name": "button",
+      "text": "1968",
+      "value": "",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "mat-calendar-body-cell mat-calendar-body-active",
+        "type": "button",
+        "placeholder": "",
+        "ariaLabel": "1968",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "td",
+        "parentText": "1968",
+        "parentId": "",
+        "framework": "angular",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 114,
+          "y": 392,
+          "w": 70,
+          "h": 40
+        },
+        "elementParentChain": "mat-calendar#mat-datepicker-0 > div:nth-child(1) > mat-multi-year-view:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1) > button:nth-child(1)"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "button[aria-label=\"janeiro 1968\"]",
+      "fallbacks": [
+        "button:has-text(\"JAN\")",
+        "button.mat-calendar-body-cell.mat-calendar-body-active",
+        "#mat-datepicker-0 > div:nth-of-type(1) > mat-year-view:nth-of-type(1) > table:nth-of-type(1) > tbody:nth-of-type(1) > tr:nth-of-type(2) > td:nth-of-type(1) > button:nth-of-type(1)"
+      ],
+      "strategies": [
+        {
+          "strategy": "aria-label",
+          "selector": "button[aria-label=\"janeiro 1968\"]"
+        },
+        {
+          "strategy": "has-text",
+          "selector": "button:has-text(\"JAN\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "button.mat-calendar-body-cell.mat-calendar-body-active"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#mat-datepicker-0 > div:nth-of-type(1) > mat-year-view:nth-of-type(1) > table:nth-of-type(1) > tbody:nth-of-type(1) > tr:nth-of-type(2) > td:nth-of-type(1) > button:nth-of-type(1)"
+        }
+      ],
+      "tag_name": "button",
+      "text": "JAN",
+      "value": "",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "mat-calendar-body-cell mat-calendar-body-active",
+        "type": "button",
+        "placeholder": "",
+        "ariaLabel": "janeiro 1968",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "td",
+        "parentText": "JAN",
+        "parentId": "",
+        "framework": "angular",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 114,
+          "y": 432,
+          "w": 70,
+          "h": 40
+        },
+        "elementParentChain": "mat-calendar#mat-datepicker-0 > div:nth-child(1) > mat-year-view:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(2) > td:nth-child(1) > button:nth-child(1)"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "button[aria-label=\"01/01/1968\"]",
+      "fallbacks": [
+        "button:has-text(\"1\")",
+        "button.mat-calendar-body-cell.mat-calendar-body-active",
+        "#mat-datepicker-0 > div:nth-of-type(1) > mat-month-view:nth-of-type(1) > table:nth-of-type(1) > tbody:nth-of-type(1) > tr:nth-of-type(2) > td:nth-of-type(2) > button:nth-of-type(1)"
+      ],
+      "strategies": [
+        {
+          "strategy": "aria-label",
+          "selector": "button[aria-label=\"01/01/1968\"]"
+        },
+        {
+          "strategy": "has-text",
+          "selector": "button:has-text(\"1\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "button.mat-calendar-body-cell.mat-calendar-body-active"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#mat-datepicker-0 > div:nth-of-type(1) > mat-month-view:nth-of-type(1) > table:nth-of-type(1) > tbody:nth-of-type(1) > tr:nth-of-type(2) > td:nth-of-type(2) > button:nth-of-type(1)"
+        }
+      ],
+      "tag_name": "button",
+      "text": "1",
+      "value": "",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "mat-calendar-body-cell mat-calendar-body-active",
+        "type": "button",
+        "placeholder": "",
+        "ariaLabel": "01/01/1968",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "td",
+        "parentText": "1",
+        "parentId": "",
+        "framework": "angular",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 154,
+          "y": 463,
+          "w": 40,
+          "h": 40
+        },
+        "elementParentChain": "mat-calendar#mat-datepicker-0 > div:nth-child(1) > mat-month-view:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(2) > td:nth-child(2) > button:nth-child(1)"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#mat-input-1",
+      "fallbacks": [
+        "input[aria-label=\"Prestação desejada *\"]",
+        "input[placeholder=\"R$0,00\"]",
+        "input.mat-mdc-input-element.ng-untouched.ng-pristine.ng-valid.mat-mdc-form-field-input-control.mdc-text-field__input.cdk-text-field-autofill-monitored"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#mat-input-1"
+        },
+        {
+          "strategy": "aria-label",
+          "selector": "input[aria-label=\"Prestação desejada *\"]"
+        },
+        {
+          "strategy": "placeholder",
+          "selector": "input[placeholder=\"R$0,00\"]"
+        },
+        {
+          "strategy": "class",
+          "selector": "input.mat-mdc-input-element.ng-untouched.ng-pristine.ng-valid.mat-mdc-form-field-input-control.mdc-text-field__input.cdk-text-field-autofill-monitored"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#mat-input-1"
+        }
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "mat-input-1",
+        "name": "",
+        "classes": "mat-mdc-input-element ng-untouched ng-pristine ng-valid mat-mdc-form-field-input-control mdc-text-field__input cdk-text-field-autofill-monitored",
+        "type": "text",
+        "placeholder": "R$0,00",
+        "ariaLabel": "Prestação desejada *",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 570,
+          "y": 663,
+          "w": 414,
+          "h": 40
+        },
+        "elementParentChain": "input#mat-input-1"
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "#mat-input-1",
+      "fallbacks": [
+        "input[aria-label=\"Prestação desejada *\"]",
+        "input[placeholder=\"R$0,00\"]",
+        "input.mat-mdc-input-element.ng-untouched.ng-valid.mat-mdc-form-field-input-control.mdc-text-field__input.cdk-text-field-autofill-monitored.ng-dirty"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#mat-input-1"
+        },
+        {
+          "strategy": "aria-label",
+          "selector": "input[aria-label=\"Prestação desejada *\"]"
+        },
+        {
+          "strategy": "placeholder",
+          "selector": "input[placeholder=\"R$0,00\"]"
+        },
+        {
+          "strategy": "class",
+          "selector": "input.mat-mdc-input-element.ng-untouched.ng-valid.mat-mdc-form-field-input-control.mdc-text-field__input.cdk-text-field-autofill-monitored.ng-dirty"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#mat-input-1"
+        }
+      ],
+      "tag_name": "input",
+      "text": "R$0,00",
+      "value": "R$ 10,00",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "mat-input-1",
+        "name": "",
+        "classes": "mat-mdc-input-element ng-untouched ng-valid mat-mdc-form-field-input-control mdc-text-field__input cdk-text-field-autofill-monitored ng-dirty",
+        "type": "text",
+        "placeholder": "R$0,00",
+        "ariaLabel": "Prestação desejada *",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 570,
+          "y": 663,
+          "w": 414,
+          "h": 40
+        },
+        "elementParentChain": "input#mat-input-1"
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "#mat-input-1",
+      "fallbacks": [
+        "input[aria-label=\"Prestação desejada *\"]",
+        "input[placeholder=\"R$0,00\"]",
+        "input.mat-mdc-input-element.ng-untouched.ng-valid.mat-mdc-form-field-input-control.mdc-text-field__input.cdk-text-field-autofill-monitored.ng-dirty"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#mat-input-1"
+        },
+        {
+          "strategy": "aria-label",
+          "selector": "input[aria-label=\"Prestação desejada *\"]"
+        },
+        {
+          "strategy": "placeholder",
+          "selector": "input[placeholder=\"R$0,00\"]"
+        },
+        {
+          "strategy": "class",
+          "selector": "input.mat-mdc-input-element.ng-untouched.ng-valid.mat-mdc-form-field-input-control.mdc-text-field__input.cdk-text-field-autofill-monitored.ng-dirty"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#mat-input-1"
+        }
+      ],
+      "tag_name": "input",
+      "text": "R$0,00",
+      "value": "R$ 100,00",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "mat-input-1",
+        "name": "",
+        "classes": "mat-mdc-input-element ng-untouched ng-valid mat-mdc-form-field-input-control mdc-text-field__input cdk-text-field-autofill-monitored ng-dirty",
+        "type": "text",
+        "placeholder": "R$0,00",
+        "ariaLabel": "Prestação desejada *",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 570,
+          "y": 663,
+          "w": 414,
+          "h": 40
+        },
+        "elementParentChain": "input#mat-input-1"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#mat-input-1",
+      "fallbacks": [
+        "input[aria-label=\"Prestação desejada *\"]",
+        "input[placeholder=\"R$0,00\"]",
+        "input.mat-mdc-input-element.ng-untouched.ng-valid.mat-mdc-form-field-input-control.mdc-text-field__input.cdk-text-field-autofill-monitored.ng-dirty"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#mat-input-1"
+        },
+        {
+          "strategy": "aria-label",
+          "selector": "input[aria-label=\"Prestação desejada *\"]"
+        },
+        {
+          "strategy": "placeholder",
+          "selector": "input[placeholder=\"R$0,00\"]"
+        },
+        {
+          "strategy": "class",
+          "selector": "input.mat-mdc-input-element.ng-untouched.ng-valid.mat-mdc-form-field-input-control.mdc-text-field__input.cdk-text-field-autofill-monitored.ng-dirty"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#mat-input-1"
+        }
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "R$ 100,00 ",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "mat-input-1",
+        "name": "",
+        "classes": "mat-mdc-input-element ng-untouched ng-valid mat-mdc-form-field-input-control mdc-text-field__input cdk-text-field-autofill-monitored ng-dirty",
+        "type": "text",
+        "placeholder": "R$0,00",
+        "ariaLabel": "Prestação desejada *",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 570,
+          "y": 663,
+          "w": 414,
+          "h": 40
+        },
+        "elementParentChain": "input#mat-input-1"
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "#mat-input-1",
+      "fallbacks": [
+        "input[aria-label=\"Prestação desejada *\"]",
+        "input[placeholder=\"R$0,00\"]",
+        "input.mat-mdc-input-element.ng-untouched.ng-valid.mat-mdc-form-field-input-control.mdc-text-field__input.cdk-text-field-autofill-monitored.ng-dirty"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#mat-input-1"
+        },
+        {
+          "strategy": "aria-label",
+          "selector": "input[aria-label=\"Prestação desejada *\"]"
+        },
+        {
+          "strategy": "placeholder",
+          "selector": "input[placeholder=\"R$0,00\"]"
+        },
+        {
+          "strategy": "class",
+          "selector": "input.mat-mdc-input-element.ng-untouched.ng-valid.mat-mdc-form-field-input-control.mdc-text-field__input.cdk-text-field-autofill-monitored.ng-dirty"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#mat-input-1"
+        }
+      ],
+      "tag_name": "input",
+      "text": "R$0,00",
+      "value": "R$ 1.000,00",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "mat-input-1",
+        "name": "",
+        "classes": "mat-mdc-input-element ng-untouched ng-valid mat-mdc-form-field-input-control mdc-text-field__input cdk-text-field-autofill-monitored ng-dirty",
+        "type": "text",
+        "placeholder": "R$0,00",
+        "ariaLabel": "Prestação desejada *",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 570,
+          "y": 663,
+          "w": 414,
+          "h": 40
+        },
+        "elementParentChain": "input#mat-input-1"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#mat-input-0",
+      "fallbacks": [
+        "input[placeholder=\"DD/MM/AAAA\"]",
+        "input.mat-mdc-input-element.mat-datepicker-input.ng-valid.mat-mdc-form-field-input-control.mdc-text-field__input.cdk-text-field-autofill-monitored.ng-touched.ng-dirty"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#mat-input-0"
+        },
+        {
+          "strategy": "placeholder",
+          "selector": "input[placeholder=\"DD/MM/AAAA\"]"
+        },
+        {
+          "strategy": "class",
+          "selector": "input.mat-mdc-input-element.mat-datepicker-input.ng-valid.mat-mdc-form-field-input-control.mdc-text-field__input.cdk-text-field-autofill-monitored.ng-touched.ng-dirty"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#mat-input-0"
+        }
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "01/01/1968",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "mat-input-0",
+        "name": "",
+        "classes": "mat-mdc-input-element mat-datepicker-input ng-valid mat-mdc-form-field-input-control mdc-text-field__input cdk-text-field-autofill-monitored ng-touched ng-dirty",
+        "type": "",
+        "placeholder": "DD/MM/AAAA",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 107,
+          "y": 663,
+          "w": 366,
+          "h": 40
+        },
+        "elementParentChain": "input#mat-input-0"
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "#mat-input-1",
+      "fallbacks": [
+        "input[aria-label=\"Prestação desejada *\"]",
+        "input[placeholder=\"R$0,00\"]",
+        "input.mat-mdc-input-element.ng-valid.mat-mdc-form-field-input-control.mdc-text-field__input.cdk-text-field-autofill-monitored.ng-dirty.ng-touched"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#mat-input-1"
+        },
+        {
+          "strategy": "aria-label",
+          "selector": "input[aria-label=\"Prestação desejada *\"]"
+        },
+        {
+          "strategy": "placeholder",
+          "selector": "input[placeholder=\"R$0,00\"]"
+        },
+        {
+          "strategy": "class",
+          "selector": "input.mat-mdc-input-element.ng-valid.mat-mdc-form-field-input-control.mdc-text-field__input.cdk-text-field-autofill-monitored.ng-dirty.ng-touched"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#mat-input-1"
+        }
+      ],
+      "tag_name": "input",
+      "text": "R$0,00",
+      "value": "R$ 1.000,00",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "mat-input-1",
+        "name": "",
+        "classes": "mat-mdc-input-element ng-valid mat-mdc-form-field-input-control mdc-text-field__input cdk-text-field-autofill-monitored ng-dirty ng-touched",
+        "type": "text",
+        "placeholder": "R$0,00",
+        "ariaLabel": "Prestação desejada *",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 570,
+          "y": 663,
+          "w": 414,
+          "h": 40
+        },
+        "elementParentChain": "input#mat-input-1"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "span:has-text(\"Calcular\")",
+      "fallbacks": [
+        "span.mdc-button__label",
+        "app-root:nth-of-type(1) > app-calculadora:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > form:nth-of-type(1) > div:nth-of-type(1) > dsc-button:nth-of-type(1) > button:nth-of-type(1) > span:nth-of-type(2)"
+      ],
+      "strategies": [
+        {
+          "strategy": "has-text",
+          "selector": "span:has-text(\"Calcular\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "span.mdc-button__label"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "app-root:nth-of-type(1) > app-calculadora:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > form:nth-of-type(1) > div:nth-of-type(1) > dsc-button:nth-of-type(1) > button:nth-of-type(1) > span:nth-of-type(2)"
+        }
+      ],
+      "tag_name": "span",
+      "text": "Calcular",
+      "value": "",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "mdc-button__label",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "button",
+        "parentText": "calculate_outline  Calcular",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 1081,
+          "y": 670,
+          "w": 63,
+          "h": 24
+        },
+        "elementParentChain": "app-root:nth-child(1) > app-calculadora:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) > form:nth-child(1) > div:nth-child(1) > dsc-button:nth-child(1) > button:nth-child(1) > span:nth-child(2)"
+      }
+    },
+    {
+      "action": "assert",
+      "selector": "p.text-grayscale-130.text-size-small.m-0.mb-4",
+      "fallbacks": [
+        "p:has-text(\"R$ 149.699,72\")"
+      ],
+      "strategies": [
+        {
+          "strategy": "text-contains",
+          "selector": "p:has-text(\"R$ 149.699,72\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "p.text-grayscale-130.text-size-small.m-0.mb-4"
+        }
+      ],
+      "tag_name": "p",
+      "text": "R$ 149.699,72",
+      "value": "",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "text-grayscale-130 text-size-small m-0 mb-4",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "homeValor do imóvel R$ 149.699,72  Valor estimado do imóvel",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 493,
+          "y": 209,
+          "w": 279,
+          "h": 36
+        },
+        "elementParentChain": "app-root:nth-child(1) > app-calculadora:nth-child(1) > div:nth-child(1) > div:nth-child(1) > app-resultados-calculadora:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > p:nth-child(1)"
+      },
+      "assert_type": "textual",
+      "assert_state": "enabled",
+      "expected_value": "R$ 149.699,72"
+    },
+    {
+      "action": "click",
+      "selector": "span.mat-mdc-button-touch-target",
+      "fallbacks": [
+        "app-root:nth-of-type(1) > app-calculadora:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > form:nth-of-type(1) > div:nth-of-type(1) > dsc-button:nth-of-type(1) > button:nth-of-type(1) > span:nth-of-type(4)"
+      ],
+      "strategies": [
+        {
+          "strategy": "class",
+          "selector": "span.mat-mdc-button-touch-target"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "app-root:nth-of-type(1) > app-calculadora:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > form:nth-of-type(1) > div:nth-of-type(1) > dsc-button:nth-of-type(1) > button:nth-of-type(1) > span:nth-of-type(4)"
+        }
+      ],
+      "tag_name": "span",
+      "text": "",
+      "value": "",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "mat-mdc-button-touch-target",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "button",
+        "parentText": "calculate_outline  Calcular",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 1037,
+          "y": 144,
+          "w": 123,
+          "h": 48
+        },
+        "elementParentChain": "app-root:nth-child(1) > app-calculadora:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) > form:nth-child(1) > div:nth-child(1) > dsc-button:nth-child(1) > button:nth-child(1) > span:nth-child(4)"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#mat-input-1",
+      "fallbacks": [
+        "input[aria-label=\"Prestação desejada *\"]",
+        "input[placeholder=\"R$0,00\"]",
+        "input.mat-mdc-input-element.ng-valid.mat-mdc-form-field-input-control.mdc-text-field__input.cdk-text-field-autofill-monitored.ng-dirty.ng-touched"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#mat-input-1"
+        },
+        {
+          "strategy": "aria-label",
+          "selector": "input[aria-label=\"Prestação desejada *\"]"
+        },
+        {
+          "strategy": "placeholder",
+          "selector": "input[placeholder=\"R$0,00\"]"
+        },
+        {
+          "strategy": "class",
+          "selector": "input.mat-mdc-input-element.ng-valid.mat-mdc-form-field-input-control.mdc-text-field__input.cdk-text-field-autofill-monitored.ng-dirty.ng-touched"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#mat-input-1"
+        }
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "R$ 1.000,00 ",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "mat-input-1",
+        "name": "",
+        "classes": "mat-mdc-input-element ng-valid mat-mdc-form-field-input-control mdc-text-field__input cdk-text-field-autofill-monitored ng-dirty ng-touched",
+        "type": "text",
+        "placeholder": "R$0,00",
+        "ariaLabel": "Prestação desejada *",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 570,
+          "y": 149,
+          "w": 414,
+          "h": 40
+        },
+        "elementParentChain": "input#mat-input-1"
+      }
+    },
+    {
+      "action": "assert",
+      "selector": "p.text-grayscale-130.text-size-small.m-0.mb-4",
+      "fallbacks": [
+        "p:has-text(\"R$ 3.333,33\")"
+      ],
+      "strategies": [
+        {
+          "strategy": "text-contains",
+          "selector": "p:has-text(\"R$ 3.333,33\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "p.text-grayscale-130.text-size-small.m-0.mb-4"
+        }
+      ],
+      "tag_name": "p",
+      "text": "R$ 3.333,33",
+      "value": "",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "text-grayscale-130 text-size-small m-0 mb-4",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "trending_upRenda estimada necessária R$ 3.333,33  Para pagar a prestação desejada",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 152,
+          "y": 161,
+          "w": 279,
+          "h": 36
+        },
+        "elementParentChain": "app-root:nth-child(1) > app-calculadora:nth-child(1) > div:nth-child(1) > div:nth-child(1) > app-resultados-calculadora:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > p:nth-child(1)"
+      },
+      "assert_type": "textual",
+      "assert_state": "enabled",
+      "expected_value": "R$ 3.333,33"
+    },
+    {
+      "action": "assert",
+      "selector": "p.text-grayscale-130.text-size-small.m-0.mb-4",
+      "fallbacks": [
+        "p:has-text(\"R$ 29.939,94\")"
+      ],
+      "strategies": [
+        {
+          "strategy": "text-contains",
+          "selector": "p:has-text(\"R$ 29.939,94\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "p.text-grayscale-130.text-size-small.m-0.mb-4"
+        }
+      ],
+      "tag_name": "p",
+      "text": "R$ 29.939,94",
+      "value": "",
+      "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "text-grayscale-130 text-size-small m-0 mb-4",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "attach_moneyValor mínimo de entrada R$ 29.939,94",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": "",
+        "elementRect": {
+          "x": 834,
+          "y": 161,
+          "w": 279,
+          "h": 36
+        },
+        "elementParentChain": "app-root:nth-child(1) > app-calculadora:nth-child(1) > div:nth-child(1) > div:nth-child(1) > app-resultados-calculadora:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(3) > p:nth-child(1)"
+      },
+      "assert_type": "textual",
+      "assert_state": "enabled",
+      "expected_value": "R$ 29.939,94"
+    }
+  ]
+}

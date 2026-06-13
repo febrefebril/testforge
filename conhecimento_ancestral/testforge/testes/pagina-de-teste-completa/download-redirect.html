@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><title>Redirect para Download</title></head>
+<body>
+<p>Redirecionando para download...</p>
+<script>
+  setTimeout(function(){
+    var blob = new Blob(['Arquivo baixado via redirect\nTimestamp: ' + Date.now()], {type: 'text/plain'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'redirect-' + Date.now() + '.txt';
+    a.click();
+    setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+    document.body.innerHTML = '<p style="font-family:system-ui;padding:24px;text-align:center;">\u2705 Download iniciado via redirect. <a href="index.html">Voltar</a></p>';
+  }, 1000);
+</script>
+</body>
+</html>

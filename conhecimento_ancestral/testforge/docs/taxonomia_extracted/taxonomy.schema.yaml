@@ -1,0 +1,706 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://testforge.local/schemas/taxonomy.schema.yaml"
+title: "TestForge Taxonomy Schema"
+description: >-
+  Schema formal para validar a taxonomia implementável de casos conhecidos do
+  TestForge / Agente Curador de Scripts. O schema cobre metadados, convenções,
+  famílias taxonômicas, casos implementáveis, estratégias, estados de resultado,
+  critérios de sucesso, fallbacks e regras mínimas para rastreabilidade.
+type: object
+additionalProperties: false
+required:
+  - metadata
+  - conventions
+  - families
+properties:
+  metadata:
+    type: object
+    additionalProperties: false
+    required:
+      - project
+      - artifact
+      - version
+      - base
+    properties:
+      project:
+        type: string
+        minLength: 1
+        examples:
+          - "TestForge / Agente Curador de Scripts"
+      artifact:
+        type: string
+        minLength: 1
+        examples:
+          - "Taxonomia implementável para detecção, classificação, healing e geração de testes"
+      version:
+        type: string
+        pattern: "^[0-9]+\\.[0-9]+(\\.[0-9]+)?(-[A-Za-z0-9._-]+)?$"
+        examples:
+          - "1.0"
+          - "1.0.0"
+      base:
+        type: string
+        minLength: 1
+        examples:
+          - "Capítulo 1 — Taxonomia de Falhas JSF, jQuery, AJAX e Frameworks Mobile"
+      owner:
+        type: string
+        minLength: 1
+      created_at:
+        type: string
+        format: date
+      updated_at:
+        type: string
+        format: date
+      source_of_truth:
+        type: string
+        description: "Referência ao artefato normativo da taxonomia, quando aplicável."
+
+  conventions:
+    type: object
+    additionalProperties: false
+    required:
+      - priorities
+      - result_states
+      - known_strategies
+    properties:
+      priorities:
+        type: array
+        minItems: 3
+        uniqueItems: true
+        items:
+          $ref: "#/$defs/priority_definition"
+        contains:
+          type: object
+          required: [id]
+          properties:
+            id:
+              const: P0
+      result_states:
+        type: array
+        minItems: 5
+        uniqueItems: true
+        items:
+          $ref: "#/$defs/result_state_definition"
+      known_strategies:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items:
+          $ref: "#/$defs/strategy"
+
+  families:
+    type: array
+    minItems: 1
+    items:
+      $ref: "#/$defs/family"
+
+$defs:
+  priority:
+    type: string
+    enum:
+      - P0
+      - P1
+      - P2
+
+  result_state:
+    type: string
+    enum:
+      - RESOLVED
+      - PARTIALLY_RESOLVED
+      - MANUAL_REQUIRED
+      - UNRESOLVED
+      - REJECTED
+
+  strategy:
+    type: string
+    enum:
+      - label_proximity
+      - text_content_match
+      - aria_role_strategy
+      - semantic_locator_conversion
+      - primefaces_registry_scan
+      - frame_reacquire
+      - shadow_pierce
+      - network_idle_wait
+      - response_intercept
+      - dom_stabilization
+      - overlay_dismiss
+      - re_auth_hook
+      - llm_selector_inference
+      - download_event_capture
+      - upload_payload_binding
+      - assert_overlay_capture
+      - manual_checkpoint
+      - wait_for_function
+      - wait_for_selector
+      - wait_for_url
+      - wait_for_popup
+      - wait_for_dialog
+      - fixture_binding
+      - precondition_validation
+      - evidence_collection
+      - patch_audit_trail
+      - controlled_retry
+      - stable_rounds_validation
+      - sensitive_data_masking
+      - irreversible_action_checkpoint
+
+  family_id:
+    type: string
+    enum:
+      - fragile_selectors
+      - timing_async
+      - context_scope
+      - application_state
+      - dynamic_dom
+      - specialized_input_interaction
+      - file_upload_download
+      - assertions_validations
+      - recorder_overlay_manual_checkpoints
+      - execution_evidence_observability
+      - technical_limits_non_automatable
+
+  case_id:
+    type: string
+    pattern: "^(SEL|TIM|CTX|STA|DOM|INP|FILE|AST|REC|OBS|LIM)-[0-9]{3}$"
+    description: >-
+      Identificador taxonômico estável. O prefixo deve representar a família:
+      SEL, TIM, CTX, STA, DOM, INP, FILE, AST, REC, OBS ou LIM.
+
+  technology:
+    type: string
+    minLength: 1
+    examples:
+      - JSF
+      - PrimeFaces
+      - jQuery
+      - Angular
+      - SPA
+      - Web Components
+      - Playwright
+      - Browser security
+      - Recorder
+      - Curador
+      - Geral
+
+  non_empty_string:
+    type: string
+    minLength: 1
+
+  string_list:
+    type: array
+    minItems: 1
+    items:
+      $ref: "#/$defs/non_empty_string"
+
+  priority_definition:
+    type: object
+    additionalProperties: false
+    required:
+      - id
+      - meaning
+    properties:
+      id:
+        $ref: "#/$defs/priority"
+      meaning:
+        type: string
+        minLength: 1
+
+  result_state_definition:
+    type: object
+    additionalProperties: false
+    required:
+      - id
+      - meaning
+    properties:
+      id:
+        $ref: "#/$defs/result_state"
+      meaning:
+        type: string
+        minLength: 1
+
+  family:
+    type: object
+    additionalProperties: false
+    required:
+      - id
+      - name
+      - description
+      - cases
+    properties:
+      id:
+        $ref: "#/$defs/family_id"
+      name:
+        type: string
+        minLength: 1
+        examples:
+          - "Seletores frágeis"
+      description:
+        type: string
+        minLength: 1
+      order:
+        type: integer
+        minimum: 1
+      cases:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/taxonomy_case"
+
+  taxonomy_case:
+    type: object
+    additionalProperties: false
+    required:
+      - id
+      - case
+      - family
+      - technologies
+      - observable_symptoms
+      - probable_causes
+      - minimum_detection
+      - primary_strategy
+      - fallback_strategies
+      - expected_output
+      - success_criteria
+      - priority
+      - result_states
+      - evidence_requirements
+      - implementation_notes
+    properties:
+      id:
+        $ref: "#/$defs/case_id"
+      case:
+        type: string
+        minLength: 1
+      family:
+        $ref: "#/$defs/family_id"
+      family_name:
+        type: string
+        minLength: 1
+      technologies:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items:
+          $ref: "#/$defs/technology"
+      observable_symptoms:
+        $ref: "#/$defs/string_list"
+      probable_causes:
+        $ref: "#/$defs/string_list"
+      minimum_detection:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/detection_rule"
+      primary_strategy:
+        $ref: "#/$defs/strategy"
+      fallback_strategies:
+        type: array
+        uniqueItems: true
+        items:
+          $ref: "#/$defs/strategy"
+      expected_output:
+        $ref: "#/$defs/string_list"
+      success_criteria:
+        $ref: "#/$defs/string_list"
+      priority:
+        $ref: "#/$defs/priority"
+      result_states:
+        $ref: "#/$defs/case_result_states"
+      evidence_requirements:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/evidence_requirement"
+      implementation_notes:
+        type: array
+        items:
+          type: string
+      safety_policy:
+        $ref: "#/$defs/safety_policy"
+      tags:
+        type: array
+        uniqueItems: true
+        items:
+          type: string
+          minLength: 1
+      examples:
+        type: array
+        items:
+          $ref: "#/$defs/case_example"
+      tests:
+        type: array
+        items:
+          $ref: "#/$defs/test_requirement"
+
+  detection_rule:
+    type: object
+    additionalProperties: false
+    required:
+      - type
+      - description
+    properties:
+      type:
+        type: string
+        enum:
+          - selector_pattern
+          - selector_shape
+          - dom_signal
+          - accessibility_signal
+          - network_signal
+          - console_signal
+          - browser_event
+          - playwright_error
+          - url_signal
+          - text_signal
+          - visual_signal
+          - technology_fingerprint
+          - recorder_event
+          - overlay_event
+          - file_event
+          - security_boundary
+          - user_intent
+          - validator_feedback
+          - execution_history
+          - custom
+      description:
+        type: string
+        minLength: 1
+      field:
+        type: string
+        minLength: 1
+        examples:
+          - selector
+          - url
+          - response.status
+          - console.type
+          - event.type
+      operator:
+        type: string
+        enum:
+          - contains
+          - matches_regex
+          - equals
+          - not_equals
+          - starts_with
+          - ends_with
+          - exists
+          - not_exists
+          - greater_than
+          - greater_than_or_equal
+          - less_than
+          - less_than_or_equal
+          - in
+          - not_in
+          - custom
+      value:
+        description: "Valor usado pelo operador de detecção. Pode ser string, número, booleano, array ou objeto."
+      severity:
+        type: string
+        enum:
+          - info
+          - warning
+          - error
+          - critical
+      required:
+        type: boolean
+        default: true
+
+  case_result_states:
+    type: object
+    additionalProperties: false
+    required:
+      - success
+      - failure
+    properties:
+      success:
+        $ref: "#/$defs/result_state"
+      partial:
+        $ref: "#/$defs/result_state"
+      manual:
+        $ref: "#/$defs/result_state"
+      rejected:
+        $ref: "#/$defs/result_state"
+      failure:
+        $ref: "#/$defs/result_state"
+
+  evidence_requirement:
+    type: object
+    additionalProperties: false
+    required:
+      - kind
+      - description
+      - required
+    properties:
+      kind:
+        type: string
+        enum:
+          - screenshot
+          - trace
+          - har
+          - console_log
+          - network_log
+          - dom_snapshot
+          - accessibility_snapshot
+          - recorder_event
+          - overlay_event
+          - file_metadata
+          - download_metadata
+          - upload_metadata
+          - patch_diff
+          - validator_report
+          - execution_report
+          - manual_note
+          - custom
+      description:
+        type: string
+        minLength: 1
+      required:
+        type: boolean
+      retention:
+        type: string
+        enum:
+          - ephemeral
+          - report
+          - audit
+          - masked
+
+  safety_policy:
+    type: object
+    additionalProperties: false
+    properties:
+      sensitive_data_handling:
+        type: string
+        enum:
+          - none
+          - mask
+          - tokenize
+          - redact
+          - manual_review
+      irreversible_action:
+        type: boolean
+        default: false
+      allows_llm_inference:
+        type: boolean
+        default: true
+      requires_human_approval:
+        type: boolean
+        default: false
+      notes:
+        type: array
+        items:
+          type: string
+
+  case_example:
+    type: object
+    additionalProperties: false
+    required:
+      - name
+      - input
+      - expected_classification
+    properties:
+      name:
+        type: string
+        minLength: 1
+      input:
+        type: object
+        additionalProperties: true
+      expected_classification:
+        $ref: "#/$defs/case_id"
+      expected_strategy:
+        $ref: "#/$defs/strategy"
+      expected_result_state:
+        $ref: "#/$defs/result_state"
+
+  test_requirement:
+    type: object
+    additionalProperties: false
+    required:
+      - id
+      - type
+      - description
+      - required_for_priority
+    properties:
+      id:
+        type: string
+        pattern: "^TAX-[A-Z]+-[0-9]{3}(-[0-9]{2})?$"
+      type:
+        type: string
+        enum:
+          - unit
+          - integration
+          - e2e
+          - golden_file
+          - regression
+          - contract
+      description:
+        type: string
+        minLength: 1
+      required_for_priority:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items:
+          $ref: "#/$defs/priority"
+      acceptance:
+        type: array
+        items:
+          type: string
+
+allOf:
+  - description: "Casos P0 devem declarar ao menos um requisito de teste automatizado."
+    if:
+      properties:
+        families:
+          type: array
+          items:
+            properties:
+              cases:
+                type: array
+                items:
+                  properties:
+                    priority:
+                      const: P0
+    then:
+      properties:
+        families:
+          type: array
+          items:
+            properties:
+              cases:
+                type: array
+                items:
+                  if:
+                    properties:
+                      priority:
+                        const: P0
+                  then:
+                    required:
+                      - tests
+                    properties:
+                      tests:
+                        type: array
+                        minItems: 1
+
+  - description: "Casos de limite técnico devem restringir inferência automática quando exigem checkpoint manual."
+    properties:
+      families:
+        type: array
+        items:
+          properties:
+            cases:
+              type: array
+              items:
+                if:
+                  properties:
+                    primary_strategy:
+                      const: manual_checkpoint
+                then:
+                  properties:
+                    result_states:
+                      anyOf:
+                        - properties:
+                            manual:
+                              const: MANUAL_REQUIRED
+                        - properties:
+                            failure:
+                              const: UNRESOLVED
+
+examples:
+  - metadata:
+      project: "TestForge / Agente Curador de Scripts"
+      artifact: "Taxonomia implementável para detecção, classificação, healing e geração de testes"
+      version: "1.0"
+      base: "Capítulo 1 — Taxonomia de Falhas JSF, jQuery, AJAX e Frameworks Mobile"
+    conventions:
+      priorities:
+        - id: P0
+          meaning: "Deve ser tratado no MVP; afeta diretamente a estabilidade básica dos scripts."
+        - id: P1
+          meaning: "Deve ser tratado após estabilização do núcleo; comum, mas pode ter workaround manual."
+        - id: P2
+          meaning: "Tratamento avançado, especializado ou dependente de contexto."
+      result_states:
+        - id: RESOLVED
+          meaning: "O curador classificou e aplicou uma correção validada."
+        - id: PARTIALLY_RESOLVED
+          meaning: "O curador aplicou correção, mas deixou ressalvas ou dependência manual."
+        - id: MANUAL_REQUIRED
+          meaning: "O caso exige intervenção humana explícita."
+        - id: UNRESOLVED
+          meaning: "O curador não conseguiu resolver com segurança."
+        - id: REJECTED
+          meaning: "A correção proposta foi rejeitada pelo validador."
+      known_strategies:
+        - semantic_locator_conversion
+        - label_proximity
+        - text_content_match
+        - aria_role_strategy
+        - llm_selector_inference
+    families:
+      - id: fragile_selectors
+        name: "Seletores frágeis"
+        description: "Falhas relacionadas a locators frágeis, dinâmicos ou ambíguos."
+        order: 1
+        cases:
+          - id: SEL-001
+            case: "ID JSF dinâmico"
+            family: fragile_selectors
+            family_name: "Seletores frágeis"
+            technologies:
+              - JSF
+              - PrimeFaces
+            observable_symptoms:
+              - "Locator gravado quebra entre execuções."
+              - "ID contém padrão dinâmico."
+            probable_causes:
+              - "JSF gerou IDs voláteis com prefixos e índices dependentes da árvore de componentes."
+            minimum_detection:
+              - type: selector_pattern
+                description: "Selector contém padrão j_idt."
+                field: selector
+                operator: contains
+                value: "j_idt"
+                severity: warning
+                required: true
+            primary_strategy: semantic_locator_conversion
+            fallback_strategies:
+              - label_proximity
+              - text_content_match
+              - aria_role_strategy
+              - llm_selector_inference
+            expected_output:
+              - "Locator semântico Playwright."
+            success_criteria:
+              - "Elemento localizado em execuções repetidas."
+              - "Sem uso de XPath absoluto."
+            priority: P0
+            result_states:
+              success: RESOLVED
+              failure: UNRESOLVED
+            evidence_requirements:
+              - kind: dom_snapshot
+                description: "Snapshot DOM usado para justificar a conversão semântica."
+                required: true
+                retention: audit
+              - kind: patch_diff
+                description: "Diff do locator original para o locator curado."
+                required: true
+                retention: audit
+            implementation_notes:
+              - "Não persistir IDs JSF voláteis como seletor primário."
+            safety_policy:
+              sensitive_data_handling: none
+              irreversible_action: false
+              allows_llm_inference: true
+              requires_human_approval: false
+            tests:
+              - id: TAX-SEL-001
+                type: unit
+                description: "Classifica selector com j_idt como SEL-001."
+                required_for_priority:
+                  - P0
+                acceptance:
+                  - "Classificação retorna SEL-001."
+                  - "Estratégia principal retorna semantic_locator_conversion."

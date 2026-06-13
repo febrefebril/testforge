@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>FAM-05: DOM Dinâmico</title>
+<script src="../common.js"></script>
+<script src="error.js"></script>
+</head>
+<body>
+  <h1>FAM-05: DOM Dinâmico</h1>
+  <div id="container">
+    <ul id="lista-itens">
+      <li data-testid="item-1">Item 1</li>
+      <li data-testid="item-2">Item 2</li>
+      <li data-testid="item-3">Item 3</li>
+    </ul>
+  </div>
+  <button id="btn-reordenar">Reordenar</button>
+  <button id="btn-adicionar">Adicionar</button>
+  <p id="result"></p>
+  <script>
+    document.getElementById("btn-reordenar").addEventListener("click", function() {
+      var lista = document.getElementById("lista-itens");
+      var items = Array.from(lista.children);
+      while (items.length) {
+        var i = Math.floor(Math.random() * items.length);
+        lista.appendChild(items.splice(i, 1)[0]);
+      }
+      document.getElementById("result").textContent = "Lista reordenada!";
+    });
+    document.getElementById("btn-adicionar").addEventListener("click", function() {
+      var li = document.createElement("li");
+      li.textContent = "Item " + (document.getElementById("lista-itens").children.length + 1);
+      document.getElementById("lista-itens").appendChild(li);
+      document.getElementById("result").textContent = "Item adicionado!";
+    });
+  </script>
+</body>
+</html>

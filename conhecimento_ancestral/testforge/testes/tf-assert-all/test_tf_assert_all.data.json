@@ -1,0 +1,697 @@
+{
+  "steps": [
+    {
+      "action": "click",
+      "selector": "#tipoImovelSelect",
+      "fallbacks": [],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#tipoImovelSelect"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#tipoImovelSelect"
+        }
+      ],
+      "tag_name": "select",
+      "text": "Selecione\n              Residencial\n              Comercial\n              Terreno\n              Rural",
+      "value": "",
+      "url": "file:///home/febre/Projetos/testforge/tests/pagina-de-teste/primefaces/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "tipoImovelSelect",
+        "name": "",
+        "classes": "",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Selecione\n              Residencial\n              Comercial\n              Terreno\n              Rura",
+        "parentId": "",
+        "framework": "primefaces",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": -9934,
+          "y": 224,
+          "w": 91,
+          "h": 19
+        },
+        "elementParentChain": "select#tipoImovelSelect"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "li:has-text(\"Residencial\")",
+      "fallbacks": [
+        "li.ui-selectonemenu-item",
+        "#tipoImovelPanel > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(2)"
+      ],
+      "strategies": [
+        {
+          "strategy": "has-text",
+          "selector": "li:has-text(\"Residencial\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "li.ui-selectonemenu-item"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#tipoImovelPanel > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(2)"
+        }
+      ],
+      "tag_name": "li",
+      "text": "Residencial",
+      "value": "",
+      "url": "file:///home/febre/Projetos/testforge/tests/pagina-de-teste/primefaces/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "ui-selectonemenu-item",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "ul",
+        "parentText": "Selecione\n              Residencial\n              Comercial\n              Terreno\n              Rura",
+        "parentId": "",
+        "framework": "primefaces",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 65,
+          "y": 304,
+          "w": 198,
+          "h": 34
+        },
+        "elementParentChain": "div#tipoImovelPanel > div:nth-child(1) > ul:nth-child(1) > li:nth-child(2)"
+      }
+    },
+    {
+      "action": "select",
+      "selector": "#tipoImovelSelect",
+      "fallbacks": [],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#tipoImovelSelect"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#tipoImovelSelect"
+        }
+      ],
+      "tag_name": "select",
+      "text": "Residencial",
+      "value": "1",
+      "url": "file:///home/febre/Projetos/testforge/tests/pagina-de-teste/primefaces/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "tipoImovelSelect",
+        "name": "",
+        "classes": "",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Selecione\n              Residencial\n              Comercial\n              Terreno\n              Rura",
+        "parentId": "",
+        "framework": "primefaces",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": -9934,
+          "y": 224,
+          "w": 91,
+          "h": 19
+        },
+        "elementParentChain": "select#tipoImovelSelect"
+      }
+    },
+    {
+      "action": "assert",
+      "selector": "h1:has-text(\"Tipo de Imóvel\")",
+      "fallbacks": [
+        "h1:has-text(\"🧪 PrimeFaces Widgets — Página de Teste\")"
+      ],
+      "strategies": [
+        {
+          "strategy": "label-text",
+          "selector": "h1:has-text(\"Tipo de Imóvel\")"
+        },
+        {
+          "strategy": "text-contains",
+          "selector": "h1:has-text(\"🧪 PrimeFaces Widgets — Página de Teste\")"
+        }
+      ],
+      "tag_name": "h1",
+      "text": "🧪 PrimeFaces Widgets — Página de Teste",
+      "value": "",
+      "url": "file:///home/febre/Projetos/testforge/tests/pagina-de-teste/primefaces/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Tipo de Imóvel",
+        "parentTag": "body",
+        "parentText": "🧪 PrimeFaces Widgets — Página de Teste\nSimula a estrutura DOM dos widgets PrimeFaces SelectOneMenu ",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 40,
+          "y": 40,
+          "w": 1200,
+          "h": 38
+        },
+        "elementParentChain": "h1:nth-child(1)"
+      },
+      "assert_type": "textual",
+      "assert_state": "enabled",
+      "expected_value": "🧪 PrimeFaces Widgets — Página de Teste"
+    },
+    {
+      "action": "assert",
+      "selector": "label:has-text(\"À Vista\")",
+      "fallbacks": [
+        "#avistaRadio",
+        "input[name=\"financiamento\"]"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#avistaRadio"
+        },
+        {
+          "strategy": "name",
+          "selector": "input[name=\"financiamento\"]"
+        }
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "avista",
+      "url": "file:///home/febre/Projetos/testforge/tests/pagina-de-teste/primefaces/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "avistaRadio",
+        "name": "financiamento",
+        "classes": "",
+        "type": "radio",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "label",
+        "parentText": "À Vista",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 165,
+          "y": 305,
+          "w": 13,
+          "h": 13
+        },
+        "elementParentChain": "input#avistaRadio"
+      },
+      "assert_type": "estado",
+      "assert_state": "checked",
+      "expected_value": "checked"
+    },
+    {
+      "action": "assert",
+      "selector": "#nomeInput",
+      "fallbacks": [
+        "label:has-text(\"Nome (desabilitado)\")",
+        "span:has-text(\"Nome (desabilitado)\")",
+        "div:has-text(\"Nome (desabilitado)\")"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#nomeInput"
+        },
+        {
+          "strategy": "label-text-label",
+          "selector": "label:has-text(\"Nome (desabilitado)\")"
+        },
+        {
+          "strategy": "label-text-span",
+          "selector": "span:has-text(\"Nome (desabilitado)\")"
+        },
+        {
+          "strategy": "label-text-div",
+          "selector": "div:has-text(\"Nome (desabilitado)\")"
+        }
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "João Silva",
+      "url": "file:///home/febre/Projetos/testforge/tests/pagina-de-teste/primefaces/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "nomeInput",
+        "name": "",
+        "classes": "",
+        "type": "text",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Nome (desabilitado)",
+        "parentTag": "div",
+        "parentText": "Nome (desabilitado)",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 64,
+          "y": 362,
+          "w": 532,
+          "h": 33
+        },
+        "elementParentChain": "input#nomeInput"
+      },
+      "assert_type": "estado",
+      "assert_state": "disabled",
+      "expected_value": "disabled"
+    },
+    {
+      "action": "assert",
+      "selector": "#result",
+      "fallbacks": [
+        "div:has-text(\"Tipo de Imóvel\")",
+        "div:has-text(\"🖱️ Última interação: select: Residencial (value=1)\n  📋 Hidden select value: select#tipoImovelSelect = 1\")",
+        "div.result"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#result"
+        },
+        {
+          "strategy": "label-text",
+          "selector": "div:has-text(\"Tipo de Imóvel\")"
+        },
+        {
+          "strategy": "text-contains",
+          "selector": "div:has-text(\"🖱️ Última interação: select: Residencial (value=1)\n  📋 Hidden select value: select#tipoImovelSelect = 1\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "div.result"
+        }
+      ],
+      "tag_name": "div",
+      "text": "🖱️ Última interação: select: Residencial (value=1)\n  📋 Hidden select value: select#tipoImovelSelect = 1",
+      "value": "",
+      "url": "file:///home/febre/Projetos/testforge/tests/pagina-de-teste/primefaces/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "result",
+        "name": "",
+        "classes": "result",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Tipo de Imóvel",
+        "parentTag": "body",
+        "parentText": "🧪 PrimeFaces Widgets — Página de Teste\nSimula a estrutura DOM dos widgets PrimeFaces SelectOneMenu ",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 40,
+          "y": 580,
+          "w": 1200,
+          "h": 54
+        },
+        "elementParentChain": "div#result"
+      },
+      "assert_type": "visivel",
+      "assert_state": "enabled",
+      "expected_value": "visible"
+    },
+    {
+      "action": "assert",
+      "selector": "#hiddenElement",
+      "fallbacks": [
+        "div:has-text(\"Tipo de Imóvel\")",
+        "div:has-text(\"Este elemento está oculto\")"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#hiddenElement"
+        },
+        {
+          "strategy": "label-text",
+          "selector": "div:has-text(\"Tipo de Imóvel\")"
+        },
+        {
+          "strategy": "text-contains",
+          "selector": "div:has-text(\"Este elemento está oculto\")"
+        }
+      ],
+      "tag_name": "div",
+      "text": "Este elemento está oculto",
+      "value": "",
+      "url": "file:///home/febre/Projetos/testforge/tests/pagina-de-teste/primefaces/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "hiddenElement",
+        "name": "",
+        "classes": "",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Tipo de Imóvel",
+        "parentTag": "body",
+        "parentText": "🧪 PrimeFaces Widgets — Página de Teste\nSimula a estrutura DOM dos widgets PrimeFaces SelectOneMenu ",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "elementParentChain": "div#hiddenElement"
+      },
+      "assert_type": "visivel",
+      "assert_state": "enabled",
+      "expected_value": "hidden"
+    },
+    {
+      "action": "click",
+      "selector": "#cidadeAcInput",
+      "fallbacks": [
+        "input[placeholder=\"Digite para buscar...\"]",
+        "input.ui-autocomplete-input"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#cidadeAcInput"
+        },
+        {
+          "strategy": "placeholder",
+          "selector": "input[placeholder=\"Digite para buscar...\"]"
+        },
+        {
+          "strategy": "class",
+          "selector": "input.ui-autocomplete-input"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#cidadeAcInput"
+        }
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "",
+      "url": "file:///home/febre/Projetos/testforge/tests/pagina-de-teste/primefaces/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "cidadeAcInput",
+        "name": "",
+        "classes": "ui-autocomplete-input",
+        "type": "text",
+        "placeholder": "Digite para buscar...",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "span",
+        "parentText": "",
+        "parentId": "cidadeAc",
+        "framework": "primefaces",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 684,
+          "y": 223,
+          "w": 532,
+          "h": 34
+        },
+        "elementParentChain": "input#cidadeAcInput"
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "#cidadeAcInput",
+      "fallbacks": [
+        "input[placeholder=\"Digite para buscar...\"]",
+        "input.ui-autocomplete-input"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#cidadeAcInput"
+        },
+        {
+          "strategy": "placeholder",
+          "selector": "input[placeholder=\"Digite para buscar...\"]"
+        },
+        {
+          "strategy": "class",
+          "selector": "input.ui-autocomplete-input"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#cidadeAcInput"
+        }
+      ],
+      "tag_name": "input",
+      "text": "Digite para buscar...",
+      "value": "Bras",
+      "url": "file:///home/febre/Projetos/testforge/tests/pagina-de-teste/primefaces/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "cidadeAcInput",
+        "name": "",
+        "classes": "ui-autocomplete-input",
+        "type": "text",
+        "placeholder": "Digite para buscar...",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "span",
+        "parentText": "",
+        "parentId": "cidadeAc",
+        "framework": "primefaces",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 684,
+          "y": 223,
+          "w": 532,
+          "h": 34
+        },
+        "elementParentChain": "input#cidadeAcInput"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "li:has-text(\"Brasília\")",
+      "fallbacks": [
+        "li.ui-autocomplete-item",
+        "#cidadeAcPanel > ul:nth-of-type(1) > li:nth-of-type(1)"
+      ],
+      "strategies": [
+        {
+          "strategy": "has-text",
+          "selector": "li:has-text(\"Brasília\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "li.ui-autocomplete-item"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#cidadeAcPanel > ul:nth-of-type(1) > li:nth-of-type(1)"
+        }
+      ],
+      "tag_name": "li",
+      "text": "Brasília",
+      "value": "",
+      "url": "file:///home/febre/Projetos/testforge/tests/pagina-de-teste/primefaces/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "ui-autocomplete-item",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "ul",
+        "parentText": "Brasília\n            Goiânia\n            Belo Horizonte\n            São Paulo\n            Rio de Jan",
+        "parentId": "",
+        "framework": "primefaces",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 685,
+          "y": 258,
+          "w": 198,
+          "h": 34
+        },
+        "elementParentChain": "div#cidadeAcPanel > ul:nth-child(1) > li:nth-child(1)"
+      }
+    },
+    {
+      "action": "fill",
+      "selector": "#cidadeAcInput",
+      "fallbacks": [
+        "input[placeholder=\"Digite para buscar...\"]",
+        "input.ui-autocomplete-input"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#cidadeAcInput"
+        },
+        {
+          "strategy": "placeholder",
+          "selector": "input[placeholder=\"Digite para buscar...\"]"
+        },
+        {
+          "strategy": "class",
+          "selector": "input.ui-autocomplete-input"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#cidadeAcInput"
+        }
+      ],
+      "tag_name": "input",
+      "text": "Digite para buscar...",
+      "value": "Brasília",
+      "url": "file:///home/febre/Projetos/testforge/tests/pagina-de-teste/primefaces/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "cidadeAcInput",
+        "name": "",
+        "classes": "ui-autocomplete-input",
+        "type": "text",
+        "placeholder": "Digite para buscar...",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "span",
+        "parentText": "",
+        "parentId": "cidadeAc",
+        "framework": "primefaces",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 684,
+          "y": 223,
+          "w": 532,
+          "h": 34
+        },
+        "elementParentChain": "input#cidadeAcInput"
+      }
+    },
+    {
+      "action": "assert",
+      "selector": "#cidadeAcInput",
+      "fallbacks": [
+        "input[placeholder=\"Digite para buscar...\"]",
+        "input.ui-autocomplete-input"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#cidadeAcInput"
+        },
+        {
+          "strategy": "placeholder",
+          "selector": "input[placeholder=\"Digite para buscar...\"]"
+        },
+        {
+          "strategy": "class",
+          "selector": "input.ui-autocomplete-input"
+        }
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "Brasília",
+      "url": "file:///home/febre/Projetos/testforge/tests/pagina-de-teste/primefaces/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "cidadeAcInput",
+        "name": "",
+        "classes": "ui-autocomplete-input",
+        "type": "text",
+        "placeholder": "Digite para buscar...",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "span",
+        "parentText": "",
+        "parentId": "cidadeAc",
+        "framework": "primefaces",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 684,
+          "y": 223,
+          "w": 532,
+          "h": 34
+        },
+        "elementParentChain": "input#cidadeAcInput"
+      },
+      "assert_type": "automatico",
+      "assert_state": "enabled",
+      "expected_value": ""
+    }
+  ]
+}

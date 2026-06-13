@@ -1,0 +1,200 @@
+{
+  "steps": [
+    {
+      "action": "click",
+      "selector": "#tipoImovelSelect",
+      "fallbacks": [],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#tipoImovelSelect"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#tipoImovelSelect"
+        }
+      ],
+      "tag_name": "select",
+      "text": "Selecione\n              Residencial\n              Comercial\n              Terreno\n              Rural",
+      "value": "",
+      "url": "file:///home/febre/Projetos/testforge/tests/pagina-de-teste/primefaces/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "tipoImovelSelect",
+        "name": "",
+        "classes": "",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Selecione\n              Residencial\n              Comercial\n              Terreno\n              Rura",
+        "parentId": "",
+        "framework": "primefaces",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": -9934,
+          "y": 224,
+          "w": 91,
+          "h": 19
+        },
+        "elementParentChain": "select#tipoImovelSelect"
+      }
+    },
+    {
+      "action": "click",
+      "selector": "li:has-text(\"Residencial\")",
+      "fallbacks": [
+        "li.ui-selectonemenu-item",
+        "#tipoImovelPanel > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(2)"
+      ],
+      "strategies": [
+        {
+          "strategy": "has-text",
+          "selector": "li:has-text(\"Residencial\")"
+        },
+        {
+          "strategy": "class",
+          "selector": "li.ui-selectonemenu-item"
+        },
+        {
+          "strategy": "dom-path",
+          "selector": "#tipoImovelPanel > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(2)"
+        }
+      ],
+      "tag_name": "li",
+      "text": "Residencial",
+      "value": "",
+      "url": "file:///home/febre/Projetos/testforge/tests/pagina-de-teste/primefaces/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "ui-selectonemenu-item",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "ul",
+        "parentText": "Selecione\n              Residencial\n              Comercial\n              Terreno\n              Rura",
+        "parentId": "",
+        "framework": "primefaces",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 65,
+          "y": 304,
+          "w": 198,
+          "h": 34
+        },
+        "elementParentChain": "div#tipoImovelPanel > div:nth-child(1) > ul:nth-child(1) > li:nth-child(2)"
+      }
+    },
+    {
+      "action": "assert",
+      "selector": "#tipoImovelSelect",
+      "fallbacks": [],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#tipoImovelSelect"
+        }
+      ],
+      "tag_name": "select",
+      "text": "Selecione\n              Residencial\n              Comercial\n              Terreno\n              Rural",
+      "value": "1",
+      "url": "file:///home/febre/Projetos/testforge/tests/pagina-de-teste/primefaces/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "tipoImovelSelect",
+        "name": "",
+        "classes": "",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Selecione\n              Residencial\n              Comercial\n              Terreno\n              Rura",
+        "parentId": "",
+        "framework": "primefaces",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": -9934,
+          "y": 224,
+          "w": 91,
+          "h": 19
+        },
+        "elementParentChain": "select#tipoImovelSelect"
+      },
+      "assert_type": "textual",
+      "assert_state": "enabled",
+      "expected_value": "Selecione\n              Residencial\n              Comercial\n              Terreno\n              Rural"
+    },
+    {
+      "action": "assert",
+      "selector": "#cidadeAcInput",
+      "fallbacks": [
+        "input[placeholder=\"Digite para buscar...\"]",
+        "input.ui-autocomplete-input"
+      ],
+      "strategies": [
+        {
+          "strategy": "id",
+          "selector": "#cidadeAcInput"
+        },
+        {
+          "strategy": "placeholder",
+          "selector": "input[placeholder=\"Digite para buscar...\"]"
+        },
+        {
+          "strategy": "class",
+          "selector": "input.ui-autocomplete-input"
+        }
+      ],
+      "tag_name": "input",
+      "text": "",
+      "value": "Brasília",
+      "url": "file:///home/febre/Projetos/testforge/tests/pagina-de-teste/primefaces/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "cidadeAcInput",
+        "name": "",
+        "classes": "ui-autocomplete-input",
+        "type": "text",
+        "placeholder": "Digite para buscar...",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "span",
+        "parentText": "",
+        "parentId": "cidadeAc",
+        "framework": "primefaces",
+        "pageTechnology": "primefaces",
+        "elementRect": {
+          "x": 684,
+          "y": 223,
+          "w": 532,
+          "h": 34
+        },
+        "elementParentChain": "input#cidadeAcInput"
+      },
+      "assert_type": "textual",
+      "assert_state": "enabled",
+      "expected_value": ""
+    }
+  ]
+}

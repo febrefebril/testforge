@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>FAM-04: Estado da Aplicação</title>
+<script src="../common.js"></script>
+<script src="error.js"></script>
+</head>
+<body>
+  <h1>FAM-04: Estado da Aplicação</h1>
+  <button id="btn-avancar">Avançar</button>
+  <button id="btn-confirmar" disabled>Confirmar</button>
+  <p id="result"></p>
+  <script>
+    document.getElementById("btn-avancar").addEventListener("click", function() {
+      document.getElementById("btn-confirmar").disabled = false;
+      document.getElementById("result").textContent = "Pode confirmar agora";
+    });
+    document.getElementById("btn-confirmar").addEventListener("click", function() {
+      document.getElementById("result").textContent = "Confirmado!";
+    });
+  </script>
+</body>
+</html>

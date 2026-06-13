@@ -1,0 +1,21 @@
+installation:
+  version: 6.8.0
+  installDate: 2026-05-30T03:01:36.848Z
+  lastUpdated: 2026-05-30T03:01:36.848Z
+modules:
+  - name: core
+    version: 6.8.0
+    installDate: 2026-05-30T03:01:36.796Z
+    lastUpdated: 2026-05-30T03:01:36.847Z
+    source: built-in
+    npmPackage: null
+    repoUrl: null
+  - name: bmm
+    version: 6.8.0
+    installDate: 2026-05-30T03:01:36.784Z
+    lastUpdated: 2026-05-30T03:01:36.848Z
+    source: built-in
+    npmPackage: null
+    repoUrl: null
+ides:
+  - opencode

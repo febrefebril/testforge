@@ -1,0 +1,1205 @@
+# TESTFORGE — Taxonomia Implementável de Casos Conhecidos
+# Artefato: taxonomy.cases.yaml
+# Versão: 1.0
+# Base: Capítulo 1 — Taxonomia de Falhas JSF, jQuery, AJAX e Frameworks Mobile
+
+metadata:
+  project: "TestForge / Agente Curador de Scripts"
+  artifact: "Taxonomia implementável para detecção, classificação, healing e geração de testes"
+  file: "taxonomy.cases.yaml"
+  version: "1.0"
+  base: "Capítulo 1 — Taxonomia de Falhas JSF, jQuery, AJAX e Frameworks Mobile"
+  language: "pt-BR"
+
+result_states:
+  RESOLVED: "O curador classificou e aplicou uma correção validada."
+  PARTIALLY_RESOLVED: "O curador aplicou correção, mas deixou ressalvas ou dependência manual."
+  MANUAL_REQUIRED: "O caso exige intervenção humana explícita."
+  UNRESOLVED: "O curador não conseguiu resolver com segurança."
+  REJECTED: "A correção proposta foi rejeitada pelo validador."
+
+priorities:
+  P0: "Deve ser tratado no MVP; afeta diretamente a estabilidade básica dos scripts."
+  P1: "Deve ser tratado após estabilização do núcleo; comum, mas pode ter workaround manual."
+  P2: "Tratamento avançado, especializado ou dependente de contexto."
+
+known_strategies:
+  - label_proximity
+  - text_content_match
+  - aria_role_strategy
+  - semantic_locator_conversion
+  - primefaces_registry_scan
+  - frame_reacquire
+  - shadow_pierce
+  - network_idle_wait
+  - response_intercept
+  - dom_stabilization
+  - overlay_dismiss
+  - re_auth_hook
+  - llm_selector_inference
+  - download_event_capture
+  - upload_payload_binding
+  - assert_overlay_capture
+  - manual_checkpoint
+  - wait_for_function
+  - popup_capture
+  - dialog_handler
+  - precondition_validation
+  - evidence_capture
+  - patch_rejection_guard
+  - flaky_validation_rounds
+  - sensitive_data_masking
+  - critical_operation_checkpoint
+
+curator_decision_matrix:
+  - order: 1
+    action: "Identificar tecnologia predominante da tela ou componente."
+  - order: 2
+    action: "Identificar família da falha."
+  - order: 3
+    action: "Classificar pelo primeiro ID taxonômico compatível."
+  - order: 4
+    action: "Coletar evidências mínimas."
+  - order: 5
+    action: "Aplicar estratégia principal."
+  - order: 6
+    action: "Validar por execução controlada."
+  - order: 7
+    action: "Se falhar, aplicar fallback na ordem definida."
+  - order: 8
+    action: "Se houver risco técnico, segurança, CAPTCHA, cross-origin fechado ou assert ambíguo, marcar como MANUAL_REQUIRED."
+  - order: 9
+    action: "Se as tentativas forem rejeitadas pelo validador, marcar como UNRESOLVED."
+  - order: 10
+    action: "Registrar no relatório: ID, causa, estratégia, patch, evidência e resultado."
+
+global_acceptance_criteria:
+  - "Todo caso conhecido possuir ID estável."
+  - "Toda alteração feita pelo curador referenciar um ID taxonômico."
+  - "Todo ID P0 possuir pelo menos um teste automatizado do curador."
+  - "Nenhum caso ambíguo gerar assert, locator ou patch inventado sem evidência."
+  - "Uploads e downloads forem tratados como artefatos versionáveis, parametrizáveis e verificáveis."
+  - "Asserts puderem ser informados antes, durante ou depois da gravação."
+  - "Iframes cross-origin, CAPTCHA e operações irreversíveis forem tratados como checkpoints manuais ou casos não resolvidos com justificativa."
+  - "O relatório final apresentar: falha, evidência, estratégia, patch, validação e estado."
+
+families:
+  - id: FAM-01
+    name: "Seletores frágeis"
+  - id: FAM-02
+    name: "Timing e assincronismo"
+  - id: FAM-03
+    name: "Contexto e escopo"
+  - id: FAM-04
+    name: "Estado da aplicação"
+  - id: FAM-05
+    name: "DOM dinâmico"
+  - id: FAM-06
+    name: "Input e interação especializada"
+  - id: FAM-07
+    name: "Upload e download de arquivos"
+  - id: FAM-08
+    name: "Asserts e validações"
+  - id: FAM-09
+    name: "Recorder, overlay e checkpoints manuais"
+  - id: FAM-10
+    name: "Execução, evidência e observabilidade"
+  - id: FAM-11
+    name: "Limites técnicos e casos não automatizáveis com segurança"
+
+cases:
+  - id: SEL-001
+    family: "Seletores frágeis"
+    case: "ID JSF dinâmico"
+    technologies: ["JSF", "PrimeFaces"]
+    priority: P0
+    observable_symptoms: ["Locator gravado quebra entre execuções"]
+    probable_causes: ["ID gerado dinamicamente pelo JSF/PrimeFaces"]
+    minimum_detection: ["ID contém padrão j_idt", "ID contém índice variável", "ID contém prefixos JSF encadeados"]
+    primary_strategy: semantic_locator_conversion
+    fallback_strategies: [label_proximity, text_content_match, aria_role_strategy, llm_selector_inference]
+    expected_output: ["Locator semântico Playwright"]
+    success_criteria: ["Elemento é localizado em 3 execuções limpas"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: SEL-002
+    family: "Seletores frágeis"
+    case: "ID com índice de tabela"
+    technologies: ["JSF", "PrimeFaces"]
+    priority: P0
+    observable_symptoms: ["Ação aponta para linha errada"]
+    probable_causes: ["Locator depende de índice numérico em tabela ou lista"]
+    minimum_detection: ["Locator contém índice numérico em tabela/lista"]
+    primary_strategy: label_proximity
+    fallback_strategies: [text_content_match, table_cell_filter, llm_selector_inference]
+    expected_output: ["Locator contextual por linha"]
+    success_criteria: ["A ação ocorre na linha correta"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: SEL-003
+    family: "Seletores frágeis"
+    case: "widgetVar instável"
+    technologies: ["PrimeFaces"]
+    priority: P0
+    observable_symptoms: ["Script depende de PF('x') que muda"]
+    probable_causes: ["Uso direto de widgetVar como referência primária"]
+    minimum_detection: ["Uso direto de PF(...)", "Widget sem evidência semântica"]
+    primary_strategy: primefaces_registry_scan
+    fallback_strategies: [aria_role_strategy, text_content_match, label_proximity]
+    expected_output: ["Locator independente de widgetVar"]
+    success_criteria: ["Elemento interage sem depender do nome do widget"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: SEL-004
+    family: "Seletores frágeis"
+    case: "XPath absoluto"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Locator quebra com pequena mudança estrutural"]
+    probable_causes: ["Caminho absoluto dependente da estrutura completa do DOM"]
+    minimum_detection: ["XPath inicia em /html/body", "XPath usa cadeia longa de índices"]
+    primary_strategy: semantic_locator_conversion
+    fallback_strategies: [aria_role_strategy, text_content_match, label_proximity, stable_css]
+    expected_output: ["Locator Playwright resiliente"]
+    success_criteria: ["XPath absoluto removido"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: SEL-005
+    family: "Seletores frágeis"
+    case: "CSS baseado em classe volátil"
+    technologies: ["Angular", "Frameworks modernos"]
+    priority: P1
+    observable_symptoms: ["Elemento não encontrado após build ou deploy"]
+    probable_causes: ["Classe gerada, minificada, hash ou utilitária sem semântica"]
+    minimum_detection: ["Classe parece hash", "Classe gerada/minificada", "Classe utilitária sem semântica"]
+    primary_strategy: aria_role_strategy
+    fallback_strategies: [data_testid, text_content_match, label_proximity]
+    expected_output: ["Locator orientado a intenção"]
+    success_criteria: ["Classe volátil não é seletor primário"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: SEL-006
+    family: "Seletores frágeis"
+    case: "Elemento sem ID"
+    technologies: ["Angular", "Componentes modernos"]
+    priority: P1
+    observable_symptoms: ["Recorder gera locator genérico ou por índice"]
+    probable_causes: ["Ausência de atributos identificadores estáveis"]
+    minimum_detection: ["Ausência de id/name", "Presença de texto, role ou data-*"]
+    primary_strategy: aria_role_strategy
+    fallback_strategies: [text_content_match, data_testid, label_proximity]
+    expected_output: ["Locator semântico"]
+    success_criteria: ["Elemento localizado sem índice absoluto"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: SEL-007
+    family: "Seletores frágeis"
+    case: "Elemento fora do formulário"
+    technologies: ["jQuery UI", "Dialogs"]
+    priority: P0
+    observable_symptoms: ["Botão em modal não é localizado no escopo esperado"]
+    probable_causes: ["Elemento visual está fora do form/árvore original"]
+    minimum_detection: ["Elemento visível está fora do form/árvore original"]
+    primary_strategy: aria_role_strategy
+    fallback_strategies: [dialog_role_scope, text_content_match, overlay_container_scope]
+    expected_output: ["Locator no escopo real do DOM"]
+    success_criteria: ["Clique ocorre no botão visível correto"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: SEL-008
+    family: "Seletores frágeis"
+    case: "Locator por posição"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Ação quebra quando ordem visual muda"]
+    probable_causes: ["Uso de índice posicional sem identidade semântica"]
+    minimum_detection: ["Uso de .nth() sem justificativa"]
+    primary_strategy: semantic_locator_conversion
+    fallback_strategies: [text_filter, label_proximity, aria_role_strategy]
+    expected_output: ["Locator contextual"]
+    success_criteria: [".nth() removido ou justificado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: SEL-009
+    family: "Seletores frágeis"
+    case: "Texto duplicado"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Curador escolhe elemento errado com mesmo texto"]
+    probable_causes: ["Múltiplos elementos correspondem ao mesmo texto"]
+    minimum_detection: ["Múltiplos elementos correspondem ao mesmo texto"]
+    primary_strategy: label_proximity
+    fallback_strategies: [aria_role_strategy, container_scope, frame_scope, table_row_scope]
+    expected_output: ["Locator desambiguado"]
+    success_criteria: ["Match único ou escopo explícito"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: SEL-010
+    family: "Seletores frágeis"
+    case: "Label não associado via for"
+    technologies: ["Legado", "JSF"]
+    priority: P1
+    observable_symptoms: ["Campo não é encontrado por label padrão"]
+    probable_causes: ["Label visual próximo sem associação HTML"]
+    minimum_detection: ["Label visual próximo", "Ausência de associação HTML via for"]
+    primary_strategy: label_proximity
+    fallback_strategies: [spatial_heuristic, placeholder, name_attribute]
+    expected_output: ["Locator por proximidade"]
+    success_criteria: ["Campo correto localizado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: TIM-001
+    family: "Timing e assincronismo"
+    case: "Ação antes do re-render JSF"
+    technologies: ["JSF AJAX"]
+    priority: P0
+    observable_symptoms: ["Clique ou assert ocorre antes da atualização"]
+    probable_causes: ["Requisição AJAX seguida de DOM substituído"]
+    minimum_detection: ["Requisição AJAX seguida de DOM substituído"]
+    primary_strategy: network_idle_wait
+    fallback_strategies: [dom_stabilization, wait_for_target_selector, response_intercept]
+    expected_output: ["Wait semântico inserido"]
+    success_criteria: ["Próxima ação encontra DOM atualizado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: TIM-002
+    family: "Timing e assincronismo"
+    case: "ViewState inválido"
+    technologies: ["JSF"]
+    priority: P0
+    observable_symptoms: ["Submissão falha após gravação"]
+    probable_causes: ["Captura ou reutilização explícita de ViewState"]
+    minimum_detection: ["Captura ou reutilização explícita de ViewState"]
+    primary_strategy: avoid_hardcoded_viewstate
+    fallback_strategies: [rerun_flow, wait_for_updated_form]
+    expected_output: ["Script sem ViewState hardcoded"]
+    success_criteria: ["Nenhum ViewState fixo no script"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: TIM-003
+    family: "Timing e assincronismo"
+    case: "Callback jQuery sem evento DOM claro"
+    technologies: ["jQuery"]
+    priority: P1
+    observable_symptoms: ["Teste avança sem mudança visível imediata"]
+    probable_causes: ["XHR/fetch finaliza, mas DOM muda depois"]
+    minimum_detection: ["XHR/fetch finaliza", "Mudança DOM ocorre posteriormente"]
+    primary_strategy: response_intercept
+    fallback_strategies: [wait_for_function, wait_for_selector]
+    expected_output: ["Wait baseado em resposta ou condição"]
+    success_criteria: ["Condição de negócio observável é satisfeita"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: TIM-004
+    family: "Timing e assincronismo"
+    case: "Change detection assíncrono"
+    technologies: ["Angular"]
+    priority: P1
+    observable_symptoms: ["Assert lê valor antigo"]
+    probable_causes: ["Mudanças após microtasks/change detection"]
+    minimum_detection: ["Presença de Angular", "Mudanças após microtasks"]
+    primary_strategy: wait_for_function
+    fallback_strategies: [wait_for_text_or_state, network_idle_wait]
+    expected_output: ["Wait por condição da UI"]
+    success_criteria: ["Assert passa sem timeout fixo"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: TIM-005
+    family: "Timing e assincronismo"
+    case: "waitForTimeout gravado"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Script fica lento ou flaky"]
+    probable_causes: ["Uso de sleeps fixos"]
+    minimum_detection: ["Presença de sleeps fixos", "Uso de waitForTimeout"]
+    primary_strategy: semantic_wait_replacement
+    fallback_strategies: [dom_stabilization, network_idle_wait, wait_for_selector, response_intercept]
+    expected_output: ["Timeout fixo removido"]
+    success_criteria: ["Execução estável sem espera arbitrária"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: TIM-006
+    family: "Timing e assincronismo"
+    case: "Debounce em autocomplete"
+    technologies: ["Geral", "jQuery", "Angular"]
+    priority: P1
+    observable_symptoms: ["Opções não aparecem no momento do clique"]
+    probable_causes: ["Input seguido de lista assíncrona/debounce"]
+    minimum_detection: ["Input seguido de lista assíncrona"]
+    primary_strategy: wait_for_option_list
+    fallback_strategies: [response_intercept, wait_for_function]
+    expected_output: ["Seleção robusta"]
+    success_criteria: ["Opção correta selecionada"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: TIM-007
+    family: "Timing e assincronismo"
+    case: "Navegação parcial sem page load"
+    technologies: ["SPA", "AJAX"]
+    priority: P1
+    observable_symptoms: ["waitForLoadState não resolve o estado real"]
+    probable_causes: ["URL muda ou componente troca sem navegação completa"]
+    minimum_detection: ["URL muda sem navegação completa", "Componente troca sem page load"]
+    primary_strategy: wait_for_screen_marker
+    fallback_strategies: [dom_stabilization, network_idle_wait]
+    expected_output: ["Wait de tela pronta"]
+    success_criteria: ["Próxima ação só ocorre com tela estável"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: CTX-001
+    family: "Contexto e escopo"
+    case: "Iframe same-origin"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Elemento não encontrado no page principal"]
+    probable_causes: ["Elemento existe dentro de frame acessível"]
+    minimum_detection: ["Elemento existe dentro de frame acessível"]
+    primary_strategy: frame_reacquire
+    fallback_strategies: [frame_by_url, frame_by_title, frame_by_name, frame_by_selector]
+    expected_output: ["Locator usando frameLocator"]
+    success_criteria: ["Ação ocorre dentro do frame correto"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: CTX-002
+    family: "Contexto e escopo"
+    case: "Iframe cross-origin"
+    technologies: ["Geral", "Portais corporativos"]
+    priority: P0
+    observable_symptoms: ["Script não consegue injetar ou inspecionar DOM"]
+    probable_causes: ["Frame bloqueia acesso por origem"]
+    minimum_detection: ["Frame bloqueia acesso por origem", "Erro de cross-origin"]
+    primary_strategy: manual_checkpoint
+    fallback_strategies: [limited_playwright_interaction, external_contract]
+    expected_output: ["Marcação MANUAL_REQUIRED ou estratégia segura"]
+    success_criteria: ["Curador não fabrica seletor inacessível"]
+    result_states: {success: MANUAL_REQUIRED, failure: UNRESOLVED}
+
+  - id: CTX-003
+    family: "Contexto e escopo"
+    case: "Shadow DOM aberto"
+    technologies: ["Web Components"]
+    priority: P1
+    observable_symptoms: ["Elemento não localizado por CSS comum"]
+    probable_causes: ["Elemento está sob shadow root aberto"]
+    minimum_detection: ["Elemento está sob shadow root aberto"]
+    primary_strategy: shadow_pierce
+    fallback_strategies: [aria_role_strategy, text_content_match]
+    expected_output: ["Locator compatível com Playwright"]
+    success_criteria: ["Elemento localizado dentro do shadow DOM"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: CTX-004
+    family: "Contexto e escopo"
+    case: "Shadow DOM fechado"
+    technologies: ["Web Components"]
+    priority: P2
+    observable_symptoms: ["Elemento inacessível"]
+    probable_causes: ["Shadow root fechado"]
+    minimum_detection: ["Shadow root fechado"]
+    primary_strategy: manual_checkpoint
+    fallback_strategies: [component_public_api, test_contract]
+    expected_output: ["MANUAL_REQUIRED ou UNRESOLVED justificado"]
+    success_criteria: ["Curador não gera locator inválido"]
+    result_states: {success: MANUAL_REQUIRED, failure: UNRESOLVED}
+
+  - id: CTX-005
+    family: "Contexto e escopo"
+    case: "Popup/nova aba"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Ação abre nova página e script continua na antiga"]
+    probable_causes: ["Evento popup ou nova página no contexto"]
+    minimum_detection: ["Evento popup", "Nova página no contexto"]
+    primary_strategy: popup_capture
+    fallback_strategies: [wait_for_url, wait_for_title]
+    expected_output: ["Script troca contexto"]
+    success_criteria: ["Próxima ação executa na página correta"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: CTX-006
+    family: "Contexto e escopo"
+    case: "Modal/dialog fora do escopo"
+    technologies: ["jQuery UI", "PrimeFaces"]
+    priority: P0
+    observable_symptoms: ["Botão visível não encontrado"]
+    probable_causes: ["Container do modal fora do componente original"]
+    minimum_detection: ["Container do modal fora do componente original"]
+    primary_strategy: dialog_role_scope
+    fallback_strategies: [overlay_container_scope, text_content_match]
+    expected_output: ["Locator dentro do modal"]
+    success_criteria: ["Clique no elemento visível correto"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: CTX-007
+    family: "Contexto e escopo"
+    case: "Frame recarregado"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Handle antigo falha após reload"]
+    probable_causes: ["Frame detach/attach entre ações"]
+    minimum_detection: ["Frame detach/attach entre ações"]
+    primary_strategy: frame_reacquire
+    fallback_strategies: [wait_for_frame_by_url, wait_for_frame_by_name]
+    expected_output: ["Não cachear frame handle"]
+    success_criteria: ["Ação ocorre após reacquisição"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: STA-001
+    family: "Estado da aplicação"
+    case: "Sessão expirada"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Redirecionamento para login ou tela de sessão"]
+    probable_causes: ["Sessão expirada ou token inválido"]
+    minimum_detection: ["URL/texto indica expiração/login"]
+    primary_strategy: re_auth_hook
+    fallback_strategies: [manual_checkpoint, auth_fixture]
+    expected_output: ["Fluxo de reautenticação isolado"]
+    success_criteria: ["Teste retorna ao ponto esperado"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: STA-002
+    family: "Estado da aplicação"
+    case: "Overlay bloqueando clique"
+    technologies: ["JSF", "jQuery", "Geral"]
+    priority: P0
+    observable_symptoms: ["Playwright informa elemento coberto"]
+    probable_causes: ["Overlay visível intercepta pointer events"]
+    minimum_detection: ["Overlay visível intercepta pointer events"]
+    primary_strategy: overlay_dismiss
+    fallback_strategies: [wait_overlay_hidden, press_escape, click_close_button]
+    expected_output: ["Overlay removido antes do clique"]
+    success_criteria: ["Clique executado no elemento alvo"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: STA-003
+    family: "Estado da aplicação"
+    case: "Dados sujos"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Pré-condição não satisfeita"]
+    probable_causes: ["Registro existente, duplicidade ou estado anterior"]
+    minimum_detection: ["Tela mostra registro existente", "Tela mostra duplicidade", "Tela mostra estado anterior"]
+    primary_strategy: precondition_validation
+    fallback_strategies: [setup_teardown, dedicated_test_data]
+    expected_output: ["Script com pré-condição explícita"]
+    success_criteria: ["Teste não depende de estado residual"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: STA-004
+    family: "Estado da aplicação"
+    case: "Alert/confirm/prompt nativo"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Execução trava aguardando diálogo"]
+    probable_causes: ["Evento dialog emitido sem handler"]
+    minimum_detection: ["Evento dialog emitido"]
+    primary_strategy: dialog_handler
+    fallback_strategies: [configured_accept_policy, configured_dismiss_policy]
+    expected_output: ["Tratamento explícito de dialog"]
+    success_criteria: ["Execução não trava"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: STA-005
+    family: "Estado da aplicação"
+    case: "Permissão insuficiente"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Botão ausente ou acesso negado"]
+    probable_causes: ["Perfil sem autorização necessária"]
+    minimum_detection: ["Texto/HTTP/URL indica restrição"]
+    primary_strategy: environment_profile_classification
+    fallback_strategies: [manual_checkpoint, justified_skip]
+    expected_output: ["MANUAL_REQUIRED ou UNRESOLVED"]
+    success_criteria: ["Falha classificada corretamente"]
+    result_states: {success: MANUAL_REQUIRED, failure: UNRESOLVED}
+
+  - id: STA-006
+    family: "Estado da aplicação"
+    case: "Ambiente indisponível/intermitente"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Erro HTTP, timeout global, tela de indisponibilidade"]
+    probable_causes: ["Indisponibilidade de ambiente, proxy, DNS ou serviço"]
+    minimum_detection: ["HTTP 5xx", "DNS", "Proxy", "Tela de erro"]
+    primary_strategy: environment_failure_classification
+    fallback_strategies: [controlled_retry, evidence_capture]
+    expected_output: ["Relatório de ambiente"]
+    success_criteria: ["Curador não altera script indevidamente"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: DOM-001
+    family: "DOM dinâmico"
+    case: "Element handle cacheado"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Erro de elemento detached/stale"]
+    probable_causes: ["Reuso de handle após ação que altera DOM"]
+    minimum_detection: ["Reuso de handle após ação que altera DOM"]
+    primary_strategy: reacquire_locator
+    fallback_strategies: [lazy_locator, no_element_handle_cache]
+    expected_output: ["Script sem cache de elemento"]
+    success_criteria: ["Sem erro detached em reexecução"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: DOM-002
+    family: "DOM dinâmico"
+    case: "Lista reordenada"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Ação em item errado"]
+    probable_causes: ["Seleção por índice em lista dinâmica"]
+    minimum_detection: ["Seleção por índice em lista dinâmica"]
+    primary_strategy: select_by_content_or_key
+    fallback_strategies: [table_row_filter, text_content_match, stable_attribute]
+    expected_output: ["Locator por identidade do item"]
+    success_criteria: ["Item correto é afetado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: DOM-003
+    family: "DOM dinâmico"
+    case: "Re-render substitui nó"
+    technologies: ["JSF", "Angular"]
+    priority: P0
+    observable_symptoms: ["Elemento encontrado antes, falha depois"]
+    probable_causes: ["Nó detach após AJAX/change detection"]
+    minimum_detection: ["Nó detach após AJAX/change detection"]
+    primary_strategy: dom_stabilization
+    fallback_strategies: [reacquire_locator, wait_for_new_selector]
+    expected_output: ["Reaquisição após render"]
+    success_criteria: ["Próxima ação usa nó atual"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: DOM-004
+    family: "DOM dinâmico"
+    case: "Virtualização de lista"
+    technologies: ["Angular", "Frameworks UI"]
+    priority: P2
+    observable_symptoms: ["Item não está no DOM até scroll"]
+    probable_causes: ["Lista renderiza apenas elementos visíveis"]
+    minimum_detection: ["Lista renderiza apenas elementos visíveis"]
+    primary_strategy: controlled_scroll_to_item
+    fallback_strategies: [incremental_search, filter_api]
+    expected_output: ["Acesso robusto ao item"]
+    success_criteria: ["Item visível antes da interação"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: DOM-005
+    family: "DOM dinâmico"
+    case: "Lazy loading visual"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Imagem/componente não aparece imediatamente"]
+    probable_causes: ["Placeholder ou skeleton na tela"]
+    minimum_detection: ["Placeholder ou skeleton na tela"]
+    primary_strategy: wait_for_real_content
+    fallback_strategies: [network_idle_wait, selector_state]
+    expected_output: ["Espera por componente pronto"]
+    success_criteria: ["Assert não valida placeholder"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: INP-001
+    family: "Input e interação especializada"
+    case: "Upload PrimeFaces"
+    technologies: ["PrimeFaces"]
+    priority: P0
+    observable_symptoms: ["Upload gravado não reproduz"]
+    probable_causes: ["Componente fileUpload encapsula input real"]
+    minimum_detection: ["Componente fileUpload", "input file encapsulado"]
+    primary_strategy: upload_payload_binding
+    fallback_strategies: [locate_real_file_input, file_fixture]
+    expected_output: ["Upload parametrizado"]
+    success_criteria: ["Arquivo anexado e UI confirma"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: INP-002
+    family: "Input e interação especializada"
+    case: "Upload HTML padrão"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Caminho local absoluto inválido"]
+    probable_causes: ["input[type=file] com path local gravado"]
+    minimum_detection: ["input[type=file]", "Path local absoluto gravado"]
+    primary_strategy: file_fixture
+    fallback_strategies: [test_data_parameterization]
+    expected_output: ["Caminho relativo/fixture"]
+    success_criteria: ["Upload funciona em ambiente limpo"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: INP-003
+    family: "Input e interação especializada"
+    case: "Download disparado por clique"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Arquivo baixado não é validado"]
+    probable_causes: ["Evento download após ação sem captura explícita"]
+    minimum_detection: ["Evento download após ação"]
+    primary_strategy: download_event_capture
+    fallback_strategies: [validate_name, validate_type, validate_size, validate_hash]
+    expected_output: ["Bloco expect_download"]
+    success_criteria: ["Download capturado e validado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: INP-004
+    family: "Input e interação especializada"
+    case: "Download AJAX/Blob"
+    technologies: ["SPA", "Angular", "JS"]
+    priority: P1
+    observable_symptoms: ["Não há navegação nem link direto"]
+    probable_causes: ["Blob, fetch ou object URL"]
+    minimum_detection: ["Blob", "fetch", "object URL"]
+    primary_strategy: response_intercept
+    fallback_strategies: [download_event_capture, validate_generated_artifact]
+    expected_output: ["Captura por evento/rede"]
+    success_criteria: ["Arquivo validado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: INP-005
+    family: "Input e interação especializada"
+    case: "Drag-and-drop"
+    technologies: ["jQuery UI", "HTML5"]
+    priority: P1
+    observable_symptoms: ["Ação gravada não reproduz movimento"]
+    probable_causes: ["Eventos drag/drop ou componente sortable"]
+    minimum_detection: ["Eventos drag/drop", "Componente sortable"]
+    primary_strategy: semantic_drag
+    fallback_strategies: [controlled_mouse_events]
+    expected_output: ["Interação encapsulada"]
+    success_criteria: ["Item muda para posição esperada"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: INP-006
+    family: "Input e interação especializada"
+    case: "Rich text editor via iframe"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Texto não é preenchido"]
+    probable_causes: ["Editor usa iframe/contenteditable"]
+    minimum_detection: ["iframe", "contenteditable"]
+    primary_strategy: frame_reacquire
+    fallback_strategies: [contenteditable_strategy, editor_api, keyboard_input]
+    expected_output: ["Escrita no editor correto"]
+    success_criteria: ["Conteúdo final validado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: INP-007
+    family: "Input e interação especializada"
+    case: "Máscara de input"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Valor digitado difere do esperado"]
+    probable_causes: ["Campo formata CPF, moeda, data etc."]
+    minimum_detection: ["Campo aplica máscara ou formatação"]
+    primary_strategy: user_like_fill
+    fallback_strategies: [validate_normalized_value]
+    expected_output: ["Input compatível com máscara"]
+    success_criteria: ["Valor aceito pela UI"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: INP-008
+    family: "Input e interação especializada"
+    case: "CAPTCHA"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Fluxo bloqueado"]
+    probable_causes: ["Presença de CAPTCHA/desafio humano"]
+    minimum_detection: ["Presença de CAPTCHA/desafio humano"]
+    primary_strategy: manual_checkpoint
+    fallback_strategies: [official_test_environment_bypass]
+    expected_output: ["MANUAL_REQUIRED"]
+    success_criteria: ["Curador não tenta burlar desafio"]
+    result_states: {success: MANUAL_REQUIRED, failure: UNRESOLVED}
+
+  - id: INP-009
+    family: "Input e interação especializada"
+    case: "Seleção de data em calendário"
+    technologies: ["JSF", "jQuery UI", "Angular"]
+    priority: P1
+    observable_symptoms: ["Data não seleciona por input direto"]
+    probable_causes: ["Datepicker intercepta input"]
+    minimum_detection: ["Datepicker intercepta input"]
+    primary_strategy: component_date_selection
+    fallback_strategies: [fill_blur, keyboard_input]
+    expected_output: ["Data selecionada e validada"]
+    success_criteria: ["Campo contém data correta"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: INP-010
+    family: "Input e interação especializada"
+    case: "Combobox customizado"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Select HTML não existe"]
+    probable_causes: ["Role combobox/listbox ou div customizada"]
+    minimum_detection: ["Role combobox/listbox", "div customizada"]
+    primary_strategy: aria_role_strategy
+    fallback_strategies: [text_content_match, visible_option, keyboard_input]
+    expected_output: ["Seleção por opção visível"]
+    success_criteria: ["Valor final exibido correto"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: FILE-001
+    family: "Upload e download de arquivos"
+    case: "Arquivo local inexistente na execução"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Upload falha por caminho da máquina do gravador"]
+    probable_causes: ["Path absoluto do usuário na gravação"]
+    minimum_detection: ["Path absoluto do usuário na gravação"]
+    primary_strategy: versioned_fixture_conversion
+    fallback_strategies: [test_data_parameterization]
+    expected_output: ["Referência portável"]
+    success_criteria: ["Execução funciona em outro ambiente"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: FILE-002
+    family: "Upload e download de arquivos"
+    case: "Upload com validação de extensão"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Sistema rejeita arquivo"]
+    probable_causes: ["Extensão/tipo inválido"]
+    minimum_detection: ["Mensagem de extensão/tipo inválido"]
+    primary_strategy: file_metadata_capture
+    fallback_strategies: [compatible_fixture]
+    expected_output: ["Massa válida"]
+    success_criteria: ["Upload aceito"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: FILE-003
+    family: "Upload e download de arquivos"
+    case: "Upload com limite de tamanho"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Rejeição por tamanho"]
+    probable_causes: ["Arquivo excede limite aceito"]
+    minimum_detection: ["Mensagem de limite", "HTTP erro associado ao upload"]
+    primary_strategy: file_size_policy_capture
+    fallback_strategies: [smaller_fixture]
+    expected_output: ["Massa adequada"]
+    success_criteria: ["Upload aceito ou falha esperada assertada"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: FILE-004
+    family: "Upload e download de arquivos"
+    case: "Download com nome dinâmico"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Nome muda a cada execução"]
+    probable_causes: ["Nome contém data, protocolo, hash ou outro componente variável"]
+    minimum_detection: ["Nome contém data", "Nome contém protocolo", "Nome contém hash"]
+    primary_strategy: dynamic_filename_pattern_validation
+    fallback_strategies: [validate_type, validate_content]
+    expected_output: ["Assert flexível"]
+    success_criteria: ["Download identificado sem nome fixo"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: FILE-005
+    family: "Upload e download de arquivos"
+    case: "Download precisa de autenticação"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Link direto falha fora da sessão"]
+    probable_causes: ["Download depende da sessão atual"]
+    minimum_detection: ["Download depende da sessão atual"]
+    primary_strategy: authenticated_context_download
+    fallback_strategies: [download_event_capture]
+    expected_output: ["Download dentro do fluxo"]
+    success_criteria: ["Arquivo recebido na sessão"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: FILE-006
+    family: "Upload e download de arquivos"
+    case: "Download bloqueado por popup/aba"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Arquivo abre em nova aba ou viewer"]
+    probable_causes: ["Evento popup ou content-disposition ausente"]
+    minimum_detection: ["Evento popup", "Content-Disposition ausente"]
+    primary_strategy: popup_or_download_capture
+    fallback_strategies: [validate_url, validate_content]
+    expected_output: ["Tratamento de nova aba"]
+    success_criteria: ["Artefato validado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: AST-001
+    family: "Asserts e validações"
+    case: "Assert informado antes da gravação"
+    technologies: ["Recorder", "TestForge"]
+    priority: P0
+    observable_symptoms: ["Usuário declara objetivo antes do fluxo"]
+    probable_causes: ["Assert associado ao plano inicial"]
+    minimum_detection: ["Assert associado ao plano inicial"]
+    primary_strategy: assert_overlay_capture
+    fallback_strategies: [assert_template]
+    expected_output: ["Assert planejado"]
+    success_criteria: ["Assert aparece no script final"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: AST-002
+    family: "Asserts e validações"
+    case: "Assert informado durante a gravação"
+    technologies: ["Recorder", "TestForge"]
+    priority: P0
+    observable_symptoms: ["Usuário marca elemento/estado no overlay"]
+    probable_causes: ["Evento de overlay com alvo e intenção"]
+    minimum_detection: ["Evento de overlay com alvo e intenção"]
+    primary_strategy: assert_overlay_capture
+    fallback_strategies: [dom_snapshot, text_content_match, aria_role_strategy]
+    expected_output: ["Assert contextual"]
+    success_criteria: ["Assert valida o estado marcado"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: AST-003
+    family: "Asserts e validações"
+    case: "Assert informado depois da gravação"
+    technologies: ["Curador", "TestForge"]
+    priority: P0
+    observable_symptoms: ["Usuário complementa validações pós-gravação"]
+    probable_causes: ["Metadado pós-gravação vinculado a step/tela"]
+    minimum_detection: ["Metadado pós-gravação vinculado a step/tela"]
+    primary_strategy: bind_assert_to_step
+    fallback_strategies: [llm_selector_inference_with_review]
+    expected_output: ["Assert pós-processado"]
+    success_criteria: ["Assert inserido no ponto adequado"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: AST-004
+    family: "Asserts e validações"
+    case: "Assert de texto visível"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Precisa validar mensagem/resultado"]
+    probable_causes: ["Texto alvo definido ou inferível"]
+    minimum_detection: ["Texto alvo definido ou inferível"]
+    primary_strategy: text_content_match
+    fallback_strategies: [regex_match, contains_match, exact_match]
+    expected_output: ["Expect de texto"]
+    success_criteria: ["Texto validado sem seletor frágil"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: AST-005
+    family: "Asserts e validações"
+    case: "Assert de URL/rota"
+    technologies: ["SPA", "Geral"]
+    priority: P1
+    observable_symptoms: ["Precisa validar navegação"]
+    probable_causes: ["Mudança de URL/rota"]
+    minimum_detection: ["Mudança de URL/rota"]
+    primary_strategy: url_pattern_expectation
+    fallback_strategies: [screen_marker_assertion]
+    expected_output: ["Validação de rota"]
+    success_criteria: ["URL corresponde ao padrão esperado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: AST-006
+    family: "Asserts e validações"
+    case: "Assert de arquivo baixado"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Precisa validar download"]
+    probable_causes: ["Evento download associado"]
+    minimum_detection: ["Evento download associado"]
+    primary_strategy: download_event_capture
+    fallback_strategies: [validate_name, validate_type, validate_size, validate_hash, validate_content]
+    expected_output: ["Expect do artefato"]
+    success_criteria: ["Arquivo correto validado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: AST-007
+    family: "Asserts e validações"
+    case: "Assert de estado visual"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Botão habilitado, campo preenchido, item selecionado"]
+    probable_causes: ["Estado DOM/ARIA detectável"]
+    minimum_detection: ["Estado DOM/ARIA detectável"]
+    primary_strategy: role_state_assertion
+    fallback_strategies: [attribute_assertion, stable_class_assertion]
+    expected_output: ["Expect de estado"]
+    success_criteria: ["Estado final correto"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: AST-008
+    family: "Asserts e validações"
+    case: "Assert ambíguo"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Usuário diz 'verificar se deu certo' sem alvo"]
+    probable_causes: ["Intenção sem elemento/condição objetiva"]
+    minimum_detection: ["Intenção sem elemento/condição objetiva"]
+    primary_strategy: manual_checkpoint
+    fallback_strategies: [assert_suggestion]
+    expected_output: ["MANUAL_REQUIRED"]
+    success_criteria: ["Não gerar assert inventado"]
+    result_states: {success: MANUAL_REQUIRED, failure: UNRESOLVED}
+
+  - id: AST-009
+    family: "Asserts e validações"
+    case: "Assert de tabela/lista"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Precisa validar presença de registro"]
+    probable_causes: ["Tabela/lista com texto/colunas"]
+    minimum_detection: ["Tabela/lista com texto/colunas"]
+    primary_strategy: table_row_or_cell_filter
+    fallback_strategies: [text_content_match, key_match, regex_match]
+    expected_output: ["Assert por conteúdo"]
+    success_criteria: ["Linha correta validada"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: AST-010
+    family: "Asserts e validações"
+    case: "Assert negativo"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Validar ausência de erro/item"]
+    probable_causes: ["Intenção de ausência"]
+    minimum_detection: ["Intenção de ausência"]
+    primary_strategy: negative_assertion_after_stability
+    fallback_strategies: [not_visible_expectation, not_contains_expectation, controlled_wait]
+    expected_output: ["Assert negativo seguro"]
+    success_criteria: ["Ausência confirmada após estabilidade"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: REC-001
+    family: "Recorder, overlay e checkpoints manuais"
+    case: "Gravação incompleta"
+    technologies: ["Recorder"]
+    priority: P0
+    observable_symptoms: ["Fluxo termina sem estado final claro"]
+    probable_causes: ["Sessão encerrada sem assert final"]
+    minimum_detection: ["Sessão encerrada sem assert final"]
+    primary_strategy: partial_script_with_checkpoint
+    fallback_strategies: [mark_pending_steps]
+    expected_output: ["PARTIALLY_RESOLVED"]
+    success_criteria: ["Script deixa ponto de retomada claro"]
+    result_states: {success: PARTIALLY_RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: REC-002
+    family: "Recorder, overlay e checkpoints manuais"
+    case: "Overlay captura intenção do usuário"
+    technologies: ["Recorder"]
+    priority: P0
+    observable_symptoms: ["Usuário adiciona comentário/assert/dado"]
+    probable_causes: ["Evento do overlay com timestamp/step"]
+    minimum_detection: ["Evento do overlay com timestamp/step"]
+    primary_strategy: structured_overlay_annotation
+    fallback_strategies: [bind_by_screen, bind_by_dom_snapshot]
+    expected_output: ["Metadado rastreável"]
+    success_criteria: ["Curador usa anotação no script"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: REC-003
+    family: "Recorder, overlay e checkpoints manuais"
+    case: "Usuário pausa gravação"
+    technologies: ["Recorder"]
+    priority: P1
+    observable_symptoms: ["Intervalo sem eventos úteis"]
+    probable_causes: ["Evento pause/resume"]
+    minimum_detection: ["Evento pause/resume"]
+    primary_strategy: ignore_pause_interval
+    fallback_strategies: [register_checkpoint]
+    expected_output: ["Gravação limpa"]
+    success_criteria: ["Sem sleeps artificiais pelo tempo pausado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: REC-004
+    family: "Recorder, overlay e checkpoints manuais"
+    case: "Navegação manual fora do fluxo"
+    technologies: ["Recorder"]
+    priority: P1
+    observable_symptoms: ["Usuário muda URL/aba sem ação clara"]
+    probable_causes: ["Mudança de página sem evento de interação"]
+    minimum_detection: ["Mudança de página sem evento de interação"]
+    primary_strategy: manual_transition_classification
+    fallback_strategies: [checkpoint, observation]
+    expected_output: ["Step explícito"]
+    success_criteria: ["Fluxo fica rastreável"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: REC-005
+    family: "Recorder, overlay e checkpoints manuais"
+    case: "Recon/fingerprint inicial"
+    technologies: ["Recorder"]
+    priority: P0
+    observable_symptoms: ["Coleta de stack/DOM/ambiente no início"]
+    probable_causes: ["Execução de fingerprint antes/durante gravação"]
+    minimum_detection: ["Execução de fingerprint antes/durante gravação"]
+    primary_strategy: technology_map_registration
+    fallback_strategies: [network_enrichment, frame_enrichment]
+    expected_output: ["Contexto para curadoria"]
+    success_criteria: ["Taxonomia usa tecnologia detectada"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: REC-006
+    family: "Recorder, overlay e checkpoints manuais"
+    case: "Evento bloqueado por política do browser/app"
+    technologies: ["Recorder"]
+    priority: P1
+    observable_symptoms: ["Evento não capturado ou bloqueado"]
+    probable_causes: ["Política do browser/app impede captura"]
+    minimum_detection: ["Falta de evento esperado", "Mudança visual ocorreu"]
+    primary_strategy: before_after_snapshot
+    fallback_strategies: [manual_checkpoint]
+    expected_output: ["Evento sintético classificado"]
+    success_criteria: ["Curador não inventa causa"]
+    result_states: {success: PARTIALLY_RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: OBS-001
+    family: "Execução, evidência e observabilidade"
+    case: "Falha sem screenshot/trace"
+    technologies: ["Execução"]
+    priority: P0
+    observable_symptoms: ["Erro sem evidência suficiente"]
+    probable_causes: ["Falha Playwright sem artefatos"]
+    minimum_detection: ["Falha Playwright sem artefatos"]
+    primary_strategy: evidence_capture
+    fallback_strategies: [screenshot, trace, console_log, har, dom_snapshot]
+    expected_output: ["Evidência anexada"]
+    success_criteria: ["Relatório permite diagnóstico"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: OBS-002
+    family: "Execução, evidência e observabilidade"
+    case: "Console error relevante"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["UI falha por erro JS"]
+    probable_causes: ["Console error durante step"]
+    minimum_detection: ["Console error durante step"]
+    primary_strategy: console_error_correlation
+    fallback_strategies: [attach_stack]
+    expected_output: ["Diagnóstico enriquecido"]
+    success_criteria: ["Erro aparece no relatório"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: OBS-003
+    family: "Execução, evidência e observabilidade"
+    case: "Erro de rede relevante"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Ação falha por HTTP/API"]
+    probable_causes: ["Response 4xx/5xx ou timeout"]
+    minimum_detection: ["Response 4xx/5xx", "Timeout"]
+    primary_strategy: response_intercept
+    fallback_strategies: [har_capture, network_log]
+    expected_output: ["Diagnóstico de rede"]
+    success_criteria: ["Falha classificada como rede/app"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: OBS-004
+    family: "Execução, evidência e observabilidade"
+    case: "Healing aplicado sem rastreabilidade"
+    technologies: ["Curador"]
+    priority: P0
+    observable_symptoms: ["Script muda sem justificar"]
+    probable_causes: ["Patch sem motivo/caso taxonômico"]
+    minimum_detection: ["Patch sem motivo", "Patch sem ID taxonômico"]
+    primary_strategy: taxonomy_traceability
+    fallback_strategies: [annotated_diff]
+    expected_output: ["Patch auditável"]
+    success_criteria: ["Toda mudança tem causa e evidência"]
+    result_states: {success: RESOLVED, failure: REJECTED}
+
+  - id: OBS-005
+    family: "Execução, evidência e observabilidade"
+    case: "Rejeição repetida do mesmo patch"
+    technologies: ["Curador"]
+    priority: P0
+    observable_symptoms: ["Patch falha repetidamente"]
+    probable_causes: ["Mesmo patch é rejeitado por assinatura recorrente"]
+    minimum_detection: ["Contador de rejeições por assinatura"]
+    primary_strategy: patch_rejection_guard
+    fallback_strategies: [manual_pending_issue]
+    expected_output: ["UNRESOLVED justificado"]
+    success_criteria: ["Loop de healing interrompido"]
+    result_states: {success: UNRESOLVED, failure: REJECTED}
+    policy:
+      max_rejections_same_patch: 3
+
+  - id: OBS-006
+    family: "Execução, evidência e observabilidade"
+    case: "Flakiness não determinística"
+    technologies: ["Execução"]
+    priority: P0
+    observable_symptoms: ["Passa/falha alternadamente"]
+    probable_causes: ["Resultado instável entre rodadas"]
+    minimum_detection: ["Resultado instável entre rodadas"]
+    primary_strategy: flaky_validation_rounds
+    fallback_strategies: [classify_flaky]
+    expected_output: ["Script só é promovido após estabilidade"]
+    success_criteria: ["Promoção baseada em execução limpa"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+    policy:
+      clean_runs_required_for_promotion: 3
+
+  - id: LIM-001
+    family: "Limites técnicos e casos não automatizáveis com segurança"
+    case: "CAPTCHA/desafio humano"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Desafio exige validação humana"]
+    probable_causes: ["CAPTCHA visível ou provedor conhecido"]
+    minimum_detection: ["CAPTCHA visível", "Provedor conhecido"]
+    primary_strategy: manual_checkpoint
+    fallback_strategies: [official_test_environment_bypass]
+    expected_output: ["MANUAL_REQUIRED"]
+    success_criteria: ["Curador não tenta burlar"]
+    result_states: {success: MANUAL_REQUIRED, failure: UNRESOLVED}
+
+  - id: LIM-002
+    family: "Limites técnicos e casos não automatizáveis com segurança"
+    case: "Cross-origin inacessível"
+    technologies: ["Browser security"]
+    priority: P0
+    observable_symptoms: ["DOM de frame não pode ser inspecionado"]
+    probable_causes: ["Política de mesma origem bloqueia acesso"]
+    minimum_detection: ["Erro de origem", "Acesso negado"]
+    primary_strategy: manual_checkpoint
+    fallback_strategies: [limited_interaction_if_possible]
+    expected_output: ["MANUAL_REQUIRED/UNRESOLVED"]
+    success_criteria: ["Sem locator fabricado"]
+    result_states: {success: MANUAL_REQUIRED, failure: UNRESOLVED}
+
+  - id: LIM-003
+    family: "Limites técnicos e casos não automatizáveis com segurança"
+    case: "Dado sensível mascarado"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Valor não pode ser persistido em claro"]
+    probable_causes: ["Campo marcado sensível ou política detectada"]
+    minimum_detection: ["Campo marcado sensível", "Política de dado sensível detectada"]
+    primary_strategy: sensitive_data_masking
+    fallback_strategies: [tokenization, secure_fixture]
+    expected_output: ["Dado protegido"]
+    success_criteria: ["Relatório não expõe segredo"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: LIM-004
+    family: "Limites técnicos e casos não automatizáveis com segurança"
+    case: "Operação irreversível"
+    technologies: ["Sistemas críticos"]
+    priority: P0
+    observable_symptoms: ["Fluxo confirma exclusão/envio/contratação"]
+    probable_causes: ["Ação crítica detectada"]
+    minimum_detection: ["Botão/ação crítica detectada"]
+    primary_strategy: critical_operation_checkpoint
+    fallback_strategies: [sandbox_environment]
+    expected_output: ["MANUAL_REQUIRED"]
+    success_criteria: ["Curador exige confirmação explícita"]
+    result_states: {success: MANUAL_REQUIRED, failure: UNRESOLVED}
+
+  - id: LIM-005
+    family: "Limites técnicos e casos não automatizáveis com segurança"
+    case: "Dependência externa instável"
+    technologies: ["Integrações"]
+    priority: P2
+    observable_symptoms: ["Resultado depende de sistema externo"]
+    probable_causes: ["Erro/timeouts de terceiro"]
+    minimum_detection: ["Erro de terceiro", "Timeout de terceiro"]
+    primary_strategy: external_dependency_classification
+    fallback_strategies: [mock_if_allowed, stub_if_allowed]
+    expected_output: ["Falha classificada"]
+    success_criteria: ["Não alterar script indevidamente"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}

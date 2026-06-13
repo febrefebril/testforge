@@ -1,0 +1,363 @@
+@startuml curator-decision-tree
+' TESTFORGE — Curator Decision Tree
+' Artefato: curator-decision-tree.puml
+' Base: Taxonomia implementável de casos conhecidos v1.0
+' Objetivo: orientar a classificação, healing, fallback e estado final do Agente Curador.
+
+skinparam backgroundColor #FFFFFF
+skinparam activity {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #0F172A
+  DiamondBackgroundColor #E0F2FE
+  DiamondBorderColor #0369A1
+  StartColor #16A34A
+  EndColor #DC2626
+}
+skinparam note {
+  BackgroundColor #FEF3C7
+  BorderColor #D97706
+  FontColor #111827
+}
+skinparam shadowing false
+
+title TestForge — Árvore de Decisão do Curador
+<size:12>Legenda: FAM-08 (PrimeFaces Agent) planejado em Epic F.3 | Demais agentes (L2) implementados em Epic B</size>
+
+start
+:Receber evento, falha, step ou pedido de curadoria;
+:Coletar contexto mínimo (OBS-001 se insuficiente);
+note right
+Contexto mínimo recomendado:
+- snapshot DOM antes/depois
+- locator original + failure_signature
+- stack/fingerprint da tela
+- frame/aba/contexto atual
+- logs Playwright + console/network
+- trace/HAR quando configurado
+end note
+
+:=== LAYER 1: CONSULTAR CATÁLOGO ===;
+note right
+Pipeline de 3 camadas:
+  Layer 1: Catálogo (custo zero, sem LLM)
+  Layer 2: Agente especialista (~200 tok)
+  Layer 3a: Evidence Collector (sem LLM)
+  Layer 3b: LLM Healer (~500 tok)
+  Layer 3c: Curador Automático (valida + cataloga)
+end note
+
+:Montar assinatura da falha;
+:FAM-09: Buscar match no HealingCatalog;
+if (Match encontrado no catálogo?) then (sim)
+  :Aplicar estratégia catalogada diretamente;
+  :Resultado = RESOLVED (Layer 1);
+  :Registrar catalog_match, estratégia e diff;
+  stop
+else (não)
+  :=== LAYER 2: CLASSIFICAR E CURAR ===;
+endif
+
+:Identificar tecnologia predominante;
+note right
+Exemplos:
+- JSF / PrimeFaces
+- jQuery / jQuery UI
+- Angular / SPA
+- Web Components
+- Recorder/TestForge
+end note
+
+if (Falha é de seletor/locator?) then (sim)
+  :Família = FAM-01 (Seletores frágeis);
+  note right: Agente: SelectorAgent
+  if (ID JSF dinâmico?) then (sim)
+    :Classificar SEL-001;
+    :Aplicar semantic_locator_conversion;
+  elseif (Índice de tabela/lista?) then (sim)
+    :Classificar SEL-002;
+    :Aplicar label_proximity por linha/chave;
+  elseif (widgetVar PrimeFaces?) then (sim)
+    :Classificar SEL-003;
+    :Aplicar primefaces_registry_scan;
+  elseif (XPath absoluto?) then (sim)
+    :Classificar SEL-004;
+    :Converter para locator semântico;
+  elseif (classe volátil?) then (sim)
+    :Classificar SEL-005;
+    :Aplicar aria_role_strategy;
+  elseif (texto duplicado?) then (sim)
+    :Classificar SEL-009;
+    :Desambiguar por escopo/container/role;
+  else (outro)
+    :Classificar SEL-* compatível;
+    :Aplicar fallback semântico;
+  endif
+elseif (Falha é de timing/assincronismo?) then (sim)
+  :Família = FAM-02 (Timing e assincronismo);
+  note right: Agente: TimingAgent
+  if (Re-render JSF/AJAX?) then (sim)
+    :Classificar TIM-001;
+    :Aplicar network_idle_wait + dom_stabilization;
+  elseif (ViewState hardcoded?) then (sim)
+    :Classificar TIM-002;
+    :Remover captura manual de ViewState;
+  elseif (sleep fixo?) then (sim)
+    :Classificar TIM-005;
+    :Substituir por wait semântico;
+  elseif (autocomplete/debounce?) then (sim)
+    :Classificar TIM-006;
+    :Aguardar lista/opção;
+  else (outro)
+    :Classificar TIM-* compatível;
+    :Aplicar wait por condição observável;
+  endif
+elseif (Falha é de contexto/escopo?) then (sim)
+  :Família = FAM-03 (Contexto e escopo);
+  note right: Agente: ContextAgent
+  if (iframe same-origin?) then (sim)
+    :Classificar CTX-001;
+    :Aplicar frame_reacquire/frameLocator;
+  elseif (iframe cross-origin?) then (sim)
+    :Classificar CTX-002/LIM-002;
+    :Resultado = MANUAL_REQUIRED ou UNRESOLVED;
+    :Não fabricar seletor;
+    stop
+  elseif (Shadow DOM aberto?) then (sim)
+    :Classificar CTX-003;
+    :Aplicar shadow_pierce;
+  elseif (Shadow DOM fechado?) then (sim)
+    :Classificar CTX-004;
+    :Resultado = MANUAL_REQUIRED ou UNRESOLVED;
+    stop
+  elseif (popup/nova aba?) then (sim)
+    :Classificar CTX-005;
+    :Capturar popup/page e trocar contexto;
+  else (outro)
+    :Classificar CTX-* compatível;
+  endif
+elseif (Falha é de estado da aplicação?) then (sim)
+  :Família = FAM-04 (Estado da aplicação);
+  note right: Agente: StateAgent
+  if (Sessão expirada/login?) then (sim)
+    :Classificar STA-001;
+    :Aplicar re_auth_hook;
+  elseif (Overlay bloqueia clique?) then (sim)
+    :Classificar STA-002;
+    :Aplicar overlay_dismiss ou aguardar sumir;
+  elseif (Dialog nativo?) then (sim)
+    :Classificar STA-004;
+    :Instalar handler de dialog;
+  elseif (Ambiente indisponível?) then (sim)
+    :Classificar STA-006;
+    :Não alterar script indevidamente;
+    :Resultado = PARTIALLY_RESOLVED ou UNRESOLVED;
+  else (outro)
+    :Classificar STA-* compatível;
+  endif
+elseif (Falha envolve DOM dinâmico?) then (sim)
+  :Família = FAM-05 (DOM dinâmico);
+  note right: Agente: TimingAgent (fundido)
+  if (handle cacheado/detached?) then (sim)
+    :Classificar DOM-001;
+    :Rebuscar locator e evitar ElementHandle cacheado;
+  elseif (lista virtualizada/lazy?) then (sim)
+    :Classificar DOM-004 ou DOM-005;
+    :Scroll/wait por conteúdo real;
+  else (outro)
+    :Classificar DOM-* compatível;
+  endif
+elseif (Falha envolve input especializado?) then (sim)
+  :Família = FAM-06 (Input e interação);
+  note right: Agente: InputAgent
+  if (Drag-and-drop?) then (sim)
+    :Classificar INP-005;
+    :Simular interação semântica;
+  elseif (Rich text editor?) then (sim)
+    :Classificar INP-006;
+    :Readquirir frame/contenteditable;
+  elseif (Máscara de input?) then (sim)
+    :Classificar INP-007;
+    :Aplicar pressSequentially + verificação;
+  elseif (CAPTCHA?) then (sim)
+    :Classificar INP-008/LIM-001;
+    :Resultado = MANUAL_REQUIRED;
+    :Registrar checkpoint manual;
+    stop
+  elseif (Date picker?) then (sim)
+    :Classificar INP-009;
+    :Aplicar estratégia de data;
+  elseif (Autocomplete customizado?) then (sim)
+    :Classificar INP-010/TIM-006;
+    :Aguardar opção + verificar valor final;
+  else (outro)
+    :Classificar INP-* compatível;
+  endif
+elseif (Falha envolve assert/validação?) then (sim)
+  :Família = FAM-07 (Asserts e validações);
+  note right: Agente: InputAgent (fundido)
+  if (Assert antes da gravação?) then (sim)
+    :Classificar AST-001;
+    :Vincular ao plano inicial;
+  elseif (Assert durante gravação?) then (sim)
+    :Classificar AST-002;
+    :Capturar via overlay;
+  elseif (Assert depois da gravação?) then (sim)
+    :Classificar AST-003;
+    :Vincular ao step/tela correto;
+  elseif (Assert ambíguo?) then (sim)
+    :Classificar AST-008;
+    :Resultado = MANUAL_REQUIRED;
+    :Não inventar assert;
+    stop
+  else (outro)
+    :Classificar AST-* compatível;
+  endif
+elseif (Caso é do recorder/overlay?) then (sim)
+  :Família = FAM-08 (Recorder e overlay);
+  note right: Layer 2: fallback manual
+  if (Gravação incompleta?) then (sim)
+    :Classificar REC-001;
+    :Gerar script parcial com checkpoint;
+    :Resultado = PARTIALLY_RESOLVED;
+  elseif (Evento duplicado?) then (sim)
+    :Classificar REC-002;
+    :Deduplicar steps;
+  elseif (Navegação manual?) then (sim)
+    :Classificar REC-004;
+    :Sincronizar contexto do navegador;
+  elseif (Recon/fingerprint inicial?) then (sim)
+    :Classificar REC-005;
+    :Persistir mapa tecnológico;
+  else (outro)
+    :Classificar REC-* compatível;
+  endif
+elseif (Falha é de execução/observabilidade?) then (sim)
+  :Família = FAM-09 (Execução e evidência);
+  if (Screenshot/trace ausente?) then (sim)
+    :Classificar OBS-001;
+    :Coletar evidência mínima;
+    if (Evidência obtida?) then (sim)
+    else (não)
+      :Resultado = UNRESOLVED;
+      stop
+    endif
+  elseif (Healing sem rastro?) then (sim)
+    :Classificar OBS-004;
+    :Garantir rastreabilidade do patch;
+  elseif (Rejeição repetida?) then (sim)
+    :Classificar OBS-005;
+    :Incrementar contador; abrir pendência;
+  elseif (Flakiness?) then (sim)
+    :Classificar OBS-006;
+    :Exigir N rodadas limpas consecutivas;
+  else (outro)
+    :Classificar OBS-* compatível;
+  endif
+elseif (Falha envolve upload/download?) then (sim)
+  :Família = FAM-10 (Arquivos);
+  note right: Agente: InputAgent (fundido)
+  if (Upload PrimeFaces?) then (sim)
+    :Classificar FILE-001/INP-001;
+    :Aplicar upload_payload_binding;
+  elseif (Upload padrão?) then (sim)
+    :Classificar FILE-002/INP-002;
+    :Aplicar setInputFiles + fixture versionada;
+  elseif (Download por clique?) then (sim)
+    :Classificar FILE-003/INP-003;
+    :Aplicar download_event_capture;
+  elseif (Download AJAX/Blob?) then (sim)
+    :Classificar FILE-004/INP-004;
+    :Aplicar download_event_capture;
+  elseif (Arquivo inexistente?) then (sim)
+    :Classificar FILE-005;
+    :Versionar fixture no projeto;
+  else (outro)
+    :Classificar FILE-* compatível;
+  endif
+elseif (Falha é limite técnico/segurança?) then (sim)
+  :Família = FAM-11 (Limites técnicos);
+  note right: Resultado = MANUAL_REQUIRED
+  if (Cross-origin inacessível?) then (sim)
+    :Classificar LIM-002/CTX-002;
+    :Resultado = MANUAL_REQUIRED ou UNRESOLVED;
+    :Não fabricar locator;
+    stop
+  elseif (Dado sensível mascarado?) then (sim)
+    :Classificar LIM-003;
+    :Aplicar mascaramento/tokenização;
+    :Validar ausência de segredo em relatório;
+    if (Dado protegido?) then (sim)
+      :Resultado = RESOLVED;
+    else (não)
+      :Resultado = UNRESOLVED;
+    endif
+    stop
+  elseif (Operação irreversível?) then (sim)
+    :Classificar LIM-004;
+    :Exigir confirmação/checkpoint explícito;
+    :Resultado = MANUAL_REQUIRED;
+    stop
+  else (outro)
+    :Classificar LIM-* compatível;
+    :Resultado = MANUAL_REQUIRED ou UNRESOLVED;
+    stop
+  endif
+else (não classificado)
+  :=== LAYER 3a: EVIDENCE COLLECTOR ===;
+  note right: Sem LLM. Custo baixo.\nColeta e estrutura evidências.
+  :Coletar DOM snapshot, screenshot,\nconsole errors, network state,\ncontexto dos steps anteriores;
+  if (Pacote de evidências suficiente?) then (sim)
+    :=== LAYER 3b: LLM HEALER ===;
+    note right: Prompt enxuto (~500 tok).\nRecebe payload do Evidence Collector.\nPropõe cura específica.
+    :Montar payload estruturado com evidências;\nEnviar prompt focado + payload;
+    :Avaliar hipótese/patch candidato;
+    if (Cura proposta plausível?) then (sim)
+      :=== LAYER 3c: CURADOR AUTOMÁTICO ===;
+      note right: Valida cura executando o step.\nSe passar → registra no catálogo (learned).\nSe falhar → UNRESOLVED + stale em 90d.
+    else (não)
+      :Resultado = UNRESOLVED;
+      :Registrar evidência e motivo;
+      stop
+    endif
+  else (não)
+    :Resultado = UNRESOLVED;
+    :Evidência insuficiente para LLM;
+    stop
+  endif
+endif
+
+:Gerar patch candidato;
+:Registrar ID taxonômico, estratégia, fallback e evidências;
+:Executar validação controlada;
+
+if (Validação passou?) then (sim)
+  if (Requer promoção por estabilidade?) then (sim)
+    :Aplicar política OBS-006;
+    :Exigir rodadas limpas consecutivas definidas no projeto;
+  else (não)
+  endif
+  :Resultado = RESOLVED;
+  :Anexar diff, evidências e critério de sucesso;
+  stop
+else (não)
+  :Aplicar próximo fallback disponível;
+  if (Fallback passou?) then (sim)
+    :Resultado = RESOLVED ou PARTIALLY_RESOLVED;
+    :Registrar fallback utilizado;
+    stop
+  else (não)
+    :Incrementar contador de rejeição por assinatura do patch;
+    if (Limite de rejeições atingido?) then (sim)
+      :Classificar OBS-005;
+      :Resultado = UNRESOLVED;
+      :Abrir pendência/checkpoint manual;
+      stop
+    else (não)
+      :Gerar novo patch candidato;
+      :Retornar à validação controlada;
+    endif
+  endif
+endif
+
+@enduml

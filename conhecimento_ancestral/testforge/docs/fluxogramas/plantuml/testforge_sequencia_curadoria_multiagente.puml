@@ -1,0 +1,304 @@
+@startuml
+title TestForge - Sequência da Curadoria em 3 Camadas
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 18
+skinparam BoxPadding 10
+
+autonumber
+
+participant "ExecutorAgent" as ExecutorAgent
+participant "ScriptUnderTest" as ScriptUnderTest
+participant "ExecutionCollector" as ExecutionCollector
+participant "FailureDiagnostic" as FailureDiagnostic
+participant "FailureClassifier" as FailureClassifier
+participant "HealingCatalog" as HealingCatalog
+participant "AgentOrchestrator" as AgentOrchestrator
+participant "SelectorAgent" as SelectorAgent
+participant "TimingAgent" as TimingAgent
+participant "InputAgent" as InputAgent
+participant "ContextAgent" as ContextAgent
+participant "StateAgent" as StateAgent
+participant "PatchValidator" as PatchValidator
+participant "ProgressDetector" as ProgressDetector
+participant "EvidenceCollector" as EvidenceCollector
+participant "LLMHealer" as LLMHealer
+participant "CuradorAutomatico" as CuradorAutomatico
+
+== Execução e detecção de falha ==
+
+ExecutorAgent -> ScriptUnderTest : executar script
+activate ExecutorAgent
+activate ScriptUnderTest
+
+alt Step falha
+  ScriptUnderTest --> ExecutorAgent : erro no step_id
+  deactivate ScriptUnderTest
+
+  ExecutorAgent -> ExecutionCollector : coletar evidências da falha
+  activate ExecutionCollector
+  ExecutionCollector -> ExecutionCollector : trace.zip, screenshot, DOM, console, network
+  ExecutionCollector --> ExecutorAgent : pacote de evidências
+  deactivate ExecutionCollector
+
+  ExecutorAgent -> FailureDiagnostic : diagnosticar falha
+  activate FailureDiagnostic
+  FailureDiagnostic -> FailureDiagnostic : identificar step_id, erro, seletor, contexto
+  FailureDiagnostic --> ExecutorAgent : diagnóstico estruturado
+  deactivate FailureDiagnostic
+
+  ExecutorAgent -> FailureClassifier : classificar falha na taxonomia
+  activate FailureClassifier
+  FailureClassifier -> FailureClassifier : mapear sintoma para família (FAM-01 a FAM-11)\ne caso (SEL-004, TIM-006, INP-009, etc.)
+  FailureClassifier --> ExecutorAgent : failure_signature.json\ncom family + taxonomy + evidências
+  deactivate FailureClassifier
+
+  == Layer 1 — Catálogo de Cura ==
+
+  ExecutorAgent -> HealingCatalog : consultar catálogo por family + sintoma
+  activate HealingCatalog
+
+  alt Match exato encontrado no catálogo
+    HealingCatalog --> ExecutorAgent : entrada do catálogo com estratégia primária
+    deactivate HealingCatalog
+
+    ExecutorAgent -> PatchValidator : aplicar estratégia primária\n(layer 1, custo zero de LLM)
+    activate PatchValidator
+    PatchValidator -> PatchValidator : validar sintaxe, segurança,\nmascaramento, compatibilidade
+    PatchValidator --> ExecutorAgent : patch aprovado
+    deactivate PatchValidator
+
+    ExecutorAgent -> ScriptUnderTest : reexecutar step com cura do catálogo
+    activate ScriptUnderTest
+    ScriptUnderTest --> ExecutorAgent : resultado da reexecução
+    deactivate ScriptUnderTest
+
+    ExecutorAgent -> ProgressDetector : classificar progresso
+    activate ProgressDetector
+
+    alt PASSED_STEP
+      ProgressDetector --> ExecutorAgent : sucesso
+      deactivate ProgressDetector
+      ExecutorAgent -> HealingCatalog : atualizar contador de acertos
+      ExecutorAgent --> ExecutorAgent : cura layer 1 concluída
+    else REGRESSED ou ERROR_CHANGED
+      ProgressDetector --> ExecutorAgent : reclassificar necessário
+      deactivate ProgressDetector
+      ExecutorAgent -> FailureClassifier : reclassificar falha
+      activate FailureClassifier
+      FailureClassifier --> ExecutorAgent : família atualizada
+      deactivate FailureClassifier
+      -> Layer 2
+    else STAGNATED ou UNRESOLVED
+      ProgressDetector --> ExecutorAgent : tentar próxima camada
+      deactivate ProgressDetector
+      -> Layer 2
+    end
+
+  else Nenhum match no catálogo
+    HealingCatalog --> ExecutorAgent : sem entrada para este caso
+    deactivate HealingCatalog
+    -> Layer 2
+  end
+
+  == Layer 2 — Agente Especialista ==
+
+  group Layer 2 — Agente Especialista
+    ExecutorAgent -> AgentOrchestrator : solicitar cura com família {family}
+    activate AgentOrchestrator
+    AgentOrchestrator -> AgentOrchestrator : selecionar agente conforme família\nFAMILY_AGENT_MAP: FAM-01→selector,\nFAM-02→timing, FAM-03→context,\nFAM-04→state, FAM-05→dynamic_dom,\nFAM-06→input, FAM-07→input
+
+    alt Família = FAM-01 (seletores)
+      AgentOrchestrator -> SelectorAgent : evidências mínimas + prompt otimizado
+      activate SelectorAgent
+      SelectorAgent -> SelectorAgent : heal(): regras determinísticas\n(prioridade data-testid > id > name...)
+      SelectorAgent -> SelectorAgent : _llm_fallback() se regras exauridas:\nchama LLM via _build_prompt()
+      SelectorAgent --> AgentOrchestrator : proposta de novo seletor
+      deactivate SelectorAgent
+    elseif Família = FAM-02 ou FAM-05 (timing/DOM)
+      AgentOrchestrator -> TimingAgent : evidências mínimas + prompt otimizado
+      activate TimingAgent
+      TimingAgent -> TimingAgent : heal(): regras determinísticas\n(network_idle, visibility_wait)
+      TimingAgent -> TimingAgent : _llm_fallback() se regras exauridas:\nchama LLM via _build_prompt()
+      TimingAgent --> AgentOrchestrator : proposta de wait semântico
+      deactivate TimingAgent
+    elseif Família = FAM-06 (input) ou FAM-07 (capture/file)
+      AgentOrchestrator -> InputAgent : evidências mínimas + prompt otimizado
+      activate InputAgent
+      InputAgent -> InputAgent : heal(): regras determinísticas\n(fill→pressSequentially→native setter)
+      InputAgent -> InputAgent : _llm_fallback() se regras exauridas:\nchama LLM via _build_prompt()
+      InputAgent --> AgentOrchestrator : proposta de interação alternativa
+      deactivate InputAgent
+    elseif Família = FAM-03 (contexto)
+      AgentOrchestrator -> ContextAgent : evidências mínimas + prompt otimizado
+      activate ContextAgent
+      ContextAgent -> ContextAgent : heal(): regras determinísticas\n(frame_switch, shadow_pierce)
+      ContextAgent -> ContextAgent : _llm_fallback() se regras exauridas:\nchama LLM via _build_prompt()
+      ContextAgent --> AgentOrchestrator : ajuste de escopo
+      deactivate ContextAgent
+    elseif Família = FAM-04 (estado)
+      AgentOrchestrator -> StateAgent : evidências mínimas + prompt otimizado
+      activate StateAgent
+      StateAgent -> StateAgent : heal(): regras determinísticas\n(dialog_accept, overlay_dismiss)
+      StateAgent -> StateAgent : _llm_fallback() se regras exauridas:\nchama LLM via _build_prompt()
+      StateAgent --> AgentOrchestrator : ação corretiva de estado
+      deactivate StateAgent
+    elseif Família = FAM-08, FAM-09, FAM-10 ou FAM-11
+      AgentOrchestrator -> AgentOrchestrator : sem agente especialista\npara asserts (FAM-08), recorder (FAM-09),\nexecução (FAM-10) ou browser (FAM-11)\npular layer 2 → layer 3 direto
+    else
+      AgentOrchestrator -> AgentOrchestrator : sem agente especialista\npular layer 2
+    end
+
+    AgentOrchestrator -> PatchValidator : validar proposta do agente
+    activate PatchValidator
+    PatchValidator -> PatchValidator : verificar sintaxe, segurança, rastreabilidade
+    alt Patch válido
+      PatchValidator --> AgentOrchestrator : patch aprovado
+      deactivate PatchValidator
+
+      AgentOrchestrator -> ExecutorAgent : reexecutar step com patch da layer 2
+      ExecutorAgent -> ScriptUnderTest : executar versão com patch
+      activate ScriptUnderTest
+      ScriptUnderTest --> ExecutorAgent : resultado
+      deactivate ScriptUnderTest
+
+      ExecutorAgent -> ProgressDetector : classificar progresso
+      activate ProgressDetector
+
+      alt PASSED_STEP
+        ProgressDetector --> ExecutorAgent : sucesso
+        deactivate ProgressDetector
+        ExecutorAgent -> HealingCatalog : registrar nova entrada (fix_type = learned)
+        ExecutorAgent --> ExecutorAgent : cura layer 2 concluída
+      else REGRESSED
+        ProgressDetector --> ExecutorAgent : rollback necessário
+        deactivate ProgressDetector
+        ExecutorAgent -> ExecutorAgent : reverter para versão anterior
+        -> Layer 3
+      else ERROR_CHANGED
+        ProgressDetector --> ExecutorAgent : reclassificar
+        deactivate ProgressDetector
+        ExecutorAgent -> FailureClassifier : reclassificar falha
+        activate FailureClassifier
+        FailureClassifier --> ExecutorAgent : nova família
+        deactivate FailureClassifier
+        -> Layer 3
+      else STAGNATED ou UNRESOLVED
+        ProgressDetector --> ExecutorAgent : tentar layer 3
+        deactivate ProgressDetector
+        -> Layer 3
+      end
+
+    else Patch inválido
+      PatchValidator --> AgentOrchestrator : patch rejeitado
+      deactivate PatchValidator
+      AgentOrchestrator -> ExecutorAgent : passar para layer 3
+      -> Layer 3
+    end
+
+    deactivate AgentOrchestrator
+  end
+
+  == Layer 3 — _run_healing_cycle (CuradorAutomatico + LLMHealer) ==
+
+  group Layer 3a — CuradorAutomatico init
+    ExecutorAgent -> CuradorAutomatico : iniciar cura L3
+    activate CuradorAutomatico
+    CuradorAutomatico -> CuradorAutomatico : __init__():\nload_llm_config() lê env vars
+
+    alt AZURE_OPENAI_KEY + AZURE_OPENAI_ENDPOINT definidos
+      CuradorAutomatico -> CuradorAutomatico : LLMHealer real ativado\nAzure OpenAI, model=gpt-4.1-mini\nconfigurado via LLMConfig
+    else Env vars ausentes
+      CuradorAutomatico -> CuradorAutomatico : MockLLMHealer ativado\n(confiança 0.85 simulada,\nsem chamada LLM real)
+    end
+    deactivate CuradorAutomatico
+  end
+
+  group Layer 3b — LLM Healer (prompt enxuto + confidence gate)
+    ExecutorAgent -> LLMHealer : EvidenceCollector coleta payload\nDOM, screenshot, console, network, contexto
+    activate EvidenceCollector
+    EvidenceCollector -> EvidenceCollector : estruturar EvidencePayload:\nDOM snippet, console errors,\nnetwork state, step_context
+    EvidenceCollector --> ExecutorAgent : payload estruturado
+    deactivate EvidenceCollector
+
+    alt Evidência insuficiente
+      ExecutorAgent -> ExecutorAgent : UNRESOLVED\n(preservar evidências para revisão manual)
+    else Payload suficiente
+      ExecutorAgent -> LLMHealer : heal_or_unresolved(payload, error, family)
+      activate LLMHealer
+      LLMHealer -> LLMHealer : _build_prompt() seleciona template:\nCURATION_PROMPT_TEMPLATE genérico\nou FAMILY_PROMPTS[family] se family != ""
+      LLMHealer -> LLMHealer : Azure OpenAI:\nclient.chat.completions.create(\nmodel=gpt-4.1-mini,\ntemperature=0.3, max_tokens=500)
+      LLMHealer -> LLMHealer : _parse_response() extrai JSON\n→ LLMHealingProposal:\ntaxonomy_id, family, strategy,\nnew_locator, confidence, rationale
+
+      alt confidence >= 0.5 (gate)
+        LLMHealer --> ExecutorAgent : proposta aceita
+      else confidence < 0.5 ou parse falhou
+        LLMHealer --> ExecutorAgent : proposta rejeitada\nconfidence=0.0
+      end
+      deactivate LLMHealer
+    end
+  end
+
+  group Layer 3c — _run_healing_cycle (valida + cataloga + retry)
+    ExecutorAgent -> PatchValidator : validar proposta
+    activate PatchValidator
+    PatchValidator -> PatchValidator : verificar sintaxe, segurança, rastreabilidade
+    alt Patch válido
+      PatchValidator --> ExecutorAgent : patch aprovado
+      deactivate PatchValidator
+
+      ExecutorAgent -> ExecutorAgent : _build_step_copy() → patched_step\ncom proposal.new_locator
+
+      ExecutorAgent -> ScriptUnderTest : _try_execute_step(patched_step)
+      activate ScriptUnderTest
+      ScriptUnderTest --> ExecutorAgent : resultado (passed / erro)
+      deactivate ScriptUnderTest
+
+      ExecutorAgent -> ProgressDetector : classify_step_result()\ncompara erro original vs novo
+      activate ProgressDetector
+
+      alt PASSED_STEP
+        ProgressDetector --> ExecutorAgent : sucesso
+        deactivate ProgressDetector
+        ExecutorAgent -> HealingCatalog : _register_learned()\nentrada fix_type=learned
+        ExecutorAgent --> ExecutorAgent : cura L3 concluída
+      else ERROR_CHANGED
+        ProgressDetector --> ExecutorAgent : erro mudou
+        deactivate ProgressDetector
+        ExecutorAgent -> ExecutorAgent : _run_healing_cycle() retry\ncom novo erro, depth+1\n(max depth = 1)
+        ExecutorAgent -> ScriptUnderTest : reexecutar com retry
+        activate ScriptUnderTest
+        ScriptUnderTest --> ExecutorAgent : resultado final
+        deactivate ScriptUnderTest
+        alt PASSED_STEP no retry
+          ExecutorAgent -> HealingCatalog : _register_learned()
+          ExecutorAgent --> ExecutorAgent : cura L3 após retry
+        else Ainda falha
+          ExecutorAgent -> ExecutorAgent : UNRESOLVED\n(rollback, _register_unresolved())
+        end
+      else REGRESSED ou STAGNATED
+        ProgressDetector --> ExecutorAgent : rollback necessário
+        deactivate ProgressDetector
+        ExecutorAgent -> ExecutorAgent : _should_rollback() → true\nrestaurar step anterior\n_register_unresolved()
+      end
+
+    else Patch inválido
+      PatchValidator --> ExecutorAgent : saída rejeitada
+      deactivate PatchValidator
+      ExecutorAgent -> ExecutorAgent : marcar como UNRESOLVED
+    end
+
+    ExecutorAgent -> ExecutorAgent : se UNRESOLVED:\npreservar evidências para revisão manual\nstale detection 90+ dias
+  end
+
+else Script passa sem falha
+  ScriptUnderTest --> ExecutorAgent : execução concluída
+  deactivate ScriptUnderTest
+  ExecutorAgent --> ExecutorAgent : promover para entrega
+end
+
+deactivate ExecutorAgent
+
+@enduml

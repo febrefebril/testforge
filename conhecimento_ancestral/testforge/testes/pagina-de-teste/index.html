@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Página de Teste — Cobertura da Taxonomia</title>
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f5f5f5; padding: 24px; color: #222; }
+  h1 { margin-bottom: 8px; }
+  .subtitle { color: #555; margin-bottom: 24px; font-size: 14px; }
+  section { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  section h2 { font-size: 16px; margin-bottom: 4px; color: #1a1a2e; }
+  section .taxo { font-size: 12px; color: #888; margin-bottom: 16px; font-family: monospace; }
+  .field-group { display: flex; flex-direction: column; gap: 12px; max-width: 500px; }
+  .field-row { display: flex; flex-direction: column; gap: 4px; }
+  .field-row label { font-size: 13px; color: #444; }
+  .field-row input, .field-row select, .field-row textarea {
+    padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;
+  }
+  .field-row input:focus, .field-row select:focus, .field-row textarea:focus {
+    outline: 2px solid #4a90d9; border-color: transparent;
+  }
+  .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+  .btn-primary { background: #4a90d9; color: #fff; }
+  .btn-primary:hover { background: #357abd; }
+  .btn-danger { background: #d9534f; color: #fff; }
+  .btn-danger:hover { background: #c9302c; }
+  .duplicate-text { color: #d9534f; font-weight: bold; }
+  .overlay-blocker {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,.5); z-index: 999; display: none;
+    justify-content: center; align-items: center; color: #fff; font-size: 24px;
+  }
+  .overlay-blocker.show { display: flex; }
+  .overlay-blocker .btn { background: #fff; color: #333; margin-top: 16px; }
+  #lazy-container { min-height: 60px; background: #f0f0f0; border-radius: 4px; padding: 12px; }
+  .sortable-list { list-style: none; padding: 0; }
+  .sortable-list li {
+    padding: 8px 12px; margin: 4px 0; background: #f9f9f9; border: 1px solid #ddd;
+    border-radius: 4px; cursor: grab; display: flex; justify-content: space-between;
+  }
+  .sortable-list li:active { cursor: grabbing; }
+  .sortable-list li .drag-handle { color: #999; }
+  .drop-zone {
+    width: 200px; height: 100px; border: 2px dashed #aaa; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; color: #888;
+    transition: all .2s;
+  }
+  .drop-zone.drag-over { border-color: #4a90d9; background: #e8f0fe; }
+  .hidden-radio { position: absolute; opacity: 0; pointer-events: none; }
+  .radio-group { display: flex; gap: 16px; }
+  .radio-group label { cursor: pointer; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; }
+  .radio-group label.selected { background: #4a90d9; color: #fff; border-color: #4a90d9; }
+  .shadow-host { padding: 12px; border: 1px dashed #4a90d9; border-radius: 4px; }
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,.4); z-index: 1000; display: none;
+    justify-content: center; align-items: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box { background: #fff; padding: 24px; border-radius: 8px; min-width: 300px; }
+  iframe { width: 100%; height: 150px; border: 1px solid #ddd; border-radius: 4px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+</style>
+</head>
+<body>
+
+<h1>🧪 Página de Teste — Taxonomia TestForge</h1>
+<p class="subtitle">Um exemplo de cada elemento problemático. Use para validar gravação, execução e cura.</p>
+
+<!-- ============================================================ -->
+<!-- SEÇÃO: SELETORES FRÁGEIS (SEL) -->
+<!-- ============================================================ -->
+<section id="secao-seletores">
+<h2>Seletores Frágeis</h2>
+<p class="taxo">SEL-006 | SEL-009 | SEL-010 | SEL-004 | SEL-007</p>
+<div class="field-group">
+
+  <!-- SEL-006: Elemento sem ID -->
+  <div class="field-row">
+    <label>Campo sem ID (SEL-006)</label>
+    <input type="text" placeholder="sem id, sem name" class="no-id-input">
+  </div>
+
+  <!-- SEL-010: Label não associado via for -->
+  <div class="field-row">
+    <label>Label sem <code>for</code> (SEL-010)</label>
+    <input type="text" id="campo-label-for">
+  </div>
+
+  <!-- SEL-010: Radio com label sem for -->
+  <div class="field-row">
+    <label>Radio sem <code>for</code> (SEL-010)</label>
+    <div class="radio-group">
+      <label class="radio-label-custom" data-value="opcao-a">Opção A</label>
+      <label class="radio-label-custom" data-value="opcao-b">Opção B</label>
+    </div>
+    <input type="radio" name="radio-sem-for" value="opcao-a" class="hidden-radio">
+    <input type="radio" name="radio-sem-for" value="opcao-b" class="hidden-radio">
+  </div>
+
+  <!-- SEL-009: Texto duplicado -->
+  <div class="field-row">
+    <label>Texto duplicado (SEL-009) — dois botões com mesmo texto</label>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary acao-duplicada" data-id="1">Confirmar</button>
+      <button class="btn btn-primary acao-duplicada" data-id="2">Confirmar</button>
+    </div>
+  </div>
+
+  <!-- SEL-004: Elemento sem bons seletores (genérico) -->
+  <div class="field-row">
+    <label>Div genérica sem atributos (SEL-004)</label>
+    <div style="padding:8px;border:1px solid #eee;border-radius:4px">
+      <span>Clique aqui</span>
+    </div>
+  </div>
+
+  <!-- SEL-007: Elemento fora do formulário -->
+  <div class="field-row">
+    <label>Botão fora do <code>&lt;form&gt;</code> (SEL-007)</label>
+    <button class="btn btn-primary" id="btn-fora-form">Ação fora do form</button>
+  </div>
+
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEÇÃO: INPUT E INTERAÇÃO ESPECIALIZADA (INP) -->
+<!-- ============================================================ -->
+<section id="secao-input">
+<h2>Input e Interação Especializada</h2>
+<p class="taxo">INP-007 | INP-009 | INP-010 | INP-002 | INP-005 | INP-006</p>
+<div class="field-group">
+
+  <!-- INP-007: Máscara de input (CPF) -->
+  <div class="field-row">
+    <label>Máscara de input — CPF (INP-007)</label>
+    <input type="text" id="campo-cpf" placeholder="000.000.000-00">
+  </div>
+
+  <!-- INP-009: Date picker jQuery UI -->
+  <div class="field-row">
+    <label>Date picker jQuery UI (INP-009)</label>
+    <input type="text" id="campo-data" placeholder="dd/mm/aaaa">
+  </div>
+
+  <!-- INP-010: Combobox customizado (select + input + dropdown) -->
+  <div class="field-row">
+    <label>Combobox customizado (INP-010)</label>
+    <div style="position:relative">
+      <input type="text" id="campo-combobox" placeholder="Digite ou selecione" autocomplete="off">
+      <div id="combobox-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;z-index:10;max-height:150px;overflow-y:auto">
+        <div class="combobox-item" data-value="js">JavaScript</div>
+        <div class="combobox-item" data-value="py">Python</div>
+        <div class="combobox-item" data-value="java">Java</div>
+        <div class="combobox-item" data-value="cs">C#</div>
+        <div class="combobox-item" data-value="rb">Ruby</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INP-002: Upload de arquivo -->
+  <div class="field-row">
+    <label>Upload de arquivo (INP-002)</label>
+    <input type="file" id="campo-upload">
+  </div>
+
+  <!-- INP-005: Drag-and-drop -->
+  <div class="field-row">
+    <label>Drag-and-drop (INP-005)</label>
+    <ul class="sortable-list" id="sortable-list">
+      <li data-id="1"><span>Item 1</span><span class="drag-handle">⠿</span></li>
+      <li data-id="2"><span>Item 2</span><span class="drag-handle">⠿</span></li>
+      <li data-id="3"><span>Item 3</span><span class="drag-handle">⠿</span></li>
+    </ul>
+    <div class="drop-zone" id="drop-zone">Arraste um item aqui</div>
+  </div>
+
+  <!-- INP-006: contenteditable -->
+  <div class="field-row">
+    <label>Rich text / contenteditable (INP-006)</label>
+    <div contenteditable="true" id="campo-richedit"
+      style="border:1px solid #ccc;border-radius:4px;padding:8px;min-height:60px;background:#fff">
+      Digite aqui...
+    </div>
+  </div>
+
+  <!-- jQuery UI Autocomplete (cai em TIM-006 + INP-010) -->
+  <div class="field-row">
+    <label>Autocomplete jQuery UI (TIM-006 / INP-010)</label>
+    <input type="text" id="campo-autocomplete" placeholder="Digite uma cidade">
+  </div>
+
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEÇÃO: TIMING E ASSINCRONISMO (TIM) -->
+<!-- ============================================================ -->
+<section id="secao-timing">
+<h2>Timing e Assincronismo</h2>
+<p class="taxo">TIM-006 | TIM-005</p>
+<div class="field-group">
+
+  <div class="field-row">
+    <label>Conteúdo com carregamento atrasado (TIM-006)</label>
+    <div id="lazy-container">
+      <em>Carregando...</em>
+    </div>
+  </div>
+
+  <div class="field-row">
+    <label>Select com opções carregadas via JS (TIM-006)</label>
+    <select id="select-assincrono">
+      <option value="">Carregando...</option>
+    </select>
+  </div>
+
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEÇÃO: CONTEXTO E ESCOPO (CTX) -->
+<!-- ============================================================ -->
+<section id="secao-contexto">
+<h2>Contexto e Escopo</h2>
+<p class="taxo">CTX-003 | CTX-001 | CTX-006</p>
+<div class="field-group">
+
+  <!-- CTX-003: Shadow DOM -->
+  <div class="field-row">
+    <label>Shadow DOM aberto (CTX-003)</label>
+    <div id="shadow-host" class="shadow-host">
+      <em>Shadow DOM será anexado via JS</em>
+    </div>
+  </div>
+
+  <!-- CTX-001: Iframe same-origin -->
+  <div class="field-row">
+    <label>Iframe same-origin (CTX-001)</label>
+    <iframe src="iframe-content.html" id="iframe-teste" title="iframe de teste"></iframe>
+  </div>
+
+  <!-- CTX-006: Modal/dialog -->
+  <div class="field-row">
+    <label>Modal/dialog (CTX-006)</label>
+    <button class="btn btn-primary" id="btn-abrir-modal">Abrir Modal</button>
+  </div>
+
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEÇÃO: ESTADO DA APLICAÇÃO (STA) -->
+<!-- ============================================================ -->
+<section id="secao-estado">
+<h2>Estado da Aplicação</h2>
+<p class="taxo">STA-002 | STA-004</p>
+<div class="field-group">
+
+  <!-- STA-002: Overlay bloqueando clique -->
+  <div class="field-row">
+    <label>Overlay bloqueando clique (STA-002)</label>
+    <button class="btn btn-primary" id="btn-mostrar-overlay">Mostrar Overlay</button>
+    <button class="btn btn-primary" id="btn-atras-overlay">Clicar (bloqueado por overlay)</button>
+  </div>
+
+  <!-- STA-004: Dialog nativo -->
+  <div class="field-row">
+    <label>Dialog nativo (STA-004)</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary" id="btn-alert">Alert</button>
+      <button class="btn btn-primary" id="btn-confirm">Confirm</button>
+      <button class="btn btn-primary" id="btn-prompt">Prompt</button>
+    </div>
+  </div>
+
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEÇÃO: DOM DINÂMICO (DOM) -->
+<!-- ============================================================ -->
+<section id="secao-dom">
+<h2>DOM Dinâmico</h2>
+<p class="taxo">DOM-002 | DOM-005</p>
+<div class="field-group">
+
+  <!-- DOM-002: Lista reordenada -->
+  <div class="field-row">
+    <label>Lista reordenável (DOM-002)</label>
+    <div id="lista-reordenavel">
+      <div class="item-lista" data-ordem="1">Item A <button class="btn btn-danger" style="padding:2px 8px;font-size:12px">Remover</button></div>
+      <div class="item-lista" data-ordem="2">Item B <button class="btn btn-danger" style="padding:2px 8px;font-size:12px">Remover</button></div>
+      <div class="item-lista" data-ordem="3">Item C <button class="btn btn-danger" style="padding:2px 8px;font-size:12px">Remover</button></div>
+    </div>
+    <button class="btn btn-primary" id="btn-reordenar" style="margin-top:8px">Reordenar</button>
+  </div>
+
+  <!-- DOM-005: Botão que adiciona conteúdo -->
+  <div class="field-row">
+    <label>Conteúdo carregado sob demanda (DOM-005)</label>
+    <button class="btn btn-primary" id="btn-carregar-conteudo">Carregar Conteúdo</button>
+    <div id="conteudo-dinamico" style="margin-top:8px"></div>
+  </div>
+
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEÇÃO: FORMULÁRIO COMPLETO (INTEGRAÇÃO) -->
+<!-- ============================================================ -->
+<section id="secao-form">
+<h2>Formulário Completo</h2>
+<p class="taxo">Fluxo integrado</p>
+<form id="form-completo" action="#" method="post">
+  <div class="field-group">
+    <div class="field-row">
+      <label for="nome-completo">Nome completo</label>
+      <input type="text" id="nome-completo" name="nome" required>
+    </div>
+    <div class="field-row">
+      <label for="email-contato">E-mail</label>
+      <input type="email" id="email-contato" name="email">
+    </div>
+    <div class="field-row">
+      <label for="telefone">Telefone</label>
+      <input type="tel" id="telefone" name="telefone" placeholder="(00) 00000-0000">
+    </div>
+    <div class="field-row">
+      <label for="select-estado">Estado</label>
+      <select id="select-estado" name="estado">
+        <option value="">Selecione...</option>
+        <option value="AC">Acre</option>
+        <option value="AL">Alagoas</option>
+        <option value="DF">Distrito Federal</option>
+        <option value="SP">São Paulo</option>
+      </select>
+    </div>
+    <div class="field-row">
+      <label>Gênero (radio com <code>for</code>)</label>
+      <div style="display:flex;gap:16px">
+        <label><input type="radio" name="genero" value="M"> Masculino</label>
+        <label><input type="radio" name="genero" value="F"> Feminino</label>
+        <label><input type="radio" name="genero" value="O"> Outro</label>
+      </div>
+    </div>
+    <div class="field-row">
+      <label>Interesses (checkbox)</label>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <label><input type="checkbox" name="interesse" value="tech"> Tecnologia</label>
+        <label><input type="checkbox" name="interesse" value="design"> Design</label>
+        <label><input type="checkbox" name="interesse" value="negocios"> Negócios</label>
+      </div>
+    </div>
+    <div class="field-row">
+      <label for="mensagem">Mensagem</label>
+      <textarea id="mensagem" name="mensagem" rows="3" placeholder="Digite sua mensagem"></textarea>
+    </div>
+    <div class="field-row">
+      <button type="submit" class="btn btn-primary">Enviar</button>
+    </div>
+  </div>
+</form>
+</section>
+
+<!-- ============================================================ -->
+<!-- MODAL (CTX-006) -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box">
+    <h3>Modal de Teste</h3>
+    <p>Este é um modal para testar captura em dialog (CTX-006).</p>
+    <div class="field-row" style="margin-top:12px">
+      <label for="campo-modal">Campo dentro do modal</label>
+      <input type="text" id="campo-modal" placeholder="Preencha dentro do modal">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn" id="btn-fechar-modal">Fechar</button>
+      <button class="btn btn-primary" id="btn-confirmar-modal">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- OVERLAY BLOQUEADOR (STA-002) -->
+<!-- ============================================================ -->
+<div class="overlay-blocker" id="overlay-blocker">
+  <div style="text-align:center">
+    <p>Overlay bloqueando clique (STA-002)</p>
+    <button class="btn" id="btn-fechar-overlay">Fechar Overlay</button>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SCRIPTS -->
+<!-- ============================================================ -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.8/jquery.inputmask.min.js"></script>
+
+<script>
+// ============================================================
+// SEL-010: Radio sem for - clique no label marca o radio oculto
+// ============================================================
+document.querySelectorAll('.radio-label-custom').forEach(function(label) {
+  label.addEventListener('click', function() {
+    var value = this.getAttribute('data-value');
+    document.querySelectorAll('input[name="radio-sem-for"]').forEach(function(r) {
+      r.checked = (r.value === value);
+    });
+    document.querySelectorAll('.radio-label-custom').forEach(function(l) {
+      l.classList.toggle('selected', l === label);
+    });
+  });
+});
+
+// ============================================================
+// SEL-009: Texto duplicado - botões "Confirmar"
+// ============================================================
+document.querySelectorAll('.acao-duplicada').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    alert('Clicou em Confirmar (ID ' + this.getAttribute('data-id') + ')');
+  });
+});
+
+// ============================================================
+// INP-007: Máscara de input - CPF
+// ============================================================
+var cpfInput = document.getElementById('campo-cpf');
+cpfInput.addEventListener('input', function() {
+  var v = this.value.replace(/\D/g, '').slice(0, 11);
+  var formatted = '';
+  if (v.length > 0) formatted = v.slice(0, 3);
+  if (v.length > 3) formatted += '.' + v.slice(3, 6);
+  if (v.length > 6) formatted += '.' + v.slice(6, 9);
+  if (v.length > 9) formatted += '-' + v.slice(9, 11);
+  this.value = formatted;
+});
+
+// ============================================================
+// INP-009: Date picker jQuery UI
+// ============================================================
+$('#campo-data').datepicker({
+  dateFormat: 'dd/mm/yy',
+  changeMonth: true,
+  changeYear: true,
+  dayNames: ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'],
+  dayNamesMin: ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'],
+  monthNames: ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+});
+
+// ============================================================
+// INP-010: Combobox customizado
+// ============================================================
+var comboboxInput = document.getElementById('campo-combobox');
+var comboboxDropdown = document.getElementById('combobox-dropdown');
+comboboxInput.addEventListener('focus', function() { comboboxDropdown.style.display = 'block'; });
+comboboxInput.addEventListener('blur', function() {
+  setTimeout(function() { comboboxDropdown.style.display = 'none'; }, 200);
+});
+comboboxInput.addEventListener('input', function() {
+  var val = this.value.toLowerCase();
+  comboboxDropdown.querySelectorAll('.combobox-item').forEach(function(item) {
+    item.style.display = item.textContent.toLowerCase().includes(val) ? 'block' : 'none';
+  });
+  comboboxDropdown.style.display = 'block';
+});
+document.querySelectorAll('.combobox-item').forEach(function(item) {
+  item.addEventListener('click', function() {
+    comboboxInput.value = this.textContent;
+    comboboxDropdown.style.display = 'none';
+    comboboxInput.focus();
+  });
+});
+
+// ============================================================
+// TIM-006 + INP-010: jQuery UI Autocomplete
+// ============================================================
+var cidades = [
+  'Brasília', 'São Paulo', 'Rio de Janeiro', 'Belo Horizonte',
+  'Salvador', 'Fortaleza', 'Curitiba', 'Manaus', 'Recife', 'Porto Alegre',
+  'Belém', 'Goiânia', 'Guarulhos', 'Campinas', 'São Luís'
+];
+$('#campo-autocomplete').autocomplete({
+  source: function(request, response) {
+    setTimeout(function() {
+      response($.ui.autocomplete.filter(cidades, request.term));
+    }, 300);
+  },
+  minLength: 1,
+  select: function(event, ui) {
+    // Simula comportamento que pode lançar exceção (como vimos na Caixa)
+    try {
+      console.log('Autocomplete selecionou:', ui.item.value);
+    } catch(e) {
+      console.warn('Erro no select do autocomplete:', e);
+    }
+  }
+});
+
+// ============================================================
+// CTX-003: Shadow DOM
+// ============================================================
+(function() {
+  var host = document.getElementById('shadow-host');
+  var shadow = host.attachShadow({ mode: 'open' });
+  shadow.innerHTML = `
+    <style>
+      .shadow-card {
+        padding: 12px; background: #e8f0fe; border-radius: 4px;
+        border: 1px solid #4a90d9;
+      }
+      .shadow-card input {
+        padding: 6px 10px; border: 1px solid #4a90d9;
+        border-radius: 4px; margin-top: 8px; width: 100%;
+      }
+      .shadow-card button {
+        margin-top: 8px; padding: 6px 12px; background: #4a90d9;
+        color: #fff; border: none; border-radius: 4px; cursor: pointer;
+      }
+    </style>
+    <div class="shadow-card">
+      <p><strong>Shadow DOM</strong> — este elemento está dentro de um shadow root</p>
+      <input type="text" id="shadow-input" placeholder="Campo no Shadow DOM">
+      <button id="shadow-btn">Clique no Shadow</button>
+    </div>
+  `;
+})();
+
+// ============================================================
+// CTX-006: Modal
+// ============================================================
+document.getElementById('btn-abrir-modal').addEventListener('click', function() {
+  document.getElementById('modal-overlay').classList.add('show');
+});
+document.getElementById('btn-fechar-modal').addEventListener('click', function() {
+  document.getElementById('modal-overlay').classList.remove('show');
+});
+document.getElementById('btn-confirmar-modal').addEventListener('click', function() {
+  var val = document.getElementById('campo-modal').value;
+  alert('Modal confirmado com: ' + val);
+  document.getElementById('modal-overlay').classList.remove('show');
+});
+
+// ============================================================
+// STA-002: Overlay bloqueando clique
+// ============================================================
+document.getElementById('btn-mostrar-overlay').addEventListener('click', function() {
+  document.getElementById('overlay-blocker').classList.add('show');
+});
+document.getElementById('btn-fechar-overlay').addEventListener('click', function() {
+  document.getElementById('overlay-blocker').classList.remove('show');
+});
+document.getElementById('btn-atras-overlay').addEventListener('click', function() {
+  alert('Clicou! O overlay deveria estar visível agora.');
+});
+
+// ============================================================
+// STA-004: Dialogs nativos
+// ============================================================
+document.getElementById('btn-alert').addEventListener('click', function() {
+  alert('Este é um alert nativo (STA-004)');
+});
+document.getElementById('btn-confirm').addEventListener('click', function() {
+  var r = confirm('Confirme ou cancele (STA-004)');
+  alert('Você clicou em: ' + (r ? 'OK' : 'Cancelar'));
+});
+document.getElementById('btn-prompt').addEventListener('click', function() {
+  var r = prompt('Digite algo (STA-004):', 'valor padrão');
+  alert('Você digitou: ' + (r || '(cancelou)'));
+});
+
+// ============================================================
+// TIM-006: Conteúdo carregado com atraso
+// ============================================================
+setTimeout(function() {
+  document.getElementById('lazy-container').innerHTML =
+    '<p>Conteúdo carregado após 2s (TIM-006)</p>' +
+    '<input type="text" id="campo-lazy" placeholder="Campo carregado tardiamente">';
+}, 2000);
+
+// Select com opções assíncronas
+setTimeout(function() {
+  var sel = document.getElementById('select-assincrono');
+  sel.innerHTML = '<option value="">Selecione...</option>' +
+    '<option value="opcao1">Opção 1</option>' +
+    '<option value="opcao2">Opção 2</option>' +
+    '<option value="opcao3">Opção 3</option>';
+}, 1500);
+
+// ============================================================
+// DOM-002: Lista reordenada
+// ============================================================
+document.getElementById('btn-reordenar').addEventListener('click', function() {
+  var container = document.getElementById('lista-reordenavel');
+  var items = Array.from(container.querySelectorAll('.item-lista'));
+  items.reverse().forEach(function(item) {
+    container.appendChild(item);
+  });
+});
+
+// ============================================================
+// DOM-005: Conteúdo carregado sob demanda
+// ============================================================
+document.getElementById('btn-carregar-conteudo').addEventListener('click', function() {
+  var container = document.getElementById('conteudo-dinamico');
+  container.innerHTML =
+    '<p>Conteúdo carregado!</p>' +
+    '<input type="text" id="campo-dinamico" placeholder="Campo carregado sob demanda">' +
+    '<button class="btn btn-primary" id="btn-dinamico">Botão dinâmico</button>';
+});
+
+// ============================================================
+// INP-005: Drag and drop (simplificado)
+// ============================================================
+var dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover', function(e) {
+  e.preventDefault();
+  this.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', function() {
+  this.classList.remove('drag-over');
+});
+dropZone.addEventListener('drop', function(e) {
+  e.preventDefault();
+  this.classList.remove('drag-over');
+  this.textContent = 'Item solto aqui!';
+});
+
+document.querySelectorAll('.sortable-list li').forEach(function(li) {
+  li.setAttribute('draggable', 'true');
+  li.addEventListener('dragstart', function(e) {
+    e.dataTransfer.setData('text/plain', this.getAttribute('data-id'));
+  });
+});
+
+// ============================================================
+// SEL-004: Clique na div genérica
+// ============================================================
+document.querySelector('#secao-seletores .field-row:last-child span')?.addEventListener('click', function() {
+  alert('Clicou na div genérica');
+});
+
+// ============================================================
+// SEL-007: Botão fora do form
+// ============================================================
+document.getElementById('btn-fora-form').addEventListener('click', function() {
+  alert('Botão fora do formulário clicado!');
+});
+
+// ============================================================
+// Form submit
+// ============================================================
+document.getElementById('form-completo').addEventListener('submit', function(e) {
+  e.preventDefault();
+  alert('Formulário enviado!');
+});
+</script>
+</body>
+</html>
