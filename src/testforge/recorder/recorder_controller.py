@@ -317,16 +317,26 @@ class RecorderController:
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
+                console.log('[TestForge] pointerdown em modo assert, target:', e.target.tagName, e.target.className);
+            }
+        }, true);
+
+        window.addEventListener('mousedown', function(e) {
+            if (window.__tfAssertWaiting) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
             }
         }, true);
 
         window.addEventListener('click', function(e) {
             var el = e.target;
             if (el && el.closest) {
-                var interactive = el.closest('button, a, input, select, textarea, [role="button"], [role="listitem"], [role="option"], [role="menuitem"], mat-icon, .mat-icon');
+                var interactive = el.closest('button, a, input, select, textarea, [role="button"], [role="listitem"], [role="option"], [role="menuitem"], mat-icon, .mat-icon, [class*="mat-"]');
                 if (interactive) el = interactive;
             }
             if (window.__tfAssertWaiting) {
+                console.log('[TestForge] click em modo assert, el:', el.tagName, el.className, 'text:', (el.textContent||'').substring(0,30));
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
@@ -357,13 +367,21 @@ class RecorderController:
             switch(e.key.toUpperCase()) {
                 case 'P':
                     window.__tfCommandQueue.push('TOGGLE_PAUSE');
+                    console.log('[TestForge] Shift+P: toggle pause');
                     break;
                 case 'S':
                     window.__tfCommandQueue.push('STOP');
+                    console.log('[TestForge] Shift+S: stop');
                     break;
                 case 'A':
                     window.__tfCommandQueue.push('ASSERT');
                     window.__tfAssertWaiting = true;
+                    console.log('[TestForge] Shift+A: modo assert ATIVADO');
+                    _tf_showToast('🟡 Modo Assert — clique no elemento');
+                    var dot = document.getElementById('tf-rec-dot');
+                    var status = document.getElementById('tf-status');
+                    if (dot) dot.style.color = '#f59e0b';
+                    if (status) status.textContent = 'Modo Assert — clique no elemento';
                     break;
             }
         }, true);
