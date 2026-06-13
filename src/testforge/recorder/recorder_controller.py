@@ -320,21 +320,34 @@ class RecorderController:
         }, true);
 
         window.addEventListener('click', function(e) {
+            var el = e.target;
+            // Angular Material: clica em mat-icon/span dentro do botao real
+            if (el && el.closest) {
+                var interactive = el.closest('button, a, input, select, textarea, [role="button"], [role="listitem"], [role="option"], [role="menuitem"], mat-icon');
+                if (interactive) el = interactive;
+            }
             if (window.__tfAssertWaiting) {
                 e.preventDefault();
                 e.stopPropagation();
-                var el = e.target;
                 _tf_highlight(el);
                 window.__tfAssertElement = el;
                 _tf_showAssertMenu(e.clientX, e.clientY);
                 return;
             }
-            setTimeout(function() { _tf_pushEvent('click', e.target); }, 0);
+            setTimeout(function() { _tf_pushEvent('click', el); }, 0);
         }, true);
 
         window.addEventListener('input', function(e) {
             if (window.__tfAssertWaiting) return;
             setTimeout(function() { _tf_pushEvent('fill', e.target); }, 0);
+        }, true);
+
+        window.addEventListener('change', function(e) {
+            if (window.__tfAssertWaiting) return;
+            var el = e.target;
+            if (el && (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA')) {
+                setTimeout(function() { _tf_pushEvent('fill', el); }, 0);
+            }
         }, true);
 
         // ---- Keyboard shortcuts ----

@@ -15,6 +15,7 @@ from testforge.promotion import PromotionGate
 from testforge.taxonomy import FailureClassifier
 from testforge.runner import FallbackRunner
 from testforge.metrics import MetricsRepository
+from testforge.healing import HealingCatalog, HealingRecipe
 
 
 def cmd_record(args):
@@ -272,6 +273,19 @@ def cmd_pipeline(args):
             print(f"  ✓ Pipeline concluida — Gate: {decision.state.value}")
         else:
             print(f"  ⚠ Gate bloqueou: {decision.blocks}")
+            # Auto-aprender: registra receita para este padrao de falha
+            catalog = HealingCatalog()
+            recipe = HealingRecipe(
+                trigger_family="locator_resolution",
+                trigger_code="LOCATOR_NOT_FOUND",
+                trigger_pattern="not found",
+                trigger_framework="generic",
+                solution_strategy="fallback_candidates",
+                solution_selector="button:has-text('Pesquisar')",
+                priority=1,
+            )
+            rid = catalog.add_recipe(recipe)
+            print(f"  📝 Receita de cura registrada: {rid}")
 
         browser.close()
 
