@@ -1,0 +1,156 @@
+@startuml
+ title TestForge - Diagrama de Implantação / Runtime Local (Corrigido)
+ skinparam shadowing false
+ skinparam linetype ortho
+ skinparam componentStyle rectangle
+ skinparam nodeStyle rectangle
+
+ ' ============================================================
+ ' Definições antecipadas para evitar erro de alias duplicado
+ ' ============================================================
+ component "VersionManager" as VersionManagerAlias
+
+ ' ============================================================
+ ' Nós principais do runtime local
+ ' ============================================================
+ node "Estação do usuário" as user_workstation {
+  artifact "TestForge CLI" as cli
+  artifact "Configurações" as configs
+  artifact "Logs" as logs
+
+  node "Ambiente Python" as python_env {
+   component "SmartRecorder" as SmartRecorder
+   component "FingerprintEngine" as FingerprintEngine
+   component "EvidenceCollector" as EvidenceCollector
+   component "ScriptGenerator" as ScriptGenerator
+   component "ExecutorAgent" as ExecutorAgent
+   component "AgentOrchestrator" as AgentOrchestrator
+   component "SensitiveDataGuard" as SensitiveDataGuard
+   component "PatchValidator" as PatchValidator
+   component "LLMFallbackAgent" as LLMFallbackAgent
+  }
+
+  node "Processo Playwright" as playwright_process {
+   component "BrowserContext" as BrowserContext
+   component "Page" as Page
+   component "Tracing" as Tracing
+   component "Event handlers" as EventHandlers
+  }
+
+  node "Navegador local\nChrome ou Edge" as local_browser {
+   component "Aplicação web" as BrowserApp
+   component "Recorder JS" as RecorderJS
+   component "Overlay" as Overlay
+   component "MutationObserver" as MutationObserver
+  }
+
+  node "Sistema de arquivos local" as local_fs {
+   folder "Repositório de artefatos\noutput/{slug}" as output_repo {
+    folder "recording" as recording_dir
+    folder "evidence" as evidence_dir
+    folder "generated" as generated_dir
+    folder "runs" as runs_dir
+    folder "agents" as agents_dir
+    folder "knowledge" as knowledge_dir
+    folder "final" as final_dir
+   }
+
+   database "Base de conhecimento local" as local_kb {
+    artifact "failure_signatures.jsonl" as failure_signatures
+    artifact "resolved_patterns.jsonl" as resolved_patterns
+    artifact "healing_rules.json" as healing_rules
+   }
+  }
+
+  node "Repositório Git\nopcional" as git_repo {
+   artifact "versionamento de scripts" as git_scripts
+   artifact "histórico de patches" as git_patches
+   artifact "tags/checkpoints" as git_checkpoints
+  }
+ }
+
+ cloud "Aplicação web alvo" as target_app {
+  component "Frontend web" as target_frontend
+  component "Backend / APIs" as target_backend
+  database "Sessão e dados da aplicação" as target_state
+ }
+
+ cloud "Serviço LLM / Azure OpenAI\nopcional e controlado" as llm_service {
+  component "Endpoint LLM" as llm_endpoint
+  component "Sugestão de patch" as llm_patch_suggestion
+ }
+
+ ' ============================================================
+ ' Conexões
+ ' ============================================================
+ cli --> configs
+ cli --> logs
+ cli --> python_env
+
+ python_env --> playwright_process
+
+ SmartRecorder --> BrowserContext
+ SmartRecorder --> Page
+ FingerprintEngine --> Page
+ EvidenceCollector --> Page
+ ExecutorAgent --> Page
+
+ BrowserContext --> Tracing
+ BrowserContext --> EventHandlers
+ BrowserContext --> Page
+
+ playwright_process --> local_browser
+ Page --> BrowserApp
+ RecorderJS --> BrowserApp
+ Overlay --> BrowserApp
+ MutationObserver --> BrowserApp
+
+ BrowserApp --> target_frontend
+ BrowserApp --> target_backend
+ target_backend --> target_state
+
+ EventHandlers --> EvidenceCollector
+ Tracing --> EvidenceCollector
+ RecorderJS --> SmartRecorder
+ MutationObserver --> SmartRecorder
+ Overlay --> SmartRecorder
+
+ ' Persistência
+ SmartRecorder --> recording_dir
+ FingerprintEngine --> recording_dir
+ EvidenceCollector --> evidence_dir
+ ScriptGenerator --> generated_dir
+ ExecutorAgent --> runs_dir
+ AgentOrchestrator --> agents_dir
+ AgentOrchestrator --> knowledge_dir
+ PatchValidator --> agents_dir
+
+ knowledge_dir --> local_kb
+ local_kb --> AgentOrchestrator
+ local_kb --> PatchValidator
+ local_kb --> ScriptGenerator
+
+ AgentOrchestrator --> final_dir
+ ScriptGenerator --> final_dir
+ SensitiveDataGuard --> final_dir
+ PatchValidator --> final_dir
+
+ ' Git
+ generated_dir ..> git_repo
+ agents_dir ..> git_repo
+ final_dir ..> git_repo
+ git_repo ..> PatchValidator
+
+ ' LLM
+ AgentOrchestrator ..> LLMFallbackAgent
+ LLMFallbackAgent --> SensitiveDataGuard
+ SensitiveDataGuard ..> llm_service
+ llm_endpoint --> llm_patch_suggestion
+ llm_patch_suggestion ..> LLMFallbackAgent
+
+ LLMFallbackAgent --> PatchValidator
+ PatchValidator --> VersionManagerAlias
+ VersionManagerAlias --> generated_dir
+ VersionManagerAlias --> runs_dir
+
+@enduml

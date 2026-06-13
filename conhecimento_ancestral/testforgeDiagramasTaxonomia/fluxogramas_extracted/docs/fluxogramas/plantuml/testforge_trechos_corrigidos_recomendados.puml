@@ -1,0 +1,32 @@
+@startuml
+title TestForge - Trechos PlantUML Corrigidos / Recomendados
+skinparam shadowing false
+
+' =========================================================
+' Correção 1
+' =========================================================
+participant "AgentOrchestrator" as AgentOrchestrator
+participant "GeneralDiagnosticAgent" as GeneralDiagnosticAgent
+
+AgentOrchestrator -> GeneralDiagnosticAgent : solicitar diagnóstico determinístico geral\ncom base em evidências, histórico e taxonomia
+activate GeneralDiagnosticAgent
+GeneralDiagnosticAgent --> AgentOrchestrator : patch candidato ou hipótese determinística
+deactivate GeneralDiagnosticAgent
+
+newpage
+
+' =========================================================
+' Correção 2
+' =========================================================
+participant "LLMFallbackAgent" as LLMFallbackAgent
+participant "SensitiveDataGuard" as SensitiveDataGuard
+participant "Serviço LLM / Azure OpenAI" as llm_service
+participant "PatchValidator" as PatchValidator
+
+LLMFallbackAgent -> SensitiveDataGuard : solicitar mascaramento/tokenização
+SensitiveDataGuard --> LLMFallbackAgent : pacote mínimo aprovado
+LLMFallbackAgent --> llm_service : enviar somente evidências mascaradas
+llm_service --> LLMFallbackAgent : retornar hipótese ou patch candidato
+LLMFallbackAgent -> PatchValidator : validar antes de aplicar
+
+@enduml

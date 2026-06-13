@@ -1,0 +1,66 @@
+version: "1.0"
+kind: "ShadowHealingObservation"
+observation_id: "obs-20260612-0001"
+run_id: "run-20260612-001"
+application: "SIOPI"
+technology_profile:
+  family: "legacy_web"
+  framework_hints:
+    - "jsf_or_server_side_possible"
+    - "iframe_unknown"
+    - "shadow_dom_false"
+
+step:
+  action_id: "step_002"
+  intent: "executar pesquisa de proposta"
+  action: "click"
+  semantic_target_hash: "target-abc123"
+
+failure:
+  taxonomy_code: "LOCATOR_NOT_FOUND"
+  family: "locator_resolution"
+  original_locator:
+    strategy: "role"
+    value: "button[name='Pesquisar']"
+  error_message: "Timeout waiting for locator"
+
+shadow_healing:
+  mode: "suggest_only"
+  suggested_candidate:
+    strategy: "contextual_role"
+    value: "within form[Consulta de Propostas] button[name='Consultar']"
+    score: 0.87
+    semantic_gap: 0.31
+    uniqueness_score: 0.91
+    actionability_score: 1.0
+    historical_success_score: 0.0
+  alternatives:
+    - strategy: "text"
+      value: "Consultar"
+      score: 0.73
+    - strategy: "css"
+      value: "button[type='submit']"
+      score: 0.61
+
+post_action_oracle:
+  required: true
+  oracle_results:
+    - type: "network_response"
+      expected: "/api/propostas/consulta status 200"
+      result: "passed"
+    - type: "visible_state"
+      expected: "tabela Resultado da consulta visível"
+      result: "passed"
+    - type: "business_state"
+      expected: "resultado relacionado ao CPF informado"
+      result: "not_evaluated"
+
+review:
+  status: "pending_human_review"
+  reviewer: null
+  label: null # true_positive_heal | false_heal | not_recoverable | inconclusive
+  notes: null
+
+promotion:
+  eligible_for_auto_heal: false
+  reason: "Ainda sem histórico suficiente e business oracle não avaliado."

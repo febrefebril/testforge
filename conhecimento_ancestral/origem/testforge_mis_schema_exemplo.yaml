@@ -1,0 +1,126 @@
+version: "1.0"
+kind: "SemanticTestCase"
+metadata:
+  test_id: "SIOPI_CONSULTA_PROPOSTA_001"
+  name: "Consultar proposta no SIOPI"
+  application: "SIOPI"
+  module: "Gerenciamento de Propostas"
+  created_by: "TestForge Recorder"
+  created_at: "2026-06-12T13:58:00-03:00"
+
+preconditions:
+  authentication:
+    required: true
+    profile: "usuario_teste_siopi"
+  initial_url: "https://ambiente/siopi/propostas"
+
+steps:
+  - action_id: "step_001"
+    intent: "informar CPF para consulta de proposta"
+    action: "fill"
+    input:
+      value_kind: "test_data_reference"
+      value: "cliente.cpf"
+    target:
+      role: "textbox"
+      accessible_name: "CPF"
+      label: "CPF"
+      placeholder: "Informe o CPF"
+      visible_text: null
+      test_id: null
+      attributes:
+        name: "cpf"
+        type: "text"
+      dom_fingerprint:
+        tag: "input"
+        normalized_path_hash: "abc123"
+        sibling_index: 2
+    context:
+      page_url_pattern: "/siopi/propostas"
+      page_title: "Consulta de Propostas"
+      frame: null
+      shadow_dom: false
+      nearby_texts:
+        - "CPF"
+        - "Número da Proposta"
+        - "Pesquisar"
+    locator_candidates:
+      - strategy: "label"
+        value: "CPF"
+        playwright: "page.get_by_label('CPF')"
+        score: 0.96
+        reason: "Campo possui label visível e semanticamente estável."
+      - strategy: "role"
+        value: "textbox[name='CPF']"
+        playwright: "page.get_by_role('textbox', name='CPF')"
+        score: 0.91
+        reason: "Role e accessible name compatíveis."
+      - strategy: "css"
+        value: "input[name='cpf']"
+        playwright: "page.locator(\"input[name='cpf']\")"
+        score: 0.74
+        reason: "Atributo name parece estável, mas é detalhe de implementação."
+    expected_after_action:
+      assertions:
+        - type: "value"
+          target_ref: "self"
+          expected: "cliente.cpf"
+
+  - action_id: "step_002"
+    intent: "executar pesquisa de proposta"
+    action: "click"
+    target:
+      role: "button"
+      accessible_name: "Pesquisar"
+      label: null
+      placeholder: null
+      visible_text: "Pesquisar"
+      test_id: null
+      attributes:
+        type: "submit"
+      dom_fingerprint:
+        tag: "button"
+        normalized_path_hash: "def456"
+        sibling_index: 5
+    context:
+      page_url_pattern: "/siopi/propostas"
+      page_title: "Consulta de Propostas"
+      frame: null
+      shadow_dom: false
+      nearby_texts:
+        - "CPF"
+        - "Número da Proposta"
+        - "Situação"
+    locator_candidates:
+      - strategy: "role"
+        value: "button[name='Pesquisar']"
+        playwright: "page.get_by_role('button', name='Pesquisar')"
+        score: 0.97
+        reason: "Botão possui role e accessible name compatíveis com a intenção."
+      - strategy: "text"
+        value: "Pesquisar"
+        playwright: "page.get_by_text('Pesquisar')"
+        score: 0.82
+        reason: "Texto visível é compatível, mas pode conflitar com outros elementos."
+      - strategy: "css"
+        value: "button[type='submit']"
+        playwright: "page.locator(\"button[type='submit']\")"
+        score: 0.68
+        reason: "Pode haver mais de um botão submit na tela."
+    expected_after_action:
+      assertions:
+        - type: "visible"
+          target:
+            role: "table"
+            accessible_name: "Resultado da consulta"
+        - type: "network_response"
+          url_pattern: "/api/propostas/consulta"
+          status: 200
+
+healing_policy:
+  deterministic_first: true
+  auto_heal_threshold: 0.90
+  quarantine_threshold: 0.75
+  llm_allowed_below: 0.75
+  require_evidence: true
+  persist_successful_heal: true

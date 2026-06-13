@@ -1,0 +1,27 @@
+{
+  "schema_version": "0.2.1",
+  "kind": "RawRecordedSession",
+  "recording_id": "REC-20260612-001",
+  "application": "fake-react-bank-app",
+  "base_url": "file:///workspace/synthetic_lab/fake-react-bank-app/index.html",
+  "recorder_version": "0.2.1",
+  "started_at": "2026-06-12T15:20:00-03:00",
+  "finished_at": "2026-06-12T15:20:12-03:00",
+  "status": "finished",
+  "event_count": 3,
+  "sensitive_data_alert": {
+    "enabled": true,
+    "policy": "alert_only",
+    "masking_applied": false,
+    "possible_sensitive_data_detected": true,
+    "detected_categories": [
+      "cpf_pattern",
+      "long_numeric_identifier"
+    ]
+  },
+  "directories": {
+    "screenshots": "screenshots/",
+    "dom_snapshots": "dom_snapshots/",
+    "ax_snapshots": "ax_snapshots/"
+  }
+}

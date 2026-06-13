@@ -1,0 +1,7 @@
+version: "0.2.0"
+mutations:
+  - {code: change_id, technology: react, url_query: "mutation=change_id", expected_taxonomy: LOCATOR_NOT_FOUND, expected_recoverable: true, expected_strategy: fallback_to_role_or_testid, expected_oracles: [visual_dom, business_state]}
+  - {code: change_accessible_name, technology: react, url_query: "mutation=change_accessible_name", expected_taxonomy: LOCATOR_NOT_FOUND, expected_recoverable: true, expected_strategy: fallback_to_testid, expected_oracles: [visual_dom, business_state]}
+  - {code: duplicate_button_text, technology: react, url_query: "mutation=duplicate_button_text", expected_taxonomy: LOCATOR_AMBIGUOUS, expected_recoverable: true, expected_strategy: refine_by_context_or_testid, expected_oracles: [visual_dom, business_state]}
+  - {code: overlay_blocks_click, technology: react, url_query: "mutation=overlay_blocks_click", expected_taxonomy: ACTIONABILITY_OBSCURED, expected_recoverable: false, expected_strategy: overlay_wait_policy, expected_oracles: []}
+  - {code: disabled_button, technology: react, url_query: "mutation=disabled_button", expected_taxonomy: ACTIONABILITY_DISABLED, expected_recoverable: false, expected_strategy: state_diagnosis, expected_oracles: []}

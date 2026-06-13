@@ -1,0 +1,49 @@
+version: "0.1.0"
+artifact: "TestForge LLM Development Prompt Pack"
+status: "draft"
+policy:
+  sensitive_data: "alert_only_no_automatic_masking"
+  auto_heal_mvp: false
+  llm_role: "curation_only"
+
+sprints:
+  - sprint: 1
+    title: "Fundação e Synthetic Lab mínimo"
+    iterations:
+      - "1.1 Criar estrutura inicial do repositório"
+      - "1.2 Criar fake-react-bank-app"
+      - "1.3 Implementar mutation_matrix.yaml"
+      - "1.4 Implementar mutações sintéticas iniciais"
+  - sprint: 2
+    title: "EvidenceCollector e EvidenceStore"
+    iterations:
+      - "2.1 Implementar EvidenceCollector básico"
+      - "2.2 Implementar EvidenceStore SQLite"
+      - "2.3 Criar query de pendentes de revisão"
+  - sprint: 3
+    title: "Oracles e PromotionGate mínimo"
+    iterations:
+      - "3.1 Implementar OracleRunner visual_dom"
+      - "3.2 Implementar OracleRunner business_state mínimo"
+      - "3.3 Implementar PromotionGate mínimo"
+      - "3.4 Integrar fluxo sintético completo"
+  - sprint: 4
+    title: "Modelo Intermediário Semântico e candidatos"
+    iterations:
+      - "4.1 Definir schema do Semantic Test Case"
+      - "4.2 Implementar SemanticAction e SemanticTarget"
+      - "4.3 Implementar LocatorCandidateGenerator"
+      - "4.4 Implementar LocatorScorer inicial"
+  - sprint: 5
+    title: "Taxonomia, ShadowValidator e fallback"
+    iterations:
+      - "5.1 Implementar taxonomia core"
+      - "5.2 Implementar FailureClassifier mínimo"
+      - "5.3 Implementar ShadowValidator"
+      - "5.4 Implementar fallback determinístico inicial"
+  - sprint: 6
+    title: "Métricas, revisão e preparação para piloto"
+    iterations:
+      - "6.1 Implementar métricas de false healing e precision"
+      - "6.2 Criar CLI simples de revisão"
+      - "6.3 Gerar relatório sintético em Markdown"

@@ -1,0 +1,28 @@
+epic_id,story_id,task_id,task_title,task_type,suggested_owner_type,acceptance_evidence
+EP-00,US-00.01,T-00.01.01,Criar estrutura de diretórios,implementation,dev,estrutura no repositório
+EP-00,US-00.01,T-00.01.02,Criar README inicial,documentation,dev,README.md
+EP-00,US-00.01,T-00.01.03,Criar VERSION e CHANGELOG,governance,dev,VERSION e CHANGELOG.md
+EP-00,US-00.02,T-00.02.01,Mover plano macro para docs,documentation,architect,docs/plano_macro.md
+EP-00,US-00.02,T-00.02.02,Adicionar cabeçalho versionado,governance,architect,metadados no plano
+EP-00,US-00.03,T-00.03.01,Criar policy alert_only,governance,architect,policies/evidence_sensitive_data_policy.yaml
+EP-01,US-01.01,T-01.01.01,Criar HTML base do fake app,implementation,dev,fake app abre localmente
+EP-01,US-01.01,T-01.01.02,Criar fluxo consulta CPF,implementation,dev,resultado exibe CPF
+EP-01,US-01.02,T-01.02.01,Implementar mutation change_id,implementation,dev,query string altera id
+EP-01,US-01.03,T-01.03.01,Implementar duplicate_button_text,implementation,dev,dois botões com mesmo texto
+EP-01,US-01.04,T-01.04.01,Implementar overlay_blocks_click,implementation,dev,overlay bloqueia clique
+EP-01,US-01.05,T-01.05.01,Criar mutation_matrix.yaml,configuration,qa,matriz versionada
+EP-02,US-02.01,T-02.01.01,Definir contrato Evidence Package,design,architect,contrato documentado
+EP-02,US-02.01,T-02.01.02,Capturar screenshot before/after,implementation,dev,arquivos png gerados
+EP-02,US-02.01,T-02.01.03,Capturar DOM before/after,implementation,dev,arquivos html gerados
+EP-02,US-02.01,T-02.01.04,Capturar network log,implementation,dev,network_log.json
+EP-02,US-02.01,T-02.01.05,Gerar manifest.json,implementation,dev,manifest completo
+EP-02,US-02.01,T-02.01.06,Adicionar alerta sensitive data alert_only,implementation,dev,campo no manifest sem mascaramento
+EP-02,US-02.02,T-02.02.01,Criar schema SQLite,implementation,dev,tabelas criadas
+EP-02,US-02.02,T-02.02.02,Inserir healing_suggestion,implementation,dev,registro no SQLite
+EP-02,US-02.02,T-02.02.03,Inserir evidence_package,implementation,dev,registro com caminhos das evidências
+EP-02,US-02.03,T-02.03.01,Criar pending_reviews.sql,implementation,dev,query retorna sugestões pendentes
+EP-07,US-07.01,T-07.01.01,Implementar oracle visual_dom,implementation,dev,oracle_observation registrada
+EP-07,US-07.03,T-07.03.01,Implementar oracle business_state CPF,implementation,dev,CPF exibido validado
+EP-08,US-08.01,T-08.01.01,Implementar enum de estados,implementation,dev,estados suportados
+EP-08,US-08.02,T-08.02.01,Implementar bloqueio evidence incompleto,implementation,dev,promotion negada com motivo
+EP-08,US-08.04,T-08.04.01,Integrar gate após shadow flow,implementation,dev,promotion_decision registrada

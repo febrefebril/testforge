@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "policy": "alert_only",
+  "masking_applied": false,
+  "possible_sensitive_data_detected": true,
+  "detected_categories": [
+    "cpf_pattern",
+    "long_numeric_identifier"
+  ]
+}

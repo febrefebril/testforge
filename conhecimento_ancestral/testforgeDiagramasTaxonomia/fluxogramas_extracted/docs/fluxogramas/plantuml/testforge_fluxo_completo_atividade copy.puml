@@ -1,0 +1,378 @@
+@startuml
+title TestForge - Fluxo completo de gravação, evidência, geração e self-healing determinístico
+
+start
+
+partition "0. Preparação da sessão" {
+  :CLIRecord recebe parâmetros da gravação;
+  :InputValidator valida endpoint inicial, slug, credenciais permitidas,\npolíticas, diretórios, browser, locale, timezone e viewport;
+
+  if (Entradas válidas?) then (sim)
+    :Criar workspace output/{slug}/;
+    :Criar manifest.json;
+    :Carregar políticas de gravação e mascaramento;
+    :Salvar config_snapshot.yaml;
+    :Criar estrutura de artefatos:\nrecording/, evidence/, generated/,\nruns/, agents/, knowledge/, final/;
+  else (não)
+    :Registrar erro de validação no manifest.json;
+    :Encerrar sem iniciar navegador;
+    stop
+  endif
+
+  note right
+    A gravação NÃO é considerada concluída aqui.
+    A sessão começa como pipeline de coleta de evidências,
+    não apenas como captura de eventos.
+  end note
+}
+
+partition "1. Bootstrap do navegador e observabilidade" {
+  :BrowserContextManager inicia Playwright;
+  :Criar browser context isolado;
+  :Configurar locale, timezone, viewport,\npermissões e storage state inicial;
+  :Ativar tracing, screenshots e snapshots;
+  :Registrar handlers nativos:\nrequest, response, console, dialog,\npopup, framenavigated, frameattached, pageerror;
+  :Navegar para endpoint inicial;
+  :Capturar baseline inicial:\nDOM, URL, storage, cookies, frames,\nconsole, rede e screenshot;
+  :Salvar baseline em evidence/;
+}
+
+partition "2. Reconhecimento e fingerprint inicial" {
+  :FingerprintEngine executa fingerprint antes da primeira interação;
+  :TechnologyDetector detecta tecnologias:\nJSF, PrimeFaces, jQuery, jQuery UI,\nAngular, JSP legado, Ionic/Cordova;
+
+  if (JSF ou PrimeFaces detectado?) then (sim)
+    :Ativar coletores para ViewState,\nIDs dinâmicos, AJAX parcial,\nforms e componentes ricos;
+  else (não)
+  endif
+
+  if (jQuery ou jQuery UI detectado?) then (sim)
+    :Ativar coletores para dialogs,\noverlays, datepicker, autocomplete\ne elementos fora do form;
+  else (não)
+  endif
+
+  if (Angular detectado?) then (sim)
+    :Ativar coletores para data-*,\ncomponentes assíncronos,\natributos estáveis e mudanças reativas;
+  else (não)
+  endif
+
+  if (JSP legado ou JavaScript manual detectado?) then (sim)
+    :Ativar coletores para XHR manual,\ntiming imprevisível e mutações tardias;
+  else (não)
+  endif
+
+  if (Ionic ou Cordova detectado?) then (sim)
+    :Ativar coletores para webview híbrido,\ncomponentes mobile-like e assincronismo;
+  else (não)
+  endif
+
+  :Detectar iframes, shadow DOM,\nformulários, componentes ricos,\noverlays e padrões de IDs dinâmicos;
+  :Salvar recording/fingerprint_initial.json;
+
+  note right
+    O fingerprint inicial orienta quais evidências
+    serão coletadas durante toda a sessão.
+    Ele também reduz dependência futura de LLM.
+  end note
+}
+
+partition "3. Instrumentação da página" {
+  :JSInjector injeta recorder JS;
+  :RecorderOverlay injeta overlay visual de gravação;
+  :Ativar MutationObserver;
+  :Ativar coleta de eventos DOM:\nclick, input, change, submit,\nkeydown, selection, focus e blur;
+  :LocatorCandidateCollector ativa coleta de candidatos;
+  :EvidenceCollector ativa proteção contra dados sensíveis;
+  :Aplicar mascaramento por política;
+  :Registrar instrumentação em recording_summary.md;
+
+  note right
+    Dados sensíveis devem ser mascarados,
+    tokenizados ou excluídos conforme política.
+    A massa real não deve ser acoplada ao script final.
+  end note
+}
+
+partition "4. Loop de gravação enriquecida" {
+  repeat
+    :SmartRecorder aguarda ação humana observável;
+    :Capturar ação do usuário;
+    :Capturar contexto ANTES da ação:\nDOM parcial, screenshot, URL,\nframes, shadow roots, storage,\nconsole recente e rede recente;
+    :EventListener registra evento bruto;
+    :Classificar tipo de step:\nnavegação, click, input,\nselect, upload, dialog,\nassertion hint ou interação especial;
+    :Gerar candidatos de locator:\nrole, label, text, placeholder,\ntest id, CSS, XPath, proximidade,\nshadow path e frame path;
+    :Pontuar estabilidade dos locators;
+    :Executar ação observada ou confirmar ação já aplicada;
+    :Capturar contexto DEPOIS da ação;
+    :Associar sinais de rede, DOM,\nconsole, frame, shadow DOM\ne componente especializado;
+    :Registrar checkpoints e assert hints;
+    :Persistir step incremental em recording/session_raw.json.partial;
+    :Atualizar fingerprint incremental;
+    :Atualizar recording_summary.md;
+
+    if (Evento contém dado sensível?) then (sim)
+      :Mascarar valor bruto;
+      :Registrar ocorrência em recording/sensitive_data_report.json;
+      :Manter placeholder seguro para DataSeparationAgent;
+    else (não)
+    endif
+
+    if (Mudança relevante detectada?) then (sim)
+      :Registrar mutation hints, network hints\ne state transition hints;
+    else (não)
+      :Marcar como possível ruído;
+    endif
+
+  repeat while (Usuário continua gravando?) is (sim)
+  ->não;
+}
+
+partition "5. Fechamento e validação da gravação" {
+  :Coletar eventos pendentes;
+  :Flush de rede, console, DOM,\nframes, screenshots e storage;
+  :Salvar recording/session_raw.json;
+  :Executar fingerprint final;
+  :Salvar recording/fingerprint_final.json;
+  :RecordingValidator valida integridade da gravação;
+
+  if (Gravação íntegra?) then (sim)
+    :Marcar sessão como pronta para normalização;
+  else (não)
+    if (Problemas são corrigíveis?) then (sim)
+      :Corrigir timestamps, gaps menores,\nordenação de eventos e referências ausentes;
+      :Registrar correções em recording_summary.md;
+    else (não)
+      :Marcar gravação como insuficiente;
+      :Registrar evidências do motivo;
+      :Encerrar sem gerar script;
+      stop
+    endif
+  endif
+
+  note right
+    A gravação só avança se houver evidência suficiente
+    para reconstruir intenção, contexto e estado.
+  end note
+}
+
+partition "6. Normalização" {
+  :SessionParser carrega session_raw.json;
+  :StepNormalizer converte eventos brutos em steps canônicos;
+  :Remover ruído observacional;
+  :Agrupar eventos redundantes;
+  :Preservar checkpoints, network hints,\nmutation hints, frame hints e shadow hints;
+  :Normalizar ações especializadas:\ndatepicker, autocomplete, dialog,\nupload, rich component e webview;
+  :Gerar recording/session_normalized.json;
+  :Gerar generated/steps_normalized.json;
+  :Gerar generated/selector_candidates.json;
+
+  if (Steps canônicos são suficientes?) then (sim)
+    :Aprovar normalização;
+  else (não)
+    :Registrar lacunas na gravação;
+    :Encerrar para nova gravação ou curadoria manual explícita;
+    stop
+  endif
+}
+
+partition "7. Geração do script bruto" {
+  :ScriptGenerator gera generated/script_v0.py;
+  :Gerar mapa step_id para linha do script;
+  :Gerar generated/script_metadata.json;
+  :Referenciar massa provisória sem fixar dados sensíveis;
+  :Adicionar hooks diagnósticos e captura de evidências;
+
+  note right
+    script_v0.py é intencionalmente bruto.
+    Ele serve para execução diagnóstica e não
+    deve ser tratado como script final estável.
+  end note
+}
+
+partition "8. Execução diagnóstica" {
+  :ExecutorAgent executa generated/script_v0.py;
+  :Coletar trace.zip, screenshots,\nDOM, rede, console, storage e erros;
+  :Salvar runs/run_N/execution.json;
+  :Salvar runs/run_N/trace.zip;
+  :Salvar runs/run_N/console_network.json;
+
+  if (Execução passou ponta a ponta?) then (sim)
+    :Promover para estabilização;
+  else (não)
+    :Capturar screenshot_failure.png;
+    :Capturar dom_failure.html;
+    :FailureDiagnostic gera failure_signature.json;
+    :Salvar runs/run_N/failure_signature.json;
+  endif
+}
+
+partition "9. Classificação e roteamento multiagente" {
+  if (Execução passou ponta a ponta?) then (sim)
+    :Pular roteamento de falha;
+  else (não)
+    :FailureClassifier classifica família da falha;
+
+    if (Família = Seletores frágeis?) then (sim)
+      :AgentOrchestrator roteia para SelectorRepairAgent;
+    elseif (Família = Timing e assincronismo?) then (sim)
+      :AgentOrchestrator roteia para TimingAsyncAgent;
+    elseif (Família = Contexto e escopo?) then (sim)
+      :AgentOrchestrator roteia para ContextScopeAgent;
+    elseif (Família = Estado da aplicação?) then (sim)
+      :AgentOrchestrator roteia para StateRecoveryAgent;
+    elseif (Família = DOM dinâmico?) then (sim)
+      :AgentOrchestrator roteia para DynamicDOMAgent;
+    elseif (Família = Input e interação especializada?) then (sim)
+      :AgentOrchestrator roteia para SpecialInteractionAgent;
+    else (não classificada)
+      :AgentOrchestrator roteia para GeneralDiagnosticAgent;
+    endif
+  endif
+}
+
+partition "10. Correção, validação e controle de progresso" {
+  if (Execução passou ponta a ponta?) then (sim)
+    :Nenhum patch corretivo necessário nesta fase;
+  else (não)
+    repeat
+      :Montar pacote mínimo de evidências:\nstep normalizado, candidatos de locator,\nDOM antes/depois, trace, rede,\nconsole, screenshot, frame path,\nshadow path e fingerprint;
+      :Agente especializado propõe patch determinístico;
+      :PatchValidator valida patch antes da aplicação;
+
+      if (Patch válido?) then (sim)
+        :Aplicar patch em versão temporária;
+        :ExecutorAgent executa novamente;
+        :Coletar nova evidência em runs/run_N;
+        :ProgressDetector compara resultado com execução anterior;
+
+        if (Resultado = PASSED_STEP?) then (sim)
+          :Aceitar patch;
+          :Registrar em agents/ e knowledge/resolved_patterns.jsonl;
+        elseif (Resultado = PROGRESSED?) then (sim)
+          :Aceitar patch provisoriamente;
+          :Continuar diagnóstico do próximo bloqueio;
+        elseif (Resultado = STAGNATED?) then (sim)
+          :RollbackManager reverte se custo/risco alto;
+          :Tentar próxima estratégia determinística;
+        elseif (Resultado = REGRESSED?) then (sim)
+          :RollbackManager executa rollback obrigatório;
+          :Registrar regressão;
+          :Reclassificar falha;
+        elseif (Resultado = ERROR_CHANGED?) then (sim)
+          :Registrar nova assinatura de falha;
+          :Reclassificar e rotear novamente;
+        else (UNRESOLVED)
+          :Marcar tentativa como não resolvida;
+        endif
+
+      else (não)
+        :Rejeitar patch;
+        :Registrar motivo da rejeição;
+      endif
+
+      if (Estratégias determinísticas ainda disponíveis?) then (sim)
+        :Selecionar próxima estratégia:\nlabel_proximity, text_content_match,\naria_role_strategy, shadow_pierce,\nframe_reacquire, network_idle_wait,\nresponse_intercept, dom_stabilization,\noverlay_dismiss ou re_auth_hook;
+      else (não)
+        if (Fallback LLM autorizado por política?) then (sim)
+          :Acionar fallback LLM controlado;
+          :LLM recebe somente pacote mínimo,\nmascarado e rastreável de evidências;
+          :LLM propõe hipótese ou patch candidato;
+          :PatchValidator valida saída do LLM;
+          note right
+            O LLM NÃO é primeira opção.
+            Ele só atua após esgotar estratégias
+            determinísticas aplicáveis e sua saída
+            nunca é aceita sem validação.
+          end note
+        else (não)
+          :Marcar falha como UNRESOLVED;
+        endif
+      endif
+
+    repeat while (Fluxo ainda não passou e há tentativa permitida?) is (sim)
+    ->não;
+
+    if (Fluxo estabilizado?) then (sim)
+      :Promover para estabilização;
+    else (não)
+      :Gerar relatório de não resolução;
+      :Salvar histórico dos agentes;
+      stop
+    endif
+  endif
+}
+
+partition "11. Estabilização e self-healing determinístico" {
+  :DeterministicSelfHealingAgent consolida patches aceitos;
+  :Gerar script_curado.py temporário;
+  :Aplicar estratégias determinísticas finais:\nlabel_proximity, text_content_match,\naria_role_strategy, shadow_pierce,\nframe_reacquire, network_idle_wait,\nresponse_intercept, dom_stabilization,\noverlay_dismiss e re_auth_hook;
+  :Remover sleeps frágeis;
+  :Substituir esperas fixas por condições observáveis;
+  :Gerar final/locators.json;
+  :Gerar final/healing_rules.json;
+  :Atualizar knowledge/healing_rules.json;
+
+  if (Self-healing final é determinístico?) then (sim)
+    :Aprovar script curado;
+  else (não)
+    :Rejeitar regra não determinística;
+    :Registrar pendência;
+    stop
+  endif
+
+  note right
+    O self-healing final deve ser rastreável,
+    reproduzível e baseado em evidências.
+    Nenhuma correção opaca deve entrar no final.
+  end note
+}
+
+partition "12. Separação de massa e otimização" {
+  :DataSeparationAgent extrai dados variáveis;
+  :Gerar final/test_data.json;
+  :Parametrizar script com massa externa;
+  :PerformanceOptimizerAgent remove redundâncias seguras;
+  :Executar múltiplas rodadas limpas;
+  :Medir estabilidade, tempo de execução,\nuso de locators alternativos e retries;
+
+  if (Rodadas limpas passaram?) then (sim)
+    :Aprovar estabilidade;
+  else (não)
+    :Gerar nova failure_signature.json;
+    :Retornar para classificação e roteamento multiagente;
+    detach
+  endif
+
+  if (Performance aceitável?) then (sim)
+    :Aprovar otimização;
+  else (não)
+    :Aplicar otimizações determinísticas adicionais;
+    :Reexecutar validação limpa;
+  endif
+}
+
+partition "13. Entrega" {
+  :Gerar final/script_final.py;
+  :Gerar final/execution_report.json;
+  :Gerar final/agent_history.json;
+  :Gerar final/fingerprint_summary.json;
+  :Atualizar knowledge/failure_signatures.jsonl;
+  :Atualizar knowledge/resolved_patterns.jsonl;
+  :Atualizar knowledge/healing_rules.json;
+  :Registrar rastreabilidade completa:\nmanifest, gravação, evidências,\nexecuções, patches, rollbacks e agentes;
+  :Marcar entrega como pronta para execução sem interação humana;
+
+  note right
+    Entrega final esperada:
+    - script_final.py
+    - test_data.json
+    - locators.json
+    - healing_rules.json
+    - execution_report.json
+    - agent_history.json
+    - fingerprint_summary.json
+  end note
+}
+
+stop
+@enduml

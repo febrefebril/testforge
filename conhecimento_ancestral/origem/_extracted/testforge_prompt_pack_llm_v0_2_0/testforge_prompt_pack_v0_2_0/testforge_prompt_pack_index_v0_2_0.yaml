@@ -1,0 +1,27 @@
+version: "0.2.0"
+artifact: "TestForge Prompt Pack LLM"
+status: "draft"
+major_changes:
+  - "Incluído Recorder Sensorial explicitamente."
+  - "Definidos diretórios recordings, semantic_tests, generated_tests e evidence."
+  - "Definido que SemanticTestCase é fonte de verdade e Playwright gerado é derivado."
+policy:
+  sensitive_data: "alert_only_no_automatic_masking"
+  auto_heal_mvp: false
+  llm_role: "curation_only"
+
+sprints:
+  - sprint: 1
+    title: "Fundação e Synthetic Lab mínimo"
+  - sprint: 2
+    title: "Recorder Sensorial"
+  - sprint: 3
+    title: "EvidenceCollector e EvidenceStore"
+  - sprint: 4
+    title: "SemanticTestCase e Compiler"
+  - sprint: 5
+    title: "Oracles e PromotionGate mínimo"
+  - sprint: 6
+    title: "Taxonomia, ShadowValidator e fallback"
+  - sprint: 7
+    title: "Métricas, revisão e relatório"

@@ -1,0 +1,245 @@
+@startuml
+title TestForge - Runtime Local com Self-Healing Determinístico
+
+skinparam shadowing false
+skinparam linetype ortho
+skinparam componentStyle rectangle
+skinparam nodeStyle rectangle
+
+node "Estação do usuário" as workstation {
+  artifact "TestForge CLI" as cli
+  artifact "Configurações" as configs
+  artifact "Logs" as logs
+
+  node "Ambiente Python" as python_env {
+    component "SmartRecorder" as SmartRecorder
+    component "FingerprintEngine" as FingerprintEngine
+    component "EvidenceCollector" as EvidenceCollector
+    component "ScriptGenerator" as ScriptGenerator
+    component "ExecutorAgent" as ExecutorAgent
+    component "AgentOrchestrator" as AgentOrchestrator
+    component "FailureDiagnostic" as FailureDiagnostic
+    component "FailureClassifier" as FailureClassifier
+    component "DeterministicSelfHealingAgent" as DeterministicSelfHealingAgent
+    component "SelectorRepairAgent" as SelectorRepairAgent
+    component "TimingAsyncAgent" as TimingAsyncAgent
+    component "ContextScopeAgent" as ContextScopeAgent
+    component "StateRecoveryAgent" as StateRecoveryAgent
+    component "DynamicDOMAgent" as DynamicDOMAgent
+    component "SpecialInteractionAgent" as SpecialInteractionAgent
+    component "PatchValidator" as PatchValidator
+    component "ProgressDetector" as ProgressDetector
+    component "RollbackManager" as RollbackManager
+    component "VersionManager" as VersionManager
+    component "SensitiveDataGuard" as SensitiveDataGuard
+    component "LLMFallbackAgent" as LLMFallbackAgent
+  }
+
+  node "Processo Playwright" as playwright_process {
+    component "BrowserContext" as BrowserContext
+    component "Page" as Page
+    component "Tracing" as Tracing
+    component "Event handlers" as EventHandlers
+  }
+
+  node "Navegador local\nChrome ou Edge" as local_browser {
+    component "Aplicação web" as BrowserApp
+    component "Recorder JS" as RecorderJS
+    component "Overlay" as Overlay
+    component "MutationObserver" as MutationObserver
+  }
+
+  node "Sistema de arquivos local" as local_fs {
+    folder "Repositório de artefatos\noutput/{slug}" as output_repo {
+      folder "recording" as recording_dir
+      folder "evidence" as evidence_dir
+      folder "generated" as generated_dir
+      folder "runs" as runs_dir
+      folder "agents" as agents_dir
+      folder "knowledge" as knowledge_dir
+      folder "final" as final_dir
+    }
+
+    database "Base de conhecimento local" as local_kb {
+      artifact "failure_signatures.jsonl" as failure_signatures
+      artifact "resolved_patterns.jsonl" as resolved_patterns
+      artifact "healing_rules.json" as healing_rules
+    }
+  }
+
+  node "Repositório Git\nopcional" as git_repo {
+    artifact "scripts versionados" as git_scripts
+    artifact "patches versionados" as git_patches
+    artifact "checkpoints/tags" as git_checkpoints
+  }
+}
+
+cloud "Aplicação web alvo" as target_app {
+  component "Frontend web" as target_frontend
+  component "Backend / APIs" as target_backend
+  database "Sessão e dados da aplicação" as target_state
+}
+
+cloud "Serviço LLM / Azure OpenAI\nopcional e controlado" as llm_service {
+  component "Endpoint LLM" as llm_endpoint
+  component "Sugestão de patch" as llm_patch_suggestion
+}
+
+' ============================================================
+' Entrada e orquestração local
+' ============================================================
+
+cli --> configs : lê parâmetros, perfis e políticas
+cli --> logs : registra eventos de execução
+cli --> python_env : inicia record, run, curate ou stabilize
+
+python_env --> playwright_process : controla runtime Playwright
+playwright_process --> local_browser : abre/controla Chrome ou Edge
+local_browser --> target_app : acessa aplicação web alvo
+BrowserApp --> target_frontend : carrega frontend
+BrowserApp --> target_backend : HTTP/XHR/fetch/WebSocket
+target_backend --> target_state : lê/grava estado da aplicação
+
+' ============================================================
+' Gravação enriquecida
+' ============================================================
+
+SmartRecorder --> BrowserContext : usa contexto isolado
+SmartRecorder --> Page : observa ações, URL e estado da página
+SmartRecorder --> RecorderJS : recebe eventos DOM enriquecidos
+SmartRecorder --> Overlay : controla pausa, retomada, checkpoint e finalização
+SmartRecorder --> MutationObserver : recebe hints de mutação
+
+FingerprintEngine --> Page : detecta tecnologias, frames e shadow DOM
+EvidenceCollector --> Page : coleta DOM, screenshot, storage e contexto visual
+EvidenceCollector --> EventHandlers : coleta request, response, console, dialog, popup, frame e pageerror
+EvidenceCollector --> Tracing : coleta trace, snapshots e screenshots
+
+BrowserContext --> Page : cria e controla página
+BrowserContext --> Tracing : ativa tracing, screenshots e snapshots
+BrowserContext --> EventHandlers : registra handlers nativos
+Page --> BrowserApp : navega e interage
+RecorderJS --> BrowserApp : instrumenta eventos de usuário
+Overlay --> BrowserApp : exibe controles locais
+MutationObserver --> BrowserApp : observa alterações dinâmicas do DOM
+
+' ============================================================
+' Persistência dos artefatos de gravação e execução
+' ============================================================
+
+SmartRecorder --> recording_dir : session_raw.json e recording_summary.md
+FingerprintEngine --> recording_dir : fingerprint_initial.json e fingerprint_final.json
+EvidenceCollector --> evidence_dir : screenshots, dom, network, console, storage, frames, selectors e components
+ScriptGenerator --> generated_dir : script_v0.py, script_metadata.json, steps_normalized.json e selector_candidates.json
+ExecutorAgent --> runs_dir : execution.json, trace.zip, screenshot_failure.png, dom_failure.html e console_network.json
+AgentOrchestrator --> agents_dir : histórico por agente e tentativas
+DeterministicSelfHealingAgent --> final_dir : locators.json e healing_rules.json
+ScriptGenerator --> final_dir : script_final.py
+
+knowledge_dir --> local_kb : sincroniza conhecimento local
+local_kb --> AgentOrchestrator : fornece padrões resolvidos e histórico
+local_kb --> DeterministicSelfHealingAgent : fornece regras determinísticas conhecidas
+local_kb --> FailureClassifier : auxilia classificação por padrões anteriores
+
+' ============================================================
+' Execução diagnóstica e self-healing determinístico
+' ============================================================
+
+ExecutorAgent --> Page : executa script_v0.py ou checkpoint
+ExecutorAgent --> FailureDiagnostic : envia falha, trace, DOM, rede e console
+FailureDiagnostic --> FailureClassifier : envia failure_signature.json
+FailureClassifier --> AgentOrchestrator : classifica família da falha
+
+AgentOrchestrator --> evidence_dir : reutiliza evidências originais da gravação
+AgentOrchestrator --> recording_dir : reutiliza session_raw/session_normalized e fingerprints
+AgentOrchestrator --> local_kb : consulta resolved_patterns e healing_rules
+
+AgentOrchestrator --> SelectorRepairAgent : seletores frágeis
+AgentOrchestrator --> TimingAsyncAgent : timing e assincronismo
+AgentOrchestrator --> ContextScopeAgent : contexto, frame e shadow DOM
+AgentOrchestrator --> StateRecoveryAgent : estado da aplicação e autenticação
+AgentOrchestrator --> DynamicDOMAgent : DOM dinâmico e estabilização
+AgentOrchestrator --> SpecialInteractionAgent : dialogs, overlays, datepicker, autocomplete e upload
+
+SelectorRepairAgent --> PatchValidator : patch determinístico de locator
+TimingAsyncAgent --> PatchValidator : patch determinístico de espera
+ContextScopeAgent --> PatchValidator : patch determinístico de escopo
+StateRecoveryAgent --> PatchValidator : patch determinístico de estado
+DynamicDOMAgent --> PatchValidator : patch determinístico de DOM
+SpecialInteractionAgent --> PatchValidator : patch determinístico de interação
+
+PatchValidator --> VersionManager : aplica patch somente se válido
+VersionManager --> generated_dir : cria versão temporária do script
+VersionManager --> git_repo : opcional / registra diff e checkpoint
+VersionManager --> ExecutorAgent : solicita reexecução da versão temporária
+
+ExecutorAgent --> ProgressDetector : resultado comparativo da reexecução
+ProgressDetector --> VersionManager : aceita patch se PASSED_STEP ou PROGRESSED
+ProgressDetector --> RollbackManager : aciona rollback se REGRESSED
+ProgressDetector --> FailureClassifier : reclassifica se ERROR_CHANGED
+ProgressDetector --> AgentOrchestrator : solicita nova estratégia se STAGNATED ou UNRESOLVED
+RollbackManager --> VersionManager : restaura última versão estável
+RollbackManager --> git_repo : opcional / restaura checkpoint versionado
+
+DeterministicSelfHealingAgent --> VersionManager : consolida patches aceitos
+DeterministicSelfHealingAgent --> local_kb : registra padrão resolvido e regra candidata
+DeterministicSelfHealingAgent --> final_dir : publica regras finais determinísticas
+
+' ============================================================
+' LLM opcional e controlado
+' ============================================================
+
+AgentOrchestrator ..> LLMFallbackAgent : somente após esgotar estratégias determinísticas
+LLMFallbackAgent --> SensitiveDataGuard : solicita mascaramento/tokenização
+SensitiveDataGuard ..> llm_service : envia pacote mínimo de evidências mascarado
+llm_endpoint --> llm_patch_suggestion : gera hipótese ou sugestão de patch
+llm_patch_suggestion ..> LLMFallbackAgent : retorna sugestão controlada
+LLMFallbackAgent --> PatchValidator : submete como patch candidato
+PatchValidator --> VersionManager : só aplica se validado
+
+' ============================================================
+' Publicação final e versionamento opcional
+' ============================================================
+
+final_dir ..> git_repo : opcional / versiona script_final.py e artefatos finais
+generated_dir ..> git_repo : opcional / versiona script_v0.py
+agents_dir ..> git_repo : opcional / versiona histórico de patches
+knowledge_dir ..> git_repo : opcional / versiona regras e padrões aprendidos
+
+note right of llm_service
+  O Serviço LLM/Azure OpenAI é opcional.
+  Ele não é requisito obrigatório para executar o runtime local.
+
+  Só recebe pacote mínimo de evidências após passagem
+  pelo SensitiveDataGuard.
+end note
+
+note right of LLMFallbackAgent
+  O LLMFallbackAgent é fallback controlado.
+  Não participa da primeira tentativa de correção.
+
+  A resposta do LLM é apenas hipótese ou patch candidato.
+  Ela precisa passar por PatchValidator e reexecução.
+end note
+
+note right of DeterministicSelfHealingAgent
+  O self-healing final deve ser determinístico,
+  rastreável e baseado nas evidências da gravação.
+
+  Regras finais são publicadas em final/healing_rules.json
+  e sincronizadas com a base local de conhecimento.
+end note
+
+note bottom of output_repo
+  output/{slug} preserva toda a rastreabilidade:
+  recording, evidence, generated, runs, agents,
+  knowledge e final.
+end note
+
+note bottom of SensitiveDataGuard
+  Dados sensíveis devem ser mascarados, tokenizados
+  ou bloqueados antes de persistência sensível
+  ou envio para qualquer serviço externo.
+end note
+
+@enduml

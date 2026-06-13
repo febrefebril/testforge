@@ -1,0 +1,5110 @@
+===== BEGIN curator-decision-tree.puml =====
+@startuml curator-decision-tree
+' TESTFORGE — Curator Decision Tree
+' Artefato: curator-decision-tree.puml
+' Base: Taxonomia implementável de casos conhecidos v1.0
+' Objetivo: orientar a classificação, healing, fallback e estado final do Agente Curador.
+
+skinparam backgroundColor #FFFFFF
+skinparam activity {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #0F172A
+  DiamondBackgroundColor #E0F2FE
+  DiamondBorderColor #0369A1
+  StartColor #16A34A
+  EndColor #DC2626
+}
+skinparam note {
+  BackgroundColor #FEF3C7
+  BorderColor #D97706
+  FontColor #111827
+}
+skinparam shadowing false
+
+title TestForge — Árvore de Decisão do Curador
+
+start
+:Receber evento, falha, step ou pedido de curadoria;
+:Coletar contexto mínimo;
+note right
+Contexto mínimo recomendado:
+- snapshot DOM antes/depois
+- locator original
+- stack/fingerprint da tela
+- frame/aba/contexto atual
+- logs Playwright
+- console/network quando disponíveis
+- evidência visual/trace/HAR quando configurado
+end note
+
+if (Há evidência suficiente?) then (sim)
+else (não)
+  :Classificar como OBS-001;
+  :Coletar screenshot, trace, console e/ou snapshot DOM;
+  if (Evidência mínima obtida?) then (sim)
+  else (não)
+    :Resultado = UNRESOLVED;
+    :Registrar ausência de evidência;
+    stop
+  endif
+endif
+
+:Identificar tecnologia predominante;
+note right
+Exemplos:
+- JSF / PrimeFaces
+- jQuery / jQuery UI
+- Angular / SPA
+- Web Components
+- Browser security / cross-origin
+- Recorder/TestForge
+end note
+
+if (Caso envolve risco técnico ou segurança?) then (sim)
+  if (CAPTCHA/desafio humano?) then (sim)
+    :Classificar LIM-001 ou INP-008;
+    :Resultado = MANUAL_REQUIRED;
+    :Registrar checkpoint manual;
+    stop
+  elseif (Cross-origin inacessível?) then (sim)
+    :Classificar LIM-002 ou CTX-002;
+    :Resultado = MANUAL_REQUIRED ou UNRESOLVED;
+    :Não fabricar locator;
+    stop
+  elseif (Dado sensível mascarado?) then (sim)
+    :Classificar LIM-003;
+    :Aplicar mascaramento/tokenização;
+    :Validar ausência de segredo em relatório;
+    if (Dado protegido?) then (sim)
+      :Resultado = RESOLVED;
+    else (não)
+      :Resultado = UNRESOLVED;
+    endif
+    stop
+  elseif (Operação irreversível?) then (sim)
+    :Classificar LIM-004;
+    :Exigir confirmação/checkpoint explícito;
+    :Resultado = MANUAL_REQUIRED;
+    stop
+  else (não)
+    :Continuar classificação;
+  endif
+else (não)
+endif
+
+if (Falha é de seletor/locator?) then (sim)
+  :Família = Seletores frágeis;
+  if (ID JSF dinâmico?) then (sim)
+    :Classificar SEL-001;
+    :Aplicar semantic_locator_conversion;
+  elseif (Índice de tabela/lista?) then (sim)
+    :Classificar SEL-002 ou DOM-002;
+    :Aplicar label_proximity por linha/chave;
+  elseif (widgetVar PrimeFaces?) then (sim)
+    :Classificar SEL-003;
+    :Aplicar primefaces_registry_scan;
+  elseif (XPath absoluto?) then (sim)
+    :Classificar SEL-004;
+    :Converter para locator semântico;
+  elseif (classe volátil?) then (sim)
+    :Classificar SEL-005;
+    :Aplicar aria_role_strategy;
+  elseif (texto duplicado?) then (sim)
+    :Classificar SEL-009;
+    :Desambiguar por escopo/container/role;
+  else (outro)
+    :Classificar melhor SEL-* compatível;
+    :Aplicar fallback semântico;
+  endif
+elseif (Falha é de timing/assincronismo?) then (sim)
+  :Família = Timing e assincronismo;
+  if (Re-render JSF/AJAX?) then (sim)
+    :Classificar TIM-001 ou DOM-003;
+    :Aplicar network_idle_wait + dom_stabilization;
+  elseif (ViewState hardcoded?) then (sim)
+    :Classificar TIM-002;
+    :Remover captura manual de ViewState;
+  elseif (sleep fixo?) then (sim)
+    :Classificar TIM-005;
+    :Substituir por wait semântico;
+  elseif (autocomplete/debounce?) then (sim)
+    :Classificar TIM-006;
+    :Aguardar lista/opção;
+  else (outro)
+    :Classificar TIM-* compatível;
+    :Aplicar wait por condição observável;
+  endif
+elseif (Falha é de contexto/escopo?) then (sim)
+  :Família = Contexto e escopo;
+  if (iframe same-origin?) then (sim)
+    :Classificar CTX-001;
+    :Aplicar frame_reacquire/frameLocator;
+  elseif (iframe cross-origin?) then (sim)
+    :Classificar CTX-002/LIM-002;
+    :Resultado = MANUAL_REQUIRED ou UNRESOLVED;
+    :Não fabricar seletor;
+    stop
+  elseif (Shadow DOM aberto?) then (sim)
+    :Classificar CTX-003;
+    :Aplicar shadow_pierce;
+  elseif (Shadow DOM fechado?) then (sim)
+    :Classificar CTX-004;
+    :Resultado = MANUAL_REQUIRED ou UNRESOLVED;
+    stop
+  elseif (popup/nova aba?) then (sim)
+    :Classificar CTX-005;
+    :Capturar popup/page e trocar contexto;
+  else (outro)
+    :Classificar CTX-* compatível;
+  endif
+elseif (Falha é de estado da aplicação?) then (sim)
+  :Família = Estado da aplicação;
+  if (Sessão expirada/login?) then (sim)
+    :Classificar STA-001;
+    :Aplicar re_auth_hook;
+  elseif (Overlay bloqueia clique?) then (sim)
+    :Classificar STA-002;
+    :Aplicar overlay_dismiss ou aguardar sumir;
+  elseif (Dialog nativo?) then (sim)
+    :Classificar STA-004;
+    :Instalar handler de dialog;
+  elseif (Ambiente indisponível?) then (sim)
+    :Classificar STA-006;
+    :Não alterar script indevidamente;
+    :Resultado = PARTIALLY_RESOLVED ou UNRESOLVED;
+  else (outro)
+    :Classificar STA-* compatível;
+  endif
+elseif (Falha envolve DOM dinâmico?) then (sim)
+  :Família = DOM dinâmico;
+  if (handle cacheado/detached?) then (sim)
+    :Classificar DOM-001;
+    :Rebuscar locator e evitar ElementHandle cacheado;
+  elseif (lista virtualizada/lazy?) then (sim)
+    :Classificar DOM-004 ou DOM-005;
+    :Scroll/wait por conteúdo real;
+  else (outro)
+    :Classificar DOM-* compatível;
+  endif
+elseif (Falha envolve input especializado?) then (sim)
+  :Família = Input e interação especializada;
+  if (Upload?) then (sim)
+    :Classificar INP-001/INP-002 ou FILE-001;
+    :Aplicar upload_payload_binding e fixture versionada;
+  elseif (Download?) then (sim)
+    :Classificar INP-003/INP-004 ou FILE-*;
+    :Aplicar download_event_capture;
+  elseif (Drag-and-drop?) then (sim)
+    :Classificar INP-005;
+    :Simular interação semântica;
+  elseif (Rich text editor?) then (sim)
+    :Classificar INP-006;
+    :Readquirir frame/contenteditable;
+  else (outro)
+    :Classificar INP-* compatível;
+  endif
+elseif (Falha envolve assert/validação?) then (sim)
+  :Família = Asserts e validações;
+  if (Assert antes da gravação?) then (sim)
+    :Classificar AST-001;
+    :Vincular ao plano inicial;
+  elseif (Assert durante gravação?) then (sim)
+    :Classificar AST-002;
+    :Capturar via overlay;
+  elseif (Assert depois da gravação?) then (sim)
+    :Classificar AST-003;
+    :Vincular ao step/tela correto;
+  elseif (Assert ambíguo?) then (sim)
+    :Classificar AST-008;
+    :Resultado = MANUAL_REQUIRED;
+    :Não inventar assert;
+    stop
+  else (outro)
+    :Classificar AST-* compatível;
+  endif
+elseif (Caso é do recorder/overlay?) then (sim)
+  :Família = Recorder, overlay e checkpoints manuais;
+  if (Gravação incompleta?) then (sim)
+    :Classificar REC-001;
+    :Gerar script parcial com checkpoint;
+    :Resultado = PARTIALLY_RESOLVED;
+  elseif (Recon/fingerprint inicial?) then (sim)
+    :Classificar REC-005;
+    :Persistir mapa tecnológico;
+  else (outro)
+    :Classificar REC-* compatível;
+  endif
+else (não classificado)
+  :Resultado = UNRESOLVED;
+  :Registrar evidência e motivo;
+  stop
+endif
+
+:Gerar patch candidato;
+:Registrar ID taxonômico, estratégia, fallback e evidências;
+:Executar validação controlada;
+
+if (Validação passou?) then (sim)
+  if (Requer promoção por estabilidade?) then (sim)
+    :Aplicar política OBS-006;
+    :Exigir rodadas limpas consecutivas definidas no projeto;
+  else (não)
+  endif
+  :Resultado = RESOLVED;
+  :Anexar diff, evidências e critério de sucesso;
+  stop
+else (não)
+  :Aplicar próximo fallback disponível;
+  if (Fallback passou?) then (sim)
+    :Resultado = RESOLVED ou PARTIALLY_RESOLVED;
+    :Registrar fallback utilizado;
+    stop
+  else (não)
+    :Incrementar contador de rejeição por assinatura do patch;
+    if (Limite de rejeições atingido?) then (sim)
+      :Classificar OBS-005;
+      :Resultado = UNRESOLVED;
+      :Abrir pendência/checkpoint manual;
+      stop
+    else (não)
+      :Gerar novo patch candidato;
+      :Retornar à validação controlada;
+    endif
+  endif
+endif
+
+@enduml
+
+===== END curator-decision-tree.puml =====
+
+===== BEGIN curator-test-matrix.md =====
+# TESTFORGE — Curator Test Matrix
+
+**Objetivo:** matriz mínima de testes automatizados por ID taxonômico, priorizando P0 no MVP.
+
+| ID | Família | Caso | Prioridade | Tipo mínimo de teste | Fixture/cenário sugerido | Aceite mínimo |
+|---|---|---|---|---|---|---|
+| SEL-001 | Seletores frágeis | ID JSF dinâmico | P0 | Automatizado obrigatório | DOM sintético com seletor frágil e alternativa semântica | Classifica ID, aplica política e registra evidência/resultado |
+| SEL-002 | Seletores frágeis | ID com índice de tabela | P0 | Automatizado obrigatório | DOM sintético com seletor frágil e alternativa semântica | Classifica ID, aplica política e registra evidência/resultado |
+| SEL-003 | Seletores frágeis | widgetVar instável | P0 | Automatizado obrigatório | DOM sintético com seletor frágil e alternativa semântica | Classifica ID, aplica política e registra evidência/resultado |
+| SEL-004 | Seletores frágeis | XPath absoluto | P0 | Automatizado obrigatório | DOM sintético com seletor frágil e alternativa semântica | Classifica ID, aplica política e registra evidência/resultado |
+| SEL-005 | Seletores frágeis | CSS baseado em classe volátil | P1 | Automatizado recomendado | DOM sintético com seletor frágil e alternativa semântica | Classifica ID, aplica política e registra evidência/resultado |
+| SEL-006 | Seletores frágeis | Elemento sem ID | P1 | Automatizado recomendado | DOM sintético com seletor frágil e alternativa semântica | Classifica ID, aplica política e registra evidência/resultado |
+| SEL-007 | Seletores frágeis | Elemento fora do formulário | P0 | Automatizado obrigatório | DOM sintético com seletor frágil e alternativa semântica | Classifica ID, aplica política e registra evidência/resultado |
+| SEL-008 | Seletores frágeis | Locator por posição | P1 | Automatizado recomendado | DOM sintético com seletor frágil e alternativa semântica | Classifica ID, aplica política e registra evidência/resultado |
+| SEL-009 | Seletores frágeis | Texto duplicado | P0 | Automatizado obrigatório | DOM sintético com seletor frágil e alternativa semântica | Classifica ID, aplica política e registra evidência/resultado |
+| SEL-010 | Seletores frágeis | Label não associado via for | P1 | Automatizado recomendado | DOM sintético com seletor frágil e alternativa semântica | Classifica ID, aplica política e registra evidência/resultado |
+| TIM-001 | Timing e assincronismo | Ação antes do re-render JSF | P0 | Automatizado obrigatório | Página/fixture com alteração assíncrona controlada | Classifica ID, aplica política e registra evidência/resultado |
+| TIM-002 | Timing e assincronismo | ViewState inválido | P0 | Automatizado obrigatório | Página/fixture com alteração assíncrona controlada | Classifica ID, aplica política e registra evidência/resultado |
+| TIM-003 | Timing e assincronismo | Callback jQuery sem evento DOM claro | P1 | Automatizado recomendado | Página/fixture com alteração assíncrona controlada | Classifica ID, aplica política e registra evidência/resultado |
+| TIM-004 | Timing e assincronismo | Change detection assíncrono | P1 | Automatizado recomendado | Página/fixture com alteração assíncrona controlada | Classifica ID, aplica política e registra evidência/resultado |
+| TIM-005 | Timing e assincronismo | waitForTimeout gravado | P0 | Automatizado obrigatório | Página/fixture com alteração assíncrona controlada | Classifica ID, aplica política e registra evidência/resultado |
+| TIM-006 | Timing e assincronismo | Debounce em autocomplete | P1 | Automatizado recomendado | Página/fixture com alteração assíncrona controlada | Classifica ID, aplica política e registra evidência/resultado |
+| TIM-007 | Timing e assincronismo | Navegação parcial sem page load | P1 | Automatizado recomendado | Página/fixture com alteração assíncrona controlada | Classifica ID, aplica política e registra evidência/resultado |
+| CTX-001 | Contexto e escopo | Iframe same-origin | P0 | Automatizado obrigatório | Página com frame/modal/shadow/popup conforme o caso | Classifica ID, aplica política e registra evidência/resultado |
+| CTX-002 | Contexto e escopo | Iframe cross-origin | P0 | Automatizado obrigatório | Página com frame/modal/shadow/popup conforme o caso | Classifica ID, aplica política e registra evidência/resultado |
+| CTX-003 | Contexto e escopo | Shadow DOM aberto | P1 | Automatizado recomendado | Página com frame/modal/shadow/popup conforme o caso | Classifica ID, aplica política e registra evidência/resultado |
+| CTX-004 | Contexto e escopo | Shadow DOM fechado | P2 | Especializado/manual assistido | Página com frame/modal/shadow/popup conforme o caso | Classifica ID, aplica política e registra evidência/resultado |
+| CTX-005 | Contexto e escopo | Popup/nova aba | P0 | Automatizado obrigatório | Página com frame/modal/shadow/popup conforme o caso | Classifica ID, aplica política e registra evidência/resultado |
+| CTX-006 | Contexto e escopo | Modal/dialog fora do escopo | P0 | Automatizado obrigatório | Página com frame/modal/shadow/popup conforme o caso | Classifica ID, aplica política e registra evidência/resultado |
+| CTX-007 | Contexto e escopo | Frame recarregado | P1 | Automatizado recomendado | Página com frame/modal/shadow/popup conforme o caso | Classifica ID, aplica política e registra evidência/resultado |
+| STA-001 | Estado da aplicação | Sessão expirada | P0 | Automatizado obrigatório | Cenário com estado de sessão, overlay, dialog ou indisponibilidade | Classifica ID, aplica política e registra evidência/resultado |
+| STA-002 | Estado da aplicação | Overlay bloqueando clique | P0 | Automatizado obrigatório | Cenário com estado de sessão, overlay, dialog ou indisponibilidade | Classifica ID, aplica política e registra evidência/resultado |
+| STA-003 | Estado da aplicação | Dados sujos | P1 | Automatizado recomendado | Cenário com estado de sessão, overlay, dialog ou indisponibilidade | Classifica ID, aplica política e registra evidência/resultado |
+| STA-004 | Estado da aplicação | Alert/confirm/prompt nativo | P0 | Automatizado obrigatório | Cenário com estado de sessão, overlay, dialog ou indisponibilidade | Classifica ID, aplica política e registra evidência/resultado |
+| STA-005 | Estado da aplicação | Permissão insuficiente | P1 | Automatizado recomendado | Cenário com estado de sessão, overlay, dialog ou indisponibilidade | Classifica ID, aplica política e registra evidência/resultado |
+| STA-006 | Estado da aplicação | Ambiente indisponível/intermitente | P1 | Automatizado recomendado | Cenário com estado de sessão, overlay, dialog ou indisponibilidade | Classifica ID, aplica política e registra evidência/resultado |
+| DOM-001 | DOM dinâmico | Element handle cacheado | P0 | Automatizado obrigatório | DOM que re-renderiza, reordena ou virtualiza elementos | Classifica ID, aplica política e registra evidência/resultado |
+| DOM-002 | DOM dinâmico | Lista reordenada | P0 | Automatizado obrigatório | DOM que re-renderiza, reordena ou virtualiza elementos | Classifica ID, aplica política e registra evidência/resultado |
+| DOM-003 | DOM dinâmico | Re-render substitui nó | P0 | Automatizado obrigatório | DOM que re-renderiza, reordena ou virtualiza elementos | Classifica ID, aplica política e registra evidência/resultado |
+| DOM-004 | DOM dinâmico | Virtualização de lista | P2 | Especializado/manual assistido | DOM que re-renderiza, reordena ou virtualiza elementos | Classifica ID, aplica política e registra evidência/resultado |
+| DOM-005 | DOM dinâmico | Lazy loading visual | P1 | Automatizado recomendado | DOM que re-renderiza, reordena ou virtualiza elementos | Classifica ID, aplica política e registra evidência/resultado |
+| INP-001 | Input e interação especializada | Upload PrimeFaces | P0 | Automatizado obrigatório | Fixture de input especializado/upload/download | Classifica ID, aplica política e registra evidência/resultado |
+| INP-002 | Input e interação especializada | Upload HTML padrão | P0 | Automatizado obrigatório | Fixture de input especializado/upload/download | Classifica ID, aplica política e registra evidência/resultado |
+| INP-003 | Input e interação especializada | Download disparado por clique | P0 | Automatizado obrigatório | Fixture de input especializado/upload/download | Classifica ID, aplica política e registra evidência/resultado |
+| INP-004 | Input e interação especializada | Download AJAX/Blob | P1 | Automatizado recomendado | Fixture de input especializado/upload/download | Classifica ID, aplica política e registra evidência/resultado |
+| INP-005 | Input e interação especializada | Drag-and-drop | P1 | Automatizado recomendado | Fixture de input especializado/upload/download | Classifica ID, aplica política e registra evidência/resultado |
+| INP-006 | Input e interação especializada | Rich text editor via iframe | P1 | Automatizado recomendado | Fixture de input especializado/upload/download | Classifica ID, aplica política e registra evidência/resultado |
+| INP-007 | Input e interação especializada | Máscara de input | P1 | Automatizado recomendado | Fixture de input especializado/upload/download | Classifica ID, aplica política e registra evidência/resultado |
+| INP-008 | Input e interação especializada | CAPTCHA | P0 | Automatizado obrigatório | Fixture de input especializado/upload/download | Classifica ID, aplica política e registra evidência/resultado |
+| INP-009 | Input e interação especializada | Seleção de data em calendário | P1 | Automatizado recomendado | Fixture de input especializado/upload/download | Classifica ID, aplica política e registra evidência/resultado |
+| INP-010 | Input e interação especializada | Combobox customizado | P1 | Automatizado recomendado | Fixture de input especializado/upload/download | Classifica ID, aplica política e registra evidência/resultado |
+| FILE-001 | Upload e download de arquivos | Arquivo local inexistente na execução | P0 | Automatizado obrigatório | Fixture de arquivo versionado e validação de artefato | Classifica ID, aplica política e registra evidência/resultado |
+| FILE-002 | Upload e download de arquivos | Upload com validação de extensão | P1 | Automatizado recomendado | Fixture de arquivo versionado e validação de artefato | Classifica ID, aplica política e registra evidência/resultado |
+| FILE-003 | Upload e download de arquivos | Upload com limite de tamanho | P1 | Automatizado recomendado | Fixture de arquivo versionado e validação de artefato | Classifica ID, aplica política e registra evidência/resultado |
+| FILE-004 | Upload e download de arquivos | Download com nome dinâmico | P1 | Automatizado recomendado | Fixture de arquivo versionado e validação de artefato | Classifica ID, aplica política e registra evidência/resultado |
+| FILE-005 | Upload e download de arquivos | Download precisa de autenticação | P0 | Automatizado obrigatório | Fixture de arquivo versionado e validação de artefato | Classifica ID, aplica política e registra evidência/resultado |
+| FILE-006 | Upload e download de arquivos | Download bloqueado por popup/aba | P1 | Automatizado recomendado | Fixture de arquivo versionado e validação de artefato | Classifica ID, aplica política e registra evidência/resultado |
+| AST-001 | Asserts e validações | Assert informado antes da gravação | P0 | Automatizado obrigatório | Evento de assert antes/durante/depois ou assert ambíguo | Classifica ID, aplica política e registra evidência/resultado |
+| AST-002 | Asserts e validações | Assert informado durante a gravação | P0 | Automatizado obrigatório | Evento de assert antes/durante/depois ou assert ambíguo | Classifica ID, aplica política e registra evidência/resultado |
+| AST-003 | Asserts e validações | Assert informado depois da gravação | P0 | Automatizado obrigatório | Evento de assert antes/durante/depois ou assert ambíguo | Classifica ID, aplica política e registra evidência/resultado |
+| AST-004 | Asserts e validações | Assert de texto visível | P0 | Automatizado obrigatório | Evento de assert antes/durante/depois ou assert ambíguo | Classifica ID, aplica política e registra evidência/resultado |
+| AST-005 | Asserts e validações | Assert de URL/rota | P1 | Automatizado recomendado | Evento de assert antes/durante/depois ou assert ambíguo | Classifica ID, aplica política e registra evidência/resultado |
+| AST-006 | Asserts e validações | Assert de arquivo baixado | P0 | Automatizado obrigatório | Evento de assert antes/durante/depois ou assert ambíguo | Classifica ID, aplica política e registra evidência/resultado |
+| AST-007 | Asserts e validações | Assert de estado visual | P1 | Automatizado recomendado | Evento de assert antes/durante/depois ou assert ambíguo | Classifica ID, aplica política e registra evidência/resultado |
+| AST-008 | Asserts e validações | Assert ambíguo | P0 | Automatizado obrigatório | Evento de assert antes/durante/depois ou assert ambíguo | Classifica ID, aplica política e registra evidência/resultado |
+| AST-009 | Asserts e validações | Assert de tabela/lista | P1 | Automatizado recomendado | Evento de assert antes/durante/depois ou assert ambíguo | Classifica ID, aplica política e registra evidência/resultado |
+| AST-010 | Asserts e validações | Assert negativo | P1 | Automatizado recomendado | Evento de assert antes/durante/depois ou assert ambíguo | Classifica ID, aplica política e registra evidência/resultado |
+| REC-001 | Recorder, overlay e checkpoints manuais | Gravação incompleta | P0 | Automatizado obrigatório | Sessão de gravação com overlay/checkpoint/fingerprint | Classifica ID, aplica política e registra evidência/resultado |
+| REC-002 | Recorder, overlay e checkpoints manuais | Overlay captura intenção do usuário | P0 | Automatizado obrigatório | Sessão de gravação com overlay/checkpoint/fingerprint | Classifica ID, aplica política e registra evidência/resultado |
+| REC-003 | Recorder, overlay e checkpoints manuais | Usuário pausa gravação | P1 | Automatizado recomendado | Sessão de gravação com overlay/checkpoint/fingerprint | Classifica ID, aplica política e registra evidência/resultado |
+| REC-004 | Recorder, overlay e checkpoints manuais | Navegação manual fora do fluxo | P1 | Automatizado recomendado | Sessão de gravação com overlay/checkpoint/fingerprint | Classifica ID, aplica política e registra evidência/resultado |
+| REC-005 | Recorder, overlay e checkpoints manuais | Recon/fingerprint inicial | P0 | Automatizado obrigatório | Sessão de gravação com overlay/checkpoint/fingerprint | Classifica ID, aplica política e registra evidência/resultado |
+| REC-006 | Recorder, overlay e checkpoints manuais | Evento bloqueado por política do browser/app | P1 | Automatizado recomendado | Sessão de gravação com overlay/checkpoint/fingerprint | Classifica ID, aplica política e registra evidência/resultado |
+| OBS-001 | Execução, evidência e observabilidade | Falha sem screenshot/trace | P0 | Automatizado obrigatório | Execução com erro controlado e evidências esperadas | Classifica ID, aplica política e registra evidência/resultado |
+| OBS-002 | Execução, evidência e observabilidade | Console error relevante | P1 | Automatizado recomendado | Execução com erro controlado e evidências esperadas | Classifica ID, aplica política e registra evidência/resultado |
+| OBS-003 | Execução, evidência e observabilidade | Erro de rede relevante | P1 | Automatizado recomendado | Execução com erro controlado e evidências esperadas | Classifica ID, aplica política e registra evidência/resultado |
+| OBS-004 | Execução, evidência e observabilidade | Healing aplicado sem rastreabilidade | P0 | Automatizado obrigatório | Execução com erro controlado e evidências esperadas | Classifica ID, aplica política e registra evidência/resultado |
+| OBS-005 | Execução, evidência e observabilidade | Rejeição repetida do mesmo patch | P0 | Automatizado obrigatório | Execução com erro controlado e evidências esperadas | Classifica ID, aplica política e registra evidência/resultado |
+| OBS-006 | Execução, evidência e observabilidade | Flakiness não determinística | P0 | Automatizado obrigatório | Execução com erro controlado e evidências esperadas | Classifica ID, aplica política e registra evidência/resultado |
+| LIM-001 | Limites técnicos e casos não automatizáveis com segurança | CAPTCHA/desafio humano | P0 | Automatizado obrigatório | Cenário de limite técnico/segurança com checkpoint manual | Classifica ID, aplica política e registra evidência/resultado |
+| LIM-002 | Limites técnicos e casos não automatizáveis com segurança | Cross-origin inacessível | P0 | Automatizado obrigatório | Cenário de limite técnico/segurança com checkpoint manual | Classifica ID, aplica política e registra evidência/resultado |
+| LIM-003 | Limites técnicos e casos não automatizáveis com segurança | Dado sensível mascarado | P0 | Automatizado obrigatório | Cenário de limite técnico/segurança com checkpoint manual | Classifica ID, aplica política e registra evidência/resultado |
+| LIM-004 | Limites técnicos e casos não automatizáveis com segurança | Operação irreversível | P0 | Automatizado obrigatório | Cenário de limite técnico/segurança com checkpoint manual | Classifica ID, aplica política e registra evidência/resultado |
+| LIM-005 | Limites técnicos e casos não automatizáveis com segurança | Dependência externa instável | P2 | Especializado/manual assistido | Cenário de limite técnico/segurança com checkpoint manual | Classifica ID, aplica política e registra evidência/resultado |
+===== END curator-test-matrix.md =====
+
+===== BEGIN healing-strategies.md =====
+# TESTFORGE — healing-strategies.md
+
+**Projeto:** TestForge / Agente Curador de Scripts  
+**Artefato:** Contrato implementável das estratégias de healing  
+**Versão:** 1.0  
+**Base:** Taxonomia Implementável de Casos Conhecidos — v1.0  
+**Finalidade:** Definir o contrato técnico, os critérios de uso, entradas, saídas, pré-condições, pós-condições, evidências e regras de validação de cada estratégia utilizada pelo Curador do TestForge.
+
+---
+
+## 1. Objetivo
+
+Este documento especifica o contrato implementável das estratégias de healing e tratamento usadas pelo Agente Curador do TestForge.
+
+A taxonomia define **o que foi detectado**.  
+Este documento define **como cada estratégia deve agir**.
+
+Cada estratégia deve ser implementada como uma unidade rastreável, auditável e validável, capaz de:
+
+1. Receber evidências da gravação, execução ou curadoria.
+2. Avaliar se é aplicável ao caso detectado.
+3. Propor uma alteração ou decisão segura.
+4. Registrar justificativa vinculada a um ID taxonômico.
+5. Gerar patch, metadado, checkpoint ou estado final.
+6. Permitir validação pelo `PatchValidator`, `ImplementationAuditor` ou mecanismo equivalente.
+
+---
+
+## 2. Princípios de Implementação
+
+### 2.1 Nenhuma estratégia deve inventar evidência
+
+Uma estratégia só pode produzir locator, assert, wait, patch ou checkpoint quando houver evidência mínima suficiente.
+
+Se a evidência for insuficiente, a estratégia deve retornar:
+
+- `MANUAL_REQUIRED`, quando houver necessidade explícita de decisão humana; ou
+- `UNRESOLVED`, quando não for possível resolver com segurança.
+
+### 2.2 Toda alteração deve ser rastreável
+
+Qualquer patch aplicado ao script final deve referenciar:
+
+- ID taxonômico;
+- estratégia utilizada;
+- evidência usada;
+- trecho alterado;
+- justificativa;
+- resultado da validação.
+
+### 2.3 Estratégias não substituem validação
+
+Uma estratégia pode propor healing, mas não deve considerar o caso resolvido sozinha.
+
+A resolução depende de validação por execução, auditoria ou regra objetiva definida no caso taxonômico.
+
+### 2.4 Segurança prevalece sobre automação
+
+Nos seguintes casos, a estratégia deve preferir checkpoint manual ou não resolução segura:
+
+- CAPTCHA;
+- iframe cross-origin inacessível;
+- Shadow DOM fechado;
+- operação irreversível;
+- dado sensível não mascarado;
+- assert ambíguo;
+- ausência de evidência mínima;
+- risco de alterar comportamento de negócio.
+
+---
+
+## 3. Modelo Geral de Contrato
+
+Todas as estratégias devem seguir este contrato conceitual:
+
+```yaml
+strategy_id: nome_da_estrategia
+description: descrição objetiva da estratégia
+applicable_taxonomy_ids:
+  - SEL-001
+  - TIM-001
+inputs:
+  required:
+    - evidence_bundle
+    - current_step
+    - taxonomy_case
+  optional:
+    - dom_snapshot
+    - network_trace
+    - console_logs
+    - user_annotations
+    - previous_attempts
+preconditions:
+  - condição necessária para aplicar a estratégia
+outputs:
+  success:
+    - patch_proposal
+    - confidence_score
+    - evidence_references
+  partial:
+    - partial_patch
+    - warning
+  failure:
+    - rejection_reason
+    - recommended_next_strategy
+result_states:
+  success: RESOLVED
+  partial: PARTIALLY_RESOLVED
+  manual: MANUAL_REQUIRED
+  failure: UNRESOLVED
+validation:
+  - regra objetiva de validação
+observability:
+  - logs obrigatórios
+  - evidências anexadas
+risk_policy:
+  - limites e bloqueios
+```
+
+---
+
+## 4. Estrutura Recomendada de Interface
+
+A implementação pode adaptar nomes e tipos, mas deve preservar a semântica abaixo.
+
+```python
+from dataclasses import dataclass
+from typing import Any, Literal
+
+ResultState = Literal[
+    "RESOLVED",
+    "PARTIALLY_RESOLVED",
+    "MANUAL_REQUIRED",
+    "UNRESOLVED",
+    "REJECTED",
+]
+
+@dataclass
+class StrategyContext:
+    taxonomy_id: str
+    family: str
+    current_step: dict[str, Any]
+    recorded_action: dict[str, Any] | None
+    dom_snapshot: dict[str, Any] | None
+    accessibility_snapshot: dict[str, Any] | None
+    network_trace: list[dict[str, Any]]
+    console_logs: list[dict[str, Any]]
+    user_annotations: list[dict[str, Any]]
+    execution_error: dict[str, Any] | None
+    previous_attempts: list[dict[str, Any]]
+
+@dataclass
+class StrategyResult:
+    strategy_id: str
+    taxonomy_id: str
+    state: ResultState
+    confidence: float
+    patch: dict[str, Any] | None
+    evidence: list[dict[str, Any]]
+    warnings: list[str]
+    next_strategy: str | None
+    rationale: str
+
+class HealingStrategy:
+    strategy_id: str
+
+    def can_apply(self, context: StrategyContext) -> bool:
+        raise NotImplementedError
+
+    def apply(self, context: StrategyContext) -> StrategyResult:
+        raise NotImplementedError
+```
+
+---
+
+## 5. Estratégias
+
+---
+
+# 5.1 `label_proximity`
+
+## Finalidade
+
+Inferir um locator resiliente a partir da proximidade entre um rótulo visual e o campo, botão ou componente associado.
+
+## Casos taxonômicos relacionados
+
+- `SEL-002` — ID com índice de tabela
+- `SEL-009` — Texto duplicado
+- `SEL-010` — Label não associado via `for`
+- `AST-009` — Assert de tabela/lista
+
+## Quando aplicar
+
+Aplicar quando:
+
+- o elemento não possui ID estável;
+- o label existe visualmente, mas não está semanticamente associado;
+- há múltiplos textos iguais e o escopo precisa ser reduzido;
+- o elemento correto pode ser inferido por proximidade estrutural, espacial ou hierárquica.
+
+## Entradas mínimas
+
+- DOM snapshot;
+- texto do label ou texto próximo;
+- ação gravada ou assert pretendido;
+- posição estrutural do elemento no DOM;
+- candidatos próximos.
+
+## Saída esperada
+
+Locator Playwright contextualizado por label, container, linha ou escopo.
+
+Exemplo:
+
+```python
+page.get_by_text("CPF").locator(".. ").get_by_role("textbox")
+```
+
+Preferencialmente, quando possível:
+
+```python
+page.get_by_label("CPF")
+```
+
+Ou, para tabela:
+
+```python
+page.get_by_role("row", name="João Silva").get_by_role("button", name="Editar")
+```
+
+## Critérios de sucesso
+
+- O locator retorna match único; ou
+- O escopo do locator é explícito e justificado;
+- A ação ocorre no elemento correto;
+- Não há dependência de índice absoluto sem justificativa.
+
+## Regras de rejeição
+
+Rejeitar se:
+
+- houver mais de um candidato indistinguível;
+- o label for ambíguo;
+- a proximidade não puder ser comprovada;
+- a estratégia depender apenas de coordenadas absolutas.
+
+## Estado em falha
+
+- `MANUAL_REQUIRED`, se a intenção do usuário for necessária.
+- `UNRESOLVED`, se houver evidência insuficiente.
+
+---
+
+# 5.2 `text_content_match`
+
+## Finalidade
+
+Gerar locators ou asserts baseados em texto visível, conteúdo textual ou mensagens de negócio.
+
+## Casos taxonômicos relacionados
+
+- `SEL-001`
+- `SEL-004`
+- `SEL-009`
+- `AST-004`
+- `AST-009`
+- `AST-010`
+
+## Quando aplicar
+
+Aplicar quando:
+
+- o texto visível é a evidência mais estável;
+- a validação esperada é textual;
+- o elemento pode ser identificado por mensagem, título, célula, opção ou conteúdo.
+
+## Entradas mínimas
+
+- texto alvo;
+- escopo da tela, modal, frame ou container;
+- tipo de assert ou ação;
+- snapshot textual.
+
+## Saída esperada
+
+Locator ou assert textual.
+
+```python
+expect(page.get_by_text("Operação realizada com sucesso")).to_be_visible()
+```
+
+Para textos variáveis:
+
+```python
+expect(page.get_by_text(re.compile(r"Protocolo .* gerado"))).to_be_visible()
+```
+
+## Critérios de sucesso
+
+- Texto encontrado no escopo correto;
+- Assert não depende de texto dinâmico completo quando houver padrão variável;
+- Duplicidade tratada por escopo.
+
+## Regras de rejeição
+
+Rejeitar se:
+
+- o texto for genérico demais, como “OK”, “Sim”, “Avançar”, sem escopo;
+- houver múltiplos matches sem desambiguação;
+- o texto for apenas placeholder temporário, skeleton ou loading.
+
+---
+
+# 5.3 `aria_role_strategy`
+
+## Finalidade
+
+Converter interações e asserts para locators baseados em acessibilidade, usando roles, nomes acessíveis e estados ARIA.
+
+## Casos taxonômicos relacionados
+
+- `SEL-003`
+- `SEL-005`
+- `SEL-006`
+- `SEL-007`
+- `SEL-008`
+- `CTX-006`
+- `INP-010`
+- `AST-007`
+
+## Quando aplicar
+
+Aplicar quando:
+
+- o componente possui role acessível;
+- há nome acessível confiável;
+- classes ou IDs são instáveis;
+- o componente é customizado, mas expõe semântica ARIA.
+
+## Entradas mínimas
+
+- accessibility snapshot;
+- role do elemento;
+- nome acessível;
+- estado esperado, quando aplicável.
+
+## Saída esperada
+
+```python
+page.get_by_role("button", name="Salvar").click()
+```
+
+```python
+expect(page.get_by_role("button", name="Enviar")).to_be_enabled()
+```
+
+## Critérios de sucesso
+
+- Locator por role retorna elemento correto;
+- Nome acessível é estável;
+- Estado ARIA é validável.
+
+## Regras de rejeição
+
+Rejeitar se:
+
+- o role for genérico sem nome acessível;
+- o nome acessível mudar conforme dados voláteis;
+- o componente não expuser semântica confiável.
+
+---
+
+# 5.4 `semantic_locator_conversion`
+
+## Finalidade
+
+Substituir seletores frágeis por locators Playwright semânticos e resilientes.
+
+## Casos taxonômicos relacionados
+
+- `SEL-001`
+- `SEL-004`
+- `SEL-008`
+- `DOM-002`
+
+## Quando aplicar
+
+Aplicar quando o script contém:
+
+- XPath absoluto;
+- CSS estrutural frágil;
+- `.nth()` sem justificativa;
+- ID dinâmico;
+- índice de tabela;
+- seletor dependente de estrutura volátil.
+
+## Entradas mínimas
+
+- seletor original;
+- DOM snapshot;
+- accessibility snapshot;
+- ação pretendida;
+- candidatos equivalentes.
+
+## Saída esperada
+
+Substituição do seletor por locator semântico.
+
+Antes:
+
+```python
+page.locator("/html/body/div[2]/form/table/tbody/tr[3]/td[5]/button").click()
+```
+
+Depois:
+
+```python
+page.get_by_role("row", name="Contrato 12345").get_by_role("button", name="Editar").click()
+```
+
+## Critérios de sucesso
+
+- XPath absoluto removido;
+- `.nth()` removido ou documentado;
+- locator passa em execuções repetidas;
+- alteração vinculada ao ID taxonômico.
+
+## Regras de rejeição
+
+Rejeitar se a conversão alterar a intenção da ação ou não houver evidência do elemento correto.
+
+---
+
+# 5.5 `primefaces_registry_scan`
+
+## Finalidade
+
+Usar informações do ecossistema PrimeFaces para identificar componentes, mas sem gerar dependência frágil de `widgetVar` quando isso puder variar.
+
+## Casos taxonômicos relacionados
+
+- `SEL-001`
+- `SEL-003`
+- `SEL-007`
+- `CTX-006`
+- `INP-001`
+
+## Quando aplicar
+
+Aplicar quando:
+
+- houver JSF/PrimeFaces detectado;
+- o script usar `PF('...')` diretamente;
+- componentes PrimeFaces estiverem encapsulados;
+- modal, tabela, autocomplete ou upload dependerem da estrutura PrimeFaces.
+
+## Entradas mínimas
+
+- fingerprint tecnológico;
+- DOM snapshot;
+- evidência de PrimeFaces;
+- seletor/widget original;
+- componente visual correspondente.
+
+## Saída esperada
+
+Locator semântico independente de `widgetVar`, ou metadado auxiliar de diagnóstico.
+
+## Critérios de sucesso
+
+- Script final não depende exclusivamente de `PF('widgetVar')`;
+- Componente é localizado por intenção visível ou semântica;
+- Quando `widgetVar` for mantido, deve haver justificativa técnica.
+
+## Regras de rejeição
+
+Rejeitar se o registry for usado para fabricar relação não comprovada entre widget e elemento.
+
+---
+
+# 5.6 `frame_reacquire`
+
+## Finalidade
+
+Reobter frame ou frameLocator após carregamento, recarregamento, detach/attach ou mudança de contexto.
+
+## Casos taxonômicos relacionados
+
+- `CTX-001`
+- `CTX-005`
+- `CTX-007`
+- `INP-006`
+
+## Quando aplicar
+
+Aplicar quando:
+
+- elemento está dentro de iframe same-origin;
+- frame foi recarregado;
+- handle antigo falhou;
+- editor rico usa iframe;
+- nova página ou popup exige troca de contexto.
+
+## Entradas mínimas
+
+- lista de frames;
+- URL/name/title do frame, se disponível;
+- seletor ou evidência do elemento interno;
+- erro de execução, se houver.
+
+## Saída esperada
+
+```python
+frame = page.frame_locator("iframe[title='Editor']")
+frame.get_by_role("textbox").fill("Texto")
+```
+
+Ou, para popup:
+
+```python
+with page.expect_popup() as popup_info:
+    page.get_by_role("link", name="Abrir detalhe").click()
+new_page = popup_info.value
+```
+
+## Critérios de sucesso
+
+- Nenhum frame handle obsoleto é reutilizado;
+- A ação ocorre no contexto correto;
+- Cross-origin inacessível não é tratado como same-origin.
+
+## Regras de rejeição
+
+Rejeitar se:
+
+- o frame for cross-origin inacessível;
+- não houver forma segura de identificar o frame;
+- a estratégia tentar inspecionar DOM bloqueado por política do browser.
+
+---
+
+# 5.7 `shadow_pierce`
+
+## Finalidade
+
+Permitir localização de elementos dentro de Shadow DOM aberto quando suportado pelo mecanismo de teste.
+
+## Casos taxonômicos relacionados
+
+- `CTX-003`
+- `CTX-004`
+
+## Quando aplicar
+
+Aplicar quando:
+
+- componente usa Shadow DOM aberto;
+- o elemento alvo está dentro de shadow root acessível;
+- Playwright consegue atravessar a árvore de forma suportada.
+
+## Entradas mínimas
+
+- evidência de shadow root;
+- tipo: aberto ou fechado;
+- elemento alvo;
+- seletor semântico possível.
+
+## Saída esperada
+
+Locator compatível com Playwright para Shadow DOM aberto.
+
+## Critérios de sucesso
+
+- Elemento localizado dentro do shadow root aberto;
+- Não há tentativa de inspecionar shadow root fechado.
+
+## Regras de rejeição
+
+Se o Shadow DOM for fechado, retornar `MANUAL_REQUIRED` ou `UNRESOLVED` com justificativa.
+
+---
+
+# 5.8 `network_idle_wait`
+
+## Finalidade
+
+Inserir espera baseada em atividade de rede quando uma ação dispara carregamentos assíncronos relevantes.
+
+## Casos taxonômicos relacionados
+
+- `TIM-001`
+- `TIM-003`
+- `TIM-005`
+- `TIM-007`
+- `DOM-005`
+
+## Quando aplicar
+
+Aplicar quando:
+
+- ação dispara XHR/fetch/AJAX;
+- há atualização de tela após resposta;
+- `waitForTimeout` foi usado como workaround;
+- o próximo step depende da conclusão de rede.
+
+## Entradas mínimas
+
+- network trace;
+- ação anterior;
+- próximo elemento/estado esperado;
+- evidência de requisição relevante.
+
+## Saída esperada
+
+Espera semântica combinando rede e condição observável.
+
+```python
+with page.expect_response(lambda r: "/consulta" in r.url and r.status == 200):
+    page.get_by_role("button", name="Pesquisar").click()
+
+expect(page.get_by_text("Resultado da pesquisa")).to_be_visible()
+```
+
+## Critérios de sucesso
+
+- Remove sleep fixo;
+- Aguarda resposta ou estabilidade relevante;
+- Próximo step encontra estado atualizado.
+
+## Regras de rejeição
+
+Rejeitar se:
+
+- a rede não tiver correlação com a mudança observável;
+- `networkidle` for usado como substituto genérico sem condição de negócio.
+
+---
+
+# 5.9 `response_intercept`
+
+## Finalidade
+
+Correlacionar ações da UI com respostas HTTP/API para waits, asserts, diagnóstico ou validação de artefatos.
+
+## Casos taxonômicos relacionados
+
+- `TIM-003`
+- `INP-004`
+- `OBS-003`
+- `AST-006`
+
+## Quando aplicar
+
+Aplicar quando:
+
+- a mudança relevante vem de XHR/fetch;
+- download é gerado por Blob ou resposta assíncrona;
+- falha pode ser explicada por HTTP 4xx/5xx;
+- assert de negócio depende de resposta.
+
+## Entradas mínimas
+
+- network trace;
+- endpoint candidato;
+- ação correlacionada;
+- status code;
+- headers relevantes, quando disponíveis.
+
+## Saída esperada
+
+Wait, assert ou diagnóstico baseado em resposta.
+
+```python
+with page.expect_response(lambda r: "/api/contratos" in r.url and r.status == 200):
+    page.get_by_role("button", name="Consultar").click()
+```
+
+## Critérios de sucesso
+
+- Resposta correlacionada à ação;
+- Status esperado validado;
+- Falhas HTTP são classificadas como rede/app, não como problema de locator.
+
+## Regras de rejeição
+
+Rejeitar se o endpoint não puder ser correlacionado com o step.
+
+---
+
+# 5.10 `dom_stabilization`
+
+## Finalidade
+
+Aguardar estabilização de DOM após re-render, AJAX, troca parcial de tela ou change detection.
+
+## Casos taxonômicos relacionados
+
+- `TIM-001`
+- `TIM-004`
+- `TIM-007`
+- `DOM-003`
+- `DOM-005`
+
+## Quando aplicar
+
+Aplicar quando:
+
+- o DOM é substituído após ação;
+- elemento fica detached;
+- assert lê valor antigo;
+- tela usa skeleton/loading;
+- SPA troca componente sem reload completo.
+
+## Entradas mínimas
+
+- DOM snapshot antes/depois;
+- ação disparadora;
+- condição final esperada;
+- seletor/estado marcador de prontidão.
+
+## Saída esperada
+
+Wait por condição de UI estável.
+
+```python
+page.get_by_role("button", name="Salvar").click()
+expect(page.get_by_text("Salvo com sucesso")).to_be_visible()
+```
+
+Ou:
+
+```python
+page.wait_for_function("""
+() => !document.querySelector('.loading,.spinner,.skeleton')
+""")
+```
+
+## Critérios de sucesso
+
+- Próxima ação ocorre após o estado final;
+- Não há uso de timeout fixo como solução principal;
+- Elementos são rebuscados após re-render.
+
+## Regras de rejeição
+
+Rejeitar se a condição de estabilidade for genérica demais ou não relacionada ao fluxo.
+
+---
+
+# 5.11 `overlay_dismiss`
+
+## Finalidade
+
+Detectar e remover overlays, bloqueadores visuais ou modais que interceptam cliques.
+
+## Casos taxonômicos relacionados
+
+- `STA-002`
+- `CTX-006`
+- `SEL-007`
+
+## Quando aplicar
+
+Aplicar quando:
+
+- erro indica elemento coberto;
+- overlay intercepta pointer events;
+- modal está visível;
+- tela possui bloqueador de carregamento.
+
+## Entradas mínimas
+
+- erro Playwright;
+- DOM snapshot;
+- overlay candidato;
+- ação bloqueada.
+
+## Saída esperada
+
+Tratamento antes da ação alvo.
+
+```python
+expect(page.locator(".ui-blockui,.modal-backdrop,.loading-overlay")).to_be_hidden()
+page.get_by_role("button", name="Confirmar").click()
+```
+
+Ou:
+
+```python
+page.keyboard.press("Escape")
+```
+
+Somente quando houver evidência de que ESC é comportamento esperado.
+
+## Critérios de sucesso
+
+- Overlay desaparece;
+- Clique ocorre no elemento alvo;
+- Não há clique forçado sem justificativa.
+
+## Regras de rejeição
+
+Rejeitar se a estratégia precisar usar `force=True` sem evidência suficiente.
+
+---
+
+# 5.12 `re_auth_hook`
+
+## Finalidade
+
+Isolar e acionar fluxo de autenticação ou reautenticação quando sessão expira.
+
+## Casos taxonômicos relacionados
+
+- `STA-001`
+- `FILE-005`
+
+## Quando aplicar
+
+Aplicar quando:
+
+- URL redireciona para login;
+- texto indica sessão expirada;
+- download falha por ausência de sessão;
+- perfil autenticado não está disponível.
+
+## Entradas mínimas
+
+- URL atual;
+- mensagem visível;
+- estado de sessão;
+- política de autenticação do ambiente de teste.
+
+## Saída esperada
+
+Chamada a fixture/hook de autenticação, sem persistir credenciais em claro.
+
+```python
+auth.ensure_authenticated(page)
+```
+
+## Critérios de sucesso
+
+- Teste retorna ao ponto esperado;
+- Credenciais não são gravadas no script;
+- Sessão é tratada por fixture segura.
+
+## Regras de rejeição
+
+Rejeitar se exigir captura de senha, token ou segredo em claro.
+
+---
+
+# 5.13 `llm_selector_inference`
+
+## Finalidade
+
+Usar inferência assistida por LLM para sugerir locator quando heurísticas determinísticas não forem suficientes, mantendo validação obrigatória.
+
+## Casos taxonômicos relacionados
+
+- `SEL-001`
+- `SEL-002`
+- `SEL-009`
+- `AST-003`
+
+## Quando aplicar
+
+Aplicar apenas como fallback, quando:
+
+- há evidência suficiente no DOM/snapshot;
+- heurísticas principais falharam;
+- a inferência pode ser validada objetivamente;
+- não há risco de inventar intenção.
+
+## Entradas mínimas
+
+- DOM reduzido e sanitizado;
+- ação pretendida;
+- candidatos;
+- erros anteriores;
+- restrições de segurança.
+
+## Saída esperada
+
+Sugestão de locator, assert ou escopo, acompanhada de justificativa e confiança.
+
+## Critérios de sucesso
+
+- Sugestão validada por execução;
+- Evidência anexada;
+- Patch aprovado pelo validador;
+- Não há dado sensível exposto ao modelo.
+
+## Regras de rejeição
+
+Rejeitar se:
+
+- a LLM inventar elemento, intenção ou assert;
+- a confiança for baixa;
+- o DOM contiver dado sensível não mascarado;
+- não houver validação objetiva.
+
+---
+
+# 5.14 `download_event_capture`
+
+## Finalidade
+
+Capturar, parametrizar e validar downloads disparados pela aplicação.
+
+## Casos taxonômicos relacionados
+
+- `INP-003`
+- `INP-004`
+- `FILE-004`
+- `FILE-005`
+- `FILE-006`
+- `AST-006`
+
+## Quando aplicar
+
+Aplicar quando:
+
+- ação gera arquivo;
+- download precisa ser validado;
+- nome do arquivo é dinâmico;
+- download depende de sessão;
+- arquivo abre em popup, aba ou viewer.
+
+## Entradas mínimas
+
+- ação disparadora;
+- evento download ou resposta de rede;
+- metadados esperados do arquivo;
+- regra de validação.
+
+## Saída esperada
+
+```python
+with page.expect_download() as download_info:
+    page.get_by_role("button", name="Exportar").click()
+
+download = download_info.value
+assert re.match(r"relatorio-.*\.pdf", download.suggested_filename)
+```
+
+## Critérios de sucesso
+
+- Download capturado;
+- Nome, tipo, tamanho, hash ou conteúdo validado conforme regra;
+- Artefato salvo em diretório controlado de evidências.
+
+## Regras de rejeição
+
+Rejeitar se o teste apenas clicar no botão sem validar o artefato quando o download for o resultado esperado.
+
+---
+
+# 5.15 `upload_payload_binding`
+
+## Finalidade
+
+Transformar uploads gravados em referências portáveis, versionáveis e parametrizáveis.
+
+## Casos taxonômicos relacionados
+
+- `INP-001`
+- `INP-002`
+- `FILE-001`
+- `FILE-002`
+- `FILE-003`
+
+## Quando aplicar
+
+Aplicar quando:
+
+- gravação contém caminho absoluto local;
+- upload depende de fixture;
+- componente encapsula `input[type=file]`;
+- arquivo possui restrição de extensão, tipo ou tamanho.
+
+## Entradas mínimas
+
+- caminho gravado;
+- metadados do arquivo;
+- componente de upload;
+- política de massa de teste.
+
+## Saída esperada
+
+```python
+fixture_file = test_data.path("uploads/documento_valido.pdf")
+page.set_input_files("input[type='file']", fixture_file)
+```
+
+## Critérios de sucesso
+
+- Caminho absoluto removido;
+- Fixture versionada ou parametrizada;
+- Upload confirmado pela UI ou resposta;
+- Restrições do arquivo registradas.
+
+## Regras de rejeição
+
+Rejeitar se:
+
+- arquivo local não existir;
+- arquivo contiver dado sensível não autorizado;
+- não houver fixture equivalente.
+
+---
+
+# 5.16 `assert_overlay_capture`
+
+## Finalidade
+
+Capturar e estruturar asserts informados pelo usuário antes, durante ou depois da gravação.
+
+## Casos taxonômicos relacionados
+
+- `AST-001`
+- `AST-002`
+- `AST-003`
+- `AST-008`
+- `REC-002`
+
+## Quando aplicar
+
+Aplicar quando:
+
+- usuário declara objetivo antes da gravação;
+- usuário marca um elemento no overlay durante a gravação;
+- usuário complementa validações após a gravação;
+- assert precisa ser vinculado a um step, tela ou estado.
+
+## Entradas mínimas
+
+- anotação do usuário;
+- timestamp;
+- step vinculado;
+- DOM/accessibility snapshot;
+- intenção do assert.
+
+## Saída esperada
+
+Metadado estruturado de assert.
+
+```yaml
+assertion:
+  source: overlay
+  timing: during_recording
+  step_id: STEP-008
+  intent: validar mensagem de sucesso
+  target:
+    role: status
+    text: Operação realizada com sucesso
+  suggested_assert:
+    type: visible_text
+```
+
+## Critérios de sucesso
+
+- Assert aparece no script final no ponto adequado;
+- A intenção do usuário é preservada;
+- Assert ambíguo não é inventado.
+
+## Regras de rejeição
+
+Se o usuário disser apenas “verificar se deu certo” sem alvo ou condição objetiva, retornar `MANUAL_REQUIRED` e sugerir opções de assert.
+
+---
+
+# 5.17 `manual_checkpoint`
+
+## Finalidade
+
+Registrar ponto de intervenção humana quando a automação segura não é possível ou não deve prosseguir sem decisão explícita.
+
+## Casos taxonômicos relacionados
+
+- `CTX-002`
+- `CTX-004`
+- `INP-008`
+- `LIM-001`
+- `LIM-002`
+- `LIM-004`
+- `AST-008`
+- `REC-001`
+- `REC-004`
+
+## Quando aplicar
+
+Aplicar quando:
+
+- há CAPTCHA;
+- iframe cross-origin é inacessível;
+- Shadow DOM é fechado;
+- operação é irreversível;
+- assert é ambíguo;
+- fluxo foi interrompido;
+- decisão humana é necessária.
+
+## Entradas mínimas
+
+- motivo do checkpoint;
+- evidência;
+- step atual;
+- ação bloqueada;
+- instrução esperada do usuário.
+
+## Saída esperada
+
+Checkpoint explícito no script, metadado ou relatório.
+
+```yaml
+checkpoint:
+  state: MANUAL_REQUIRED
+  taxonomy_id: LIM-004
+  reason: Operação irreversível detectada
+  required_user_decision: Confirmar se o fluxo pode prosseguir em ambiente sandbox
+```
+
+## Critérios de sucesso
+
+- O curador não prossegue de forma insegura;
+- O relatório explica a pendência;
+- O ponto de retomada é claro.
+
+## Regras de rejeição
+
+Não usar checkpoint manual como substituto para falhas simples que possuem estratégia segura P0.
+
+---
+
+## 6. Estratégias Complementares Recomendadas
+
+A taxonomia atual lista as estratégias principais conhecidas. Para implementação do Curador, recomenda-se também formalizar as estratégias complementares abaixo, pois aparecem implicitamente nos casos.
+
+---
+
+# 6.1 `precondition_validation`
+
+## Finalidade
+
+Validar se o estado inicial da aplicação permite executar o teste.
+
+## Casos relacionados
+
+- `STA-003`
+- `STA-005`
+- `STA-006`
+
+## Resultado esperado
+
+- Pré-condição explícita;
+- Setup/teardown quando aplicável;
+- Skip justificado ou `MANUAL_REQUIRED` quando depender de perfil/ambiente.
+
+---
+
+# 6.2 `dialog_handler`
+
+## Finalidade
+
+Tratar alertas, confirms e prompts nativos do browser.
+
+## Casos relacionados
+
+- `STA-004`
+
+## Resultado esperado
+
+Handler explícito de diálogo com política configurável.
+
+```python
+page.on("dialog", lambda dialog: dialog.accept())
+```
+
+A política `accept` ou `dismiss` deve vir de evidência, configuração ou intenção do teste.
+
+---
+
+# 6.3 `artifact_evidence_capture`
+
+## Finalidade
+
+Garantir coleta de evidências em falhas, execuções e healing.
+
+## Casos relacionados
+
+- `OBS-001`
+- `OBS-002`
+- `OBS-003`
+- `OBS-004`
+
+## Resultado esperado
+
+- Screenshot;
+- Trace;
+- Console logs;
+- Network/HAR, se configurado;
+- DOM snapshot;
+- Patch diff;
+- ID taxonômico.
+
+---
+
+# 6.4 `patch_rejection_policy`
+
+## Finalidade
+
+Evitar loops de healing quando o mesmo patch é rejeitado repetidamente.
+
+## Casos relacionados
+
+- `OBS-005`
+
+## Regra recomendada
+
+Após 3 rejeições do mesmo patch, com a mesma assinatura de falha, marcar como:
+
+```yaml
+state: UNRESOLVED
+reason: Patch rejeitado repetidamente pelo validador
+```
+
+---
+
+# 6.5 `flakiness_promotion_policy`
+
+## Finalidade
+
+Definir quando um script pode ser promovido como estável.
+
+## Casos relacionados
+
+- `OBS-006`
+
+## Regra recomendada
+
+Promover somente após 3 execuções limpas consecutivas, sem healing adicional e sem falhas intermitentes.
+
+---
+
+# 6.6 `sensitive_data_guard`
+
+## Finalidade
+
+Evitar persistência ou exposição de dados sensíveis em scripts, logs, snapshots, prompts ou relatórios.
+
+## Casos relacionados
+
+- `LIM-003`
+
+## Resultado esperado
+
+- Mascaramento;
+- Tokenização;
+- Fixtures seguras;
+- Bloqueio de envio de dados sensíveis à LLM;
+- Relatório sem segredo em claro.
+
+---
+
+## 7. Ordem Recomendada de Aplicação das Estratégias
+
+A ordem abaixo reduz risco de patch incorreto e favorece estratégias determinísticas antes de inferência.
+
+```text
+1. manual_checkpoint, quando houver risco bloqueante evidente
+2. re_auth_hook, quando houver sessão expirada
+3. artifact_evidence_capture, para preservar diagnóstico
+4. frame_reacquire / shadow_pierce, quando houver mudança de contexto
+5. overlay_dismiss, quando houver bloqueio visual
+6. network_idle_wait / response_intercept / dom_stabilization, quando houver assincronismo
+7. semantic_locator_conversion
+8. aria_role_strategy
+9. label_proximity
+10. text_content_match
+11. primefaces_registry_scan, quando PrimeFaces for detectado
+12. upload_payload_binding / download_event_capture, para artefatos
+13. assert_overlay_capture, para validações declaradas pelo usuário
+14. llm_selector_inference, somente como fallback validável
+15. patch_rejection_policy, quando houver rejeições repetidas
+16. flakiness_promotion_policy, antes da promoção final
+```
+
+Observação: essa ordem pode ser ajustada por família, mas qualquer alteração deve ser justificada por ADR ou decisão técnica rastreável.
+
+---
+
+## 8. Matriz Estratégia x Família
+
+| Estratégia | Seletores | Timing | Contexto | Estado | DOM | Input | Arquivos | Asserts | Recorder | Observabilidade | Limites |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `label_proximity` | Sim | Não | Parcial | Não | Parcial | Parcial | Não | Sim | Não | Não | Não |
+| `text_content_match` | Sim | Parcial | Parcial | Parcial | Parcial | Não | Não | Sim | Não | Não | Não |
+| `aria_role_strategy` | Sim | Não | Parcial | Parcial | Parcial | Sim | Não | Sim | Não | Não | Não |
+| `semantic_locator_conversion` | Sim | Não | Parcial | Não | Sim | Parcial | Não | Não | Não | Sim | Não |
+| `primefaces_registry_scan` | Sim | Parcial | Sim | Parcial | Sim | Sim | Parcial | Não | Sim | Não | Não |
+| `frame_reacquire` | Não | Parcial | Sim | Não | Sim | Sim | Não | Parcial | Não | Não | Sim |
+| `shadow_pierce` | Não | Não | Sim | Não | Sim | Parcial | Não | Parcial | Não | Não | Sim |
+| `network_idle_wait` | Não | Sim | Não | Parcial | Sim | Parcial | Parcial | Parcial | Não | Sim | Não |
+| `response_intercept` | Não | Sim | Não | Parcial | Parcial | Parcial | Sim | Sim | Não | Sim | Parcial |
+| `dom_stabilization` | Não | Sim | Parcial | Parcial | Sim | Parcial | Não | Sim | Não | Sim | Não |
+| `overlay_dismiss` | Parcial | Parcial | Sim | Sim | Parcial | Parcial | Não | Não | Não | Parcial | Não |
+| `re_auth_hook` | Não | Parcial | Não | Sim | Não | Não | Sim | Não | Não | Sim | Parcial |
+| `llm_selector_inference` | Sim | Não | Parcial | Não | Parcial | Parcial | Não | Parcial | Não | Sim | Não |
+| `download_event_capture` | Não | Parcial | Parcial | Parcial | Não | Sim | Sim | Sim | Não | Sim | Não |
+| `upload_payload_binding` | Não | Não | Parcial | Parcial | Não | Sim | Sim | Não | Não | Sim | Sim |
+| `assert_overlay_capture` | Não | Parcial | Parcial | Não | Parcial | Parcial | Sim | Sim | Sim | Sim | Sim |
+| `manual_checkpoint` | Não | Não | Sim | Sim | Parcial | Sim | Parcial | Sim | Sim | Sim | Sim |
+
+---
+
+## 9. Modelo de Registro de Aplicação da Estratégia
+
+Cada aplicação de estratégia deve gerar um registro auditável.
+
+```yaml
+healing_application:
+  id: HLG-0001
+  taxonomy_id: SEL-001
+  strategy_id: semantic_locator_conversion
+  source_step_id: STEP-004
+  original_code: |
+    page.locator("#form:j_idt123").click()
+  proposed_code: |
+    page.get_by_role("button", name="Consultar").click()
+  evidence:
+    - type: dom_snapshot
+      ref: evidence/dom/STEP-004-before.json
+    - type: accessibility_snapshot
+      ref: evidence/a11y/STEP-004.json
+    - type: execution_error
+      message: Element not found for selector #form:j_idt123
+  rationale: >
+    O seletor original usa ID JSF dinâmico. O snapshot de acessibilidade
+    mostra botão com nome acessível Consultar. A estratégia converteu o
+    seletor para locator semântico Playwright.
+  confidence: 0.91
+  validation:
+    status: passed
+    clean_runs: 3
+  result_state: RESOLVED
+```
+
+---
+
+## 10. Regras para PatchValidator
+
+O `PatchValidator` deve validar, no mínimo:
+
+1. O patch referencia um ID taxonômico existente.
+2. A estratégia usada é permitida para o ID ou possui justificativa.
+3. A evidência mínima exigida pela estratégia está presente.
+4. O patch não introduz segredo em claro.
+5. O patch não usa `waitForTimeout` como solução principal.
+6. O patch não usa `force=True` sem justificativa explícita.
+7. O patch não fabrica assert ambíguo.
+8. O patch não tenta automatizar CAPTCHA, cross-origin inacessível ou operação irreversível.
+9. O script executa com sucesso conforme critério do caso.
+10. O mesmo patch não foi rejeitado 3 vezes para a mesma assinatura.
+
+---
+
+## 11. Regras para ImplementationAuditor
+
+O `ImplementationAuditor` deve verificar:
+
+1. Todo healing tem trilha de auditoria.
+2. Todo patch tem diff e justificativa.
+3. Toda decisão manual possui motivo e ponto de retomada.
+4. Toda estratégia aplicada possui evidência.
+5. Todo uso de LLM possui dados sanitizados.
+6. Todo arquivo de upload/download é tratado como artefato controlado.
+7. Todo assert tem origem: usuário, regra explícita ou evidência objetiva.
+8. Toda promoção final respeita política de estabilidade.
+
+---
+
+## 12. Critérios Globais de Aceite deste Artefato
+
+Este contrato será considerado implementável quando:
+
+1. Cada estratégia possuir função ou classe própria.
+2. Cada estratégia implementar `can_apply` e `apply`, ou contrato equivalente.
+3. Cada resultado possuir `state`, `confidence`, `evidence`, `rationale` e `taxonomy_id`.
+4. Nenhuma estratégia alterar script sem registrar evidência.
+5. Estratégias determinísticas forem tentadas antes de inferência por LLM.
+6. Casos de risco forem tratados por checkpoint manual ou não resolução segura.
+7. PatchValidator rejeitar alterações sem evidência suficiente.
+8. ImplementationAuditor conseguir reconstruir o motivo de cada alteração.
+
+---
+
+## 13. Backlog Técnico Derivado
+
+### P0
+
+- Implementar interface base `HealingStrategy`.
+- Implementar `StrategyContext` e `StrategyResult`.
+- Implementar registro auditável de aplicação de estratégia.
+- Implementar `semantic_locator_conversion`.
+- Implementar `network_idle_wait`.
+- Implementar `dom_stabilization`.
+- Implementar `frame_reacquire`.
+- Implementar `overlay_dismiss`.
+- Implementar `download_event_capture`.
+- Implementar `upload_payload_binding`.
+- Implementar `assert_overlay_capture`.
+- Implementar `manual_checkpoint`.
+- Implementar `patch_rejection_policy`.
+- Implementar integração com `PatchValidator`.
+
+### P1
+
+- Implementar `label_proximity`.
+- Implementar `text_content_match`.
+- Implementar `aria_role_strategy`.
+- Implementar `response_intercept`.
+- Implementar `primefaces_registry_scan`.
+- Implementar `dialog_handler`.
+- Implementar `artifact_evidence_capture` completo.
+- Implementar `flakiness_promotion_policy`.
+
+### P2
+
+- Implementar `shadow_pierce` avançado.
+- Implementar `llm_selector_inference` com sanitização forte.
+- Implementar análise avançada de virtualização de listas.
+- Implementar políticas específicas por framework detectado.
+
+---
+
+## 14. Observação para SpecKit
+
+Este documento deve ser usado preferencialmente na fase de planejamento técnico (`/speckit.plan`), pois define contratos de implementação, componentes, validação e políticas de execução.
+
+A especificação funcional (`/speckit.specify`) deve referenciar este artefato apenas como requisito de comportamento esperado, sem prescrever detalhes internos de implementação.
+
+---
+
+## 15. Resumo Executivo
+
+O arquivo `healing-strategies.md` transforma a taxonomia em contratos executáveis para o Curador do TestForge.
+
+Ele garante que cada estratégia de healing:
+
+- tenha responsabilidade clara;
+- seja aplicável apenas quando houver evidência;
+- produza saída auditável;
+- respeite limites técnicos e de segurança;
+- possa ser validada automaticamente;
+- mantenha rastreabilidade com os IDs taxonômicos.
+
+Com isso, o TestForge evita correções opacas, locators inventados, asserts ambíguos e loops de healing, preservando o princípio central do projeto: **automação robusta, explicável e segura**.
+
+===== END healing-strategies.md =====
+
+===== BEGIN implementability-review.md =====
+# TESTFORGE — Revisão de Implementabilidade da Taxonomia v1.0
+
+## Veredito
+
+A taxonomia está implementável como catálogo de classificação do Agente Curador e já cobre os pontos críticos discutidos para o TestForge: seletores frágeis, JSF/PrimeFaces, AJAX, iframes, overlay, uploads/downloads, asserts antes/durante/depois, evidência, flakiness e limites técnicos.
+
+## Ajustes recomendados antes de congelar como fonte normativa
+
+### 1. Normalizar estratégias citadas fora da lista oficial
+
+Alguns casos usam estratégias que aparecem na tabela, mas não estão listadas em `2.3 Estratégias conhecidas`. Recomenda-se incluir no enum oficial:
+
+- `popup_context_capture`
+- `native_dialog_handler`
+- `file_fixture_binding`
+- `precondition_validation`
+- `environment_failure_classification`
+- `sensitive_data_masking`
+- `critical_action_checkpoint`
+- `trace_evidence_capture`
+- `patch_audit_trail`
+- `flakiness_gate`
+- `browser_policy_event_inference`
+- `screen_ready_marker_wait`
+- `virtual_list_scroll_search`
+- `datepicker_component_selection`
+- `custom_combobox_selection`
+- `rich_text_editor_binding`
+- `input_mask_user_typing`
+- `drag_and_drop_semantic`
+
+### 2. Tratar duplicidade intencional de CAPTCHA
+
+`INP-008` e `LIM-001` tratam CAPTCHA. A recomendação é manter ambos, mas com papéis diferentes:
+
+- `INP-008`: detecção durante interação especializada.
+- `LIM-001`: classificação final de limite técnico/não automatizável.
+
+No motor, `INP-008` pode ser um caso de entrada que redireciona para a política de limite `LIM-001`.
+
+### 3. Definir regra de precedência
+
+Para evitar múltiplas classificações conflitantes, usar a seguinte precedência:
+
+1. Segurança/limite técnico: `LIM-*`
+2. Checkpoints manuais e recorder: `REC-*`
+3. Contexto/escopo: `CTX-*`
+4. Estado da aplicação: `STA-*`
+5. Timing/DOM: `TIM-*` e `DOM-*`
+6. Seletores: `SEL-*`
+7. Inputs/arquivos/asserts: `INP-*`, `FILE-*`, `AST-*`
+8. Observabilidade: `OBS-*` como anotação transversal
+
+### 4. Tornar observabilidade transversal
+
+`OBS-*` deve funcionar como família transversal. Exemplo: uma falha `SEL-001` também pode gerar `OBS-004` se o patch foi aplicado. O relatório deve permitir `primary_taxonomy_id` e `related_taxonomy_ids`.
+
+### 5. Adicionar campos de implementação ao schema
+
+Campos recomendados por caso:
+
+```yaml
+id: SEL-001
+family: Seletores frágeis
+priority: P0
+matchers:
+  - type: selector_pattern
+    value: "j_idt"
+strategies:
+  primary: semantic_locator_conversion
+  fallbacks:
+    - label_proximity
+    - text_content_match
+risk_level: low
+requires_manual_checkpoint: false
+produces_patch: true
+requires_validation_runs: 3
+related_cases:
+  - OBS-004
+  - OBS-006
+```
+
+## Critério de congelamento
+
+A taxonomia pode ser congelada como v1.0 quando:
+
+- todos os P0 tiverem teste automatizado na matriz;
+- o enum de estratégias estiver completo;
+- houver política formal para `MANUAL_REQUIRED`;
+- o relatório do curador aceitar `primary_taxonomy_id` e `related_taxonomy_ids`;
+- o PatchValidator rejeitar loops repetidos conforme `OBS-005`;
+- a promoção exigir rodadas limpas conforme `OBS-006`.
+
+===== END implementability-review.md =====
+
+===== BEGIN manual-checkpoint-policy.md =====
+# TESTFORGE — Manual Checkpoint Policy
+
+**Objetivo:** definir quando o Agente Curador deve parar, solicitar intervenção humana ou registrar pendência, evitando locators, asserts ou patches inventados.
+
+## 1. Estados permitidos
+
+- `MANUAL_REQUIRED`: há risco, ambiguidade ou limite técnico que exige decisão humana.
+- `UNRESOLVED`: o curador tentou estratégias seguras, mas não conseguiu validar a correção.
+- `PARTIALLY_RESOLVED`: há correção útil, mas a conclusão depende de ação humana ou premissa externa.
+
+## 2. Gatilhos obrigatórios para checkpoint manual
+
+| Gatilho | IDs relacionados | Decisão padrão |
+|---|---|---|
+| Iframe cross-origin inacessível | CTX-002, LIM-002 | `MANUAL_REQUIRED` |
+| Shadow DOM fechado | CTX-004 | `MANUAL_REQUIRED` ou `UNRESOLVED` justificado |
+| CAPTCHA/desafio humano | INP-008, LIM-001 | `MANUAL_REQUIRED` |
+| Assert ambíguo | AST-008 | `MANUAL_REQUIRED` |
+| Operação irreversível ou crítica | LIM-004 | `MANUAL_REQUIRED` antes da ação |
+| Dado sensível mascarado/segredo | LIM-003 | aplicar mascaramento/tokenização; se impossível, `MANUAL_REQUIRED` |
+| Permissão insuficiente | STA-005 | `MANUAL_REQUIRED` ou `UNRESOLVED`, sem alterar script indevidamente |
+
+## 3. Regra anti-invenção
+
+O curador **não deve** fabricar:
+
+- locator para DOM inacessível;
+- assert sem alvo objetivo;
+- dado sensível em claro;
+- bypass para CAPTCHA;
+- confirmação automática para ação irreversível;
+- causa técnica sem evidência mínima.
+
+## 4. Registro obrigatório no relatório
+
+Todo checkpoint manual deve registrar:
+
+1. `taxonomy_id`;
+2. evidência mínima coletada;
+3. risco ou ambiguidade detectada;
+4. estratégia tentada, se houver;
+5. motivo da interrupção;
+6. ação esperada do usuário;
+7. estado final.
+
+## 5. Template YAML
+
+```yaml
+manual_checkpoint:
+  taxonomy_id: CTX-002
+  state: MANUAL_REQUIRED
+  evidence:
+    - "iframe cross-origin detectado"
+    - "DOM interno inacessível por política do browser"
+  reason: "Não é seguro fabricar seletor para conteúdo inacessível."
+  expected_user_action: "Informar contrato externo, ambiente de teste acessível ou aceitar checkpoint manual."
+  safe_to_continue: false
+```
+
+===== END manual-checkpoint-policy.md =====
+
+===== BEGIN README.md =====
+# Pacote — TestForge Taxonomia v1.0
+
+Arquivos gerados:
+
+1. `taxonomy-registry.yaml` — registro implementável com todos os IDs, famílias, prioridades, estados e estratégias.
+2. `curator-test-matrix.md` — matriz de testes por ID taxonômico.
+3. `manual-checkpoint-policy.md` — política para casos `MANUAL_REQUIRED`.
+4. `implementability-review.md` — revisão técnica de implementabilidade e ajustes recomendados.
+
+Total de casos mapeados: 78.
+Casos P0: 42.
+Casos P1: 33.
+Casos P2: 3.
+
+===== END README.md =====
+
+===== BEGIN README-taxonomy-artifacts.md =====
+# Artefatos gerados — TestForge Taxonomia v1.0
+
+Foram gerados dois artefatos complementares à taxonomia enviada:
+
+1. `curator-decision-tree.puml` — diagrama PlantUML da árvore de decisão do Agente Curador.
+2. `taxonomy-case-schema.yaml` — contrato YAML sugerido para cadastrar casos taxonômicos de forma implementável.
+
+## Observações rápidas de revisão
+
+- A taxonomia está boa para implementação incremental porque já separa ID, família, sintoma, detecção, estratégia, fallback, saída, sucesso e prioridade.
+- Para virar base de código com menos ambiguidade, recomendo adicionar em cada caso: `probable_causes`, `evidence_requirements`, `validator_policy` e `risk_flags`.
+- Há sobreposição intencional entre `INP-*` e `FILE-*`; para evitar duplicidade na implementação, trate `INP-*` como interação de UI e `FILE-*` como gestão/validação de artefato.
+- Há sobreposição entre `CTX-002`, `LIM-002` e `INP-008`/`LIM-001`; a regra prática deve ser: família técnica primeiro, limite de segurança como classificação final quando a automação segura não for possível.
+- `waitForFunction`, captura de popup e handler de diálogo aparecem como estratégias, mas ainda não estão na lista canônica da seção 2.3. Sugiro promovê-las para estratégias conhecidas ou registrá-las como `custom`.
+
+===== END README-taxonomy-artifacts.md =====
+
+===== BEGIN taxonomy.cases.yaml =====
+# TESTFORGE — Taxonomia Implementável de Casos Conhecidos
+# Artefato: taxonomy.cases.yaml
+# Versão: 1.0
+# Base: Capítulo 1 — Taxonomia de Falhas JSF, jQuery, AJAX e Frameworks Mobile
+
+metadata:
+  project: "TestForge / Agente Curador de Scripts"
+  artifact: "Taxonomia implementável para detecção, classificação, healing e geração de testes"
+  file: "taxonomy.cases.yaml"
+  version: "1.0"
+  base: "Capítulo 1 — Taxonomia de Falhas JSF, jQuery, AJAX e Frameworks Mobile"
+  language: "pt-BR"
+
+result_states:
+  RESOLVED: "O curador classificou e aplicou uma correção validada."
+  PARTIALLY_RESOLVED: "O curador aplicou correção, mas deixou ressalvas ou dependência manual."
+  MANUAL_REQUIRED: "O caso exige intervenção humana explícita."
+  UNRESOLVED: "O curador não conseguiu resolver com segurança."
+  REJECTED: "A correção proposta foi rejeitada pelo validador."
+
+priorities:
+  P0: "Deve ser tratado no MVP; afeta diretamente a estabilidade básica dos scripts."
+  P1: "Deve ser tratado após estabilização do núcleo; comum, mas pode ter workaround manual."
+  P2: "Tratamento avançado, especializado ou dependente de contexto."
+
+known_strategies:
+  - label_proximity
+  - text_content_match
+  - aria_role_strategy
+  - semantic_locator_conversion
+  - primefaces_registry_scan
+  - frame_reacquire
+  - shadow_pierce
+  - network_idle_wait
+  - response_intercept
+  - dom_stabilization
+  - overlay_dismiss
+  - re_auth_hook
+  - llm_selector_inference
+  - download_event_capture
+  - upload_payload_binding
+  - assert_overlay_capture
+  - manual_checkpoint
+  - wait_for_function
+  - popup_capture
+  - dialog_handler
+  - precondition_validation
+  - evidence_capture
+  - patch_rejection_guard
+  - flaky_validation_rounds
+  - sensitive_data_masking
+  - critical_operation_checkpoint
+
+curator_decision_matrix:
+  - order: 1
+    action: "Identificar tecnologia predominante da tela ou componente."
+  - order: 2
+    action: "Identificar família da falha."
+  - order: 3
+    action: "Classificar pelo primeiro ID taxonômico compatível."
+  - order: 4
+    action: "Coletar evidências mínimas."
+  - order: 5
+    action: "Aplicar estratégia principal."
+  - order: 6
+    action: "Validar por execução controlada."
+  - order: 7
+    action: "Se falhar, aplicar fallback na ordem definida."
+  - order: 8
+    action: "Se houver risco técnico, segurança, CAPTCHA, cross-origin fechado ou assert ambíguo, marcar como MANUAL_REQUIRED."
+  - order: 9
+    action: "Se as tentativas forem rejeitadas pelo validador, marcar como UNRESOLVED."
+  - order: 10
+    action: "Registrar no relatório: ID, causa, estratégia, patch, evidência e resultado."
+
+global_acceptance_criteria:
+  - "Todo caso conhecido possuir ID estável."
+  - "Toda alteração feita pelo curador referenciar um ID taxonômico."
+  - "Todo ID P0 possuir pelo menos um teste automatizado do curador."
+  - "Nenhum caso ambíguo gerar assert, locator ou patch inventado sem evidência."
+  - "Uploads e downloads forem tratados como artefatos versionáveis, parametrizáveis e verificáveis."
+  - "Asserts puderem ser informados antes, durante ou depois da gravação."
+  - "Iframes cross-origin, CAPTCHA e operações irreversíveis forem tratados como checkpoints manuais ou casos não resolvidos com justificativa."
+  - "O relatório final apresentar: falha, evidência, estratégia, patch, validação e estado."
+
+families:
+  - id: FAM-01
+    name: "Seletores frágeis"
+  - id: FAM-02
+    name: "Timing e assincronismo"
+  - id: FAM-03
+    name: "Contexto e escopo"
+  - id: FAM-04
+    name: "Estado da aplicação"
+  - id: FAM-05
+    name: "DOM dinâmico"
+  - id: FAM-06
+    name: "Input e interação especializada"
+  - id: FAM-07
+    name: "Upload e download de arquivos"
+  - id: FAM-08
+    name: "Asserts e validações"
+  - id: FAM-09
+    name: "Recorder, overlay e checkpoints manuais"
+  - id: FAM-10
+    name: "Execução, evidência e observabilidade"
+  - id: FAM-11
+    name: "Limites técnicos e casos não automatizáveis com segurança"
+
+cases:
+  - id: SEL-001
+    family: "Seletores frágeis"
+    case: "ID JSF dinâmico"
+    technologies: ["JSF", "PrimeFaces"]
+    priority: P0
+    observable_symptoms: ["Locator gravado quebra entre execuções"]
+    probable_causes: ["ID gerado dinamicamente pelo JSF/PrimeFaces"]
+    minimum_detection: ["ID contém padrão j_idt", "ID contém índice variável", "ID contém prefixos JSF encadeados"]
+    primary_strategy: semantic_locator_conversion
+    fallback_strategies: [label_proximity, text_content_match, aria_role_strategy, llm_selector_inference]
+    expected_output: ["Locator semântico Playwright"]
+    success_criteria: ["Elemento é localizado em 3 execuções limpas"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: SEL-002
+    family: "Seletores frágeis"
+    case: "ID com índice de tabela"
+    technologies: ["JSF", "PrimeFaces"]
+    priority: P0
+    observable_symptoms: ["Ação aponta para linha errada"]
+    probable_causes: ["Locator depende de índice numérico em tabela ou lista"]
+    minimum_detection: ["Locator contém índice numérico em tabela/lista"]
+    primary_strategy: label_proximity
+    fallback_strategies: [text_content_match, table_cell_filter, llm_selector_inference]
+    expected_output: ["Locator contextual por linha"]
+    success_criteria: ["A ação ocorre na linha correta"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: SEL-003
+    family: "Seletores frágeis"
+    case: "widgetVar instável"
+    technologies: ["PrimeFaces"]
+    priority: P0
+    observable_symptoms: ["Script depende de PF('x') que muda"]
+    probable_causes: ["Uso direto de widgetVar como referência primária"]
+    minimum_detection: ["Uso direto de PF(...)", "Widget sem evidência semântica"]
+    primary_strategy: primefaces_registry_scan
+    fallback_strategies: [aria_role_strategy, text_content_match, label_proximity]
+    expected_output: ["Locator independente de widgetVar"]
+    success_criteria: ["Elemento interage sem depender do nome do widget"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: SEL-004
+    family: "Seletores frágeis"
+    case: "XPath absoluto"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Locator quebra com pequena mudança estrutural"]
+    probable_causes: ["Caminho absoluto dependente da estrutura completa do DOM"]
+    minimum_detection: ["XPath inicia em /html/body", "XPath usa cadeia longa de índices"]
+    primary_strategy: semantic_locator_conversion
+    fallback_strategies: [aria_role_strategy, text_content_match, label_proximity, stable_css]
+    expected_output: ["Locator Playwright resiliente"]
+    success_criteria: ["XPath absoluto removido"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: SEL-005
+    family: "Seletores frágeis"
+    case: "CSS baseado em classe volátil"
+    technologies: ["Angular", "Frameworks modernos"]
+    priority: P1
+    observable_symptoms: ["Elemento não encontrado após build ou deploy"]
+    probable_causes: ["Classe gerada, minificada, hash ou utilitária sem semântica"]
+    minimum_detection: ["Classe parece hash", "Classe gerada/minificada", "Classe utilitária sem semântica"]
+    primary_strategy: aria_role_strategy
+    fallback_strategies: [data_testid, text_content_match, label_proximity]
+    expected_output: ["Locator orientado a intenção"]
+    success_criteria: ["Classe volátil não é seletor primário"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: SEL-006
+    family: "Seletores frágeis"
+    case: "Elemento sem ID"
+    technologies: ["Angular", "Componentes modernos"]
+    priority: P1
+    observable_symptoms: ["Recorder gera locator genérico ou por índice"]
+    probable_causes: ["Ausência de atributos identificadores estáveis"]
+    minimum_detection: ["Ausência de id/name", "Presença de texto, role ou data-*"]
+    primary_strategy: aria_role_strategy
+    fallback_strategies: [text_content_match, data_testid, label_proximity]
+    expected_output: ["Locator semântico"]
+    success_criteria: ["Elemento localizado sem índice absoluto"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: SEL-007
+    family: "Seletores frágeis"
+    case: "Elemento fora do formulário"
+    technologies: ["jQuery UI", "Dialogs"]
+    priority: P0
+    observable_symptoms: ["Botão em modal não é localizado no escopo esperado"]
+    probable_causes: ["Elemento visual está fora do form/árvore original"]
+    minimum_detection: ["Elemento visível está fora do form/árvore original"]
+    primary_strategy: aria_role_strategy
+    fallback_strategies: [dialog_role_scope, text_content_match, overlay_container_scope]
+    expected_output: ["Locator no escopo real do DOM"]
+    success_criteria: ["Clique ocorre no botão visível correto"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: SEL-008
+    family: "Seletores frágeis"
+    case: "Locator por posição"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Ação quebra quando ordem visual muda"]
+    probable_causes: ["Uso de índice posicional sem identidade semântica"]
+    minimum_detection: ["Uso de .nth() sem justificativa"]
+    primary_strategy: semantic_locator_conversion
+    fallback_strategies: [text_filter, label_proximity, aria_role_strategy]
+    expected_output: ["Locator contextual"]
+    success_criteria: [".nth() removido ou justificado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: SEL-009
+    family: "Seletores frágeis"
+    case: "Texto duplicado"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Curador escolhe elemento errado com mesmo texto"]
+    probable_causes: ["Múltiplos elementos correspondem ao mesmo texto"]
+    minimum_detection: ["Múltiplos elementos correspondem ao mesmo texto"]
+    primary_strategy: label_proximity
+    fallback_strategies: [aria_role_strategy, container_scope, frame_scope, table_row_scope]
+    expected_output: ["Locator desambiguado"]
+    success_criteria: ["Match único ou escopo explícito"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: SEL-010
+    family: "Seletores frágeis"
+    case: "Label não associado via for"
+    technologies: ["Legado", "JSF"]
+    priority: P1
+    observable_symptoms: ["Campo não é encontrado por label padrão"]
+    probable_causes: ["Label visual próximo sem associação HTML"]
+    minimum_detection: ["Label visual próximo", "Ausência de associação HTML via for"]
+    primary_strategy: label_proximity
+    fallback_strategies: [spatial_heuristic, placeholder, name_attribute]
+    expected_output: ["Locator por proximidade"]
+    success_criteria: ["Campo correto localizado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: TIM-001
+    family: "Timing e assincronismo"
+    case: "Ação antes do re-render JSF"
+    technologies: ["JSF AJAX"]
+    priority: P0
+    observable_symptoms: ["Clique ou assert ocorre antes da atualização"]
+    probable_causes: ["Requisição AJAX seguida de DOM substituído"]
+    minimum_detection: ["Requisição AJAX seguida de DOM substituído"]
+    primary_strategy: network_idle_wait
+    fallback_strategies: [dom_stabilization, wait_for_target_selector, response_intercept]
+    expected_output: ["Wait semântico inserido"]
+    success_criteria: ["Próxima ação encontra DOM atualizado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: TIM-002
+    family: "Timing e assincronismo"
+    case: "ViewState inválido"
+    technologies: ["JSF"]
+    priority: P0
+    observable_symptoms: ["Submissão falha após gravação"]
+    probable_causes: ["Captura ou reutilização explícita de ViewState"]
+    minimum_detection: ["Captura ou reutilização explícita de ViewState"]
+    primary_strategy: avoid_hardcoded_viewstate
+    fallback_strategies: [rerun_flow, wait_for_updated_form]
+    expected_output: ["Script sem ViewState hardcoded"]
+    success_criteria: ["Nenhum ViewState fixo no script"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: TIM-003
+    family: "Timing e assincronismo"
+    case: "Callback jQuery sem evento DOM claro"
+    technologies: ["jQuery"]
+    priority: P1
+    observable_symptoms: ["Teste avança sem mudança visível imediata"]
+    probable_causes: ["XHR/fetch finaliza, mas DOM muda depois"]
+    minimum_detection: ["XHR/fetch finaliza", "Mudança DOM ocorre posteriormente"]
+    primary_strategy: response_intercept
+    fallback_strategies: [wait_for_function, wait_for_selector]
+    expected_output: ["Wait baseado em resposta ou condição"]
+    success_criteria: ["Condição de negócio observável é satisfeita"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: TIM-004
+    family: "Timing e assincronismo"
+    case: "Change detection assíncrono"
+    technologies: ["Angular"]
+    priority: P1
+    observable_symptoms: ["Assert lê valor antigo"]
+    probable_causes: ["Mudanças após microtasks/change detection"]
+    minimum_detection: ["Presença de Angular", "Mudanças após microtasks"]
+    primary_strategy: wait_for_function
+    fallback_strategies: [wait_for_text_or_state, network_idle_wait]
+    expected_output: ["Wait por condição da UI"]
+    success_criteria: ["Assert passa sem timeout fixo"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: TIM-005
+    family: "Timing e assincronismo"
+    case: "waitForTimeout gravado"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Script fica lento ou flaky"]
+    probable_causes: ["Uso de sleeps fixos"]
+    minimum_detection: ["Presença de sleeps fixos", "Uso de waitForTimeout"]
+    primary_strategy: semantic_wait_replacement
+    fallback_strategies: [dom_stabilization, network_idle_wait, wait_for_selector, response_intercept]
+    expected_output: ["Timeout fixo removido"]
+    success_criteria: ["Execução estável sem espera arbitrária"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: TIM-006
+    family: "Timing e assincronismo"
+    case: "Debounce em autocomplete"
+    technologies: ["Geral", "jQuery", "Angular"]
+    priority: P1
+    observable_symptoms: ["Opções não aparecem no momento do clique"]
+    probable_causes: ["Input seguido de lista assíncrona/debounce"]
+    minimum_detection: ["Input seguido de lista assíncrona"]
+    primary_strategy: wait_for_option_list
+    fallback_strategies: [response_intercept, wait_for_function]
+    expected_output: ["Seleção robusta"]
+    success_criteria: ["Opção correta selecionada"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: TIM-007
+    family: "Timing e assincronismo"
+    case: "Navegação parcial sem page load"
+    technologies: ["SPA", "AJAX"]
+    priority: P1
+    observable_symptoms: ["waitForLoadState não resolve o estado real"]
+    probable_causes: ["URL muda ou componente troca sem navegação completa"]
+    minimum_detection: ["URL muda sem navegação completa", "Componente troca sem page load"]
+    primary_strategy: wait_for_screen_marker
+    fallback_strategies: [dom_stabilization, network_idle_wait]
+    expected_output: ["Wait de tela pronta"]
+    success_criteria: ["Próxima ação só ocorre com tela estável"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: CTX-001
+    family: "Contexto e escopo"
+    case: "Iframe same-origin"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Elemento não encontrado no page principal"]
+    probable_causes: ["Elemento existe dentro de frame acessível"]
+    minimum_detection: ["Elemento existe dentro de frame acessível"]
+    primary_strategy: frame_reacquire
+    fallback_strategies: [frame_by_url, frame_by_title, frame_by_name, frame_by_selector]
+    expected_output: ["Locator usando frameLocator"]
+    success_criteria: ["Ação ocorre dentro do frame correto"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: CTX-002
+    family: "Contexto e escopo"
+    case: "Iframe cross-origin"
+    technologies: ["Geral", "Portais corporativos"]
+    priority: P0
+    observable_symptoms: ["Script não consegue injetar ou inspecionar DOM"]
+    probable_causes: ["Frame bloqueia acesso por origem"]
+    minimum_detection: ["Frame bloqueia acesso por origem", "Erro de cross-origin"]
+    primary_strategy: manual_checkpoint
+    fallback_strategies: [limited_playwright_interaction, external_contract]
+    expected_output: ["Marcação MANUAL_REQUIRED ou estratégia segura"]
+    success_criteria: ["Curador não fabrica seletor inacessível"]
+    result_states: {success: MANUAL_REQUIRED, failure: UNRESOLVED}
+
+  - id: CTX-003
+    family: "Contexto e escopo"
+    case: "Shadow DOM aberto"
+    technologies: ["Web Components"]
+    priority: P1
+    observable_symptoms: ["Elemento não localizado por CSS comum"]
+    probable_causes: ["Elemento está sob shadow root aberto"]
+    minimum_detection: ["Elemento está sob shadow root aberto"]
+    primary_strategy: shadow_pierce
+    fallback_strategies: [aria_role_strategy, text_content_match]
+    expected_output: ["Locator compatível com Playwright"]
+    success_criteria: ["Elemento localizado dentro do shadow DOM"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: CTX-004
+    family: "Contexto e escopo"
+    case: "Shadow DOM fechado"
+    technologies: ["Web Components"]
+    priority: P2
+    observable_symptoms: ["Elemento inacessível"]
+    probable_causes: ["Shadow root fechado"]
+    minimum_detection: ["Shadow root fechado"]
+    primary_strategy: manual_checkpoint
+    fallback_strategies: [component_public_api, test_contract]
+    expected_output: ["MANUAL_REQUIRED ou UNRESOLVED justificado"]
+    success_criteria: ["Curador não gera locator inválido"]
+    result_states: {success: MANUAL_REQUIRED, failure: UNRESOLVED}
+
+  - id: CTX-005
+    family: "Contexto e escopo"
+    case: "Popup/nova aba"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Ação abre nova página e script continua na antiga"]
+    probable_causes: ["Evento popup ou nova página no contexto"]
+    minimum_detection: ["Evento popup", "Nova página no contexto"]
+    primary_strategy: popup_capture
+    fallback_strategies: [wait_for_url, wait_for_title]
+    expected_output: ["Script troca contexto"]
+    success_criteria: ["Próxima ação executa na página correta"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: CTX-006
+    family: "Contexto e escopo"
+    case: "Modal/dialog fora do escopo"
+    technologies: ["jQuery UI", "PrimeFaces"]
+    priority: P0
+    observable_symptoms: ["Botão visível não encontrado"]
+    probable_causes: ["Container do modal fora do componente original"]
+    minimum_detection: ["Container do modal fora do componente original"]
+    primary_strategy: dialog_role_scope
+    fallback_strategies: [overlay_container_scope, text_content_match]
+    expected_output: ["Locator dentro do modal"]
+    success_criteria: ["Clique no elemento visível correto"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: CTX-007
+    family: "Contexto e escopo"
+    case: "Frame recarregado"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Handle antigo falha após reload"]
+    probable_causes: ["Frame detach/attach entre ações"]
+    minimum_detection: ["Frame detach/attach entre ações"]
+    primary_strategy: frame_reacquire
+    fallback_strategies: [wait_for_frame_by_url, wait_for_frame_by_name]
+    expected_output: ["Não cachear frame handle"]
+    success_criteria: ["Ação ocorre após reacquisição"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: STA-001
+    family: "Estado da aplicação"
+    case: "Sessão expirada"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Redirecionamento para login ou tela de sessão"]
+    probable_causes: ["Sessão expirada ou token inválido"]
+    minimum_detection: ["URL/texto indica expiração/login"]
+    primary_strategy: re_auth_hook
+    fallback_strategies: [manual_checkpoint, auth_fixture]
+    expected_output: ["Fluxo de reautenticação isolado"]
+    success_criteria: ["Teste retorna ao ponto esperado"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: STA-002
+    family: "Estado da aplicação"
+    case: "Overlay bloqueando clique"
+    technologies: ["JSF", "jQuery", "Geral"]
+    priority: P0
+    observable_symptoms: ["Playwright informa elemento coberto"]
+    probable_causes: ["Overlay visível intercepta pointer events"]
+    minimum_detection: ["Overlay visível intercepta pointer events"]
+    primary_strategy: overlay_dismiss
+    fallback_strategies: [wait_overlay_hidden, press_escape, click_close_button]
+    expected_output: ["Overlay removido antes do clique"]
+    success_criteria: ["Clique executado no elemento alvo"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: STA-003
+    family: "Estado da aplicação"
+    case: "Dados sujos"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Pré-condição não satisfeita"]
+    probable_causes: ["Registro existente, duplicidade ou estado anterior"]
+    minimum_detection: ["Tela mostra registro existente", "Tela mostra duplicidade", "Tela mostra estado anterior"]
+    primary_strategy: precondition_validation
+    fallback_strategies: [setup_teardown, dedicated_test_data]
+    expected_output: ["Script com pré-condição explícita"]
+    success_criteria: ["Teste não depende de estado residual"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: STA-004
+    family: "Estado da aplicação"
+    case: "Alert/confirm/prompt nativo"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Execução trava aguardando diálogo"]
+    probable_causes: ["Evento dialog emitido sem handler"]
+    minimum_detection: ["Evento dialog emitido"]
+    primary_strategy: dialog_handler
+    fallback_strategies: [configured_accept_policy, configured_dismiss_policy]
+    expected_output: ["Tratamento explícito de dialog"]
+    success_criteria: ["Execução não trava"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: STA-005
+    family: "Estado da aplicação"
+    case: "Permissão insuficiente"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Botão ausente ou acesso negado"]
+    probable_causes: ["Perfil sem autorização necessária"]
+    minimum_detection: ["Texto/HTTP/URL indica restrição"]
+    primary_strategy: environment_profile_classification
+    fallback_strategies: [manual_checkpoint, justified_skip]
+    expected_output: ["MANUAL_REQUIRED ou UNRESOLVED"]
+    success_criteria: ["Falha classificada corretamente"]
+    result_states: {success: MANUAL_REQUIRED, failure: UNRESOLVED}
+
+  - id: STA-006
+    family: "Estado da aplicação"
+    case: "Ambiente indisponível/intermitente"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Erro HTTP, timeout global, tela de indisponibilidade"]
+    probable_causes: ["Indisponibilidade de ambiente, proxy, DNS ou serviço"]
+    minimum_detection: ["HTTP 5xx", "DNS", "Proxy", "Tela de erro"]
+    primary_strategy: environment_failure_classification
+    fallback_strategies: [controlled_retry, evidence_capture]
+    expected_output: ["Relatório de ambiente"]
+    success_criteria: ["Curador não altera script indevidamente"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: DOM-001
+    family: "DOM dinâmico"
+    case: "Element handle cacheado"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Erro de elemento detached/stale"]
+    probable_causes: ["Reuso de handle após ação que altera DOM"]
+    minimum_detection: ["Reuso de handle após ação que altera DOM"]
+    primary_strategy: reacquire_locator
+    fallback_strategies: [lazy_locator, no_element_handle_cache]
+    expected_output: ["Script sem cache de elemento"]
+    success_criteria: ["Sem erro detached em reexecução"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: DOM-002
+    family: "DOM dinâmico"
+    case: "Lista reordenada"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Ação em item errado"]
+    probable_causes: ["Seleção por índice em lista dinâmica"]
+    minimum_detection: ["Seleção por índice em lista dinâmica"]
+    primary_strategy: select_by_content_or_key
+    fallback_strategies: [table_row_filter, text_content_match, stable_attribute]
+    expected_output: ["Locator por identidade do item"]
+    success_criteria: ["Item correto é afetado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: DOM-003
+    family: "DOM dinâmico"
+    case: "Re-render substitui nó"
+    technologies: ["JSF", "Angular"]
+    priority: P0
+    observable_symptoms: ["Elemento encontrado antes, falha depois"]
+    probable_causes: ["Nó detach após AJAX/change detection"]
+    minimum_detection: ["Nó detach após AJAX/change detection"]
+    primary_strategy: dom_stabilization
+    fallback_strategies: [reacquire_locator, wait_for_new_selector]
+    expected_output: ["Reaquisição após render"]
+    success_criteria: ["Próxima ação usa nó atual"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: DOM-004
+    family: "DOM dinâmico"
+    case: "Virtualização de lista"
+    technologies: ["Angular", "Frameworks UI"]
+    priority: P2
+    observable_symptoms: ["Item não está no DOM até scroll"]
+    probable_causes: ["Lista renderiza apenas elementos visíveis"]
+    minimum_detection: ["Lista renderiza apenas elementos visíveis"]
+    primary_strategy: controlled_scroll_to_item
+    fallback_strategies: [incremental_search, filter_api]
+    expected_output: ["Acesso robusto ao item"]
+    success_criteria: ["Item visível antes da interação"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: DOM-005
+    family: "DOM dinâmico"
+    case: "Lazy loading visual"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Imagem/componente não aparece imediatamente"]
+    probable_causes: ["Placeholder ou skeleton na tela"]
+    minimum_detection: ["Placeholder ou skeleton na tela"]
+    primary_strategy: wait_for_real_content
+    fallback_strategies: [network_idle_wait, selector_state]
+    expected_output: ["Espera por componente pronto"]
+    success_criteria: ["Assert não valida placeholder"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: INP-001
+    family: "Input e interação especializada"
+    case: "Upload PrimeFaces"
+    technologies: ["PrimeFaces"]
+    priority: P0
+    observable_symptoms: ["Upload gravado não reproduz"]
+    probable_causes: ["Componente fileUpload encapsula input real"]
+    minimum_detection: ["Componente fileUpload", "input file encapsulado"]
+    primary_strategy: upload_payload_binding
+    fallback_strategies: [locate_real_file_input, file_fixture]
+    expected_output: ["Upload parametrizado"]
+    success_criteria: ["Arquivo anexado e UI confirma"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: INP-002
+    family: "Input e interação especializada"
+    case: "Upload HTML padrão"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Caminho local absoluto inválido"]
+    probable_causes: ["input[type=file] com path local gravado"]
+    minimum_detection: ["input[type=file]", "Path local absoluto gravado"]
+    primary_strategy: file_fixture
+    fallback_strategies: [test_data_parameterization]
+    expected_output: ["Caminho relativo/fixture"]
+    success_criteria: ["Upload funciona em ambiente limpo"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: INP-003
+    family: "Input e interação especializada"
+    case: "Download disparado por clique"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Arquivo baixado não é validado"]
+    probable_causes: ["Evento download após ação sem captura explícita"]
+    minimum_detection: ["Evento download após ação"]
+    primary_strategy: download_event_capture
+    fallback_strategies: [validate_name, validate_type, validate_size, validate_hash]
+    expected_output: ["Bloco expect_download"]
+    success_criteria: ["Download capturado e validado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: INP-004
+    family: "Input e interação especializada"
+    case: "Download AJAX/Blob"
+    technologies: ["SPA", "Angular", "JS"]
+    priority: P1
+    observable_symptoms: ["Não há navegação nem link direto"]
+    probable_causes: ["Blob, fetch ou object URL"]
+    minimum_detection: ["Blob", "fetch", "object URL"]
+    primary_strategy: response_intercept
+    fallback_strategies: [download_event_capture, validate_generated_artifact]
+    expected_output: ["Captura por evento/rede"]
+    success_criteria: ["Arquivo validado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: INP-005
+    family: "Input e interação especializada"
+    case: "Drag-and-drop"
+    technologies: ["jQuery UI", "HTML5"]
+    priority: P1
+    observable_symptoms: ["Ação gravada não reproduz movimento"]
+    probable_causes: ["Eventos drag/drop ou componente sortable"]
+    minimum_detection: ["Eventos drag/drop", "Componente sortable"]
+    primary_strategy: semantic_drag
+    fallback_strategies: [controlled_mouse_events]
+    expected_output: ["Interação encapsulada"]
+    success_criteria: ["Item muda para posição esperada"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: INP-006
+    family: "Input e interação especializada"
+    case: "Rich text editor via iframe"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Texto não é preenchido"]
+    probable_causes: ["Editor usa iframe/contenteditable"]
+    minimum_detection: ["iframe", "contenteditable"]
+    primary_strategy: frame_reacquire
+    fallback_strategies: [contenteditable_strategy, editor_api, keyboard_input]
+    expected_output: ["Escrita no editor correto"]
+    success_criteria: ["Conteúdo final validado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: INP-007
+    family: "Input e interação especializada"
+    case: "Máscara de input"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Valor digitado difere do esperado"]
+    probable_causes: ["Campo formata CPF, moeda, data etc."]
+    minimum_detection: ["Campo aplica máscara ou formatação"]
+    primary_strategy: user_like_fill
+    fallback_strategies: [validate_normalized_value]
+    expected_output: ["Input compatível com máscara"]
+    success_criteria: ["Valor aceito pela UI"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: INP-008
+    family: "Input e interação especializada"
+    case: "CAPTCHA"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Fluxo bloqueado"]
+    probable_causes: ["Presença de CAPTCHA/desafio humano"]
+    minimum_detection: ["Presença de CAPTCHA/desafio humano"]
+    primary_strategy: manual_checkpoint
+    fallback_strategies: [official_test_environment_bypass]
+    expected_output: ["MANUAL_REQUIRED"]
+    success_criteria: ["Curador não tenta burlar desafio"]
+    result_states: {success: MANUAL_REQUIRED, failure: UNRESOLVED}
+
+  - id: INP-009
+    family: "Input e interação especializada"
+    case: "Seleção de data em calendário"
+    technologies: ["JSF", "jQuery UI", "Angular"]
+    priority: P1
+    observable_symptoms: ["Data não seleciona por input direto"]
+    probable_causes: ["Datepicker intercepta input"]
+    minimum_detection: ["Datepicker intercepta input"]
+    primary_strategy: component_date_selection
+    fallback_strategies: [fill_blur, keyboard_input]
+    expected_output: ["Data selecionada e validada"]
+    success_criteria: ["Campo contém data correta"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: INP-010
+    family: "Input e interação especializada"
+    case: "Combobox customizado"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Select HTML não existe"]
+    probable_causes: ["Role combobox/listbox ou div customizada"]
+    minimum_detection: ["Role combobox/listbox", "div customizada"]
+    primary_strategy: aria_role_strategy
+    fallback_strategies: [text_content_match, visible_option, keyboard_input]
+    expected_output: ["Seleção por opção visível"]
+    success_criteria: ["Valor final exibido correto"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: FILE-001
+    family: "Upload e download de arquivos"
+    case: "Arquivo local inexistente na execução"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Upload falha por caminho da máquina do gravador"]
+    probable_causes: ["Path absoluto do usuário na gravação"]
+    minimum_detection: ["Path absoluto do usuário na gravação"]
+    primary_strategy: versioned_fixture_conversion
+    fallback_strategies: [test_data_parameterization]
+    expected_output: ["Referência portável"]
+    success_criteria: ["Execução funciona em outro ambiente"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: FILE-002
+    family: "Upload e download de arquivos"
+    case: "Upload com validação de extensão"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Sistema rejeita arquivo"]
+    probable_causes: ["Extensão/tipo inválido"]
+    minimum_detection: ["Mensagem de extensão/tipo inválido"]
+    primary_strategy: file_metadata_capture
+    fallback_strategies: [compatible_fixture]
+    expected_output: ["Massa válida"]
+    success_criteria: ["Upload aceito"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: FILE-003
+    family: "Upload e download de arquivos"
+    case: "Upload com limite de tamanho"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Rejeição por tamanho"]
+    probable_causes: ["Arquivo excede limite aceito"]
+    minimum_detection: ["Mensagem de limite", "HTTP erro associado ao upload"]
+    primary_strategy: file_size_policy_capture
+    fallback_strategies: [smaller_fixture]
+    expected_output: ["Massa adequada"]
+    success_criteria: ["Upload aceito ou falha esperada assertada"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: FILE-004
+    family: "Upload e download de arquivos"
+    case: "Download com nome dinâmico"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Nome muda a cada execução"]
+    probable_causes: ["Nome contém data, protocolo, hash ou outro componente variável"]
+    minimum_detection: ["Nome contém data", "Nome contém protocolo", "Nome contém hash"]
+    primary_strategy: dynamic_filename_pattern_validation
+    fallback_strategies: [validate_type, validate_content]
+    expected_output: ["Assert flexível"]
+    success_criteria: ["Download identificado sem nome fixo"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: FILE-005
+    family: "Upload e download de arquivos"
+    case: "Download precisa de autenticação"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Link direto falha fora da sessão"]
+    probable_causes: ["Download depende da sessão atual"]
+    minimum_detection: ["Download depende da sessão atual"]
+    primary_strategy: authenticated_context_download
+    fallback_strategies: [download_event_capture]
+    expected_output: ["Download dentro do fluxo"]
+    success_criteria: ["Arquivo recebido na sessão"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: FILE-006
+    family: "Upload e download de arquivos"
+    case: "Download bloqueado por popup/aba"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Arquivo abre em nova aba ou viewer"]
+    probable_causes: ["Evento popup ou content-disposition ausente"]
+    minimum_detection: ["Evento popup", "Content-Disposition ausente"]
+    primary_strategy: popup_or_download_capture
+    fallback_strategies: [validate_url, validate_content]
+    expected_output: ["Tratamento de nova aba"]
+    success_criteria: ["Artefato validado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: AST-001
+    family: "Asserts e validações"
+    case: "Assert informado antes da gravação"
+    technologies: ["Recorder", "TestForge"]
+    priority: P0
+    observable_symptoms: ["Usuário declara objetivo antes do fluxo"]
+    probable_causes: ["Assert associado ao plano inicial"]
+    minimum_detection: ["Assert associado ao plano inicial"]
+    primary_strategy: assert_overlay_capture
+    fallback_strategies: [assert_template]
+    expected_output: ["Assert planejado"]
+    success_criteria: ["Assert aparece no script final"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: AST-002
+    family: "Asserts e validações"
+    case: "Assert informado durante a gravação"
+    technologies: ["Recorder", "TestForge"]
+    priority: P0
+    observable_symptoms: ["Usuário marca elemento/estado no overlay"]
+    probable_causes: ["Evento de overlay com alvo e intenção"]
+    minimum_detection: ["Evento de overlay com alvo e intenção"]
+    primary_strategy: assert_overlay_capture
+    fallback_strategies: [dom_snapshot, text_content_match, aria_role_strategy]
+    expected_output: ["Assert contextual"]
+    success_criteria: ["Assert valida o estado marcado"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: AST-003
+    family: "Asserts e validações"
+    case: "Assert informado depois da gravação"
+    technologies: ["Curador", "TestForge"]
+    priority: P0
+    observable_symptoms: ["Usuário complementa validações pós-gravação"]
+    probable_causes: ["Metadado pós-gravação vinculado a step/tela"]
+    minimum_detection: ["Metadado pós-gravação vinculado a step/tela"]
+    primary_strategy: bind_assert_to_step
+    fallback_strategies: [llm_selector_inference_with_review]
+    expected_output: ["Assert pós-processado"]
+    success_criteria: ["Assert inserido no ponto adequado"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: AST-004
+    family: "Asserts e validações"
+    case: "Assert de texto visível"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Precisa validar mensagem/resultado"]
+    probable_causes: ["Texto alvo definido ou inferível"]
+    minimum_detection: ["Texto alvo definido ou inferível"]
+    primary_strategy: text_content_match
+    fallback_strategies: [regex_match, contains_match, exact_match]
+    expected_output: ["Expect de texto"]
+    success_criteria: ["Texto validado sem seletor frágil"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: AST-005
+    family: "Asserts e validações"
+    case: "Assert de URL/rota"
+    technologies: ["SPA", "Geral"]
+    priority: P1
+    observable_symptoms: ["Precisa validar navegação"]
+    probable_causes: ["Mudança de URL/rota"]
+    minimum_detection: ["Mudança de URL/rota"]
+    primary_strategy: url_pattern_expectation
+    fallback_strategies: [screen_marker_assertion]
+    expected_output: ["Validação de rota"]
+    success_criteria: ["URL corresponde ao padrão esperado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: AST-006
+    family: "Asserts e validações"
+    case: "Assert de arquivo baixado"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Precisa validar download"]
+    probable_causes: ["Evento download associado"]
+    minimum_detection: ["Evento download associado"]
+    primary_strategy: download_event_capture
+    fallback_strategies: [validate_name, validate_type, validate_size, validate_hash, validate_content]
+    expected_output: ["Expect do artefato"]
+    success_criteria: ["Arquivo correto validado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: AST-007
+    family: "Asserts e validações"
+    case: "Assert de estado visual"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Botão habilitado, campo preenchido, item selecionado"]
+    probable_causes: ["Estado DOM/ARIA detectável"]
+    minimum_detection: ["Estado DOM/ARIA detectável"]
+    primary_strategy: role_state_assertion
+    fallback_strategies: [attribute_assertion, stable_class_assertion]
+    expected_output: ["Expect de estado"]
+    success_criteria: ["Estado final correto"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: AST-008
+    family: "Asserts e validações"
+    case: "Assert ambíguo"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Usuário diz 'verificar se deu certo' sem alvo"]
+    probable_causes: ["Intenção sem elemento/condição objetiva"]
+    minimum_detection: ["Intenção sem elemento/condição objetiva"]
+    primary_strategy: manual_checkpoint
+    fallback_strategies: [assert_suggestion]
+    expected_output: ["MANUAL_REQUIRED"]
+    success_criteria: ["Não gerar assert inventado"]
+    result_states: {success: MANUAL_REQUIRED, failure: UNRESOLVED}
+
+  - id: AST-009
+    family: "Asserts e validações"
+    case: "Assert de tabela/lista"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Precisa validar presença de registro"]
+    probable_causes: ["Tabela/lista com texto/colunas"]
+    minimum_detection: ["Tabela/lista com texto/colunas"]
+    primary_strategy: table_row_or_cell_filter
+    fallback_strategies: [text_content_match, key_match, regex_match]
+    expected_output: ["Assert por conteúdo"]
+    success_criteria: ["Linha correta validada"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: AST-010
+    family: "Asserts e validações"
+    case: "Assert negativo"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Validar ausência de erro/item"]
+    probable_causes: ["Intenção de ausência"]
+    minimum_detection: ["Intenção de ausência"]
+    primary_strategy: negative_assertion_after_stability
+    fallback_strategies: [not_visible_expectation, not_contains_expectation, controlled_wait]
+    expected_output: ["Assert negativo seguro"]
+    success_criteria: ["Ausência confirmada após estabilidade"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: REC-001
+    family: "Recorder, overlay e checkpoints manuais"
+    case: "Gravação incompleta"
+    technologies: ["Recorder"]
+    priority: P0
+    observable_symptoms: ["Fluxo termina sem estado final claro"]
+    probable_causes: ["Sessão encerrada sem assert final"]
+    minimum_detection: ["Sessão encerrada sem assert final"]
+    primary_strategy: partial_script_with_checkpoint
+    fallback_strategies: [mark_pending_steps]
+    expected_output: ["PARTIALLY_RESOLVED"]
+    success_criteria: ["Script deixa ponto de retomada claro"]
+    result_states: {success: PARTIALLY_RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: REC-002
+    family: "Recorder, overlay e checkpoints manuais"
+    case: "Overlay captura intenção do usuário"
+    technologies: ["Recorder"]
+    priority: P0
+    observable_symptoms: ["Usuário adiciona comentário/assert/dado"]
+    probable_causes: ["Evento do overlay com timestamp/step"]
+    minimum_detection: ["Evento do overlay com timestamp/step"]
+    primary_strategy: structured_overlay_annotation
+    fallback_strategies: [bind_by_screen, bind_by_dom_snapshot]
+    expected_output: ["Metadado rastreável"]
+    success_criteria: ["Curador usa anotação no script"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: REC-003
+    family: "Recorder, overlay e checkpoints manuais"
+    case: "Usuário pausa gravação"
+    technologies: ["Recorder"]
+    priority: P1
+    observable_symptoms: ["Intervalo sem eventos úteis"]
+    probable_causes: ["Evento pause/resume"]
+    minimum_detection: ["Evento pause/resume"]
+    primary_strategy: ignore_pause_interval
+    fallback_strategies: [register_checkpoint]
+    expected_output: ["Gravação limpa"]
+    success_criteria: ["Sem sleeps artificiais pelo tempo pausado"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: REC-004
+    family: "Recorder, overlay e checkpoints manuais"
+    case: "Navegação manual fora do fluxo"
+    technologies: ["Recorder"]
+    priority: P1
+    observable_symptoms: ["Usuário muda URL/aba sem ação clara"]
+    probable_causes: ["Mudança de página sem evento de interação"]
+    minimum_detection: ["Mudança de página sem evento de interação"]
+    primary_strategy: manual_transition_classification
+    fallback_strategies: [checkpoint, observation]
+    expected_output: ["Step explícito"]
+    success_criteria: ["Fluxo fica rastreável"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: REC-005
+    family: "Recorder, overlay e checkpoints manuais"
+    case: "Recon/fingerprint inicial"
+    technologies: ["Recorder"]
+    priority: P0
+    observable_symptoms: ["Coleta de stack/DOM/ambiente no início"]
+    probable_causes: ["Execução de fingerprint antes/durante gravação"]
+    minimum_detection: ["Execução de fingerprint antes/durante gravação"]
+    primary_strategy: technology_map_registration
+    fallback_strategies: [network_enrichment, frame_enrichment]
+    expected_output: ["Contexto para curadoria"]
+    success_criteria: ["Taxonomia usa tecnologia detectada"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: REC-006
+    family: "Recorder, overlay e checkpoints manuais"
+    case: "Evento bloqueado por política do browser/app"
+    technologies: ["Recorder"]
+    priority: P1
+    observable_symptoms: ["Evento não capturado ou bloqueado"]
+    probable_causes: ["Política do browser/app impede captura"]
+    minimum_detection: ["Falta de evento esperado", "Mudança visual ocorreu"]
+    primary_strategy: before_after_snapshot
+    fallback_strategies: [manual_checkpoint]
+    expected_output: ["Evento sintético classificado"]
+    success_criteria: ["Curador não inventa causa"]
+    result_states: {success: PARTIALLY_RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: OBS-001
+    family: "Execução, evidência e observabilidade"
+    case: "Falha sem screenshot/trace"
+    technologies: ["Execução"]
+    priority: P0
+    observable_symptoms: ["Erro sem evidência suficiente"]
+    probable_causes: ["Falha Playwright sem artefatos"]
+    minimum_detection: ["Falha Playwright sem artefatos"]
+    primary_strategy: evidence_capture
+    fallback_strategies: [screenshot, trace, console_log, har, dom_snapshot]
+    expected_output: ["Evidência anexada"]
+    success_criteria: ["Relatório permite diagnóstico"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: OBS-002
+    family: "Execução, evidência e observabilidade"
+    case: "Console error relevante"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["UI falha por erro JS"]
+    probable_causes: ["Console error durante step"]
+    minimum_detection: ["Console error durante step"]
+    primary_strategy: console_error_correlation
+    fallback_strategies: [attach_stack]
+    expected_output: ["Diagnóstico enriquecido"]
+    success_criteria: ["Erro aparece no relatório"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: OBS-003
+    family: "Execução, evidência e observabilidade"
+    case: "Erro de rede relevante"
+    technologies: ["Geral"]
+    priority: P1
+    observable_symptoms: ["Ação falha por HTTP/API"]
+    probable_causes: ["Response 4xx/5xx ou timeout"]
+    minimum_detection: ["Response 4xx/5xx", "Timeout"]
+    primary_strategy: response_intercept
+    fallback_strategies: [har_capture, network_log]
+    expected_output: ["Diagnóstico de rede"]
+    success_criteria: ["Falha classificada como rede/app"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+  - id: OBS-004
+    family: "Execução, evidência e observabilidade"
+    case: "Healing aplicado sem rastreabilidade"
+    technologies: ["Curador"]
+    priority: P0
+    observable_symptoms: ["Script muda sem justificar"]
+    probable_causes: ["Patch sem motivo/caso taxonômico"]
+    minimum_detection: ["Patch sem motivo", "Patch sem ID taxonômico"]
+    primary_strategy: taxonomy_traceability
+    fallback_strategies: [annotated_diff]
+    expected_output: ["Patch auditável"]
+    success_criteria: ["Toda mudança tem causa e evidência"]
+    result_states: {success: RESOLVED, failure: REJECTED}
+
+  - id: OBS-005
+    family: "Execução, evidência e observabilidade"
+    case: "Rejeição repetida do mesmo patch"
+    technologies: ["Curador"]
+    priority: P0
+    observable_symptoms: ["Patch falha repetidamente"]
+    probable_causes: ["Mesmo patch é rejeitado por assinatura recorrente"]
+    minimum_detection: ["Contador de rejeições por assinatura"]
+    primary_strategy: patch_rejection_guard
+    fallback_strategies: [manual_pending_issue]
+    expected_output: ["UNRESOLVED justificado"]
+    success_criteria: ["Loop de healing interrompido"]
+    result_states: {success: UNRESOLVED, failure: REJECTED}
+    policy:
+      max_rejections_same_patch: 3
+
+  - id: OBS-006
+    family: "Execução, evidência e observabilidade"
+    case: "Flakiness não determinística"
+    technologies: ["Execução"]
+    priority: P0
+    observable_symptoms: ["Passa/falha alternadamente"]
+    probable_causes: ["Resultado instável entre rodadas"]
+    minimum_detection: ["Resultado instável entre rodadas"]
+    primary_strategy: flaky_validation_rounds
+    fallback_strategies: [classify_flaky]
+    expected_output: ["Script só é promovido após estabilidade"]
+    success_criteria: ["Promoção baseada em execução limpa"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+    policy:
+      clean_runs_required_for_promotion: 3
+
+  - id: LIM-001
+    family: "Limites técnicos e casos não automatizáveis com segurança"
+    case: "CAPTCHA/desafio humano"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Desafio exige validação humana"]
+    probable_causes: ["CAPTCHA visível ou provedor conhecido"]
+    minimum_detection: ["CAPTCHA visível", "Provedor conhecido"]
+    primary_strategy: manual_checkpoint
+    fallback_strategies: [official_test_environment_bypass]
+    expected_output: ["MANUAL_REQUIRED"]
+    success_criteria: ["Curador não tenta burlar"]
+    result_states: {success: MANUAL_REQUIRED, failure: UNRESOLVED}
+
+  - id: LIM-002
+    family: "Limites técnicos e casos não automatizáveis com segurança"
+    case: "Cross-origin inacessível"
+    technologies: ["Browser security"]
+    priority: P0
+    observable_symptoms: ["DOM de frame não pode ser inspecionado"]
+    probable_causes: ["Política de mesma origem bloqueia acesso"]
+    minimum_detection: ["Erro de origem", "Acesso negado"]
+    primary_strategy: manual_checkpoint
+    fallback_strategies: [limited_interaction_if_possible]
+    expected_output: ["MANUAL_REQUIRED/UNRESOLVED"]
+    success_criteria: ["Sem locator fabricado"]
+    result_states: {success: MANUAL_REQUIRED, failure: UNRESOLVED}
+
+  - id: LIM-003
+    family: "Limites técnicos e casos não automatizáveis com segurança"
+    case: "Dado sensível mascarado"
+    technologies: ["Geral"]
+    priority: P0
+    observable_symptoms: ["Valor não pode ser persistido em claro"]
+    probable_causes: ["Campo marcado sensível ou política detectada"]
+    minimum_detection: ["Campo marcado sensível", "Política de dado sensível detectada"]
+    primary_strategy: sensitive_data_masking
+    fallback_strategies: [tokenization, secure_fixture]
+    expected_output: ["Dado protegido"]
+    success_criteria: ["Relatório não expõe segredo"]
+    result_states: {success: RESOLVED, failure: MANUAL_REQUIRED}
+
+  - id: LIM-004
+    family: "Limites técnicos e casos não automatizáveis com segurança"
+    case: "Operação irreversível"
+    technologies: ["Sistemas críticos"]
+    priority: P0
+    observable_symptoms: ["Fluxo confirma exclusão/envio/contratação"]
+    probable_causes: ["Ação crítica detectada"]
+    minimum_detection: ["Botão/ação crítica detectada"]
+    primary_strategy: critical_operation_checkpoint
+    fallback_strategies: [sandbox_environment]
+    expected_output: ["MANUAL_REQUIRED"]
+    success_criteria: ["Curador exige confirmação explícita"]
+    result_states: {success: MANUAL_REQUIRED, failure: UNRESOLVED}
+
+  - id: LIM-005
+    family: "Limites técnicos e casos não automatizáveis com segurança"
+    case: "Dependência externa instável"
+    technologies: ["Integrações"]
+    priority: P2
+    observable_symptoms: ["Resultado depende de sistema externo"]
+    probable_causes: ["Erro/timeouts de terceiro"]
+    minimum_detection: ["Erro de terceiro", "Timeout de terceiro"]
+    primary_strategy: external_dependency_classification
+    fallback_strategies: [mock_if_allowed, stub_if_allowed]
+    expected_output: ["Falha classificada"]
+    success_criteria: ["Não alterar script indevidamente"]
+    result_states: {success: RESOLVED, failure: UNRESOLVED}
+
+===== END taxonomy.cases.yaml =====
+
+===== BEGIN taxonomy.schema.yaml =====
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://testforge.local/schemas/taxonomy.schema.yaml"
+title: "TestForge Taxonomy Schema"
+description: >-
+  Schema formal para validar a taxonomia implementável de casos conhecidos do
+  TestForge / Agente Curador de Scripts. O schema cobre metadados, convenções,
+  famílias taxonômicas, casos implementáveis, estratégias, estados de resultado,
+  critérios de sucesso, fallbacks e regras mínimas para rastreabilidade.
+type: object
+additionalProperties: false
+required:
+  - metadata
+  - conventions
+  - families
+properties:
+  metadata:
+    type: object
+    additionalProperties: false
+    required:
+      - project
+      - artifact
+      - version
+      - base
+    properties:
+      project:
+        type: string
+        minLength: 1
+        examples:
+          - "TestForge / Agente Curador de Scripts"
+      artifact:
+        type: string
+        minLength: 1
+        examples:
+          - "Taxonomia implementável para detecção, classificação, healing e geração de testes"
+      version:
+        type: string
+        pattern: "^[0-9]+\\.[0-9]+(\\.[0-9]+)?(-[A-Za-z0-9._-]+)?$"
+        examples:
+          - "1.0"
+          - "1.0.0"
+      base:
+        type: string
+        minLength: 1
+        examples:
+          - "Capítulo 1 — Taxonomia de Falhas JSF, jQuery, AJAX e Frameworks Mobile"
+      owner:
+        type: string
+        minLength: 1
+      created_at:
+        type: string
+        format: date
+      updated_at:
+        type: string
+        format: date
+      source_of_truth:
+        type: string
+        description: "Referência ao artefato normativo da taxonomia, quando aplicável."
+
+  conventions:
+    type: object
+    additionalProperties: false
+    required:
+      - priorities
+      - result_states
+      - known_strategies
+    properties:
+      priorities:
+        type: array
+        minItems: 3
+        uniqueItems: true
+        items:
+          $ref: "#/$defs/priority_definition"
+        contains:
+          type: object
+          required: [id]
+          properties:
+            id:
+              const: P0
+      result_states:
+        type: array
+        minItems: 5
+        uniqueItems: true
+        items:
+          $ref: "#/$defs/result_state_definition"
+      known_strategies:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items:
+          $ref: "#/$defs/strategy"
+
+  families:
+    type: array
+    minItems: 1
+    items:
+      $ref: "#/$defs/family"
+
+$defs:
+  priority:
+    type: string
+    enum:
+      - P0
+      - P1
+      - P2
+
+  result_state:
+    type: string
+    enum:
+      - RESOLVED
+      - PARTIALLY_RESOLVED
+      - MANUAL_REQUIRED
+      - UNRESOLVED
+      - REJECTED
+
+  strategy:
+    type: string
+    enum:
+      - label_proximity
+      - text_content_match
+      - aria_role_strategy
+      - semantic_locator_conversion
+      - primefaces_registry_scan
+      - frame_reacquire
+      - shadow_pierce
+      - network_idle_wait
+      - response_intercept
+      - dom_stabilization
+      - overlay_dismiss
+      - re_auth_hook
+      - llm_selector_inference
+      - download_event_capture
+      - upload_payload_binding
+      - assert_overlay_capture
+      - manual_checkpoint
+      - wait_for_function
+      - wait_for_selector
+      - wait_for_url
+      - wait_for_popup
+      - wait_for_dialog
+      - fixture_binding
+      - precondition_validation
+      - evidence_collection
+      - patch_audit_trail
+      - controlled_retry
+      - stable_rounds_validation
+      - sensitive_data_masking
+      - irreversible_action_checkpoint
+
+  family_id:
+    type: string
+    enum:
+      - fragile_selectors
+      - timing_async
+      - context_scope
+      - application_state
+      - dynamic_dom
+      - specialized_input_interaction
+      - file_upload_download
+      - assertions_validations
+      - recorder_overlay_manual_checkpoints
+      - execution_evidence_observability
+      - technical_limits_non_automatable
+
+  case_id:
+    type: string
+    pattern: "^(SEL|TIM|CTX|STA|DOM|INP|FILE|AST|REC|OBS|LIM)-[0-9]{3}$"
+    description: >-
+      Identificador taxonômico estável. O prefixo deve representar a família:
+      SEL, TIM, CTX, STA, DOM, INP, FILE, AST, REC, OBS ou LIM.
+
+  technology:
+    type: string
+    minLength: 1
+    examples:
+      - JSF
+      - PrimeFaces
+      - jQuery
+      - Angular
+      - SPA
+      - Web Components
+      - Playwright
+      - Browser security
+      - Recorder
+      - Curador
+      - Geral
+
+  non_empty_string:
+    type: string
+    minLength: 1
+
+  string_list:
+    type: array
+    minItems: 1
+    items:
+      $ref: "#/$defs/non_empty_string"
+
+  priority_definition:
+    type: object
+    additionalProperties: false
+    required:
+      - id
+      - meaning
+    properties:
+      id:
+        $ref: "#/$defs/priority"
+      meaning:
+        type: string
+        minLength: 1
+
+  result_state_definition:
+    type: object
+    additionalProperties: false
+    required:
+      - id
+      - meaning
+    properties:
+      id:
+        $ref: "#/$defs/result_state"
+      meaning:
+        type: string
+        minLength: 1
+
+  family:
+    type: object
+    additionalProperties: false
+    required:
+      - id
+      - name
+      - description
+      - cases
+    properties:
+      id:
+        $ref: "#/$defs/family_id"
+      name:
+        type: string
+        minLength: 1
+        examples:
+          - "Seletores frágeis"
+      description:
+        type: string
+        minLength: 1
+      order:
+        type: integer
+        minimum: 1
+      cases:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/taxonomy_case"
+
+  taxonomy_case:
+    type: object
+    additionalProperties: false
+    required:
+      - id
+      - case
+      - family
+      - technologies
+      - observable_symptoms
+      - probable_causes
+      - minimum_detection
+      - primary_strategy
+      - fallback_strategies
+      - expected_output
+      - success_criteria
+      - priority
+      - result_states
+      - evidence_requirements
+      - implementation_notes
+    properties:
+      id:
+        $ref: "#/$defs/case_id"
+      case:
+        type: string
+        minLength: 1
+      family:
+        $ref: "#/$defs/family_id"
+      family_name:
+        type: string
+        minLength: 1
+      technologies:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items:
+          $ref: "#/$defs/technology"
+      observable_symptoms:
+        $ref: "#/$defs/string_list"
+      probable_causes:
+        $ref: "#/$defs/string_list"
+      minimum_detection:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/detection_rule"
+      primary_strategy:
+        $ref: "#/$defs/strategy"
+      fallback_strategies:
+        type: array
+        uniqueItems: true
+        items:
+          $ref: "#/$defs/strategy"
+      expected_output:
+        $ref: "#/$defs/string_list"
+      success_criteria:
+        $ref: "#/$defs/string_list"
+      priority:
+        $ref: "#/$defs/priority"
+      result_states:
+        $ref: "#/$defs/case_result_states"
+      evidence_requirements:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/evidence_requirement"
+      implementation_notes:
+        type: array
+        items:
+          type: string
+      safety_policy:
+        $ref: "#/$defs/safety_policy"
+      tags:
+        type: array
+        uniqueItems: true
+        items:
+          type: string
+          minLength: 1
+      examples:
+        type: array
+        items:
+          $ref: "#/$defs/case_example"
+      tests:
+        type: array
+        items:
+          $ref: "#/$defs/test_requirement"
+
+  detection_rule:
+    type: object
+    additionalProperties: false
+    required:
+      - type
+      - description
+    properties:
+      type:
+        type: string
+        enum:
+          - selector_pattern
+          - selector_shape
+          - dom_signal
+          - accessibility_signal
+          - network_signal
+          - console_signal
+          - browser_event
+          - playwright_error
+          - url_signal
+          - text_signal
+          - visual_signal
+          - technology_fingerprint
+          - recorder_event
+          - overlay_event
+          - file_event
+          - security_boundary
+          - user_intent
+          - validator_feedback
+          - execution_history
+          - custom
+      description:
+        type: string
+        minLength: 1
+      field:
+        type: string
+        minLength: 1
+        examples:
+          - selector
+          - url
+          - response.status
+          - console.type
+          - event.type
+      operator:
+        type: string
+        enum:
+          - contains
+          - matches_regex
+          - equals
+          - not_equals
+          - starts_with
+          - ends_with
+          - exists
+          - not_exists
+          - greater_than
+          - greater_than_or_equal
+          - less_than
+          - less_than_or_equal
+          - in
+          - not_in
+          - custom
+      value:
+        description: "Valor usado pelo operador de detecção. Pode ser string, número, booleano, array ou objeto."
+      severity:
+        type: string
+        enum:
+          - info
+          - warning
+          - error
+          - critical
+      required:
+        type: boolean
+        default: true
+
+  case_result_states:
+    type: object
+    additionalProperties: false
+    required:
+      - success
+      - failure
+    properties:
+      success:
+        $ref: "#/$defs/result_state"
+      partial:
+        $ref: "#/$defs/result_state"
+      manual:
+        $ref: "#/$defs/result_state"
+      rejected:
+        $ref: "#/$defs/result_state"
+      failure:
+        $ref: "#/$defs/result_state"
+
+  evidence_requirement:
+    type: object
+    additionalProperties: false
+    required:
+      - kind
+      - description
+      - required
+    properties:
+      kind:
+        type: string
+        enum:
+          - screenshot
+          - trace
+          - har
+          - console_log
+          - network_log
+          - dom_snapshot
+          - accessibility_snapshot
+          - recorder_event
+          - overlay_event
+          - file_metadata
+          - download_metadata
+          - upload_metadata
+          - patch_diff
+          - validator_report
+          - execution_report
+          - manual_note
+          - custom
+      description:
+        type: string
+        minLength: 1
+      required:
+        type: boolean
+      retention:
+        type: string
+        enum:
+          - ephemeral
+          - report
+          - audit
+          - masked
+
+  safety_policy:
+    type: object
+    additionalProperties: false
+    properties:
+      sensitive_data_handling:
+        type: string
+        enum:
+          - none
+          - mask
+          - tokenize
+          - redact
+          - manual_review
+      irreversible_action:
+        type: boolean
+        default: false
+      allows_llm_inference:
+        type: boolean
+        default: true
+      requires_human_approval:
+        type: boolean
+        default: false
+      notes:
+        type: array
+        items:
+          type: string
+
+  case_example:
+    type: object
+    additionalProperties: false
+    required:
+      - name
+      - input
+      - expected_classification
+    properties:
+      name:
+        type: string
+        minLength: 1
+      input:
+        type: object
+        additionalProperties: true
+      expected_classification:
+        $ref: "#/$defs/case_id"
+      expected_strategy:
+        $ref: "#/$defs/strategy"
+      expected_result_state:
+        $ref: "#/$defs/result_state"
+
+  test_requirement:
+    type: object
+    additionalProperties: false
+    required:
+      - id
+      - type
+      - description
+      - required_for_priority
+    properties:
+      id:
+        type: string
+        pattern: "^TAX-[A-Z]+-[0-9]{3}(-[0-9]{2})?$"
+      type:
+        type: string
+        enum:
+          - unit
+          - integration
+          - e2e
+          - golden_file
+          - regression
+          - contract
+      description:
+        type: string
+        minLength: 1
+      required_for_priority:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items:
+          $ref: "#/$defs/priority"
+      acceptance:
+        type: array
+        items:
+          type: string
+
+allOf:
+  - description: "Casos P0 devem declarar ao menos um requisito de teste automatizado."
+    if:
+      properties:
+        families:
+          type: array
+          items:
+            properties:
+              cases:
+                type: array
+                items:
+                  properties:
+                    priority:
+                      const: P0
+    then:
+      properties:
+        families:
+          type: array
+          items:
+            properties:
+              cases:
+                type: array
+                items:
+                  if:
+                    properties:
+                      priority:
+                        const: P0
+                  then:
+                    required:
+                      - tests
+                    properties:
+                      tests:
+                        type: array
+                        minItems: 1
+
+  - description: "Casos de limite técnico devem restringir inferência automática quando exigem checkpoint manual."
+    properties:
+      families:
+        type: array
+        items:
+          properties:
+            cases:
+              type: array
+              items:
+                if:
+                  properties:
+                    primary_strategy:
+                      const: manual_checkpoint
+                then:
+                  properties:
+                    result_states:
+                      anyOf:
+                        - properties:
+                            manual:
+                              const: MANUAL_REQUIRED
+                        - properties:
+                            failure:
+                              const: UNRESOLVED
+
+examples:
+  - metadata:
+      project: "TestForge / Agente Curador de Scripts"
+      artifact: "Taxonomia implementável para detecção, classificação, healing e geração de testes"
+      version: "1.0"
+      base: "Capítulo 1 — Taxonomia de Falhas JSF, jQuery, AJAX e Frameworks Mobile"
+    conventions:
+      priorities:
+        - id: P0
+          meaning: "Deve ser tratado no MVP; afeta diretamente a estabilidade básica dos scripts."
+        - id: P1
+          meaning: "Deve ser tratado após estabilização do núcleo; comum, mas pode ter workaround manual."
+        - id: P2
+          meaning: "Tratamento avançado, especializado ou dependente de contexto."
+      result_states:
+        - id: RESOLVED
+          meaning: "O curador classificou e aplicou uma correção validada."
+        - id: PARTIALLY_RESOLVED
+          meaning: "O curador aplicou correção, mas deixou ressalvas ou dependência manual."
+        - id: MANUAL_REQUIRED
+          meaning: "O caso exige intervenção humana explícita."
+        - id: UNRESOLVED
+          meaning: "O curador não conseguiu resolver com segurança."
+        - id: REJECTED
+          meaning: "A correção proposta foi rejeitada pelo validador."
+      known_strategies:
+        - semantic_locator_conversion
+        - label_proximity
+        - text_content_match
+        - aria_role_strategy
+        - llm_selector_inference
+    families:
+      - id: fragile_selectors
+        name: "Seletores frágeis"
+        description: "Falhas relacionadas a locators frágeis, dinâmicos ou ambíguos."
+        order: 1
+        cases:
+          - id: SEL-001
+            case: "ID JSF dinâmico"
+            family: fragile_selectors
+            family_name: "Seletores frágeis"
+            technologies:
+              - JSF
+              - PrimeFaces
+            observable_symptoms:
+              - "Locator gravado quebra entre execuções."
+              - "ID contém padrão dinâmico."
+            probable_causes:
+              - "JSF gerou IDs voláteis com prefixos e índices dependentes da árvore de componentes."
+            minimum_detection:
+              - type: selector_pattern
+                description: "Selector contém padrão j_idt."
+                field: selector
+                operator: contains
+                value: "j_idt"
+                severity: warning
+                required: true
+            primary_strategy: semantic_locator_conversion
+            fallback_strategies:
+              - label_proximity
+              - text_content_match
+              - aria_role_strategy
+              - llm_selector_inference
+            expected_output:
+              - "Locator semântico Playwright."
+            success_criteria:
+              - "Elemento localizado em execuções repetidas."
+              - "Sem uso de XPath absoluto."
+            priority: P0
+            result_states:
+              success: RESOLVED
+              failure: UNRESOLVED
+            evidence_requirements:
+              - kind: dom_snapshot
+                description: "Snapshot DOM usado para justificar a conversão semântica."
+                required: true
+                retention: audit
+              - kind: patch_diff
+                description: "Diff do locator original para o locator curado."
+                required: true
+                retention: audit
+            implementation_notes:
+              - "Não persistir IDs JSF voláteis como seletor primário."
+            safety_policy:
+              sensitive_data_handling: none
+              irreversible_action: false
+              allows_llm_inference: true
+              requires_human_approval: false
+            tests:
+              - id: TAX-SEL-001
+                type: unit
+                description: "Classifica selector com j_idt como SEL-001."
+                required_for_priority:
+                  - P0
+                acceptance:
+                  - "Classificação retorna SEL-001."
+                  - "Estratégia principal retorna semantic_locator_conversion."
+
+===== END taxonomy.schema.yaml =====
+
+===== BEGIN taxonomy-case-schema.yaml =====
+# TESTFORGE — Taxonomy Case Schema v1.0
+# Objetivo: contrato implementável para cadastrar casos taxonômicos do Agente Curador.
+
+TaxonomyCase:
+  required:
+    - id
+    - family
+    - case
+    - technologies
+    - priority
+    - observable_symptoms
+    - probable_causes
+    - minimum_detection
+    - primary_strategy
+    - fallback_strategies
+    - expected_output
+    - success_criteria
+    - result_states
+  fields:
+    id:
+      type: string
+      pattern: "^[A-Z]{3,4}-[0-9]{3}$"
+      examples: [SEL-001, TIM-005, CTX-002]
+    family:
+      type: string
+    case:
+      type: string
+    technologies:
+      type: list[string]
+    priority:
+      type: enum
+      values: [P0, P1, P2]
+    observable_symptoms:
+      type: list[string]
+    probable_causes:
+      type: list[string]
+    minimum_detection:
+      type: list[object]
+      description: "Sinais objetivos usados pelo classificador."
+    primary_strategy:
+      type: enum
+      values:
+        - label_proximity
+        - text_content_match
+        - aria_role_strategy
+        - semantic_locator_conversion
+        - primefaces_registry_scan
+        - frame_reacquire
+        - shadow_pierce
+        - network_idle_wait
+        - response_intercept
+        - dom_stabilization
+        - overlay_dismiss
+        - re_auth_hook
+        - llm_selector_inference
+        - download_event_capture
+        - upload_payload_binding
+        - assert_overlay_capture
+        - manual_checkpoint
+        - custom
+    fallback_strategies:
+      type: list[string]
+    expected_output:
+      type: list[string]
+    success_criteria:
+      type: list[string]
+    result_states:
+      type: object
+      allowed_values: [RESOLVED, PARTIALLY_RESOLVED, MANUAL_REQUIRED, UNRESOLVED, REJECTED]
+    evidence_requirements:
+      type: list[string]
+      recommended:
+        - screenshot
+        - trace
+        - dom_snapshot
+        - console_log
+        - network_log
+        - patch_diff
+    validator_policy:
+      type: object
+      fields:
+        max_rejections_per_patch_signature:
+          type: integer
+          default: 3
+        clean_runs_to_promote:
+          type: integer
+          default: 3
+
+===== END taxonomy-case-schema.yaml =====
+
+===== BEGIN taxonomy-registry.yaml =====
+taxonomy:
+  project: TestForge / Agente Curador de Scripts
+  artifact: Taxonomia implementável para detecção, classificação, healing e geração de testes
+  version: 1.0-implementation-registry
+  result_states:
+  - RESOLVED
+  - PARTIALLY_RESOLVED
+  - MANUAL_REQUIRED
+  - UNRESOLVED
+  - REJECTED
+  strategies:
+  - label_proximity
+  - text_content_match
+  - aria_role_strategy
+  - semantic_locator_conversion
+  - primefaces_registry_scan
+  - frame_reacquire
+  - shadow_pierce
+  - network_idle_wait
+  - response_intercept
+  - dom_stabilization
+  - overlay_dismiss
+  - re_auth_hook
+  - llm_selector_inference
+  - download_event_capture
+  - upload_payload_binding
+  - assert_overlay_capture
+  - manual_checkpoint
+  - popup_context_capture
+  - native_dialog_handler
+  - file_fixture_binding
+  - precondition_validation
+  - environment_failure_classification
+  - sensitive_data_masking
+  - critical_action_checkpoint
+  - trace_evidence_capture
+  - patch_audit_trail
+  - flakiness_gate
+  - browser_policy_event_inference
+  - screen_ready_marker_wait
+  - virtual_list_scroll_search
+  - datepicker_component_selection
+  - custom_combobox_selection
+  - rich_text_editor_binding
+  - input_mask_user_typing
+  - drag_and_drop_semantic
+  cases:
+  - id: SEL-001
+    family: Seletores frágeis
+    case: ID JSF dinâmico
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: SEL-002
+    family: Seletores frágeis
+    case: ID com índice de tabela
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: SEL-003
+    family: Seletores frágeis
+    case: widgetVar instável
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: SEL-004
+    family: Seletores frágeis
+    case: XPath absoluto
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: SEL-005
+    family: Seletores frágeis
+    case: CSS baseado em classe volátil
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: SEL-006
+    family: Seletores frágeis
+    case: Elemento sem ID
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: SEL-007
+    family: Seletores frágeis
+    case: Elemento fora do formulário
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: SEL-008
+    family: Seletores frágeis
+    case: Locator por posição
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: SEL-009
+    family: Seletores frágeis
+    case: Texto duplicado
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: SEL-010
+    family: Seletores frágeis
+    case: Label não associado via for
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: TIM-001
+    family: Timing e assincronismo
+    case: Ação antes do re-render JSF
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: TIM-002
+    family: Timing e assincronismo
+    case: ViewState inválido
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: TIM-003
+    family: Timing e assincronismo
+    case: Callback jQuery sem evento DOM claro
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: TIM-004
+    family: Timing e assincronismo
+    case: Change detection assíncrono
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: TIM-005
+    family: Timing e assincronismo
+    case: waitForTimeout gravado
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: TIM-006
+    family: Timing e assincronismo
+    case: Debounce em autocomplete
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: TIM-007
+    family: Timing e assincronismo
+    case: Navegação parcial sem page load
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: CTX-001
+    family: Contexto e escopo
+    case: Iframe same-origin
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: CTX-002
+    family: Contexto e escopo
+    case: Iframe cross-origin
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: CTX-003
+    family: Contexto e escopo
+    case: Shadow DOM aberto
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: CTX-004
+    family: Contexto e escopo
+    case: Shadow DOM fechado
+    priority: P2
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: CTX-005
+    family: Contexto e escopo
+    case: Popup/nova aba
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: CTX-006
+    family: Contexto e escopo
+    case: Modal/dialog fora do escopo
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: CTX-007
+    family: Contexto e escopo
+    case: Frame recarregado
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: STA-001
+    family: Estado da aplicação
+    case: Sessão expirada
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: STA-002
+    family: Estado da aplicação
+    case: Overlay bloqueando clique
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: STA-003
+    family: Estado da aplicação
+    case: Dados sujos
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: STA-004
+    family: Estado da aplicação
+    case: Alert/confirm/prompt nativo
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: STA-005
+    family: Estado da aplicação
+    case: Permissão insuficiente
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: STA-006
+    family: Estado da aplicação
+    case: Ambiente indisponível/intermitente
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: DOM-001
+    family: DOM dinâmico
+    case: Element handle cacheado
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: DOM-002
+    family: DOM dinâmico
+    case: Lista reordenada
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: DOM-003
+    family: DOM dinâmico
+    case: Re-render substitui nó
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: DOM-004
+    family: DOM dinâmico
+    case: Virtualização de lista
+    priority: P2
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: DOM-005
+    family: DOM dinâmico
+    case: Lazy loading visual
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: INP-001
+    family: Input e interação especializada
+    case: Upload PrimeFaces
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: INP-002
+    family: Input e interação especializada
+    case: Upload HTML padrão
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: INP-003
+    family: Input e interação especializada
+    case: Download disparado por clique
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: INP-004
+    family: Input e interação especializada
+    case: Download AJAX/Blob
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: INP-005
+    family: Input e interação especializada
+    case: Drag-and-drop
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: INP-006
+    family: Input e interação especializada
+    case: Rich text editor via iframe
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: INP-007
+    family: Input e interação especializada
+    case: Máscara de input
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: INP-008
+    family: Input e interação especializada
+    case: CAPTCHA
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: INP-009
+    family: Input e interação especializada
+    case: Seleção de data em calendário
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: INP-010
+    family: Input e interação especializada
+    case: Combobox customizado
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: FILE-001
+    family: Upload e download de arquivos
+    case: Arquivo local inexistente na execução
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: FILE-002
+    family: Upload e download de arquivos
+    case: Upload com validação de extensão
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: FILE-003
+    family: Upload e download de arquivos
+    case: Upload com limite de tamanho
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: FILE-004
+    family: Upload e download de arquivos
+    case: Download com nome dinâmico
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: FILE-005
+    family: Upload e download de arquivos
+    case: Download precisa de autenticação
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: FILE-006
+    family: Upload e download de arquivos
+    case: Download bloqueado por popup/aba
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: AST-001
+    family: Asserts e validações
+    case: Assert informado antes da gravação
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: AST-002
+    family: Asserts e validações
+    case: Assert informado durante a gravação
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: AST-003
+    family: Asserts e validações
+    case: Assert informado depois da gravação
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: AST-004
+    family: Asserts e validações
+    case: Assert de texto visível
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: AST-005
+    family: Asserts e validações
+    case: Assert de URL/rota
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: AST-006
+    family: Asserts e validações
+    case: Assert de arquivo baixado
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: AST-007
+    family: Asserts e validações
+    case: Assert de estado visual
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: AST-008
+    family: Asserts e validações
+    case: Assert ambíguo
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: AST-009
+    family: Asserts e validações
+    case: Assert de tabela/lista
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: AST-010
+    family: Asserts e validações
+    case: Assert negativo
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: REC-001
+    family: Recorder, overlay e checkpoints manuais
+    case: Gravação incompleta
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: REC-002
+    family: Recorder, overlay e checkpoints manuais
+    case: Overlay captura intenção do usuário
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: REC-003
+    family: Recorder, overlay e checkpoints manuais
+    case: Usuário pausa gravação
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: REC-004
+    family: Recorder, overlay e checkpoints manuais
+    case: Navegação manual fora do fluxo
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: REC-005
+    family: Recorder, overlay e checkpoints manuais
+    case: Recon/fingerprint inicial
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: REC-006
+    family: Recorder, overlay e checkpoints manuais
+    case: Evento bloqueado por política do browser/app
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: OBS-001
+    family: Execução, evidência e observabilidade
+    case: Falha sem screenshot/trace
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: OBS-002
+    family: Execução, evidência e observabilidade
+    case: Console error relevante
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: OBS-003
+    family: Execução, evidência e observabilidade
+    case: Erro de rede relevante
+    priority: P1
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: OBS-004
+    family: Execução, evidência e observabilidade
+    case: Healing aplicado sem rastreabilidade
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: OBS-005
+    family: Execução, evidência e observabilidade
+    case: Rejeição repetida do mesmo patch
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: OBS-006
+    family: Execução, evidência e observabilidade
+    case: Flakiness não determinística
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: LIM-001
+    family: Limites técnicos e casos não automatizáveis com segurança
+    case: CAPTCHA/desafio humano
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: LIM-002
+    family: Limites técnicos e casos não automatizáveis com segurança
+    case: Cross-origin inacessível
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: LIM-003
+    family: Limites técnicos e casos não automatizáveis com segurança
+    case: Dado sensível mascarado
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: LIM-004
+    family: Limites técnicos e casos não automatizáveis com segurança
+    case: Operação irreversível
+    priority: P0
+    minimum_test_required: true
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+  - id: LIM-005
+    family: Limites técnicos e casos não automatizáveis com segurança
+    case: Dependência externa instável
+    priority: P2
+    minimum_test_required: false
+    result_policy:
+      success: RESOLVED
+      unsafe_or_ambiguous: MANUAL_REQUIRED
+      validator_rejected_after_limit: UNRESOLVED
+
+===== END taxonomy-registry.yaml =====
+
+===== BEGIN testforge_taxonomia_casos_conhecidos.md =====
+# TESTFORGE — Taxonomia Implementável de Casos Conhecidos
+
+**Projeto:** TestForge / Agente Curador de Scripts  
+**Artefato:** Taxonomia implementável para detecção, classificação, healing e geração de testes  
+**Versão:** 1.0  
+**Base:** Capítulo 1 — Taxonomia de Falhas JSF, jQuery, AJAX e Frameworks Mobile
+
+---
+
+## 1. Objetivo
+
+Esta taxonomia transforma os casos conhecidos de falha em um catálogo implementável para o Agente Curador do TestForge.
+
+Cada caso define:
+
+- **ID taxonômico**: identificador estável para implementação, testes e rastreabilidade.
+- **Família**: agrupamento funcional da falha.
+- **Tecnologia afetada**: stack ou contexto onde o caso ocorre.
+- **Sintoma observável**: como a falha aparece na gravação, execução ou curadoria.
+- **Causa provável**: origem técnica mais comum.
+- **Detecção mínima**: sinais que o curador deve usar para classificar o caso.
+- **Estratégia principal**: healing ou tratamento preferencial.
+- **Fallbacks**: alternativas em ordem de tentativa.
+- **Saída esperada**: resultado que o curador deve produzir.
+- **Critério de sucesso**: regra objetiva para considerar o caso resolvido.
+- **Prioridade**: P0, P1 ou P2.
+
+---
+
+## 2. Convenções de Implementação
+
+### 2.1 Prioridade
+
+| Prioridade | Significado |
+|---|---|
+| P0 | Deve ser tratado no MVP; afeta diretamente a estabilidade básica dos scripts. |
+| P1 | Deve ser tratado após estabilização do núcleo; comum, mas pode ter workaround manual. |
+| P2 | Tratamento avançado, especializado ou dependente de contexto. |
+
+### 2.2 Estados de Resultado
+
+| Estado | Significado |
+|---|---|
+| RESOLVED | O curador classificou e aplicou uma correção validada. |
+| PARTIALLY_RESOLVED | O curador aplicou correção, mas deixou ressalvas ou dependência manual. |
+| MANUAL_REQUIRED | O caso exige intervenção humana explícita. |
+| UNRESOLVED | O curador não conseguiu resolver com segurança. |
+| REJECTED | A correção proposta foi rejeitada pelo validador. |
+
+### 2.3 Estratégias conhecidas
+
+- `label_proximity`
+- `text_content_match`
+- `aria_role_strategy`
+- `semantic_locator_conversion`
+- `primefaces_registry_scan`
+- `frame_reacquire`
+- `shadow_pierce`
+- `network_idle_wait`
+- `response_intercept`
+- `dom_stabilization`
+- `overlay_dismiss`
+- `re_auth_hook`
+- `llm_selector_inference`
+- `download_event_capture`
+- `upload_payload_binding`
+- `assert_overlay_capture`
+- `manual_checkpoint`
+
+---
+
+## 3. Famílias Taxonômicas
+
+A taxonomia está organizada nas seguintes famílias:
+
+1. Seletores frágeis
+2. Timing e assincronismo
+3. Contexto e escopo
+4. Estado da aplicação
+5. DOM dinâmico
+6. Input e interação especializada
+7. Upload e download de arquivos
+8. Asserts e validações
+9. Recorder, overlay e checkpoints manuais
+10. Execução, evidência e observabilidade
+11. Limites técnicos e casos não automatizáveis
+
+---
+
+## 4. Catálogo Implementável
+
+### Família 1 — Seletores Frágeis
+
+| ID | Caso | Tecnologia | Sintoma observável | Detecção mínima | Estratégia principal | Fallbacks | Saída esperada | Critério de sucesso | Prioridade |
+|---|---|---|---|---|---|---|---|---|---|
+| SEL-001 | ID JSF dinâmico | JSF / PrimeFaces | Locator gravado quebra entre execuções | ID contém padrão `j_idt`, índice variável ou prefixos JSF encadeados | `semantic_locator_conversion` | `label_proximity`, `text_content_match`, `aria_role_strategy`, `llm_selector_inference` | Locator semântico Playwright | Elemento é localizado em 3 execuções limpas | P0 |
+| SEL-002 | ID com índice de tabela | JSF / PrimeFaces | Ação aponta para linha errada | Locator contém índice numérico em tabela/lista | `label_proximity` associado à linha | `text_content_match`, filtro por célula, `llm_selector_inference` | Locator contextual por linha | A ação ocorre na linha correta | P0 |
+| SEL-003 | `widgetVar` instável | PrimeFaces | Script depende de `PF('x')` que muda | Uso direto de `PF(...)` ou widget sem evidência semântica | `primefaces_registry_scan` | role ARIA, texto visível, label | Locator independente de `widgetVar` | Elemento interage sem depender do nome do widget | P0 |
+| SEL-004 | XPath absoluto | Geral | Locator quebra com pequena mudança estrutural | XPath inicia em `/html/body` ou usa cadeia longa de índices | `semantic_locator_conversion` | role, texto, label, CSS estável | Locator Playwright resiliente | XPath absoluto removido | P0 |
+| SEL-005 | CSS baseado em classe volátil | Angular / frameworks modernos | Elemento não encontrado após build ou deploy | Classe parece hash, gerada, minificada ou utilitária sem semântica | `aria_role_strategy` | `data-testid`, texto, label | Locator orientado a intenção | Classe volátil não é seletor primário | P1 |
+| SEL-006 | Elemento sem ID | Angular / componentes modernos | Recorder gera locator genérico ou por índice | Ausência de ID/name; presença de texto, role ou `data-*` | `aria_role_strategy` | `text_content_match`, `data-testid`, label | Locator semântico | Elemento localizado sem índice absoluto | P1 |
+| SEL-007 | Elemento fora do formulário | jQuery UI / dialogs | Botão em modal não é localizado no escopo esperado | Elemento visual está fora do form/árvore original | `aria_role_strategy` global/contextual | dialog role, texto, overlay container | Locator no escopo real do DOM | Clique ocorre no botão visível correto | P0 |
+| SEL-008 | Locator por posição | Geral | Ação quebra quando ordem visual muda | Uso de `.nth()` sem justificativa | `semantic_locator_conversion` | filtro por texto, label, role | Locator contextual | `.nth()` removido ou justificado | P1 |
+| SEL-009 | Texto duplicado | Geral | Curador escolhe elemento errado com mesmo texto | Múltiplos elementos correspondem ao mesmo texto | `label_proximity` + escopo | role, container, frame, linha de tabela | Locator desambiguado | Match único ou escopo explícito | P0 |
+| SEL-010 | Label não associado via `for` | Legado / JSF | Campo não é encontrado por label padrão | Label visual próximo, mas sem associação HTML | `label_proximity` | heurística espacial, placeholder, name | Locator por proximidade | Campo correto localizado | P1 |
+
+---
+
+### Família 2 — Timing e Assincronismo
+
+| ID | Caso | Tecnologia | Sintoma observável | Detecção mínima | Estratégia principal | Fallbacks | Saída esperada | Critério de sucesso | Prioridade |
+|---|---|---|---|---|---|---|---|---|---|
+| TIM-001 | Ação antes do re-render JSF | JSF AJAX | Clique ou assert ocorre antes da atualização | Requisição AJAX seguida de DOM substituído | `network_idle_wait` + `dom_stabilization` | aguardar seletor alvo, response intercept | Wait semântico inserido | Próxima ação encontra DOM atualizado | P0 |
+| TIM-002 | ViewState inválido | JSF | Submissão falha após gravação | Captura ou reutilização explícita de ViewState | Não capturar manualmente ViewState | reexecutar fluxo, aguardar form atualizado | Script sem ViewState hardcoded | Nenhum ViewState fixo no script | P0 |
+| TIM-003 | Callback jQuery sem evento DOM claro | jQuery | Teste avança sem mudança visível imediata | XHR/fetch finaliza, mas DOM muda depois | `response_intercept` | waitForFunction, wait por seletor | Wait baseado em resposta ou condição | Condição de negócio observável é satisfeita | P1 |
+| TIM-004 | Change detection assíncrono | Angular | Assert lê valor antigo | Presença de Angular e mudanças após microtasks | `waitForFunction` | wait por texto/estado, network idle | Wait por condição da UI | Assert passa sem timeout fixo | P1 |
+| TIM-005 | `waitForTimeout` gravado | Geral | Script fica lento ou flaky | Presença de sleeps fixos | Substituir por wait semântico | DOM, rede, seletor, resposta | Timeout fixo removido | Execução estável sem espera arbitrária | P0 |
+| TIM-006 | Debounce em autocomplete | Geral / jQuery / Angular | Opções não aparecem no momento do clique | Input seguido de lista assíncrona | Wait por lista/opção | response intercept, waitForFunction | Seleção robusta | Opção correta selecionada | P1 |
+| TIM-007 | Navegação parcial sem page load | SPA / AJAX | `waitForLoadState` não resolve o estado real | URL muda ou componente troca sem navegação completa | Wait por marcador de tela | DOM stabilization, rede | Wait de tela pronta | Próxima ação só ocorre com tela estável | P1 |
+
+---
+
+### Família 3 — Contexto e Escopo
+
+| ID | Caso | Tecnologia | Sintoma observável | Detecção mínima | Estratégia principal | Fallbacks | Saída esperada | Critério de sucesso | Prioridade |
+|---|---|---|---|---|---|---|---|---|---|
+| CTX-001 | Iframe same-origin | Geral | Elemento não encontrado no `page` principal | Elemento existe dentro de frame acessível | `frame_reacquire` | frame por URL, título, nome, seletor | Locator usando `frameLocator` | Ação ocorre dentro do frame correto | P0 |
+| CTX-002 | Iframe cross-origin | Geral / portais corporativos | Script não consegue injetar ou inspecionar DOM | Frame bloqueia acesso por origem | `manual_checkpoint` | interação Playwright limitada, contrato externo | Marcação MANUAL_REQUIRED ou estratégia segura | Curador não fabrica seletor inacessível | P0 |
+| CTX-003 | Shadow DOM aberto | Web Components | Elemento não localizado por CSS comum | Elemento está sob shadow root aberto | `shadow_pierce` | role/text se suportado | Locator compatível com Playwright | Elemento localizado dentro do shadow DOM | P1 |
+| CTX-004 | Shadow DOM fechado | Web Components | Elemento inacessível | Shadow root fechado | `manual_checkpoint` | API pública do componente, contrato de teste | MANUAL_REQUIRED ou UNRESOLVED justificado | Curador não gera locator inválido | P2 |
+| CTX-005 | Popup/nova aba | Geral | Ação abre nova página e script continua na antiga | Evento `popup` ou nova página no contexto | Capturar popup/page | esperar URL/título | Script troca contexto | Próxima ação executa na página correta | P0 |
+| CTX-006 | Modal/dialog fora do escopo | jQuery UI / PrimeFaces | Botão visível não encontrado | Container do modal fora do componente original | Escopo por dialog/role | overlay container, texto | Locator dentro do modal | Clique no elemento visível correto | P0 |
+| CTX-007 | Frame recarregado | Geral | Handle antigo falha após reload | Frame detach/attach entre ações | `frame_reacquire` | aguardar frame por URL/name | Não cachear frame handle | Ação ocorre após reacquisição | P1 |
+
+---
+
+### Família 4 — Estado da Aplicação
+
+| ID | Caso | Tecnologia | Sintoma observável | Detecção mínima | Estratégia principal | Fallbacks | Saída esperada | Critério de sucesso | Prioridade |
+|---|---|---|---|---|---|---|---|---|---|
+| STA-001 | Sessão expirada | Geral | Redirecionamento para login ou tela de sessão | URL/texto indica expiração/login | `re_auth_hook` | checkpoint manual, fixture de autenticação | Fluxo de reautenticação isolado | Teste retorna ao ponto esperado | P0 |
+| STA-002 | Overlay bloqueando clique | JSF / jQuery / Geral | Playwright informa elemento coberto | Overlay visível intercepta pointer events | `overlay_dismiss` | aguardar sumir, ESC, botão fechar | Overlay removido antes do clique | Clique executado no elemento alvo | P0 |
+| STA-003 | Dados sujos | Geral | Pré-condição não satisfeita | Tela mostra registro existente, duplicidade ou estado anterior | Validação de pré-condição | setup/teardown, massa dedicada | Script com pré-condição explícita | Teste não depende de estado residual | P1 |
+| STA-004 | Alert/confirm/prompt nativo | Geral | Execução trava aguardando diálogo | Evento dialog emitido | Handler global de diálogo | política accept/dismiss configurável | Tratamento explícito de dialog | Execução não trava | P0 |
+| STA-005 | Permissão insuficiente | Geral | Botão ausente ou acesso negado | Texto/HTTP/URL indica restrição | Classificação de ambiente/perfil | checkpoint manual, skip justificado | MANUAL_REQUIRED ou UNRESOLVED | Falha classificada corretamente | P1 |
+| STA-006 | Ambiente indisponível/intermitente | Geral | Erro HTTP, timeout global, tela de indisponibilidade | HTTP 5xx, DNS, proxy, tela erro | Classificar como falha de ambiente | retry controlado, evidência | Relatório de ambiente | Curador não altera script indevidamente | P1 |
+
+---
+
+### Família 5 — DOM Dinâmico
+
+| ID | Caso | Tecnologia | Sintoma observável | Detecção mínima | Estratégia principal | Fallbacks | Saída esperada | Critério de sucesso | Prioridade |
+|---|---|---|---|---|---|---|---|---|---|
+| DOM-001 | Element handle cacheado | Geral | Erro de elemento detached/stale | Reuso de handle após ação que altera DOM | Rebuscar locator sempre | locator lazy, reacquire | Script sem cache de elemento | Sem erro detached em reexecução | P0 |
+| DOM-002 | Lista reordenada | Geral | Ação em item errado | Seleção por índice em lista dinâmica | Selecionar por conteúdo/chave | filtro por linha, texto, atributo estável | Locator por identidade do item | Item correto é afetado | P0 |
+| DOM-003 | Re-render substitui nó | JSF / Angular | Elemento encontrado antes, falha depois | Nó detach após AJAX/change detection | `dom_stabilization` + reacquire | wait por novo seletor | Reaquisição após render | Próxima ação usa nó atual | P0 |
+| DOM-004 | Virtualização de lista | Angular / frameworks UI | Item não está no DOM até scroll | Lista renderiza apenas elementos visíveis | Scroll controlado até item | busca incremental, API de filtro | Acesso robusto ao item | Item visível antes da interação | P2 |
+| DOM-005 | Lazy loading visual | Geral | Imagem/componente não aparece imediatamente | Placeholder ou skeleton na tela | Wait por conteúdo real | network idle, selector state | Espera por componente pronto | Assert não valida placeholder | P1 |
+
+---
+
+### Família 6 — Input e Interação Especializada
+
+| ID | Caso | Tecnologia | Sintoma observável | Detecção mínima | Estratégia principal | Fallbacks | Saída esperada | Critério de sucesso | Prioridade |
+|---|---|---|---|---|---|---|---|---|---|
+| INP-001 | Upload PrimeFaces | PrimeFaces | Upload gravado não reproduz | Componente fileUpload ou input file encapsulado | `upload_payload_binding` | localizar input real, fixture de arquivo | Upload parametrizado | Arquivo anexado e UI confirma | P0 |
+| INP-002 | Upload HTML padrão | Geral | Caminho local absoluto inválido | `input[type=file]` com path local gravado | Fixture de arquivo | parametrização por massa | Caminho relativo/fixture | Upload funciona em ambiente limpo | P0 |
+| INP-003 | Download disparado por clique | Geral | Arquivo baixado não é validado | Evento download após ação | `download_event_capture` | validar nome/tipo/tamanho/hash | Bloco `expect_download` | Download capturado e validado | P0 |
+| INP-004 | Download AJAX/Blob | SPA / Angular / JS | Não há navegação nem link direto | Blob, fetch ou object URL | Interceptar resposta/download | validar artefato gerado | Captura por evento/rede | Arquivo validado | P1 |
+| INP-005 | Drag-and-drop | jQuery UI / HTML5 | Ação gravada não reproduz movimento | Eventos drag/drop ou componente sortable | Simular drag semântico | mouse events controlados | Interação encapsulada | Item muda para posição esperada | P1 |
+| INP-006 | Rich text editor via iframe | Geral | Texto não é preenchido | Editor usa iframe/contenteditable | `frame_reacquire` + contenteditable | API do editor, teclado | Escrita no editor correto | Conteúdo final validado | P1 |
+| INP-007 | Máscara de input | Geral | Valor digitado difere do esperado | Campo formata CPF, moeda, data etc. | Preencher como usuário | validar valor normalizado | Input compatível com máscara | Valor aceito pela UI | P1 |
+| INP-008 | CAPTCHA | Geral | Fluxo bloqueado | Presença de CAPTCHA/desafio humano | `manual_checkpoint` | bypass de ambiente de teste se existir | MANUAL_REQUIRED | Curador não tenta burlar desafio | P0 |
+| INP-009 | Seleção de data em calendário | JSF / jQuery UI / Angular | Data não seleciona por input direto | Datepicker intercepta input | Seleção por componente | preenchimento + blur, teclado | Data selecionada e validada | Campo contém data correta | P1 |
+| INP-010 | Combobox customizado | Geral | Select HTML não existe | Role combobox/listbox ou div customizada | `aria_role_strategy` | texto/opção, teclado | Seleção por opção visível | Valor final exibido correto | P1 |
+
+---
+
+### Família 7 — Upload e Download de Arquivos
+
+| ID | Caso | Tecnologia | Sintoma observável | Detecção mínima | Estratégia principal | Fallbacks | Saída esperada | Critério de sucesso | Prioridade |
+|---|---|---|---|---|---|---|---|---|---|
+| FILE-001 | Arquivo local inexistente na execução | Geral | Upload falha por caminho da máquina do gravador | Path absoluto do usuário na gravação | Converter para fixture versionada | parametrizar massa | Referência portável | Execução funciona em outro ambiente | P0 |
+| FILE-002 | Upload com validação de extensão | Geral | Sistema rejeita arquivo | Mensagem de extensão/tipo inválido | Registrar metadados do arquivo | fixture compatível | Massa válida | Upload aceito | P1 |
+| FILE-003 | Upload com limite de tamanho | Geral | Rejeição por tamanho | Mensagem de limite ou HTTP erro | Registrar tamanho e política | fixture menor | Massa adequada | Upload aceito ou falha esperada assertada | P1 |
+| FILE-004 | Download com nome dinâmico | Geral | Nome muda a cada execução | Nome contém data, protocolo, hash | Validar por padrão/regex | validar tipo e conteúdo | Assert flexível | Download identificado sem nome fixo | P1 |
+| FILE-005 | Download precisa de autenticação | Geral | Link direto falha fora da sessão | Download depende da sessão atual | Capturar no contexto autenticado | evento download | Download dentro do fluxo | Arquivo recebido na sessão | P0 |
+| FILE-006 | Download bloqueado por popup/aba | Geral | Arquivo abre em nova aba ou viewer | Evento popup ou content-disposition ausente | Capturar popup/download | validar URL/conteúdo | Tratamento de nova aba | Artefato validado | P1 |
+
+---
+
+### Família 8 — Asserts e Validações
+
+| ID | Caso | Tecnologia | Sintoma observável | Detecção mínima | Estratégia principal | Fallbacks | Saída esperada | Critério de sucesso | Prioridade |
+|---|---|---|---|---|---|---|---|---|---|
+| AST-001 | Assert informado antes da gravação | Recorder/TestForge | Usuário declara objetivo antes do fluxo | Assert associado ao plano inicial | `assert_overlay_capture` | template de assert | Assert planejado | Assert aparece no script final | P0 |
+| AST-002 | Assert informado durante a gravação | Recorder/TestForge | Usuário marca elemento/estado no overlay | Evento de overlay com alvo e intenção | `assert_overlay_capture` | snapshot DOM, texto, role | Assert contextual | Assert valida o estado marcado | P0 |
+| AST-003 | Assert informado depois da gravação | Curador/TestForge | Usuário complementa validações pós-gravação | Metadado pós-gravação vinculado a step/tela | Vincular assert ao step correto | LLM inference com revisão | Assert pós-processado | Assert inserido no ponto adequado | P0 |
+| AST-004 | Assert de texto visível | Geral | Precisa validar mensagem/resultado | Texto alvo definido ou inferível | `text_content_match` | regex, contains, exact | Expect de texto | Texto validado sem seletor frágil | P0 |
+| AST-005 | Assert de URL/rota | SPA / Geral | Precisa validar navegação | Mudança de URL/rota | Expect URL/padrão | marcador de tela | Validação de rota | URL corresponde ao padrão esperado | P1 |
+| AST-006 | Assert de arquivo baixado | Geral | Precisa validar download | Evento download associado | `download_event_capture` | nome/tipo/tamanho/hash/conteúdo | Expect do artefato | Arquivo correto validado | P0 |
+| AST-007 | Assert de estado visual | Geral | Botão habilitado, campo preenchido, item selecionado | Estado DOM/ARIA detectável | role/state assertion | atributo, classe estável | Expect de estado | Estado final correto | P1 |
+| AST-008 | Assert ambíguo | Geral | Usuário diz “verificar se deu certo” sem alvo | Intenção sem elemento/condição objetiva | Solicitar/registrar checkpoint manual | sugestão de assert | MANUAL_REQUIRED | Não gerar assert inventado | P0 |
+| AST-009 | Assert de tabela/lista | Geral | Precisa validar presença de registro | Tabela/lista com texto/colunas | filtro por linha/célula | texto, chave, regex | Assert por conteúdo | Linha correta validada | P1 |
+| AST-010 | Assert negativo | Geral | Validar ausência de erro/item | Intenção de ausência | Expect not visible/not contains | wait controlado | Assert negativo seguro | Ausência confirmada após estabilidade | P1 |
+
+---
+
+### Família 9 — Recorder, Overlay e Checkpoints Manuais
+
+| ID | Caso | Tecnologia | Sintoma observável | Detecção mínima | Estratégia principal | Fallbacks | Saída esperada | Critério de sucesso | Prioridade |
+|---|---|---|---|---|---|---|---|---|---|
+| REC-001 | Gravação incompleta | Recorder | Fluxo termina sem estado final claro | Sessão encerrada sem assert final | Gerar script parcial com checkpoint | marcar pendências | PARTIALLY_RESOLVED | Script deixa ponto de retomada claro | P0 |
+| REC-002 | Overlay captura intenção do usuário | Recorder | Usuário adiciona comentário/assert/dado | Evento do overlay com timestamp/step | Persistir anotação estruturada | vincular por tela/DOM snapshot | Metadado rastreável | Curador usa anotação no script | P0 |
+| REC-003 | Usuário pausa gravação | Recorder | Intervalo sem eventos úteis | Evento pause/resume | Ignorar intervalo | registrar checkpoint | Gravação limpa | Sem sleeps artificiais pelo tempo pausado | P1 |
+| REC-004 | Navegação manual fora do fluxo | Recorder | Usuário muda URL/aba sem ação clara | Mudança de página sem evento de interação | Classificar como transição manual | checkpoint/observação | Step explícito | Fluxo fica rastreável | P1 |
+| REC-005 | Recon/fingerprint inicial | Recorder | Coleta de stack/DOM/ambiente no início | Execução de fingerprint antes/durante gravação | Registrar mapa tecnológico | enriquecer com rede/frames | Contexto para curadoria | Taxonomia usa tecnologia detectada | P0 |
+| REC-006 | Evento bloqueado por política do browser/app | Recorder | Evento não capturado ou bloqueado | Falta de evento esperado + mudança visual | Snapshot antes/depois | checkpoint manual | Evento sintético classificado | Curador não inventa causa | P1 |
+
+---
+
+### Família 10 — Execução, Evidência e Observabilidade
+
+| ID | Caso | Tecnologia | Sintoma observável | Detecção mínima | Estratégia principal | Fallbacks | Saída esperada | Critério de sucesso | Prioridade |
+|---|---|---|---|---|---|---|---|---|---|
+| OBS-001 | Falha sem screenshot/trace | Execução | Erro sem evidência suficiente | Falha Playwright sem artefatos | Coletar screenshot, trace, console, HAR se configurado | snapshot DOM | Evidência anexada | Relatório permite diagnóstico | P0 |
+| OBS-002 | Console error relevante | Geral | UI falha por erro JS | Console error durante step | Registrar e correlacionar | anexar stack | Diagnóstico enriquecido | Erro aparece no relatório | P1 |
+| OBS-003 | Erro de rede relevante | Geral | Ação falha por HTTP/API | Response 4xx/5xx ou timeout | `response_intercept` | HAR/log de rede | Diagnóstico de rede | Falha classificada como rede/app | P1 |
+| OBS-004 | Healing aplicado sem rastreabilidade | Curador | Script muda sem justificar | Patch sem motivo/caso taxonômico | Registrar ID taxonômico e estratégia | diff anotado | Patch auditável | Toda mudança tem causa e evidência | P0 |
+| OBS-005 | Rejeição repetida do mesmo patch | Curador | Patch falha repetidamente | Contador de rejeições por assinatura | Marcar UNRESOLVED após limite definido | abrir pendência manual | UNRESOLVED justificado | Loop de healing interrompido | P0 |
+| OBS-006 | Flakiness não determinística | Execução | Passa/falha alternadamente | Resultado instável entre rodadas | Rodadas limpas consecutivas antes de promover | classificar flaky | Script só é promovido após estabilidade | Promoção baseada em execução limpa | P0 |
+
+---
+
+### Família 11 — Limites Técnicos e Casos Não Automatizáveis com Segurança
+
+| ID | Caso | Tecnologia | Sintoma observável | Detecção mínima | Estratégia principal | Fallbacks | Saída esperada | Critério de sucesso | Prioridade |
+|---|---|---|---|---|---|---|---|---|---|
+| LIM-001 | CAPTCHA/desafio humano | Geral | Desafio exige validação humana | CAPTCHA visível ou provedor conhecido | `manual_checkpoint` | ambiente de teste com bypass oficial | MANUAL_REQUIRED | Curador não tenta burlar | P0 |
+| LIM-002 | Cross-origin inacessível | Browser security | DOM de frame não pode ser inspecionado | Erro de origem/acesso negado | `manual_checkpoint` | interação limitada se possível | MANUAL_REQUIRED/UNRESOLVED | Sem locator fabricado | P0 |
+| LIM-003 | Dado sensível mascarado | Geral | Valor não pode ser persistido em claro | Campo marcado sensível ou política detectada | Mascaramento/tokenização | fixture segura | Dado protegido | Relatório não expõe segredo | P0 |
+| LIM-004 | Operação irreversível | Sistemas críticos | Fluxo confirma exclusão/envio/contratação | Botão/ação crítica detectada | Checkpoint de confirmação | ambiente sandbox | MANUAL_REQUIRED | Curador exige confirmação explícita | P0 |
+| LIM-005 | Dependência externa instável | Integrações | Resultado depende de sistema externo | Erro/timeouts de terceiro | Classificar dependência | mock/stub se permitido | Falha classificada | Não alterar script indevidamente | P2 |
+
+---
+
+## 5. Matriz de Decisão do Curador
+
+Ordem recomendada de decisão:
+
+1. Identificar tecnologia predominante da tela ou componente.
+2. Identificar família da falha.
+3. Classificar pelo primeiro ID taxonômico compatível.
+4. Coletar evidências mínimas.
+5. Aplicar estratégia principal.
+6. Validar por execução controlada.
+7. Se falhar, aplicar fallback na ordem definida.
+8. Se houver risco técnico, segurança, CAPTCHA, cross-origin fechado ou assert ambíguo, marcar como `MANUAL_REQUIRED`.
+9. Se as tentativas forem rejeitadas pelo validador, marcar como `UNRESOLVED`.
+10. Registrar no relatório: ID, causa, estratégia, patch, evidência e resultado.
+
+---
+
+## 6. Modelo de Registro para Implementação
+
+```yaml
+id: SEL-001
+family: Seletores frágeis
+case: ID JSF dinâmico
+technologies:
+  - JSF
+  - PrimeFaces
+priority: P0
+observable_symptoms:
+  - Locator quebra entre execuções
+  - ID contém padrão dinâmico
+minimum_detection:
+  - pattern: "j_idt"
+  - selector_has_numeric_index: true
+primary_strategy: semantic_locator_conversion
+fallback_strategies:
+  - label_proximity
+  - text_content_match
+  - aria_role_strategy
+  - llm_selector_inference
+expected_output:
+  - Playwright locator semântico
+success_criteria:
+  - Elemento localizado em execuções repetidas
+  - Sem uso de XPath absoluto
+result_states:
+  success: RESOLVED
+  failure: UNRESOLVED
+```
+
+---
+
+## 7. Critérios Globais de Aceite
+
+A implementação da taxonomia será considerada adequada quando:
+
+1. Todo caso conhecido possuir ID estável.
+2. Toda alteração feita pelo curador referenciar um ID taxonômico.
+3. Todo ID P0 possuir pelo menos um teste automatizado do curador.
+4. Nenhum caso ambíguo gerar assert, locator ou patch inventado sem evidência.
+5. Uploads e downloads forem tratados como artefatos versionáveis, parametrizáveis e verificáveis.
+6. Asserts puderem ser informados antes, durante ou depois da gravação.
+7. Iframes cross-origin, CAPTCHA e operações irreversíveis forem tratados como checkpoints manuais ou casos não resolvidos com justificativa.
+8. O relatório final apresentar: falha, evidência, estratégia, patch, validação e estado.
+
+---
+
+## 8. Próximos Artefatos Recomendados
+
+1. `taxonomy.schema.yaml` — schema formal da taxonomia.
+2. `taxonomy.cases.yaml` — catálogo consumível pela implementação.
+3. `curator-decision-tree.puml` — diagrama da decisão do curador.
+4. `healing-strategies.md` — contrato de cada estratégia.
+5. `curator-test-matrix.md` — matriz de testes automatizados por ID.
+6. `manual-checkpoint-policy.md` — política para casos MANUAL_REQUIRED.
+
+===== END testforge_taxonomia_casos_conhecidos.md =====
+

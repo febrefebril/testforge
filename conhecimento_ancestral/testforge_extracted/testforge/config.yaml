@@ -1,0 +1,42 @@
+recording:
+  default_timeout: 30000
+  screenshot_on_event: false
+  max_events: 500
+  iframe_support: true
+  shadow_dom_support: true
+
+selectors:
+  priority_order:
+    - data_testid
+    - aria
+    - text
+    - css
+    - xpath
+  fallback_enabled: true
+
+generation:
+  model_temperature: 0.2
+  max_tokens: 4096
+  include_comments: true
+  pytest_markers: true
+
+healing:
+  max_heal_attempts: 5
+  screenshot_on_failure: true
+  llm_heal_enabled: true
+  patch_in_place: true
+
+optimization:
+  min_timeout_ms: 500
+  max_timeout_reduction_pct: 70
+  re_run_after_optimization: true
+  target_wait_strategies:
+    - domcontentloaded
+    - load
+    - networkidle
+
+logging:
+  level: INFO
+  rich_output: true
+  save_logs: true
+  log_dir: logs/

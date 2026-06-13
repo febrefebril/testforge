@@ -1,0 +1,23 @@
+{
+  "created_at": "2026-06-12T17:51:59.571170",
+  "package_name": "testforge_consolidado_discussao",
+  "policy_update": {
+    "sensitive_data_handling": "alert_only",
+    "masking_applied_in_mvp": false
+  },
+  "included_items": [
+    {
+      "folder": "codigo_referencia",
+      "name": "sensitive_data_alert_only_detector.py",
+      "size": 1380
+    }
+  ],
+  "updated_at": "2026-06-12T17:52:33.979590",
+  "contains": [
+    "perguntas_e_respostas_consolidadas",
+    "decisao_alert_only_para_dados_sensiveis",
+    "indice_de_artefatos_gerados",
+    "codigo_referencia_detector_alert_only",
+    "referencias_dos_arquivos_anteriores"
+  ]
+}

@@ -1,0 +1,96 @@
+version: "0.1.0"
+artifact: "TestForge MVP Prioritization and Estimation"
+status: "draft"
+
+priority_formula:
+  valor_aprendizado: 0.30
+  reducao_risco: 0.25
+  dependencia: 0.20
+  observabilidade: 0.15
+  esforco_inverso: 0.10
+
+mvp1_epics:
+  - id: "EP-00"
+    title: "Fundação do Produto e Governança"
+    priority: 1
+    rationale: "Base de versionamento, governança e decisões normativas."
+  - id: "EP-01"
+    title: "Synthetic Lab Mínimo"
+    priority: 2
+    rationale: "Permite validar hipóteses sem depender de ambiente real."
+  - id: "EP-02"
+    title: "EvidenceCollector e EvidenceStore"
+    priority: 3
+    rationale: "Sem evidência e banco, não há auditoria nem aprendizado."
+  - id: "EP-07"
+    title: "Oracle Pós-Ação mínimo"
+    priority: 4
+    rationale: "Sem oracle, não há como medir falso healing."
+  - id: "EP-08"
+    title: "Promotion Gate mínimo"
+    priority: 5
+    rationale: "Impede promoção sem evidência e critérios objetivos."
+
+story_point_scale:
+  values: [1, 2, 3, 5, 8, 13]
+  rule: "Histórias de 13 pontos devem ser quebradas."
+
+mvp1_estimates:
+  - story: "US-00.01"
+    title: "Criar estrutura inicial do repositório"
+    points: 2
+  - story: "US-00.02"
+    title: "Versionar plano macro"
+    points: 2
+  - story: "US-00.03"
+    title: "Política alert_only para dados sensíveis"
+    points: 2
+  - story: "US-01.01"
+    title: "Criar fake-react-bank-app"
+    points: 3
+  - story: "US-01.02"
+    title: "Implementar mutation change_id"
+    points: 2
+  - story: "US-01.03"
+    title: "Implementar mutation duplicate_button_text"
+    points: 2
+  - story: "US-01.04"
+    title: "Implementar mutation overlay_blocks_click"
+    points: 3
+  - story: "US-01.05"
+    title: "Criar mutation_matrix.yaml"
+    points: 2
+  - story: "US-02.01"
+    title: "EvidenceCollector básico"
+    points: 5
+  - story: "US-02.02"
+    title: "Persistência SQLite"
+    points: 5
+  - story: "US-02.03"
+    title: "Query pendentes de revisão"
+    points: 2
+  - story: "US-07.01"
+    title: "Oracle visual/DOM"
+    points: 3
+  - story: "US-07.03"
+    title: "Oracle business_state mínimo"
+    points: 3
+  - story: "US-08.01"
+    title: "Estados de promoção"
+    points: 3
+  - story: "US-08.02"
+    title: "Bloqueio sem evidência completa"
+    points: 3
+  - story: "US-08.04"
+    title: "Integração básica ao shadow flow"
+    points: 5
+
+total_points_mvp1: 44
+
+suggested_sprints:
+  - sprint: 1
+    stories: ["US-00.01", "US-00.02", "US-00.03", "US-01.01", "US-01.02", "US-01.05"]
+  - sprint: 2
+    stories: ["US-01.03", "US-01.04", "US-02.01", "US-02.03"]
+  - sprint: 3
+    stories: ["US-02.02", "US-07.01", "US-07.03", "US-08.01", "US-08.02", "US-08.04"]

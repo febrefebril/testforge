@@ -1,0 +1,353 @@
+@startuml
+title TestForge - Sequência da Curadoria Multiagente após Falha do script_v0.py
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 18
+skinparam BoxPadding 10
+
+autonumber
+
+participant "ExecutorAgent" as ExecutorAgent
+participant "ScriptUnderTest\n(script_v0.py)" as ScriptUnderTest
+participant "ExecutionCollector" as ExecutionCollector
+participant "FailureDiagnostic" as FailureDiagnostic
+participant "FailureSignatureBuilder" as FailureSignatureBuilder
+participant "FailureClassifier" as FailureClassifier
+participant "AgentOrchestrator" as AgentOrchestrator
+participant "EvidenceRepository" as EvidenceRepository
+participant "KnowledgeBase" as KnowledgeBase
+participant "SelectorRepairAgent" as SelectorRepairAgent
+participant "TimingAsyncAgent" as TimingAsyncAgent
+participant "ContextScopeAgent" as ContextScopeAgent
+participant "StateRecoveryAgent" as StateRecoveryAgent
+participant "DynamicDOMAgent" as DynamicDOMAgent
+participant "SpecialInteractionAgent" as SpecialInteractionAgent
+participant "PatchValidator" as PatchValidator
+participant "ProgressDetector" as ProgressDetector
+participant "RollbackManager" as RollbackManager
+participant "VersionManager" as VersionManager
+participant "LLMFallbackAgent" as LLMFallbackAgent
+
+ExecutorAgent -> ScriptUnderTest : executar script_v0.py
+activate ExecutorAgent
+activate ScriptUnderTest
+
+ScriptUnderTest -> ScriptUnderTest : executar steps normalizados\ncom locators e waits iniciais
+
+alt Step falha durante execução
+  ScriptUnderTest --> ExecutorAgent : erro no step_id\nexception, timeout ou comportamento inesperado
+  deactivate ScriptUnderTest
+
+  ExecutorAgent -> ExecutionCollector : coletar evidências da execução falha
+  activate ExecutionCollector
+  ExecutionCollector -> ExecutionCollector : coletar trace.zip
+  ExecutionCollector -> ExecutionCollector : coletar screenshot_failure.png
+  ExecutionCollector -> ExecutionCollector : coletar dom_failure.html
+  ExecutionCollector -> ExecutionCollector : coletar console_network.json
+  ExecutionCollector -> ExecutionCollector : coletar timing, URL, frame, storage\ne estado do browser context
+  ExecutionCollector --> ExecutorAgent : pacote de execução falha
+  deactivate ExecutionCollector
+
+  ExecutorAgent -> FailureDiagnostic : diagnosticar falha
+  activate FailureDiagnostic
+  FailureDiagnostic -> FailureDiagnostic : identificar step_id, linha do script,\nerro, contexto, locator usado e checkpoint
+  FailureDiagnostic -> FailureSignatureBuilder : criar assinatura da falha
+  activate FailureSignatureBuilder
+  FailureSignatureBuilder -> FailureSignatureBuilder : normalizar erro, stacktrace,\nDOM alvo, rede, console e timing
+  FailureSignatureBuilder --> FailureDiagnostic : failure_signature.json
+  deactivate FailureSignatureBuilder
+  FailureDiagnostic --> ExecutorAgent : diagnóstico estruturado
+  deactivate FailureDiagnostic
+
+  ExecutorAgent -> FailureClassifier : classificar família da falha
+  activate FailureClassifier
+
+  alt Seletores frágeis
+    FailureClassifier --> AgentOrchestrator : família = seletores frágeis
+  else Timing / assincronismo
+    FailureClassifier --> AgentOrchestrator : família = timing/assincronismo
+  else Contexto / escopo
+    FailureClassifier --> AgentOrchestrator : família = contexto/escopo
+  else Estado da aplicação
+    FailureClassifier --> AgentOrchestrator : família = estado da aplicação
+  else DOM dinâmico
+    FailureClassifier --> AgentOrchestrator : família = DOM dinâmico
+  else Interação especializada
+    FailureClassifier --> AgentOrchestrator : família = interação especializada
+  else Desconhecida
+    FailureClassifier --> AgentOrchestrator : família = desconhecida
+  end
+  deactivate FailureClassifier
+
+  activate AgentOrchestrator
+
+  AgentOrchestrator -> EvidenceRepository : consultar gravação e evidências originais\nsession_raw, session_normalized, DOM, screenshots, rede, console,\nframes, shadow DOM, storage, selector_candidates e fingerprints
+  activate EvidenceRepository
+  EvidenceRepository --> AgentOrchestrator : evidências originais e contexto do step
+  deactivate EvidenceRepository
+
+  AgentOrchestrator -> KnowledgeBase : consultar padrões resolvidos,\nfailure_signatures.jsonl e healing_rules.json
+  activate KnowledgeBase
+  KnowledgeBase --> AgentOrchestrator : histórico aplicável e regras conhecidas
+  deactivate KnowledgeBase
+
+  AgentOrchestrator -> AgentOrchestrator : montar pacote mínimo de evidências\nmascarado, rastreável e suficiente para curadoria
+
+  note over AgentOrchestrator,EvidenceRepository
+    O pacote enviado ao agente reutiliza a gravação original
+    e as evidências coletadas no momento da interação humana:
+    ação, contexto técnico, DOM, rede, console, frame,
+    shadow DOM, storage, locators alternativos e fingerprint.
+  end note
+
+  loop Tentativas determinísticas até sucesso, progresso, limite ou esgotamento
+    alt Família = seletores frágeis
+      AgentOrchestrator -> SelectorRepairAgent : solicitar patch determinístico\nlabel_proximity, text_content_match, aria_role_strategy
+      activate SelectorRepairAgent
+      SelectorRepairAgent --> AgentOrchestrator : patch candidato de locator
+      deactivate SelectorRepairAgent
+    else Família = timing/assincronismo
+      AgentOrchestrator -> TimingAsyncAgent : solicitar patch determinístico\nnetwork_idle_wait, response_intercept, dom_stabilization
+      activate TimingAsyncAgent
+      TimingAsyncAgent --> AgentOrchestrator : patch candidato de espera observável
+      deactivate TimingAsyncAgent
+    else Família = contexto/escopo
+      AgentOrchestrator -> ContextScopeAgent : solicitar patch determinístico\nframe_reacquire, shadow_pierce, contexto correto
+      activate ContextScopeAgent
+      ContextScopeAgent --> AgentOrchestrator : patch candidato de escopo
+      deactivate ContextScopeAgent
+    else Família = estado da aplicação
+      AgentOrchestrator -> StateRecoveryAgent : solicitar patch determinístico\nre_auth_hook, restauração de estado, checkpoint
+      activate StateRecoveryAgent
+      StateRecoveryAgent --> AgentOrchestrator : patch candidato de estado
+      deactivate StateRecoveryAgent
+    else Família = DOM dinâmico
+      AgentOrchestrator -> DynamicDOMAgent : solicitar patch determinístico\ndom_stabilization, MutationObserver hints, reconsulta de alvo
+      activate DynamicDOMAgent
+      DynamicDOMAgent --> AgentOrchestrator : patch candidato de DOM dinâmico
+      deactivate DynamicDOMAgent
+    else Família = interação especializada
+      AgentOrchestrator -> SpecialInteractionAgent : solicitar patch determinístico\ndialog, overlay, datepicker, autocomplete, upload, componente rico
+      activate SpecialInteractionAgent
+      SpecialInteractionAgent --> AgentOrchestrator : patch candidato de interação especializada
+      deactivate SpecialInteractionAgent
+    else Família desconhecida
+      AgentOrchestrator -> AgentOrchestrator : selecionar estratégia determinística geral\ncom base em evidências e histórico
+    end
+
+    AgentOrchestrator -> PatchValidator : validar patch candidato
+    activate PatchValidator
+    PatchValidator -> PatchValidator : verificar sintaxe, segurança, escopo,\nrastreabilidade, mascaramento e compatibilidade com Playwright Python
+
+    alt Patch válido
+      PatchValidator --> AgentOrchestrator : patch aprovado para versão temporária
+      deactivate PatchValidator
+
+      AgentOrchestrator -> VersionManager : aplicar patch em versão temporária
+      activate VersionManager
+      VersionManager -> VersionManager : criar branch/versão temporária\nassociada ao attempt_id
+      VersionManager --> AgentOrchestrator : versão temporária pronta
+      deactivate VersionManager
+
+      AgentOrchestrator -> ExecutorAgent : reexecutar checkpoint ou script temporário
+      activate ExecutorAgent
+      ExecutorAgent -> ScriptUnderTest : executar versão temporária\na partir do checkpoint seguro
+      activate ScriptUnderTest
+
+      alt Execução retorna resultado comparável
+        ScriptUnderTest --> ExecutorAgent : resultado da reexecução\npassou, avançou, estagnou, regrediu ou mudou erro
+        deactivate ScriptUnderTest
+
+        ExecutorAgent -> ExecutionCollector : coletar novas evidências da tentativa
+        activate ExecutionCollector
+        ExecutionCollector --> ExecutorAgent : run_N atualizado
+        deactivate ExecutionCollector
+
+        ExecutorAgent -> ProgressDetector : classificar progresso da tentativa
+        activate ProgressDetector
+        ProgressDetector -> ProgressDetector : comparar com baseline anterior\nstep, erro, DOM, rede, console, trace e checkpoints
+
+        alt Resultado = PASSED_STEP
+          ProgressDetector --> AgentOrchestrator : PASSED_STEP
+          deactivate ProgressDetector
+          AgentOrchestrator -> VersionManager : aceitar patch e criar checkpoint estável
+          activate VersionManager
+          VersionManager --> AgentOrchestrator : checkpoint criado
+          deactivate VersionManager
+          AgentOrchestrator -> KnowledgeBase : registrar tentativa, patch aceito\ne padrão resolvido
+          activate KnowledgeBase
+          KnowledgeBase --> AgentOrchestrator : histórico atualizado
+          deactivate KnowledgeBase
+
+        else Resultado = PROGRESSED
+          ProgressDetector --> AgentOrchestrator : PROGRESSED
+          deactivate ProgressDetector
+          AgentOrchestrator -> VersionManager : aceitar patch provisório\ne criar checkpoint de progresso
+          activate VersionManager
+          VersionManager --> AgentOrchestrator : checkpoint de progresso criado
+          deactivate VersionManager
+          AgentOrchestrator -> KnowledgeBase : registrar progresso e evidências
+          activate KnowledgeBase
+          KnowledgeBase --> AgentOrchestrator : histórico atualizado
+          deactivate KnowledgeBase
+          AgentOrchestrator -> FailureClassifier : reavaliar próximo bloqueio se existir
+          activate FailureClassifier
+          FailureClassifier --> AgentOrchestrator : família atualizada ou mantida
+          deactivate FailureClassifier
+
+        else Resultado = STAGNATED
+          ProgressDetector --> AgentOrchestrator : STAGNATED
+          deactivate ProgressDetector
+          AgentOrchestrator -> KnowledgeBase : registrar tentativa sem progresso
+          activate KnowledgeBase
+          KnowledgeBase --> AgentOrchestrator : histórico atualizado
+          deactivate KnowledgeBase
+          AgentOrchestrator -> AgentOrchestrator : tentar próxima estratégia determinística\nda mesma família ou estratégia correlata
+
+        else Resultado = REGRESSED
+          ProgressDetector --> AgentOrchestrator : REGRESSED
+          deactivate ProgressDetector
+          AgentOrchestrator -> RollbackManager : restaurar versão estável anterior
+          activate RollbackManager
+          RollbackManager -> VersionManager : rollback para checkpoint estável
+          activate VersionManager
+          VersionManager --> RollbackManager : versão restaurada
+          deactivate VersionManager
+          RollbackManager --> AgentOrchestrator : rollback concluído
+          deactivate RollbackManager
+          AgentOrchestrator -> KnowledgeBase : registrar regressão e patch rejeitado
+          activate KnowledgeBase
+          KnowledgeBase --> AgentOrchestrator : histórico atualizado
+          deactivate KnowledgeBase
+
+        else Resultado = ERROR_CHANGED
+          ProgressDetector --> AgentOrchestrator : ERROR_CHANGED
+          deactivate ProgressDetector
+          AgentOrchestrator -> KnowledgeBase : registrar nova assinatura de falha
+          activate KnowledgeBase
+          KnowledgeBase --> AgentOrchestrator : histórico atualizado
+          deactivate KnowledgeBase
+          AgentOrchestrator -> FailureClassifier : reclassificar nova falha
+          activate FailureClassifier
+          FailureClassifier --> AgentOrchestrator : nova família de falha
+          deactivate FailureClassifier
+          AgentOrchestrator -> AgentOrchestrator : rotear para outro agente especializado
+
+        else Resultado = UNRESOLVED
+          ProgressDetector --> AgentOrchestrator : UNRESOLVED
+          deactivate ProgressDetector
+          AgentOrchestrator -> KnowledgeBase : registrar tentativa não resolvida
+          activate KnowledgeBase
+          KnowledgeBase --> AgentOrchestrator : histórico atualizado
+          deactivate KnowledgeBase
+          AgentOrchestrator -> AgentOrchestrator : verificar limite e estratégias restantes
+        end
+
+      else Reexecução não comparável
+        ScriptUnderTest --> ExecutorAgent : erro infraestrutural ou evidência insuficiente
+        deactivate ScriptUnderTest
+        ExecutorAgent -> ProgressDetector : classificar como UNRESOLVED ou ERROR_CHANGED
+        activate ProgressDetector
+        ProgressDetector --> AgentOrchestrator : resultado não comparável
+        deactivate ProgressDetector
+      end
+
+      deactivate ExecutorAgent
+
+    else Patch inválido
+      PatchValidator --> AgentOrchestrator : patch rejeitado\ncom motivo técnico
+      deactivate PatchValidator
+      AgentOrchestrator -> KnowledgeBase : registrar patch rejeitado
+      activate KnowledgeBase
+      KnowledgeBase --> AgentOrchestrator : histórico atualizado
+      deactivate KnowledgeBase
+    end
+
+    alt Estratégias determinísticas disponíveis
+      AgentOrchestrator -> AgentOrchestrator : continuar com próxima estratégia determinística
+    else Estratégias determinísticas esgotadas ou limite excedido
+      AgentOrchestrator -> AgentOrchestrator : marcar necessidade de fallback controlado
+      break
+    end
+  end
+
+  alt Fluxo estabilizado por estratégia determinística
+    AgentOrchestrator -> KnowledgeBase : registrar padrão aprendido,\npatch aceito e regra candidata de healing
+    activate KnowledgeBase
+    KnowledgeBase --> AgentOrchestrator : conhecimento consolidado
+    deactivate KnowledgeBase
+    AgentOrchestrator --> ExecutorAgent : curadoria determinística concluída
+
+  else UNRESOLVED ou limite excedido após estratégias determinísticas
+    note over AgentOrchestrator,LLMFallbackAgent
+      LLMFallbackAgent só é acionado depois de esgotar
+      as estratégias determinísticas aplicáveis.
+      A saída do LLM é tratada como hipótese ou patch candidato,
+      nunca como correção automaticamente aceita.
+    end note
+
+    AgentOrchestrator -> EvidenceRepository : montar pacote mínimo mascarado\ncom gravação e evidências originais
+    activate EvidenceRepository
+    EvidenceRepository --> AgentOrchestrator : pacote controlado de evidências
+    deactivate EvidenceRepository
+
+    AgentOrchestrator -> LLMFallbackAgent : solicitar hipótese ou patch candidato\ncom escopo limitado e evidências mascaradas
+    activate LLMFallbackAgent
+    LLMFallbackAgent --> AgentOrchestrator : hipótese ou patch candidato controlado
+    deactivate LLMFallbackAgent
+
+    AgentOrchestrator -> PatchValidator : validar saída do LLM
+    activate PatchValidator
+    PatchValidator -> PatchValidator : aplicar as mesmas regras de validação\nusadas para patches determinísticos
+
+    alt Patch do LLM válido
+      PatchValidator --> AgentOrchestrator : patch candidato aprovado para teste
+      deactivate PatchValidator
+      AgentOrchestrator -> VersionManager : aplicar patch em versão temporária
+      activate VersionManager
+      VersionManager --> AgentOrchestrator : versão temporária pronta
+      deactivate VersionManager
+      AgentOrchestrator -> ExecutorAgent : reexecutar checkpoint/script temporário
+      activate ExecutorAgent
+      ExecutorAgent -> ScriptUnderTest : executar patch candidato validado
+      activate ScriptUnderTest
+      ScriptUnderTest --> ExecutorAgent : resultado da execução
+      deactivate ScriptUnderTest
+      ExecutorAgent -> ProgressDetector : classificar resultado do fallback
+      activate ProgressDetector
+      ProgressDetector --> AgentOrchestrator : PASSED_STEP, PROGRESSED, STAGNATED,\nREGRESSED, ERROR_CHANGED ou UNRESOLVED
+      deactivate ProgressDetector
+      deactivate ExecutorAgent
+      AgentOrchestrator -> KnowledgeBase : registrar tentativa de fallback,\nresultado e rastreabilidade
+      activate KnowledgeBase
+      KnowledgeBase --> AgentOrchestrator : histórico atualizado
+      deactivate KnowledgeBase
+    else Patch do LLM inválido
+      PatchValidator --> AgentOrchestrator : saída rejeitada
+      deactivate PatchValidator
+      AgentOrchestrator -> KnowledgeBase : registrar fallback rejeitado\ne manter falha como UNRESOLVED
+      activate KnowledgeBase
+      KnowledgeBase --> AgentOrchestrator : histórico atualizado
+      deactivate KnowledgeBase
+    end
+
+    AgentOrchestrator --> ExecutorAgent : curadoria encerrada com resultado controlado
+  end
+
+  deactivate AgentOrchestrator
+  deactivate ExecutorAgent
+
+else Script passa sem falha
+  ScriptUnderTest --> ExecutorAgent : execução concluída sem falhas
+  deactivate ScriptUnderTest
+  ExecutorAgent -> ExecutionCollector : registrar execução bem-sucedida
+  activate ExecutionCollector
+  ExecutionCollector --> ExecutorAgent : execution.json atualizado
+  deactivate ExecutionCollector
+  ExecutorAgent --> ExecutorAgent : promover para estabilização
+  deactivate ExecutorAgent
+end
+
+@enduml
