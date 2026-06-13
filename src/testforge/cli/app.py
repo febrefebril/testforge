@@ -112,7 +112,9 @@ def _auto_learn(error_msg: str, solution: str, framework: str = "generic"):
     except Exception:
         pass
     return None
-    """Compila gravacao em script Playwright Python."""
+
+
+def cmd_compile(args):
     rec_id = args.recording
     rec_dir = f"recordings/{rec_id}"
     if not os.path.isdir(rec_dir):
