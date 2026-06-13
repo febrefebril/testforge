@@ -9,6 +9,9 @@ dependencies = [
     "typer>=0.9",
 ]
 
+[project.scripts]
+testforge = "testforge.cli.app:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
