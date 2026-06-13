@@ -1,0 +1,8 @@
+{
+  "recording_id": "REC-E2E-001",
+  "application": "fake-bank",
+  "base_url": "http://localhost:8765",
+  "started_at": "2026-06-13T04:03:59.915397+00:00",
+  "finished_at": "2026-06-13T04:04:01.749234+00:00",
+  "status": "completed"
+}

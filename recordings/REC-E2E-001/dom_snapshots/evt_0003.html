@@ -1,0 +1,95 @@
+<!DOCTYPE html><html lang="pt-BR"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Consulta de Cliente</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f4f6f8; display: flex; justify-content: center; padding-top: 80px; }
+  .card { background: #fff; padding: 32px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); width: 420px; }
+  h1 { font-size: 20px; margin-bottom: 24px; color: #1a1a2e; }
+  .field { margin-bottom: 16px; }
+  label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 4px; color: #374151; }
+  input { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px; outline: none; transition: border-color 0.2s; }
+  input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+  button { width: 100%; padding: 12px; background: #6366f1; color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+  button:hover { background: #4f46e5; }
+  button:disabled { background: #9ca3af; cursor: not-allowed; }
+  .result { margin-top: 24px; padding: 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; display: none; }
+  .result.visible { display: block; }
+  .result h2 { font-size: 16px; margin-bottom: 8px; color: #166534; }
+  .result p { font-size: 14px; color: #374151; }
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; z-index: 100; }
+  .overlay.active { display: block; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>Consulta de Cliente</h1>
+  <form id="consultaForm" onsubmit="handleSubmit(event)">
+    <div class="field">
+      <label for="cpfField" data-mutation="change_accessible_name">CPF</label>
+      <input type="text" id="cpfField" name="cpf" placeholder="000.000.000-00" autocomplete="off" style="">
+    </div>
+    <button type="submit" id="btnPesquisar" data-mutation="change_id">Pesquisar</button>
+  </form>
+  <div id="resultadoSection" class="result visible">
+    <h2>Resultado da consulta</h2>
+    <p id="cpfResultado">CPF consultado: 12345678900</p>
+  </div>
+</div>
+
+<div id="overlayBlock" class="overlay"></div>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const mutation = params.get('mutation');
+
+  if (mutation === 'change_id') {
+    document.getElementById('btnPesquisar').id = 'btnPesquisar_' + Date.now();
+  }
+
+  if (mutation === 'change_accessible_name') {
+    document.querySelector('label[for="cpfField"]').textContent = 'Documento';
+  }
+
+  if (mutation === 'duplicate_button_text') {
+    const dup = document.createElement('button');
+    dup.textContent = 'Pesquisar';
+    dup.style.cssText = 'width:100%;padding:12px;margin-top:8px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;';
+    dup.onclick = (e) => { e.preventDefault(); handleSubmit(e); };
+    document.getElementById('consultaForm').appendChild(dup);
+  }
+
+  if (mutation === 'overlay_blocks_click') {
+    document.getElementById('overlayBlock').classList.add('active');
+    setTimeout(() => {
+      document.getElementById('overlayBlock').classList.remove('active');
+    }, 8000);
+  }
+
+  if (mutation === 'disabled_button') {
+    document.getElementById('btnPesquisar').disabled = true;
+    setTimeout(() => {
+      document.getElementById('btnPesquisar').disabled = false;
+    }, 8000);
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    const cpf = document.getElementById('cpfField')?.value || params.get('cpf') || '';
+    const section = document.getElementById('resultadoSection');
+    const resultEl = document.getElementById('cpfResultado');
+    if (cpf) {
+      resultEl.textContent = 'CPF consultado: ' + cpf;
+      section.classList.add('visible');
+    } else {
+      resultEl.textContent = 'Informe um CPF para consultar.';
+      section.classList.add('visible');
+    }
+  }
+</script>
+
+
+
+</body></html>
