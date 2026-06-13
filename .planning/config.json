@@ -1,0 +1,30 @@
+{
+  "project": {
+    "name": "TestForge",
+    "description": "Gravador inteligente de testes E2E com self-healing deterministico",
+    "language": "Python",
+    "framework": "Playwright"
+  },
+  "workflow": {
+    "granularity": "fine",
+    "auto_commit": true,
+    "require_verify": true,
+    "planning_mode": "phase"
+  },
+  "git": {
+    "auto_commit": true,
+    "require_conventional_commits": true,
+    "hooks_path": ".githooks"
+  },
+  "agents": {
+    "planner": "gsd-planner",
+    "executor": "gsd-executor",
+    "verifier": "gsd-verifier",
+    "code_reviewer": "gsd-code-reviewer"
+  },
+  "model_profiles": {
+    "research": {},
+    "planning": {},
+    "execution": {}
+  }
+}
