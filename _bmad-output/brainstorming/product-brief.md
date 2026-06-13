@@ -58,22 +58,26 @@ Nosso diferencial nao e a ideia — a ideia ja existia nas 4 tentativas. Nosso d
 
 ## Escopo
 
-### MVP (primeira versao)
-- Recorder via extensao Chrome com overlay injection
-- Suporte a PrimeFaces, Angular (detecao automatica de framework)
-- Geracao de script Playwright Python a partir da gravacao
-- Healing deterministico: fallback por score de candidatos
-- 1 oracle: visual/DOM comparison
-- Relatorio simples: passo, status, healing aplicado
+### MVP (primeira versao — 7 sprints)
+Baseado no prompt pack v0.2.0 do conhecimento ancestral:
+
+| Sprint | Foco |
+|--------|------|
+| **S1 — Fundacao** | Estrutura repo, fake-react-bank-app, mutation matrix, 4 mutacoes sinteticas |
+| **S2 — Recorder Sensorial** | Playwright nativo (sem extensao): RecordingSession, RawRecordedEvent, snapshots DOM/AX/screenshot, network log, sensitive data alert_only |
+| **S3 — EvidenceCollector** | Coleta de evidencias por evento, SQLite store, pending_reviews.sql |
+| **S4 — SemanticTestCase + Compiler** | Schema YAML, RawRecordedSession→SemanticTestCase, LocatorCandidateGenerator, PlaywrightPythonCompiler |
+| **S5 — Oracles + PromotionGate** | Oracle visual_dom + business_state, PromotionGate (experimental/shadow_validated/rejected) |
+| **S6 — Taxonomia + Shadow + Fallback** | Failure taxonomy, FailureClassifier, ShadowValidator, fallback deterministico |
+| **S7 — Metricas + Revisao** | MetricsRepository, CLI de revisao, relatorio sintetico |
+
+Gravacao via **Playwright API nativa** — sem extensao de browser. Seguro para ambientes corporativos.
 
 ### Fora do MVP
-- Shadow mode com revisao humana
-- Promotion Gate com estados (experimental → trusted)
-- Multiplos oracles por acao
-- Curador LLM integrado
-- Taxonomia de falhas completa (React, Angular, etc)
-- Dashboard/metricas
-- Synthetic lab com mutacoes controladas
+- Curador LLM integrado (off critical path, so quando deterministico falha)
+- Multiplos oracles por acao (MVP: 2 oracles)
+- Dashboard/metricas em tempo real
+- Suporte a frameworks alem de React (PrimeFaces, Angular para depois)
 
 ## Visao
 
