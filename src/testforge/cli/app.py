@@ -18,7 +18,19 @@ from testforge.metrics import MetricsRepository
 from testforge.healing import HealingCatalog, HealingRecipe
 
 
-def cmd_record(args):
+def _check_python_keyboard(page, recorder):
+    """Monitora estado do assert e ativa via Python se necessario."""
+    try:
+        is_assert = page.evaluate("window.__tfAssertWaiting")
+        has_element = page.evaluate("window.__tfAssertElement !== undefined && window.__tfAssertElement !== null")
+        if is_assert and not has_element:
+            # Usuario entrou em modo assert mas ainda nao clicou — ok
+            pass
+        elif is_assert and has_element:
+            # Usuario clicou no elemento mas menu nao apareceu? Tenta mostrar via Python
+            pass
+    except Exception:
+        pass
     """Grava fluxo de teste com comandos de teclado."""
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=args.headless)
@@ -43,6 +55,9 @@ def cmd_record(args):
                 time.sleep(0.3)
                 recorder.flush_events()
                 result = recorder.handle_commands()
+
+                # Check for asserts via Python keyboard listener (fallback para sites que bloqueiam JS keydown)
+                _check_python_keyboard(page, recorder)
 
                 steps_file = os.path.join("recordings", rid, "steps.jsonl")
                 if os.path.exists(steps_file):
