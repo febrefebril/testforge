@@ -356,9 +356,21 @@ class RecorderController:
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
+                // Captura automatica como textual (menu aparece como opcao adicional)
+                _tf_addStep('assert', el, 'textual');
+                var assertCount = document.getElementById('tf-assert-count');
+                if (assertCount) assertCount.textContent = parseInt(assertCount.textContent||0) + 1;
+                var stepCount = document.getElementById('tf-step-count');
+                if (stepCount) stepCount.textContent = parseInt(stepCount.textContent||0) + 1;
+                var expected = _tf_getExpectedValue(el, 'textual');
+                _tf_showToast('✓ Assert textual: \"' + (expected||'').substring(0,40) + '\"');
                 _tf_highlight(el);
-                window.__tfAssertElement = el;
-                _tf_showAssertMenu(e.clientX, e.clientY);
+                window.__tfAssertWaiting = false;
+                window.__tfAssertElement = null;
+                var dot = document.getElementById('tf-rec-dot');
+                var status = document.getElementById('tf-status');
+                if (dot) dot.style.color = '#e94560';
+                if (status) status.textContent = 'Gravando...';
                 return;
             }
             setTimeout(function() { _tf_pushEvent('click', el); }, 0);
