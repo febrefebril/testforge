@@ -1,0 +1,61 @@
+@startuml
+title TestForge v1 — C4 Container Diagram
+
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+Person(qa, "QA Engineer", "Grava fluxos e recebe scripts com self-healing.")
+
+System_Boundary(testforge, "TestForge v1 — Runtime") {
+
+  Container(recorder, "Recorder Sensorial", "Python + Playwright", "Captura eventos do usuario (pointerup, input, keydown). Gera RawRecordedSession com eventos JSONL, screenshots, DOM/AX snapshots. NAO gera script final.")
+
+  Container(mis, "Modelo Intermediario Semantico", "Python", "Converte RawRecordedSession em SemanticTestCase YAML. Gera multiplos candidatos de locator com scoring deterministico. Fonte de verdade do teste.")
+
+  Container(compiler, "Compiler Playwright", "Python", "Le SemanticTestCase e gera script Python com fallback loop (for/else/try/except). Script derivado, regeneravel.")
+
+  Container(runner, "Runner + Healing", "Python + Playwright", "Executa script gerado. 4-layer healing: Recipe Catalog → Specialist Agent → Evidence Collector → LLM Healer (so quando deterministico falha).")
+
+  ContainerDb(storage, "Storage", "JSONL + YAML + Filesystem", "recordings/, semantic_tests/, generated_tests/, evidence/. Zero DB no MVP.")
+
+  Container(cli, "CLI (Typer)", "Python", "Comandos: record, compile, run, report. Interface unica para o usuario.")
+
+}
+
+System_Ext(web_app, "Aplicacao Web Alvo", "PrimeFaces, Angular, JSF, etc.")
+
+System_Ext(llm, "LLM Gateway", "Opcional, off critical path")
+
+Rel(qa, cli, "Usa CLI", "record, run, report")
+Rel(cli, recorder, "Aciona gravacao", "record")
+Rel(cli, runner, "Aciona execucao", "run")
+Rel(cli, compiler, "Aciona compilacao", "compile")
+
+Rel(recorder, web_app, "Instrumenta navegador", "Playwright page.on()")
+Rel(recorder, storage, "Persiste RawRecordedSession", "recordings/{id}/")
+
+Rel(mis, storage, "Le RawRecordedSession", "recordings/")
+Rel(mis, storage, "Persiste SemanticTestCase", "semantic_tests/")
+
+Rel(compiler, storage, "Le SemanticTestCase", "semantic_tests/")
+Rel(compiler, storage, "Gera script Python", "generated_tests/")
+
+Rel(runner, web_app, "Executa script contra app alvo", "Playwright")
+Rel(runner, storage, "Le script + candidatos", "generated_tests/ + semantic_tests/")
+Rel(runner, storage, "Persiste evidencias", "evidence/")
+
+Rel(runner, llm, "Consulta LLM (so quando deterministico falha)", "EvidencePackage estruturado")
+
+note right of recorder
+  Playwright nativo — sem extensao browser.
+  Eventos: pointerup, input, keydown, change.
+  Listener no window, nao document.
+end note
+
+note right of mis
+  SemanticTestCase YAML = fonte de verdade.
+  Script Python = artefato derivado, regeneravel.
+end note
+
+@enduml

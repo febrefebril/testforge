@@ -1,0 +1,42 @@
+@startuml
+title TestForge v1 — Estados da RecordingSession
+
+skinparam backgroundColor #FFFFFF
+
+[*] --> Idle : CLI inicia
+
+Idle --> Recording : start()
+Recording : Captura eventos\n(pointerup, input, keydown)
+Recording : Gera raw_events.jsonl
+Recording : Coleta screenshots/DOM/AX
+
+Recording --> Recording : Novo evento capturado\n→ append JSONL
+Recording --> Paused : pause()
+Paused --> Recording : resume()
+Recording --> Stopped : stop()
+Paused --> Stopped : stop()
+
+Stopped --> Finalized : finalize()
+Finalized : recording_metadata.json atualizado
+Finalized : status = "completed"
+Finalized : NAO aceita novos eventos
+
+Stopped --> [*] : discard()
+Finalized --> [*]
+
+note right of Recording
+  Durante Recording:
+  - Cada evento persiste em raw_events.jsonl
+  - Screenshots/DOM/AX salvos por evento
+  - network_log.json em background
+  - sensitive_data_alert.json se detectado
+end note
+
+note right of Finalized
+  Apos finalize():
+  - recording_metadata.json tem timestamps
+  - Sessao pronta para MIS (normalizer)
+  - Imutavel — nao aceita novos eventos
+end note
+
+@enduml

@@ -1,0 +1,97 @@
+@startuml
+title TestForge v1 — Sequencia: Gravacao → MIS → Compilacao → Execucao → Healing
+
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign center
+
+actor "QA Engineer" as QA
+participant "CLI\n(record)" as CLI_R
+participant "Recorder\nSensorial" as REC
+participant "Aplicacao\nWeb Alvo" as APP
+database "Storage\n(JSONL)" as STORE
+participant "CLI\n(compile)" as CLI_C
+participant "MIS\nNormalizer" as MIS
+participant "Compiler\nPlaywright" as COMP
+participant "CLI\n(run)" as CLI_X
+participant "Runner" as RUN
+participant "Healing\nEngine" as HEAL
+participant "LLM\n(Opcional)" as LLM
+
+== Fase 1: Gravacao ==
+
+QA -> CLI_R: record --name "consulta-cliente"
+CLI_R -> REC: start()
+REC -> APP: page.goto(url)
+REC -> REC: Injeta listeners\n(page.on('pointerup'),\npage.on('input'), etc.)
+
+QA -> APP: Preenche CPF "12345678900"
+APP -> REC: input event + keydown
+REC -> REC: Cria RawRecordedEvent\n(type=fill, target={role, label, placeholder, ...})
+
+QA -> APP: Clica "Pesquisar"
+APP -> REC: pointerup event
+REC -> REC: Cria RawRecordedEvent\n(type=click, target={role, accessible_name, text, ...})
+
+QA -> CLI_R: stop()
+CLI_R -> REC: stop()
+REC -> STORE: Persiste recordings/{id}/\n(raw_events.jsonl, screenshots/,\ndom_snapshots/, ax_snapshots/,\nnetwork_log.json, metadata.json)
+
+== Fase 2: MIS (Modelo Intermediario Semantico) ==
+
+QA -> CLI_C: compile
+CLI_C -> STORE: Le recordings/{id}/raw_events.jsonl
+CLI_C -> MIS: normalize()
+MIS -> MIS: RawRecordedEvent → SemanticAction
+MIS -> MIS: Extrai SemanticTarget\n(role, accessible_name, label,\nplaceholder, test_id, text)
+MIS -> MIS: Gera LocatorCandidates\n(score deterministico:\nrole+name > label > placeholder >\ntestid > text > css)
+MIS -> STORE: Persiste semantic_tests/{id}/\nsemantic_test_case.yaml
+
+== Fase 3: Compilacao ==
+
+CLI_C -> COMP: compile()
+COMP -> STORE: Le semantic_tests/{id}/semantic_test_case.yaml
+COMP -> COMP: Gera script Python com\nfallback loop (for/else/try/except)
+COMP -> STORE: Persiste generated_tests/{id}/test_*.py
+
+== Fase 4: Execucao ==
+
+QA -> CLI_X: run
+CLI_X -> RUN: execute()
+RUN -> STORE: Le generated_tests/{id}/test_*.py
+RUN -> STORE: Le semantic_tests/{id}/ (candidatos)
+RUN -> APP: page.goto(url)
+RUN -> APP: page.fill(cpf_selector, "12345678900")
+
+alt Seletor funciona
+  APP -> RUN: OK
+else Seletor falha (ex: ID mudou)
+  RUN -> RUN: Tenta proximo candidato\n(label > placeholder > testid > text)
+  alt Candidato deterministico funciona
+    APP -> RUN: OK
+  else Candidatos esgotados
+    RUN -> HEAL: Solicita healing
+
+    == Fase 5: Healing (off critical path) ==
+
+    HEAL -> HEAL: Layer 0: Recipe Catalog (<50ms)
+    alt Recipe encontrada
+      HEAL -> RUN: Aplica recipe
+    else Sem recipe
+      HEAL -> HEAL: Layer 1: Specialist Agent (~200 tok)
+      alt Agente resolve
+        HEAL -> RUN: Aplica solucao
+      else Agente falha
+        HEAL -> HEAL: Layer 2: Evidence Collector\n(coleta DOM, screenshot, network)
+        HEAL -> LLM: Layer 3: LLM Healer\n(payload estruturado)
+        LLM -> HEAL: Sugestao de locator
+        HEAL -> RUN: Aplica sugestao (modo shadow)
+      end
+    end
+  end
+end
+
+RUN -> APP: page.click(btn_selector)
+RUN -> RUN: Oracle: visual_dom\n(resultado visivel?)
+RUN -> STORE: Persiste evidence/{run_id}/
+
+@enduml
