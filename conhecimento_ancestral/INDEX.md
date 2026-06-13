@@ -1,6 +1,7 @@
 # TestForge - Conhecimento Ancestral
 
-Indice do conhecimento acumulado em 4 tentativas anteriores. Organizado e limpo.
+Conhecimento acumulado em 4 tentativas anteriores de construir o TestForge.
+Organizado, limpo e renomeado para facilitar consulta.
 
 ---
 
@@ -8,69 +9,79 @@ Indice do conhecimento acumulado em 4 tentativas anteriores. Organizado e limpo.
 
 ```
 conhecimento_ancestral/
-├── INDEX.md                              ← Este indice
-├── origem/                               ← Artefatos extraidos do base64
-│   ├── testforge_plano_macro_completo.md
-│   ├── testforge_arquitetura_selfhealing_deterministico.md
-│   ├── testforge_locators_ranking_fallback.md
-│   ├── testforge_tecnologias_oracle_shadow_sintetico.md
-│   ├── testforge_synthetic_mutations.md
-│   ├── testforge_shadow_*.md/yaml        ← Shadow mode docs
-│   ├── testforge_promotion_gate.*        ← Promotion gate
-│   ├── testforge_mis_*                   ← MIS docs e modelo
-│   ├── testforge_healing_*               ← Healing governance + KB SQL
-│   ├── testforge_locator_engine_skeleton.py
+├── INDEX.md
+├── planejamento/                       ← Artefatos de planejamento e arquitetura
+│   ├── plano-macro.md                  ← Visao geral do TestForge
+│   ├── arquitetura-selfhealing.md      ← Arquitetura do self-healing deterministico
+│   ├── locators-ranking-fallback.md    ← Sistema de locators
+│   ├── tecnologias-oracle-shadow.md    ← Oracle, shadow, sintetico
+│   ├── mutacoes-sinteticas.md          ← Mutacoes sinteticas para teste
+│   ├── shadow-*.md|yaml               ← Shadow mode (experimento, validacao, observacao)
+│   ├── promotion-gate.*               ← Gate de promocao
+│   ├── mis-*                           ← MIS (guia, modelo, schema)
+│   ├── healing-*                       ← Healing (governance YAML, KB SQL)
+│   ├── locator-engine.py              ← Motor de locators esqueleto
 │   ├── config.ini, config.yaml
-│   ├── testforge_consolidado_discussao_arquitetura/  ← Decisoes de arq
-│   ├── testforge_epicos_historias_plano/             ← Epicos e historias
-│   ├── testforge_projeto_completo_v020/              ← Codigo v0.2.0 completo
-│   ├── testforge_prompt_pack_llm/                    ← LLM prompts v1
-│   ├── testforge_prompt_pack_llm_v0_2_0/             ← LLM prompts v2
-│   ├── testforge_recorder_criterios_exemplo_testes/  ← Gravacao exemplo
-│   └── testforge_tarefas_priorizacao_estimativas/    ← Tarefas MVP
-├── testforge/                            ← Projeto ancestral completo
-│   ├── demo/                             ← Demo funcional
-│   ├── testes/                           ← 30+ sessoes de teste
-│   ├── packages/                         ← bridge, core, war-room
-│   ├── docs/                             ← Fluxogramas PlantUML
-│   └── _bmad/                            ← BMAD artifacts
-├── testforge-versao-targz/               ← Versao alternativa (tar.gz)
-│   ├── generator/                        ← Gerador de testes
-│   ├── healer/                           ← Self-healer
-│   ├── optimizer/                        ← Otimizador
-│   ├── recorder/                         ← Recorder (injection JS)
+│   ├── discussao-arquitetura/          ← Consolidado de decisoes de arquitetura
+│   ├── epicos-historias/               ← Epicos, historias, backlog, criterios
+│   ├── codigo-v020/                    ← Codigo fonte v0.2.0 (versao mais completa)
+│   │   ├── src/testforge/             ← Modulos: recorder, semantic, compiler, etc
+│   │   ├── adrs/                       ← 3 Architecture Decision Records
+│   │   └── tests/                      ← Testes unitarios
+│   ├── prompt-pack-v1/                 ← LLM prompt pack v1
+│   ├── prompt-pack-v2/                 ← LLM prompt pack v2 (recorder sensorial)
+│   ├── recorder-exemplos/              ← Exemplo de gravacao raw real
+│   └── tarefas-mvp/                    ← Tarefas MVP, priorizacao, estimativas
+├── projeto-anterior/                   ← Snapshot do projeto anterior completo
+│   ├── demo/                           ← Demonstracao funcional do recorder
+│   ├── testes/                         ← 30+ sessoes de teste reais
+│   ├── packages/                       ← bridge (extensao), core (healing agents), war-room
+│   ├── docs/                           ← Fluxogramas PlantUML e pesquisas
+│   └── _bmad/                          ← BMAD artifacts da tentativa anterior
+├── versao-alternativa/                 ← Versao alternativa do projeto (tar.gz)
+│   ├── generator/                      ← Gerador de testes via LLM
+│   ├── healer/                         ← Self-healer (patcher, runner)
+│   ├── optimizer/                      ← Profiler e tuner
+│   ├── recorder/                       ← Recorder com injection JS
 │   └── recording_manager.py
-└── testforgeDiagramasTaxonomia/          ← Diagramas e taxonomia
-    ├── fluxogramas.b64                   ← Fluxogramas (protegido)
-    ├── fluxogramas_extracted/            ← Extraido parcial
-    ├── taxonomia.puml                    ← Taxonomia PlantUML
-    └── taxonomia_extracted/              ← Taxonomia detalhada
+└── diagramas-taxonomia/                ← Diagramas e taxonomia de casos
+    ├── fluxogramas/                    ← Fluxogramas PlantUML (C4, componentes, sequencia, estados)
+    ├── taxonomia/                      ← Taxonomia completa de casos conhecidos
+    │   ├── curator-decision-tree.puml ← Arvore de decisao do curador
+    │   ├── healing-strategies.md      ← Estrategias de healing por caso
+    │   ├── taxonomy.cases.yaml        ← Catalogo de casos
+    │   └── taxonomy.schema.yaml       ← Schema da taxonomia
+    └── taxonomia.puml                  ← Taxonomia PlantUML completa
 ```
 
 ---
 
 ## Guia Rapido de Consulta
 
-| Topico | Onde encontrar |
-|--------|---------------|
-| **Visao geral** | `origem/testforge_plano_macro_completo.md` |
-| **Arquitetura** | `origem/testforge_arquitetura_selfhealing_deterministico.md` |
-| **Self-healing** | `origem/testforge_healing_governance.yaml`, `origem/testforge_healing_kb_schema.sql` |
-| **Sistema de locators** | `origem/testforge_locators_ranking_fallback.md` |
-| **Codigo mais maduro** | `origem/testforge_projeto_completo_v020/testforge/src/` |
-| **ADRs** | `origem/testforge_projeto_completo_v020/testforge/adrs/` |
-| **Taxonomia de falhas** | `testforgeDiagramasTaxonomia/taxonomia_extracted/` |
-| **Epicos/historias** | `origem/testforge_epicos_historias_plano/` |
-| **Demo funcional** | `testforge/demo/` |
-| **Testes reais** | `testforge/testes/` |
-| **Healing agents** | `testforge/packages/core/testforge/core/healing/agents/` |
-| **Recorder v1** | `testforge/packages/core/testforge/core/recording/` |
-| **Recorder v2 (targz)** | `testforge-versao-targz/recorder/` |
-| **Generator** | `testforge-versao-targz/generator/` |
-| **Healer** | `testforge-versao-targz/healer/` |
-| **Diagramas PlantUML** | `testforge/docs/fluxogramas/plantuml/` |
-| **Prompt packs LLM** | `origem/testforge_prompt_pack_llm_v0_2_0/` |
+| Topico | Caminho |
+|--------|---------|
+| Visao geral do projeto | `planejamento/plano-macro.md` |
+| Arquitetura self-healing | `planejamento/arquitetura-selfhealing.md` |
+| Decisoes de arquitetura | `planejamento/discussao-arquitetura/` |
+| ADRs | `planejamento/codigo-v020/adrs/` |
+| Epicos e historias | `planejamento/epicos-historias/` |
+| Tarefas MVP | `planejamento/tarefas-mvp/` |
+| Locators e fallback | `planejamento/locators-ranking-fallback.md` |
+| Self-healing governance | `planejamento/healing-governance.yaml` |
+| Healing KB schema | `planejamento/healing-kb.sql` |
+| Taxonomia de falhas | `diagramas-taxonomia/taxonomia/` |
+| Arvore de decisao do curador | `diagramas-taxonomia/taxonomia/curator-decision-tree.puml` |
+| Estrategias de healing | `diagramas-taxonomia/taxonomia/healing-strategies.md` |
+| Codigo mais maduro | `planejamento/codigo-v020/src/testforge/` |
+| Demo funcional | `projeto-anterior/demo/` |
+| Testes reais | `projeto-anterior/testes/` |
+| Healing agents | `projeto-anterior/packages/core/testforge/core/healing/agents/` |
+| Recorder alternativo | `versao-alternativa/recorder/` |
+| Generator LLM | `versao-alternativa/generator/` |
+| Diagramas PlantUML | `projeto-anterior/docs/fluxogramas/plantuml/` |
+| Prompt packs LLM | `planejamento/prompt-pack-v2/` |
+| Exemplo gravacao raw | `planejamento/recorder-exemplos/exemplo_raw_recording/` |
 
 ---
 
-*Limpo em $(date). 7 ZIPs + 3 originais + 3 temp files removidos. Estrutura reorganizada.*
+*Organizado em $(date). Nomes simplificados, prefixos `testforge_` removidos, manifests descartados.*
