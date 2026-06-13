@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Iframe de Teste</title>
+<style>
+  body { font-family: system-ui, sans-serif; padding: 16px; background: #fafafa; }
+  h4 { margin: 0 0 8px; font-size: 14px; color: #333; }
+  input, button { padding: 6px 10px; font-size: 13px; border: 1px solid #ccc; border-radius: 4px; }
+  button { background: #4a90d9; color: #fff; border: none; cursor: pointer; }
+  button:hover { background: #357abd; }
+</style>
+</head>
+<body>
+<h4>Iframe (CTX-001)</h4>
+<p style="font-size:12px;color:#888">Este elemento está dentro de um iframe same-origin</p>
+<input type="text" id="campo-iframe" placeholder="Campo no iframe">
+<button id="btn-iframe">Clique no iframe</button>
+<script>
+  document.getElementById('btn-iframe').addEventListener('click', function() {
+    alert('Clique dentro do iframe!');
+  });
+</script>
+</body>
+</html>

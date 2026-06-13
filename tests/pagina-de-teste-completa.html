@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Página de Teste Completa — 78 Taxonomias TestForge</title>
+<link rel="stylesheet" href="assets/style.css">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" defer></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js" defer></script>
+</head>
+<body>
+
+<h1>Página de Teste Completa</h1>
+<p class="subtitle">78 taxonomias organizadas por família. Use <code>data-testid="tax-{CODIGO}"</code> para automação.</p>
+
+<div class="toc">
+<h2>Índice</h2>
+<ul>
+<li><span class="epic-badge epic-fam01">FAM-01</span> <a href="#fam01">Seletores</a></li>
+<li><span class="epic-badge epic-fam02">FAM-02</span> <a href="#fam02">Timing</a></li>
+<li><span class="epic-badge epic-fam03">FAM-03</span> <a href="#fam03">Contexto</a></li>
+<li><span class="epic-badge epic-fam04">FAM-04</span> <a href="#fam04">Estado</a></li>
+<li><span class="epic-badge epic-fam05">FAM-05</span> <a href="#fam05">DOM Dinâmico</a></li>
+<li><span class="epic-badge epic-fam06">FAM-06</span> <a href="#fam06">Input</a></li>
+<li><span class="epic-badge epic-fam07">FAM-07</span> <a href="#fam07">File</a></li>
+<li><span class="epic-badge epic-fam08">FAM-08</span> <a href="#fam08">Assert</a></li>
+<li><span class="epic-badge epic-fam09">FAM-09</span> <a href="#fam09">Recorder</a></li>
+<li><span class="epic-badge epic-fam10">FAM-10</span> <a href="#fam10">Execução</a></li>
+<li><span class="epic-badge epic-fam11">FAM-11</span> <a href="#fam11">Browser</a></li>
+</ul>
+</div>
+
+<section id="fam01" data-testid="fam-01">
+<h2>FAM-01: Seletores Frágeis</h2>
+<div class="taxo-bar"><span class="taxo-tag">SEL-001</span><span class="taxo-tag">SEL-002</span><span class="taxo-tag">SEL-003</span><span class="taxo-tag">SEL-004</span><span class="taxo-tag">SEL-005</span><span class="taxo-tag">SEL-006</span><span class="taxo-tag">SEL-007</span><span class="taxo-tag">SEL-008</span><span class="taxo-tag">SEL-009</span><span class="taxo-tag">SEL-010</span></div>
+
+<div class="scenario-box" data-testid="tax-SEL-001" title="SEL-001: Strict locator — dois elementos idênticos">
+  <h4>SEL-001: Strict locator — dois elementos idênticos</h4>
+  <div class="scenario-row">
+    <button class="btn btn-primary" onclick="alert('SEL-001: Primeiro')">Ação</button>
+    <button class="btn btn-primary" onclick="alert('SEL-001: Segundo')">Ação</button>
+    <span style="font-size:12px;color:#999;">‑‑ dois botões com mesmo texto/classe, sem id</span>
+  </div>
+</div>
+
+<div class="scenario-box" data-testid="tax-SEL-002">
+  <h4>SEL-002: Click interceptado — div transparente sobre botão</h4>
+  <div class="scenario-row" style="position:relative;display:inline-block;">
+    <button class="btn btn-primary" id="sel-002-btn" onclick="document.getElementById('sel-002-result').textContent='Clicou!'">Clique aqui</button>
+    <div class="blocker-div" style="position:absolute;top:0;left:0;width:100%;height:100%;background:transparent;z-index:10;pointer-events:auto;" onclick="document.getElementById('sel-002-result').textContent='Blocker interceptou'"></div>
+  </div>
+  <div class="result-box" id="sel-002-result">Aguardando clique...</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-SEL-003">
+  <h4>SEL-003: data-testid gerado</h4>
+  <button class="btn btn-primary" id="sel-003-btn" onclick="this.setAttribute('data-testid','generated-'+Date.now());alert('data-testid gerado: '+this.getAttribute('data-testid'))">Gerar data-testid</button>
+</div>
+
+<div class="scenario-box" data-testid="tax-SEL-004">
+  <h4>SEL-004: Elemento sem identificador único</h4>
+  <div class="field-row">
+    <label>Campo sem ID</label>
+    <input name="campo-sem-id" placeholder="Apenas name e placeholder">
+  </div>
+</div>
+
+<div class="scenario-box" data-testid="tax-SEL-005">
+  <h4>SEL-005: Elemento fora do viewport</h4>
+  <div style="height:1200px;position:relative;">
+    <div style="position:absolute;top:1150px;">
+      <button class="btn btn-primary" id="sel-005-btn" onclick="document.getElementById('sel-005-result').textContent='Clicou!'">Elemento no fim da página</button>
+    </div>
+  </div>
+  <div class="result-box" id="sel-005-result">Role para baixo</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-SEL-006">
+  <h4>SEL-006: has-text em tag errada</h4>
+  <div><span class="duplicate-text">Salvar</span> — texto "Salvar" em span, não button</div>
+  <button class="btn btn-primary" onclick="alert('SEL-006')">Enviar</button>
+</div>
+
+<div class="scenario-box" data-testid="tax-SEL-007">
+  <h4>SEL-007: Botão fora de form</h4>
+  <button class="btn btn-danger" id="sel-007-btn" onclick="alert('SEL-007')">Excluir</button>
+</div>
+
+<div class="scenario-box" data-testid="tax-SEL-008">
+  <h4>SEL-008: Prioridade de seletores — todos os atributos presentes</h4>
+  <button data-testid="btn-prioridade" id="btn-prioridade-id" name="btn-prioridade" aria-label="Botão prioridade" placeholder="btn" class="btn btn-primary" onclick="alert('SEL-008')">Prioridade</button>
+  <div class="result-box">data-testid > id > name > aria-label > class > XPath</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-SEL-009">
+  <h4>SEL-009: Texto duplicado</h4>
+  <span class="duplicate-text">Atenção: este texto aparece duas vezes</span>
+  <span class="duplicate-text">Atenção: este texto aparece duas vezes</span>
+</div>
+
+<div class="scenario-box" data-testid="tax-SEL-010">
+  <h4>SEL-010: Radio sem label com for</h4>
+  <div class="radio-group">
+    <label><input type="radio" name="sel10" value="A"> Opção A (label envolvendo)</label>
+    <label><input type="radio" name="sel10" value="B"> Opção B (label envolvendo)</label>
+  </div>
+</div>
+</section>
+
+<section id="fam02" data-testid="fam-02">
+<h2>FAM-02: Timing e Assincronismo</h2>
+<div class="taxo-bar"><span class="taxo-tag">TIM-001</span><span class="taxo-tag">TIM-002</span><span class="taxo-tag">TIM-003</span><span class="taxo-tag">TIM-004</span><span class="taxo-tag">TIM-005</span><span class="taxo-tag">TIM-006</span><span class="taxo-tag">TIM-007</span></div>
+
+<div class="scenario-box" data-testid="tax-TIM-001" title="TIM-001: Página carregando — recurso pesado simulado">
+  <h4>TIM-001: Página carregando — recurso pesado simulado</h4>
+  <div id="tim-001-content">Carregando... <span id="tim-001-status"></span></div>
+  <script>
+    setTimeout(function(){
+      if (document.getElementById('tim-001-content') && document.getElementById('tim-001-status')) {
+        document.getElementById('tim-001-content').innerHTML = 'Conteúdo carregado após 10s <button class="btn btn-primary btn-sm" onclick="alert(\'TIM-001\')">OK</button>';
+        document.getElementById('tim-001-status').textContent = '(10s)';
+      }
+    }, 10000);
+  </script>
+</div>
+
+<div class="scenario-box" data-testid="tax-TIM-002">
+  <h4>TIM-002: Elemento stale — removido e readicionado</h4>
+  <div id="tim-002-container">
+    <button class="btn btn-primary btn-sm" id="tim-002-btn" onclick="var p=this.parentElement;var c=this.cloneNode(true);c.onclick = this.onclick; c.id = this.id;p.innerHTML='';setTimeout(function(){c.textContent='Stale - clique novamente';p.appendChild(c)},500)">Clique (stale)</button>
+  </div>
+  <div class="result-box" id="tim-002-result"></div>
+</div>
+
+<div class="scenario-box" data-testid="tax-TIM-003">
+  <h4>TIM-003: Erro de rede — imagem quebrada + script 404</h4>
+  <img src="assets/imagem-inexistente.jpg" alt="Imagem quebrada" style="width:50px;height:50px;border:1px solid #ddd;">
+  <script src="assets/script-inexistente.js"></script>
+  <div class="result-box">Imagem e script com erro 404 esperado</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-TIM-004">
+  <h4>TIM-004: Timeout de recurso</h4>
+  <div id="tim-004-content">
+    <button class="btn btn-primary btn-sm" onclick="document.getElementById('tim-004-content').innerHTML='<p>Recurso carregou após clique</p>'">Carregar recurso lento</button>
+  </div>
+</div>
+
+<div class="scenario-box" data-testid="tax-TIM-005">
+  <h4>TIM-005: Lazy loading (2s)</h4>
+  <div id="lazy-container"><em>Conteúdo será carregado em 2s...</em></div>
+  <script>setTimeout(function(){var el=document.getElementById('lazy-container');if(el)el.innerHTML='<button class="btn btn-primary btn-sm" onclick="alert(\'TIM-005\')">Carregado tardiamente</button>'},2000);</script>
+</div>
+
+<div class="scenario-box" data-testid="tax-TIM-006">
+  <h4>TIM-006: Async select (1.5s) + autocomplete</h4>
+  <div class="field-row">
+    <label for="tim-006-select">Select com dados async</label>
+    <select id="tim-006-select"><option value="">Carregando...</option></select>
+  </div>
+  <div class="field-row">
+    <label for="tim-006-auto">Autocomplete (jQuery UI)</label>
+    <input id="tim-006-auto" placeholder="Digite 'a' para ver opções" style="width:250px;">
+  </div>
+  <script>
+    setTimeout(function(){
+      var sel = document.getElementById('tim-006-select');
+      if (sel) sel.innerHTML = '<option value="">Selecione</option><option value="1">Opção 1</option><option value="2">Opção 2</option><option value="3">Opção 3</option>';
+    }, 1500);
+  </script>
+  <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+  <script>
+    if(typeof jQuery !== 'undefined'){
+      jQuery(function($){
+        var data = ['Apple','Amazon','Atacadao','Banco do Brasil','Bradesco','Caixa','Google','Microsoft','Nubank','PicPay','Samsung','Xiaomi'];
+        $('#tim-006-auto').autocomplete({source: function(req,resp){var r=data.filter(function(d){return d.toLowerCase().indexOf(req.term.toLowerCase())>=0});resp(r.slice(0,5))}});
+      });
+    }
+  </script>
+</div>
+
+<div class="scenario-box" data-testid="tax-TIM-007">
+  <h4>TIM-007: WebSocket / SSE simulado</h4>
+  <div id="tim-007-status">Aguardando evento SSE...</div>
+  <script>
+    var idx = 0;
+    var intervalId = setInterval(function(){
+      var el = document.getElementById('tim-007-status');
+      if(!el) return;
+      idx++;
+      el.textContent = 'Evento SSE #'+idx+' recebido';
+      if(idx>=3) el.innerHTML += ' <button class="btn btn-primary btn-sm" onclick="alert(\'TIM-007\')">OK</button>';
+    }, 2000);
+    window.addEventListener('beforeunload', function(){ clearInterval(intervalId); });
+  </script>
+</div>
+</section>
+
+<section id="fam03" data-testid="fam-03">
+<h2>FAM-03: Contexto e Escopo</h2>
+<div class="taxo-bar"><span class="taxo-tag">CTX-001</span><span class="taxo-tag">CTX-002</span><span class="taxo-tag">CTX-003</span><span class="taxo-tag">CTX-004</span><span class="taxo-tag">CTX-005</span><span class="taxo-tag">CTX-006</span><span class="taxo-tag">CTX-007</span></div>
+
+<div class="scenario-box" data-testid="tax-CTX-001" title="CTX-001: Iframe same-origin">
+  <h4>CTX-001: Iframe same-origin</h4>
+  <iframe src="iframe-content.html" title="Iframe same-origin"></iframe>
+</div>
+
+<div class="scenario-box" data-testid="tax-CTX-002">
+  <h4>CTX-002: Shadow DOM — modo fechado</h4>
+  <div id="shadow-closed-host"></div>
+  <script>
+    var host = document.getElementById('shadow-closed-host');
+    if(host.attachShadow) {
+      var s = host.attachShadow({mode:'closed'});
+      s.innerHTML = '<button class="btn btn-primary btn-sm" onclick="alert(\'CTX-002\')">Dentro do Shadow DOM fechado</button>';
+    }
+  </script>
+</div>
+
+<div class="scenario-box" data-testid="tax-CTX-003">
+  <h4>CTX-003: Shadow DOM — modo aberto</h4>
+  <div id="shadow-open-host" class="shadow-host"></div>
+  <script>
+    (function(){
+      var host = document.getElementById('shadow-open-host');
+      if(host.attachShadow) {
+        var s = host.attachShadow({mode:'open'});
+        s.innerHTML = '<button class="btn btn-primary btn-sm" onclick="alert(\'CTX-003\')">Dentro do Shadow DOM aberto</button>';
+      }
+    })();
+  </script>
+</div>
+
+<div class="scenario-box" data-testid="tax-CTX-004">
+  <h4>CTX-004: Cross-origin iframe (simulado)</h4>
+  <iframe src="https://example.com" title="Cross-origin simulado" style="height:80px;"></iframe>
+  <div class="result-box">Iframe aponta para example.com (cross-origin real)</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-CTX-005">
+  <h4>CTX-005: Iframes aninhados</h4>
+  <iframe src="iframe-content.html" title="Iframe pai" style="height:200px;"></iframe>
+</div>
+
+<div class="scenario-box" data-testid="tax-CTX-006">
+  <h4>CTX-006: Modal/dialog</h4>
+  <button class="btn btn-primary btn-sm" onclick="document.getElementById('modal-test').classList.add('show')">Abrir Modal</button>
+  <div id="modal-test" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal-box">
+      <h3>Modal de Teste</h3>
+      <p style="margin:12px 0;font-size:14px;">Conteúdo do modal</p>
+      <button class="btn btn-primary btn-sm" onclick="alert('CTX-006');closeModal()">OK</button>
+      <button class="btn btn-sm" onclick="closeModal()" style="margin-left:8px;">Fechar</button>
+    </div>
+  </div>
+  <script>
+    function closeModal(){var m=document.getElementById('modal-test');if(m)m.classList.remove('show')}
+    document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal()});
+  </script>
+</div>
+
+<div class="scenario-box" data-testid="tax-CTX-007">
+  <h4>CTX-007: Troca de aba/janela</h4>
+  <button class="btn btn-primary btn-sm" onclick="window.open('iframe-content.html','_blank')">Abrir nova aba</button>
+  <div class="result-box">Testar captura de eventos em popup</div>
+</div>
+</section>
+
+<section id="fam04" data-testid="fam-04">
+<h2>FAM-04: Estado da Aplicação</h2>
+<div class="taxo-bar"><span class="taxo-tag">STA-001</span><span class="taxo-tag">STA-002</span><span class="taxo-tag">STA-003</span><span class="taxo-tag">STA-004</span><span class="taxo-tag">STA-005</span><span class="taxo-tag">STA-006</span></div>
+
+<div class="scenario-box" data-testid="tax-STA-001" title="STA-001: Elemento disabled nativo">
+  <h4>STA-001: Elemento disabled nativo</h4>
+  <input id="sta-001-input" value="Campo desabilitado" disabled>
+  <button class="btn btn-primary btn-sm" id="sta-001-btn" disabled>Botão desabilitado</button>
+</div>
+
+<div class="scenario-box" data-testid="tax-STA-002">
+  <h4>STA-002: Overlay bloqueando clique</h4>
+  <button class="btn btn-primary btn-sm" onclick="alert('STA-002')">Botão sob overlay</button>
+  <div style="margin-top:8px;">
+    <button class="btn btn-warning btn-sm" onclick="document.getElementById('overlay-blocker').classList.toggle('show')">Mostrar/Esconder Overlay</button>
+  </div>
+  <div id="overlay-blocker" class="modal-overlay">
+    <div class="modal-box" style="text-align:center;">
+      <p style="margin-bottom:12px;">Overlay bloqueando interação</p>
+      <button class="btn btn-sm" onclick="document.getElementById('overlay-blocker').classList.remove('show')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="scenario-box" data-testid="tax-STA-003">
+  <h4>STA-003: Elemento não anexado ao DOM</h4>
+  <div id="sta-003-container">
+    <button class="btn btn-primary btn-sm" onclick="var b=this;b.remove();setTimeout(function(){var el=document.getElementById('sta-003-container');if(el)el.innerHTML='<span style=color:#999>Elemento removido</span>'},100)">Remover-me do DOM</button>
+  </div>
+</div>
+
+<div class="scenario-box" data-testid="tax-STA-004">
+  <h4>STA-004: Diálogos nativos</h4>
+  <!-- Playwright requires page.on('dialog') handler -->
+  <button class="btn btn-primary btn-sm" onclick="alert('STA-004: Alerta')">Alert</button>
+  <button class="btn btn-primary btn-sm" onclick="confirm('STA-004: Confirme')">Confirm</button>
+  <button class="btn btn-primary btn-sm" onclick="prompt('STA-004: Digite algo')">Prompt</button>
+</div>
+
+<div class="scenario-box" data-testid="tax-STA-005">
+  <h4>STA-005: Sessão expirada</h4>
+  <button class="btn btn-primary btn-sm" id="sta-005-expire-btn">Simular expiração</button>
+  <div class="result-box" id="sta-005-result"></div>
+  <div id="session-expired-modal" class="modal-overlay">
+    <div class="modal-box">
+      <h3>Sessão Expirada</h3>
+      <p style="margin:12px 0;">Sua sessão expirou. Faça login novamente.</p>
+      <button class="btn btn-primary btn-sm" id="sta-005-modal-ok">OK</button>
+    </div>
+  </div>
+  <script>
+    (function(){
+      var btn = document.getElementById('sta-005-expire-btn');
+      var modal = document.getElementById('session-expired-modal');
+      var modalOk = document.getElementById('sta-005-modal-ok');
+      var result = document.getElementById('sta-005-result');
+      var timeoutId;
+      if(btn && modal) {
+        btn.onclick = function(){
+          modal.classList.add('show');
+          timeoutId = setTimeout(function(){
+            if(result) result.textContent = 'Redirecionando...';
+          }, 2000);
+        };
+      }
+      if(modalOk && modal) {
+        modalOk.onclick = function(){
+          clearTimeout(timeoutId);
+          modal.classList.remove('show');
+        };
+      }
+    })();
+  </script>
+</div>
+
+<div class="scenario-box" data-testid="tax-STA-006">
+  <h4>STA-006: Cookie consent banner</h4>
+  <div class="consent-banner" id="consent-banner">
+    <span>Este site usa cookies. Aceita?</span>
+    <div>
+      <button class="btn btn-success btn-sm" onclick="document.getElementById('consent-banner').remove();document.getElementById('sta-006-result').textContent='Consentimento aceito'">Aceitar</button>
+      <button class="btn btn-sm" onclick="document.getElementById('consent-banner').remove();document.getElementById('sta-006-result').textContent='Consentimento rejeitado'">Recusar</button>
+    </div>
+  </div>
+  <div class="result-box" id="sta-006-result">Banner visível no rodapé</div>
+</div>
+</section>
+
+<section id="fam05" data-testid="fam-05">
+<h2>FAM-05: DOM Dinâmico</h2>
+<div class="taxo-bar"><span class="taxo-tag">DOM-001</span><span class="taxo-tag">DOM-002</span><span class="taxo-tag">DOM-003</span><span class="taxo-tag">DOM-004</span><span class="taxo-tag">DOM-005</span></div>
+
+<div class="scenario-box" data-testid="tax-DOM-001" title="DOM-001: Elemento removido do DOM">
+  <h4>DOM-001: Elemento removido do DOM</h4>
+  <div id="dom-001-target">
+    <button class="btn btn-primary btn-sm" onclick="document.getElementById('dom-001-target').innerHTML='<span style=color:#999>Elemento sumiu</span>'">Desaparecer</button>
+  </div>
+  <div class="result-box">O botão desaparece 2s após carregar</div>
+  <script>setTimeout(function(){var t=document.getElementById('dom-001-target');if(t)t.innerHTML='<span style=color:#999>Elemento removido automaticamente (DOM-001)</span>'},2000);</script>
+</div>
+
+<div class="scenario-box" data-testid="tax-DOM-002">
+  <h4>DOM-002: Lista reordenável</h4>
+  <ul class="sortable-list" id="dom-002-list">
+    <li data-id="1"><span class="drag-handle">☰</span> Item A</li>
+    <li data-id="2"><span class="drag-handle">☰</span> Item B</li>
+    <li data-id="3"><span class="drag-handle">☰</span> Item C</li>
+  </ul>
+</div>
+
+<div class="scenario-box" data-testid="tax-DOM-003">
+  <h4>DOM-003: Scroll infinito</h4>
+  <div id="infinite-scroll-container" style="max-height:150px;overflow-y:auto;border:1px solid #ddd;border-radius:4px;padding:8px;">
+    <div id="infinite-scroll-content"></div>
+    <div id="infinite-scroll-loader" style="text-align:center;color:#999;padding:8px;">Role para carregar mais...</div>
+  </div>
+  <script>
+    (function(){
+      var container = document.getElementById('infinite-scroll-container');
+      if (!container) return;
+      var content = document.getElementById('infinite-scroll-content');
+      if (!content) return;
+      var loader = document.getElementById('infinite-scroll-loader');
+      var page = 0;
+      var loading = false;
+      function loadMore(){
+        if (loading) return;
+        loading = true;
+        page++;
+        for(var i=0;i<5;i++){
+          var div = document.createElement('div');
+          div.textContent = 'Item ' + ((page-1)*5 + i + 1);
+          div.style.padding = '4px 0';
+          div.style.fontSize = '13px';
+          content.appendChild(div);
+        }
+        while(content.children.length > 100) content.removeChild(content.firstChild);
+        if(page >= 6){
+          loader.textContent = '— Fim —';
+          loading = false;
+          return;
+        }
+        loading = false;
+      }
+      loadMore();
+      container.addEventListener('scroll', function(){
+        if(container.scrollTop + container.clientHeight >= container.scrollHeight - 20){
+          loadMore();
+        }
+      });
+    })();
+  </script>
+</div>
+
+<div class="scenario-box" data-testid="tax-DOM-004">
+  <h4>DOM-004: SPA route change (pushState)</h4>
+  <div>
+    <button class="btn btn-primary btn-sm" onclick="window.history.pushState({},'Rota 1','?rota=1');document.getElementById('dom-004-view').textContent='Você está na rota 1'">Rota 1</button>
+    <button class="btn btn-primary btn-sm" onclick="window.history.pushState({},'Rota 2','?rota=2');document.getElementById('dom-004-view').textContent='Você está na rota 2'">Rota 2</button>
+    <div class="result-box" id="dom-004-view">Rota inicial</div>
+  </div>
+</div>
+
+<div class="scenario-box" data-testid="tax-DOM-005">
+  <h4>DOM-005: Conteúdo sob demanda</h4>
+  <button class="btn btn-primary btn-sm" onclick="var c=document.getElementById('dom-005-content');c.innerHTML='<p>Conteúdo carregado! <button class=\'btn btn-primary btn-sm\' onclick=\'alert(\\\"DOM-005\\\")\'>Clique aqui</button></p>'">Carregar conteúdo</button>
+  <div id="dom-005-content" class="result-box">Clique no botão acima para carregar</div>
+</div>
+</section>
+
+<section id="fam06" data-testid="fam-06">
+<h2>FAM-06: Input e Interação Especializada</h2>
+<div class="taxo-bar"><span class="taxo-tag">INP-001</span><span class="taxo-tag">INP-002</span><span class="taxo-tag">INP-003</span><span class="taxo-tag">INP-004</span><span class="taxo-tag">INP-005</span><span class="taxo-tag">INP-006</span><span class="taxo-tag">INP-007</span><span class="taxo-tag">INP-008</span><span class="taxo-tag">INP-009</span><span class="taxo-tag">INP-010</span></div>
+
+<div class="scenario-box" data-testid="tax-INP-001" title="INP-001: contenteditable (div editável)">
+  <h4>INP-001: contenteditable (div editável)</h4>
+  <div contenteditable="true" id="inp-001-editor" style="border:1px solid #ccc;border-radius:4px;padding:8px;min-height:40px;font-size:14px;">Edite este texto</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-INP-002">
+  <h4>INP-002: Upload de arquivo</h4>
+  <input type="file" id="inp-002-file" data-testid="file-upload">
+  <div class="result-box" id="inp-002-result"></div>
+  <script>
+    document.getElementById('inp-002-file').addEventListener('change',function(e){
+      if (e.target.files.length > 0) {
+        document.getElementById('inp-002-result').textContent = e.target.files.length + ' arquivo(s) selecionado(s)';
+      }
+    });
+  </script>
+</div>
+
+<div class="scenario-box" data-testid="tax-INP-003">
+  <h4>INP-003: Input readonly com valor pré-preenchido</h4>
+  <input type="text" id="inp-003-readonly" value="Valor fixo" readonly style="background:#eee;">
+</div>
+
+<div class="scenario-box" data-testid="tax-INP-004">
+  <h4>INP-004: Color picker</h4>
+  <label for="inp-004-color">Escolha uma cor:</label>
+  <input type="color" id="inp-004-color" value="#4a90d9">
+</div>
+
+<div class="scenario-box" data-testid="tax-INP-005">
+  <h4>INP-005: Drag and drop</h4>
+  <div class="scenario-row">
+    <div draggable="true" id="drag-source" class="btn btn-primary btn-sm" style="cursor:grab;" ondragstart="event.dataTransfer.setData('text/plain','dragged')">Arraste-me</div>
+    <div class="drop-zone" id="drop-target" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="event.preventDefault();this.classList.remove('drag-over');this.innerHTML='<span style=color:#4a90d9>✓ Soltou!</span>'">↘ Solte aqui</div>
+  </div>
+</div>
+
+<div class="scenario-box" data-testid="tax-INP-006">
+  <h4>INP-006: Múltiplos inputs + textarea</h4>
+  <div class="field-group">
+    <div class="field-row"><label for="inp-006-name">Nome</label><input id="inp-006-name" placeholder="Seu nome"></div>
+    <div class="field-row"><label for="inp-006-email">Email</label><input id="inp-006-email" type="email" placeholder="email@exemplo.com"></div>
+    <div class="field-row"><label for="inp-006-msg">Mensagem</label><textarea id="inp-006-msg" rows="3" placeholder="Digite sua mensagem"></textarea></div>
+  </div>
+</div>
+
+<div class="scenario-box" data-testid="tax-INP-007">
+  <h4>INP-007: CPF mask (JS masking)</h4>
+  <input id="inp-007-cpf" placeholder="000.000.000-00" maxlength="14" style="width:180px;">
+  <div class="result-box">Máscara JS: 12345678901 → 123.456.789-01</div>
+  <script>
+    document.getElementById('inp-007-cpf').addEventListener('paste',function(e){e.preventDefault()});
+    document.getElementById('inp-007-cpf').addEventListener('input',function(){
+      var v = this.value.replace(/\D/g,'').slice(0,11);
+      if(v.length > 9) v = v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9);
+      else if(v.length > 6) v = v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);
+      else if(v.length > 3) v = v.slice(0,3)+'.'+v.slice(3);
+      this.value = v;
+    });
+  </script>
+</div>
+
+<div class="scenario-box" data-testid="tax-INP-008">
+  <h4>INP-008: Slider / range</h4>
+  <label for="inp-008-range">Valor: <span id="inp-008-val">50</span></label>
+  <input type="range" id="inp-008-range" min="0" max="100" value="50" oninput="document.getElementById('inp-008-val').textContent=this.value">
+</div>
+
+<div class="scenario-box" data-testid="tax-INP-009">
+  <h4>INP-009: Combo box (select)</h4>
+  <div class="field-row">
+    <label for="inp-009-select">Estado</label>
+    <select id="inp-009-select">
+      <option value="">Selecione...</option>
+      <option value="SP">São Paulo</option>
+      <option value="RJ">Rio de Janeiro</option>
+      <option value="MG">Minas Gerais</option>
+      <option value="BA">Bahia</option>
+      <option value="RS">Rio Grande do Sul</option>
+    </select>
+  </div>
+</div>
+
+<div class="scenario-box" data-testid="tax-INP-010">
+  <h4>INP-010: Autocomplete (jQuery UI)</h4>
+  <div class="field-row">
+    <label for="inp-010-auto">Empresa</label>
+    <input id="inp-010-auto" placeholder="Digite para buscar..." style="width:250px;">
+  </div>
+  <script>
+    if(typeof jQuery !== 'undefined'){
+      jQuery(function($){
+        var companies = ['Apple Inc.','Amazon Web Services','Atacadão S.A.','Banco do Brasil','Bradesco S.A.','Caixa Econômica','Google LLC','Microsoft Corp.','Nubank','PicPay','Samsung','Xiaomi'];
+        $('#inp-010-auto').autocomplete({source: function(req,resp){resp(companies.filter(function(c){return c.toLowerCase().indexOf(req.term.toLowerCase())>=0}))}});
+      });
+    }
+  </script>
+</div>
+</section>
+
+<section id="fam07" data-testid="fam-07">
+<h2>FAM-07: Upload e Download de Arquivos</h2>
+<div class="taxo-bar"><span class="taxo-tag">FILE-001</span><span class="taxo-tag">FILE-002</span><span class="taxo-tag">FILE-003</span><span class="taxo-tag">FILE-004</span><span class="taxo-tag">FILE-005</span><span class="taxo-tag">FILE-006</span></div>
+
+<div class="scenario-box" data-testid="tax-FILE-001" title="FILE-001: Upload com accept restrictions">
+  <h4>FILE-001: Upload com accept restrictions</h4>
+  <input type="file" id="file-001-upload" accept=".pdf,.doc,.docx" data-testid="file-upload-pdf">
+  <div class="result-box">Aceita apenas .pdf, .doc, .docx</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-FILE-002">
+  <h4>FILE-002: Upload múltiplo</h4>
+  <input type="file" id="file-002-upload" multiple data-testid="file-upload-multiple">
+  <div class="result-box" id="file-002-result"></div>
+  <script>
+    document.getElementById('file-002-upload').addEventListener('change',function(e){
+      if (e.target.files.length > 0) {
+        document.getElementById('file-002-result').textContent = e.target.files.length + ' arquivo(s) selecionado(s)';
+      }
+    });
+  </script>
+</div>
+
+<div class="scenario-box" data-testid="tax-FILE-003">
+  <h4>FILE-003: Drag and drop upload zone</h4>
+  <div class="drop-zone" id="file-003-zone" style="width:300px;height:120px;" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="event.preventDefault();this.classList.remove('drag-over');document.getElementById('file-003-result').textContent='✓ Arquivo solto na zona'">
+    <span>📁 Arraste arquivos aqui</span>
+    <span style="font-size:11px;color:#aaa;">ou clique para selecionar</span>
+  </div>
+  <input type="file" id="file-003-input" style="display:none" onchange="document.getElementById('file-003-result').textContent=this.files.length+' arquivo(s) selecionado(s)'">
+  <script>
+    document.getElementById('file-003-zone').addEventListener('click',function(){
+      var input = document.getElementById('file-003-input');
+      if (input) input.click();
+    });
+  </script>
+  <div class="result-box" id="file-003-result"></div>
+</div>
+
+<div class="scenario-box" data-testid="tax-FILE-004">
+  <h4>FILE-004: Download de arquivo</h4>
+  <a href="assets/download-exemplo.txt" download="exemplo.txt" class="btn btn-primary btn-sm">📥 Baixar exemplo.txt</a>
+  <button class="btn btn-primary btn-sm" onclick="var a=document.createElement('a');a.href='data:text/plain;charset=utf-8,'+encodeURIComponent('Conteúdo gerado: '+Date.now());a.download='gerado-'+Date.now()+'.txt';a.click()">📥 Baixar blob</button>
+  <div class="result-box">Link de download + geração de blob</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-FILE-005">
+  <h4>FILE-005: Download com redirect</h4>
+  <button class="btn btn-primary btn-sm" onclick="window.location.href='download-redirect.html'">📥 Download (redirect)</button>
+  <div class="result-box">Página que redireciona para download</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-FILE-006">
+  <h4>FILE-006: Validação de tamanho de arquivo</h4>
+  <input type="file" id="file-006-validate" data-testid="file-upload-size">
+  <div class="result-box" id="file-006-result"></div>
+  <script>
+    document.getElementById('file-006-validate').addEventListener('change',function(e){
+      var file = e.target.files[0];
+      if(file && file.size > 1024*1024){
+        document.getElementById('file-006-result').textContent = '❌ Arquivo muito grande (>1MB)';
+        this.value = '';
+      } else if(file) {
+        document.getElementById('file-006-result').textContent = '✅ ' + file.name + ' (' + (file.size/1024).toFixed(1) + 'KB)';
+      }
+    });
+  </script>
+</div>
+</section>
+
+<section id="fam08" data-testid="fam-08">
+<h2>FAM-08: Asserts e Validações</h2>
+<div class="taxo-bar"><span class="taxo-tag">AST-001</span><span class="taxo-tag">AST-002</span><span class="taxo-tag">AST-003</span><span class="taxo-tag">AST-004</span><span class="taxo-tag">AST-005</span><span class="taxo-tag">AST-006</span><span class="taxo-tag">AST-007</span><span class="taxo-tag">AST-008</span><span class="taxo-tag">AST-009</span><span class="taxo-tag">AST-010</span></div>
+
+<div class="scenario-box" data-testid="tax-AST-001" title="AST-001: Assert de texto — mismatch">
+  <h4>AST-001: Assert de texto — mismatch</h4>
+  <p id="ast-001-text">Texto esperado: "Sucesso" mas pode ser "Erro"</p>
+  <button class="btn btn-primary btn-sm" onclick="document.getElementById('ast-001-text').textContent='Erro na operação'">Simular erro</button>
+  <button class="btn btn-success btn-sm" onclick="document.getElementById('ast-001-text').textContent='Operação concluída com sucesso'">Simular sucesso</button>
+</div>
+
+<div class="scenario-box" data-testid="tax-AST-002">
+  <h4>AST-002: Assert de visibilidade</h4>
+  <div id="ast-002-target" style="display:none;padding:8px;background:#e8f0fe;border-radius:4px;">Elemento oculto</div>
+  <button class="btn btn-primary btn-sm" onclick="document.getElementById('ast-002-target').style.display='block'">Mostrar</button>
+  <button class="btn btn-sm" onclick="document.getElementById('ast-002-target').style.display='none'">Esconder</button>
+</div>
+
+<div class="scenario-box" data-testid="tax-AST-003">
+  <h4>AST-003: Assert de estado</h4>
+  <input id="ast-003-check" type="checkbox"> <label for="ast-003-check">Checkbox para assert</label>
+  <div class="result-box">Testar checked, disabled, enabled</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-AST-004">
+  <h4>AST-004: Assert em conteúdo dinâmico</h4>
+  <div id="ast-004-dynamic" class="result-box">Valor inicial: 0</div>
+  <button class="btn btn-primary btn-sm" onclick="var c=document.getElementById('ast-004-dynamic');var match=c.textContent.match(/\d+/);if(match){var n=parseInt(match[0])+1;c.textContent='Valor: '+n}">Incrementar</button>
+</div>
+
+<div class="scenario-box" data-testid="tax-AST-005">
+  <h4>AST-005: Assert de contagem</h4>
+  <ul id="ast-005-list">
+    <li>Item 1</li>
+    <li>Item 2</li>
+    <li>Item 3</li>
+  </ul>
+  <button class="btn btn-primary btn-sm" onclick="var l=document.getElementById('ast-005-list');var n=l.children.length+1;var li=document.createElement('li');li.textContent='Item '+n;l.appendChild(li)">+ Adicionar item</button>
+</div>
+
+<div class="scenario-box" data-testid="tax-AST-006">
+  <h4>AST-006: Assert de CSS property</h4>
+  <div id="ast-006-css" style="color:#e74c3c;font-size:18px;font-weight:bold;">Texto estilizado</div>
+  <button class="btn btn-primary btn-sm" onclick="document.getElementById('ast-006-css').style.color='#2ecc71'">Mudar cor</button>
+</div>
+
+<div class="scenario-box" data-testid="tax-AST-007">
+  <h4>AST-007: Assert de atributo</h4>
+  <input id="ast-007-input" type="text" placeholder="Valor original" data-custom="abc123">
+  <button class="btn btn-primary btn-sm" onclick="document.getElementById('ast-007-input').setAttribute('data-custom','xyz789')">Mudar atributo</button>
+</div>
+
+<div class="scenario-box" data-testid="tax-AST-008">
+  <h4>AST-008: Assert de URL</h4>
+  <div id="ast-008-url" class="result-box">URL atual: <span id="ast-008-current">/</span></div>
+  <button class="btn btn-primary btn-sm" onclick="window.history.pushState({},'','?assert=url');document.getElementById('ast-008-current').textContent=window.location.search">Mudar URL (pushState)</button>
+</div>
+
+<div class="scenario-box" data-testid="tax-AST-009">
+  <h4>AST-009: Assert de screenshot</h4>
+  <div id="ast-009-visual" style="width:200px;height:80px;background:linear-gradient(90deg,#4a90d9,#e74c3c);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;">Área visual</div>
+  <button class="btn btn-primary btn-sm" onclick="document.getElementById('ast-009-visual').style.background='linear-gradient(90deg,#2ecc71,#f1c40f)'">Mudar aparência</button>
+</div>
+
+<div class="scenario-box" data-testid="tax-AST-010">
+  <h4>AST-010: Assert de console error</h4>
+  <button class="btn btn-danger btn-sm" onclick="console.error('AST-010: Erro simulado no console')">Gerar console.error</button>
+  <div class="result-box">Verificar captura de console errors</div>
+</div>
+</section>
+
+<section id="fam09" data-testid="fam-09">
+<h2>FAM-09: Recorder, Overlay e Checkpoints Manuais</h2>
+<div class="taxo-bar"><span class="taxo-tag">REC-001</span><span class="taxo-tag">REC-002</span><span class="taxo-tag">REC-003</span><span class="taxo-tag">REC-004</span><span class="taxo-tag">REC-005</span><span class="taxo-tag">REC-006</span></div>
+
+<div class="scenario-box" data-testid="tax-REC-001" title="REC-001: Início/fim da sessão de gravação">
+  <h4>REC-001: Início/fim da sessão de gravação</h4>
+  <button class="btn btn-primary btn-sm" onclick="alert('REC-001: Passo gravado')">Passo 1</button>
+  <button class="btn btn-primary btn-sm" onclick="alert('REC-001: Outro passo')">Passo 2</button>
+  <div class="result-box">Gravar com Shift+S para finalizar</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-REC-002">
+  <h4>REC-002: Duplicação de eventos</h4>
+  <button class="btn btn-primary btn-sm" id="rec-002-btn" onclick="window.rec002counter = (window.rec002counter || 0) + 1;document.getElementById('rec-002-result').textContent='Clicado '+ window.rec002counter +'x'">Clique (verificar duplicação)</button>
+  <div class="result-box" id="rec-002-result">Aguardando...</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-REC-003">
+  <h4>REC-003: Modo shortcuts</h4>
+  <button class="btn btn-primary btn-sm" onclick="alert('REC-003: Modo shortcuts ativo')">Ação em shortcuts</button>
+  <div class="result-box">Usar --mode shortcuts na gravação</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-REC-004">
+  <h4>REC-004: Pause/Resume</h4>
+  <button class="btn btn-primary btn-sm" onclick="alert('REC-004')">Clique durante gravação</button>
+  <div class="result-box">Shift+P pausa, Shift+S finaliza</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-REC-005">
+  <h4>REC-005: Menu Assert (Shift+A)</h4>
+  <div class="field-row">
+    <label for="rec-005-field">Campo para assert</label>
+    <input id="rec-005-field" type="text" placeholder="Valor para assert">
+  </div>
+  <div class="result-box">Shift+A abre menu de tipos de assert</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-REC-006">
+  <h4>REC-006: Evento não disparado</h4>
+  <div id="rec-006-area" style="padding:12px;border:1px solid #ddd;border-radius:4px;text-align:center;" onclick="document.getElementById('rec-006-area').innerHTML='<span style=color:#4a90d9>✓ Clicou!</span>'">Clique aqui (evento no div, não no button)</div>
+</div>
+</section>
+
+<section id="fam10" data-testid="fam-10">
+<h2>FAM-10: Execução, Evidência e Observabilidade</h2>
+<div class="taxo-bar"><span class="taxo-tag">OBS-001</span><span class="taxo-tag">OBS-002</span><span class="taxo-tag">OBS-003</span><span class="taxo-tag">OBS-004</span><span class="taxo-tag">OBS-005</span><span class="taxo-tag">OBS-006</span></div>
+
+<div class="scenario-box" data-testid="tax-OBS-001" title="OBS-001: Step timeout — loop infinito">
+  <h4>OBS-001: Step timeout — loop infinito</h4>
+  <button class="btn btn-danger btn-sm" id="obs-001-btn" onclick="while(true){}">Travar (não clique!)</button>
+  <div class="result-box">Runner deve timeout após step_timeout</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-OBS-002">
+  <h4>OBS-002: Browser crash recovery</h4>
+  <button class="btn btn-danger btn-sm" onclick="window.close()">Fechar janela</button>
+  <div class="result-box">Runner deve detectar quebra e reportar</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-OBS-003">
+  <h4>OBS-003: Desconexão de rede</h4>
+  <button class="btn btn-warning btn-sm" onclick="var el=document.getElementById('obs-003-status');if(el)el.textContent='Simulando offline...';setTimeout(function(){var el=document.getElementById('obs-003-status');if(el)el.textContent='Simulação de rede off-line'},1000)">Simular offline</button>
+  <div class="result-box" id="obs-003-status">Rede ativa</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-OBS-004">
+  <h4>OBS-004: Fallback logging</h4>
+  <div id="obs-004-area">
+    <button class="btn btn-primary btn-sm" onclick="console.log('OBS-004: fallback acionado');this.parentNode.insertBefore(document.createTextNode(' fallback executado'), this.nextSibling)">Clique (fallback simulado)</button>
+  </div>
+  <div class="result-box">Runner registra fallbacks no log</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-OBS-005">
+  <h4>OBS-005: Screenshot em falha</h4>
+  <button class="btn btn-danger btn-sm" onclick="document.body.innerHTML='<h1>PÁGINA ALTERADA</h1><p>Runner deve capturar screenshot</p>'">Quebrar página</button>
+  <div class="result-box">Runner salva screenshot ao falhar</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-OBS-006">
+  <h4>OBS-006: Trace viewer</h4>
+  <div class="field-row">
+    <label for="obs-006-input">Campo para interação com trace</label>
+    <input id="obs-006-input" placeholder="Digite algo para o trace">
+  </div>
+  <div class="result-box">Runner gera trace.zip com passo a passo</div>
+</div>
+</section>
+
+<section id="fam11" data-testid="fam-11">
+<h2>FAM-11: Limites Técnicos e Casos Não Automatizáveis</h2>
+<div class="taxo-bar"><span class="taxo-tag">LIM-001</span><span class="taxo-tag">LIM-002</span><span class="taxo-tag">LIM-003</span><span class="taxo-tag">LIM-004</span><span class="taxo-tag">LIM-005</span></div>
+
+<div class="scenario-box" data-testid="tax-LIM-001" title="LIM-001: Cross-origin restrictions">
+  <h4>LIM-001: Cross-origin restrictions</h4>
+  <iframe src="https://api.github.com" title="Cross-origin real" style="height:80px;"></iframe>
+  <div class="result-box">Playwright não acessa conteúdo cross-origin</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-LIM-002">
+  <h4>LIM-002: Popup blocker</h4>
+  <button class="btn btn-primary btn-sm" onclick="window.open('iframe-content.html','_blank','width=400,height=300')">Abrir popup</button>
+  <div class="result-box">Browser pode bloquear popup</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-LIM-003">
+  <h4>LIM-003: Locale / browser configuration</h4>
+  <div class="result-box">TestForge usa locale pt-BR. Verificar:</div>
+  <ul style="font-size:13px;color:#555;margin-top:8px;padding-left:20px;">
+    <li>Formato de data: 31/12/2024</li>
+    <li>Separador decimal: 1.234,56</li>
+    <li>Moeda: R$ 1.234,56</li>
+  </ul>
+</div>
+
+<div class="scenario-box" data-testid="tax-LIM-004">
+  <h4>LIM-004: SSL certificate error</h4>
+  <a href="https://self-signed.badssl.com/" target="_blank" class="btn btn-warning btn-sm">⚠️ Abrir site SSL inválido</a>
+  <div class="result-box">Runner deve ignorar erros de certificado</div>
+</div>
+
+<div class="scenario-box" data-testid="tax-LIM-005">
+  <h4>LIM-005: CI headless limitations</h4>
+  <button class="btn btn-primary btn-sm" onclick="alert('LIM-005: Esta ação requer display')">Ação headed-only</button>
+  <div class="result-box">Em CI headless, algumas ações podem falhar. Usar xvfb-run.</div>
+</div>
+</section>
+
+<p style="text-align:center;color:#999;font-size:12px;margin-top:32px;">TestForge — Página de Teste Completa v1.0 — 78 taxonomias</p>
+</body>
+</html>
