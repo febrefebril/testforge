@@ -2,7 +2,7 @@
 import pytest
 from playwright.sync_api import Page, expect, TimeoutError as PlaywrightTimeout
 
-BASE_URL = "http://localhost:3000"
+BASE_URL = "http://localhost:8765"
 
 
 def test_mutation_change_id(page: Page):
@@ -31,12 +31,15 @@ def test_mutation_duplicate_button_text(page: Page):
 
 
 def test_mutation_overlay_blocks_click(page: Page):
-    """Overlay bloqueia clique — precisa esperar ou forcar."""
+    """Overlay bloqueia clique — espera overlay desaparecer e clica normalmente."""
     page.goto(BASE_URL + "?mutation=overlay_blocks_click")
     page.get_by_placeholder("000.000.000-00").fill("12345678900")
-    # Forca o clique mesmo com overlay
     btn = page.get_by_role("button", name="Pesquisar")
-    btn.click(force=True)
+    # Overlay fica ativo por 8s — espera desaparecer
+    overlay = page.locator("#overlayBlock")
+    expect(overlay).to_be_visible(timeout=2000)  # confirma que overlay existe
+    overlay.wait_for(state="hidden", timeout=10000)  # espera sumir
+    btn.click()
     expect(page.get_by_text("CPF consultado: 12345678900")).to_be_visible()
 
 
