@@ -24,13 +24,14 @@ def _check_python_keyboard(page, recorder):
         is_assert = page.evaluate("window.__tfAssertWaiting")
         has_element = page.evaluate("window.__tfAssertElement !== undefined && window.__tfAssertElement !== null")
         if is_assert and not has_element:
-            # Usuario entrou em modo assert mas ainda nao clicou — ok
             pass
         elif is_assert and has_element:
-            # Usuario clicou no elemento mas menu nao apareceu? Tenta mostrar via Python
             pass
     except Exception:
         pass
+
+
+def cmd_record(args):
     """Grava fluxo de teste com comandos de teclado."""
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=args.headless)
