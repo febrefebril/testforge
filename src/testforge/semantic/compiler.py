@@ -13,7 +13,8 @@ class PlaywrightCompiler:
 
     def compile(self, test_case: SemanticTestCase, output_dir: str) -> str:
         os.makedirs(output_dir, exist_ok=True)
-        test_name = test_case.test_id.replace("-", "_").lower()
+        import re
+        test_name = re.sub(r'[^a-zA-Z0-9_]', '_', test_case.test_id).lower()
         filename = f"test_{test_name}.py"
         path = os.path.join(output_dir, filename)
 
@@ -31,7 +32,9 @@ class PlaywrightCompiler:
         lines.append(f"BASE_URL = \"{tc.base_url}\"")
         lines.append("")
         lines.append("")
-        lines.append(f"def test_{tc.test_id.replace('-', '_').lower()}(page: Page):")
+        import re
+        safe_name = re.sub(r'[^a-zA-Z0-9_]', '_', tc.test_id).lower()
+        lines.append(f"def test_{safe_name}(page: Page):")
         lines.append(f'    """{tc.application or "Fluxo gravado"} — source: {tc.source_recording_id}."""')
 
         step_idx = 0

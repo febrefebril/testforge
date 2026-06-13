@@ -115,7 +115,7 @@ def _auto_learn(error_msg: str, solution: str, framework: str = "generic"):
 
 
 def cmd_compile(args):
-    rec_id = args.recording
+    rec_id = " ".join(args.recording)  # suporta nomes com espaco
     rec_dir = f"recordings/{rec_id}"
     if not os.path.isdir(rec_dir):
         print(f"[TestForge] ✗ Gravacao nao encontrada: {rec_dir}")
@@ -495,7 +495,7 @@ def main():
 
     # compile
     comp = sub.add_parser("compile", help="Compilar gravacao em script Playwright")
-    comp.add_argument("recording", help="ID da gravacao (ex: REC-20260613)")
+    comp.add_argument("recording", nargs="+", help="ID da gravacao (ex: REC-20260613)")
     comp.add_argument("--app", help="Nome da aplicacao")
     comp.add_argument("--base-url", help="URL base override")
     comp.add_argument("--output", help="Diretorio de saida")
