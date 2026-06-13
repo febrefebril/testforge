@@ -83,7 +83,35 @@ def cmd_record(args):
         browser.close()
 
 
-def cmd_compile(args):
+def _auto_learn(error_msg: str, solution: str, framework: str = "generic"):
+    """Registra automaticamente licao aprendida no catalogo de cura."""
+    try:
+        from testforge.healing import HealingCatalog, HealingRecipe
+        from testforge.taxonomy import FailureClassifier
+        catalog = HealingCatalog()
+        classifier = FailureClassifier()
+        failure = classifier.classify(error_msg)
+
+        # So cria receita se nao existir match com score alto (>=5)
+        existing = catalog.match_recipes(error_msg, framework, failure.family.value)
+        high_confidence = [r for r in existing if r.priority >= 5]
+        if not high_confidence:
+            recipe = HealingRecipe(
+                trigger_family=failure.family.value,
+                trigger_code=failure.code,
+                trigger_pattern=error_msg[:200],
+                trigger_framework=framework,
+                solution_strategy="auto_learned",
+                solution_selector=solution[:300],
+                priority=1,
+                status="active",
+            )
+            rid = catalog.add_recipe(recipe)
+            print(f"  📝 Licao auto-registrada: {rid} ({failure.code})")
+            return rid
+    except Exception:
+        pass
+    return None
     """Compila gravacao em script Playwright Python."""
     rec_id = args.recording
     rec_dir = f"recordings/{rec_id}"
@@ -156,6 +184,11 @@ def cmd_run(args):
 
             print(f"  Falha: {failure.code} ({failure.family.value})")
             print(f"  Recuperavel: {failure.recoverable}")
+
+            # Auto-aprende com a falha
+            _auto_learn(result.stderr or result.stdout,
+                        f"fallback deterministico para {script_path}",
+                        "generic")
 
             if failure.recoverable:
                 # Tenta com fallback (navega e tenta de novo)
@@ -426,6 +459,9 @@ def cmd_demo_heal(args):
             print(f"  Gate: {decision.state.value}")
         else:
             print(f"  ⚠ HEALING NAO PROMOVIDO: {decision.blocks}")
+            _auto_learn("locator not found after id change",
+                        "fallback button:has-text('Pesquisar')",
+                        "angular")
         print("=" * 60)
         print()
         print(metrics.summary())
