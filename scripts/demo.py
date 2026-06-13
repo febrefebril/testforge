@@ -24,7 +24,8 @@ def main():
     print()
 
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=True)
+        headed = "--headless" not in sys.argv
+        browser = pw.chromium.launch(headless=not headed)
         context = browser.new_context(viewport={"width": 1280, "height": 720})
         page = context.new_page()
 
