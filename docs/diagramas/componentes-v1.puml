@@ -1,0 +1,79 @@
+@startuml
+title TestForge v1 — Componentes (9 modulos, 1876 LOC)
+
+skinparam packageStyle rectangle
+skinparam backgroundColor #FFFFFF
+
+package "CLI (Typer)" as cli {
+  [app.py] as App
+}
+
+package "Recorder" as recorder {
+  [recorder_controller.py] as RC
+  [recording_session.py] as RS
+  [raw_event.py] as RE
+  [raw_recording_store.py] as RRS
+}
+
+package "Evidence" as evidence {
+  [evidence_collector.py] as EC
+  [evidence_store.py] as ES
+}
+
+package "Semantic (MIS)" as semantic {
+  [model.py] as Model
+  [recording_normalizer.py] as RN
+  [compiler.py] as Compiler
+}
+
+package "Oracle" as oracle {
+  [oracle_runner.py] as OR
+}
+
+package "Promotion" as promotion {
+  [promotion_gate.py] as PG
+}
+
+package "Taxonomy" as taxonomy {
+  [taxonomy.py] as TX
+}
+
+package "Runner" as runner {
+  [fallback_runner.py] as FR
+  [ShadowValidator] as SV
+}
+
+package "Metrics" as metrics {
+  [metrics_repository.py] as MR
+}
+
+database "recordings/" as rec
+database "evidence/" as ev
+database "semantic_tests/" as st
+database "generated_tests/" as gt
+
+App --> RC : record
+App --> RN : compile
+RC --> RE : RawRecordedEvent
+RC --> RS : RecordingSession
+RC --> RRS : JSONL persist
+RC --> rec : recordings/
+
+RN --> rec : le raw_events.jsonl
+RN --> Model : SemanticTestCase
+Model --> Compiler
+Compiler --> st : semantic_tests/
+Compiler --> gt : generated_tests/
+
+OR --> App : visual_dom, business_state
+PG --> OR : avalia resultados
+PG --> ev : le evidencias
+EC --> ev : evidence/
+
+FR --> App : fallback deterministico
+SV --> TX : classifica falha
+TX --> FR : estrategia sugerida
+
+MR --> PG : coleta metricas
+
+@enduml

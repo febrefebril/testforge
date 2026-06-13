@@ -1,0 +1,33 @@
+@startuml
+title TestForge v1 — C4 Context (codigo: 9 modulos, 1876 LOC, 93 testes)
+
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+LAYOUT_WITH_LEGEND()
+
+Person(qa, "QA Engineer", "Grava fluxos e recebe scripts com self-healing.")
+
+System(testforge, "TestForge CLI", "Python CLI (Typer)\n9 modulos implementados")
+
+System_Ext(web_app, "Aplicacao Web Alvo", "PrimeFaces, Angular, JSF, React")
+
+System_Ext(llm, "LLM Gateway", "Opcional — off critical path")
+
+Rel(qa, testforge, "Usa CLI", "record, run, compile")
+Rel(testforge, web_app, "Playwright nativo", "page.on(), page.fill(), page.click()")
+Rel(testforge, llm, "Consulta quando deterministico falha", "Prompt estruturado")
+
+note right of testforge
+  Implementado (v0.1.0):
+  - recorder (JS injection)
+  - evidence (JSONL store)
+  - semantic (MIS + Compiler)
+  - oracle (visual_dom + business_state)
+  - promotion (Gate com 3 estados)
+  - taxonomy (11 codigos, 6 familias)
+  - runner (ShadowValidator + FallbackRunner)
+  - metrics (precision, false_heal_rate)
+  - cli (app.py)
+end note
+
+@enduml

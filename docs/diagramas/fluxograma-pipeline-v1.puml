@@ -1,0 +1,67 @@
+@startuml
+title TestForge v1 — Flowchart Pipeline (implementado)
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontSize 13
+
+|Recorder|
+start
+:RecorderController.start()
+Injeta JS listeners via add_init_script;
+:page.goto(url);
+:Usuario interage (fill, click);
+:JS captura eventos → __tfEventQueue;
+:JS captura steps → __tfStepQueue;
+
+|CLI Polling|
+:recorder.flush_events()
+page.evaluate() le as queues;
+
+|Store|
+:RawRecordingStore.append_event()
+→ raw_events.jsonl;
+:RawRecordingStore.save_*()
+→ screenshots, DOM snapshots;
+:Persiste steps.jsonl (asserts);
+
+|MIS|
+:RecordingNormalizer.normalize()
+Le raw_events.jsonl + steps.jsonl;
+:Converte eventos → SemanticAction
+fill, click, navigation, assert;
+:Gera LocatorCandidates
+(role > label > placeholder > id > name > text);
+
+|Compiler|
+:PlaywrightCompiler.compile()
+Le SemanticTestCase;
+:Gera script Python com fallback loop
+for/else/try/except/break/continue;
+:Script salvo em generated_tests/;
+
+|Oracle|
+:OracleRunner.run_all()
+visual_dom: verifica visibilidade/texto;
+:business_state: extrai valor via JS;
+
+|Gate|
+:PromotionGate.evaluate()
+Verifica evidencias + oracles;
+if (todos oracles pass?) then (sim)
+  :Promove → shadow_validated;
+else (nao)
+  :Rejeita → rejected
+  Lista bloqueios;
+endif
+
+|Evidence|
+:EvidenceCollector.finalize()
+manifest.json + steps + screenshots;
+
+|Metrics|
+:MetricsRepository.record_run()
+Atualiza precision, false_heal_rate;
+
+stop
+
+@enduml

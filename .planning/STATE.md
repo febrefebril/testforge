@@ -1,19 +1,29 @@
 # TestForge — Estado do Projeto
 
 **Inicio:** 2026-06-13
-**Fase atual:** Execucao
-**Ultimo milestone:** v1.0 — Fundacao + Synthetic Lab ✓
+**Versao:** 0.1.0
+**Fase:** v0.1.0 Shipada
 
-## Fases Concluidas
-- BMAD Brainstorming (Failure Analysis + Five Whys)
-- BMAD Product Brief
-- BMAD Arquitetura
-- **GSD Milestone 1:** Fundacao + Synthetic Lab ✓
-  - Estrutura de diretorios
-  - README, CHANGELOG, VERSION, pyproject.toml
-  - 3 ADRs
-  - fake-react-bank-app + mutation matrix (5 mutacoes)
-  - Testes Playwright: base + 5 mutacoes
+## Metricas
+- **31 commits** no main
+- **93 testes** passando
+- **1876 linhas** de codigo
+- **9 modulos** implementados
 
-## Proximo
-- GSD Milestone 2: Recorder Sensorial (Sprint 2)
+## Milestones Concluidos
+- [x] BMAD Brainstorming (Failure Analysis + Five Whys)
+- [x] BMAD Product Brief
+- [x] BMAD Arquitetura
+- [x] M1: Fundacao + Synthetic Lab
+- [x] M2: Recorder Sensorial + Asserts
+- [x] M3: Evidence Collector + Store
+- [x] M4: MIS + Compiler Playwright
+- [x] M5: Oracle + PromotionGate
+- [x] M6: Taxonomia + ShadowValidator + FallbackRunner
+- [x] M7: Metricas + Revisao CLI
+
+## Proximo (v0.2.0)
+- [ ] CLI `testforge` installavel (console_scripts)
+- [ ] Pipeline `run` integrada com healing
+- [ ] Demo healing real (record → break → heal)
+- [ ] Prompt pack para GSD sprints
