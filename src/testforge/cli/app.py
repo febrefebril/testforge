@@ -157,7 +157,7 @@ def cmd_compile(args):
 
 def cmd_run(args):
     """Executa script Playwright com fallback healing."""
-    script_path = args.script
+    script_path = " ".join(args.script)  # suporta caminhos com espaco
     if not os.path.exists(script_path):
         print(f"[TestForge] ✗ Script nao encontrado: {script_path}")
         return
@@ -491,7 +491,7 @@ def main():
 
     # record
     rec = sub.add_parser("record", help="Gravar fluxo de teste")
-    rec.add_argument("url", help="URL da aplicacao alvo")
+    rec.add_argument("url", nargs="?", help="URL da aplicacao alvo")
     rec.add_argument("--name", help="Nome/ID da gravacao")
     rec.add_argument("--app", help="Nome da aplicacao")
     rec.add_argument("--headless", action="store_true", help="Modo headless")
@@ -507,13 +507,13 @@ def main():
 
     # run
     run = sub.add_parser("run", help="Executar script Playwright com healing")
-    run.add_argument("script", help="Caminho do script Python")
+    run.add_argument("script", nargs="+", help="Caminho do script Python")
     run.add_argument("--headless", action="store_true", help="Modo headless")
     run.set_defaults(func=cmd_run)
 
     # pipeline
     pipe = sub.add_parser("pipeline", help="Pipeline completa: record → compile → run")
-    pipe.add_argument("url", help="URL da aplicacao alvo")
+    pipe.add_argument("url", nargs="?", default="http://localhost:8765", help="URL da aplicacao alvo")
     pipe.add_argument("--headless", action="store_true", help="Modo headless")
     pipe.set_defaults(func=cmd_pipeline)
 
