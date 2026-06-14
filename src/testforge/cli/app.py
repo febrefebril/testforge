@@ -214,28 +214,38 @@ def cmd_run(args):
                         "generic")
 
             if failure.recoverable:
-                # Tenta com fallback (navega e tenta de novo)
-                page.goto(base_url)
-                page.wait_for_timeout(500)
-                page.get_by_placeholder("000.000.000-00").fill("12345678900")
-                page.wait_for_timeout(200)
-                page.get_by_role("button", name="Pesquisar").click()
-                page.wait_for_timeout(500)
-
-                results = oracle.run_all([
-                    {"type": "visual_dom", "selector": "#resultadoSection", "expected": "CPF consultado"},
-                ])
-
-                for r in results:
-                    icon = "✓" if r.status == "passed" else "✗"
-                    print(f"  {icon} Oracle {r.oracle_type}: {r.status}")
-
-                decision = gate.evaluate(results, {"screenshots": ["fallback.png"]})
-                if decision.allowed:
-                    healed = True
-                    print(f"  ✓ Healing bem-sucedido! Gate: {decision.state.value}")
-                else:
-                    print(f"  ✗ Healing falhou: {decision.blocks}")
+                # Tenta healing generico com candidatos do MIS
+                try:
+                    recording_id = None
+                    for line in code.split("\n"):
+                        if "source:" in line:
+                            recording_id = line.split("source:")[-1].strip().rstrip('."\'')
+                            break
+                    if recording_id:
+                        rec_dir = str(_PROJECT_ROOT / "recordings" / recording_id)
+                        if os.path.isdir(rec_dir):
+                            stc = RecordingNormalizer().normalize(rec_dir, f"HEAL-{recording_id}", "", "")
+                            fallback = FallbackRunner(page)
+                            page.goto(base_url)
+                            page.wait_for_timeout(500)
+                            for step in stc.steps:
+                                if step.action == "fill" and step.target and step.target.candidates:
+                                    candidates = [{"selector": c.selector, "score": c.score} for c in step.target.candidates[:3]]
+                                    ok = fallback.try_fill(candidates, step.value or "")
+                                    if ok:
+                                        print(f"  ✓ fill com candidato alternativo")
+                                elif step.action == "click" and step.target and step.target.candidates:
+                                    candidates = [{"selector": c.selector, "score": c.score} for c in step.target.candidates[:3]]
+                                    ok = fallback.try_click(candidates)
+                                    if ok:
+                                        print(f"  ✓ click com candidato alternativo")
+                                        healed = True
+                        else:
+                            print(f"  ⚠ Recording nao encontrado: {recording_id}")
+                    else:
+                        print(f"  ⚠ source recording nao identificado no script")
+                except Exception as e:
+                    print(f"  ⚠ Healing generico falhou: {e}")
 
         metrics.record_run(
             healed=healed,
