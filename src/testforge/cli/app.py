@@ -17,6 +17,10 @@ from testforge.runner import FallbackRunner
 from testforge.metrics import MetricsRepository
 from testforge.healing import HealingCatalog, HealingRecipe
 
+import pathlib
+_PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent.parent
+import pathlib
+
 
 def _check_python_keyboard(page, recorder):
     """Monitora estado do assert e ativa via Python se necessario."""
@@ -60,7 +64,7 @@ def cmd_record(args):
                 # Check for asserts via Python keyboard listener (fallback para sites que bloqueiam JS keydown)
                 _check_python_keyboard(page, recorder)
 
-                steps_file = os.path.join("recordings", rid, "steps.jsonl")
+                steps_file = str(_PROJECT_ROOT / "recordings" / rid / "steps.jsonl")
                 if os.path.exists(steps_file):
                     with open(steps_file) as f:
                         current = sum(1 for _ in f)
@@ -116,7 +120,7 @@ def _auto_learn(error_msg: str, solution: str, framework: str = "generic"):
 
 def cmd_compile(args):
     rec_id = " ".join(args.recording)  # suporta nomes com espaco
-    rec_dir = f"recordings/{rec_id}"
+    rec_dir = str(_PROJECT_ROOT / "recordings" / rec_id)
     if not os.path.isdir(rec_dir):
         print(f"[TestForge] ✗ Gravacao nao encontrada: {rec_dir}")
         return
@@ -136,7 +140,7 @@ def cmd_compile(args):
     stc = normalizer.normalize(rec_dir, f"ST-{rec_id}", app or "app", base_url or "http://localhost")
 
     compiler = PlaywrightCompiler()
-    out_dir = args.output or f"semantic_tests/ST-{rec_id}"
+    out_dir = args.output or str(_PROJECT_ROOT / f"semantic_tests/ST-{rec_id}")
     path = compiler.compile(stc, out_dir)
 
     print(f"[TestForge] ✓ SemanticTestCase: {len(stc.steps)} steps")
@@ -287,7 +291,7 @@ def cmd_pipeline(args):
         # Step 2: Compile
         print("\n⚙ Fase 2: Compilacao")
         normalizer = RecordingNormalizer()
-        stc = normalizer.normalize(f"recordings/{rid}", f"ST-{rid}", "pipeline", args.url)
+        stc = normalizer.normalize(str(_PROJECT_ROOT / f"recordings/{rid}"), f"ST-{rid}", "pipeline", args.url)
         compiler = PlaywrightCompiler()
         script_path = compiler.compile(stc, f"semantic_tests/ST-{rid}")
         print(f"  ✓ {len(stc.steps)} steps → {script_path}")
@@ -393,7 +397,7 @@ def cmd_demo_heal(args):
         recorder.stop()
         recorder.finalize()
 
-        with open("recordings/HEAL-DEMO/raw_events.jsonl") as f:
+        with open(_PROJECT_ROOT / "recordings/HEAL-DEMO/raw_events.jsonl") as f:
             events = [json.loads(l) for l in f]
         print(f"  ✓ {len(events)} eventos gravados")
 
