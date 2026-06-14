@@ -119,7 +119,7 @@ def _auto_learn(error_msg: str, solution: str, framework: str = "generic"):
 
 
 def cmd_compile(args):
-    rec_id = " ".join(args.recording)  # suporta nomes com espaco
+    rec_id = args.recording
     rec_dir = str(_PROJECT_ROOT / "recordings" / rec_id)
     if not os.path.isdir(rec_dir):
         print(f"[TestForge] ✗ Gravacao nao encontrada: {rec_dir}")
@@ -140,7 +140,8 @@ def cmd_compile(args):
     stc = normalizer.normalize(rec_dir, f"ST-{rec_id}", app or "app", base_url or "http://localhost")
 
     compiler = PlaywrightCompiler()
-    out_dir = args.output or str(_PROJECT_ROOT / f"semantic_tests/ST-{rec_id}")
+    safe_rec_id = rec_id.replace(" ", "_").replace("/", "_")
+    out_dir = args.output or str(_PROJECT_ROOT / f"semantic_tests/ST-{safe_rec_id}")
     path = compiler.compile(stc, out_dir)
 
     print(f"[TestForge] ✓ SemanticTestCase: {len(stc.steps)} steps")
@@ -157,7 +158,7 @@ def cmd_compile(args):
 
 def cmd_run(args):
     """Executa script Playwright com fallback healing."""
-    script_path = " ".join(args.script)  # suporta caminhos com espaco
+    script_path = args.script
     if not os.path.exists(script_path):
         print(f"[TestForge] ✗ Script nao encontrado: {script_path}")
         return
@@ -184,26 +185,31 @@ def cmd_run(args):
 
         # Executa como pytest
         import subprocess
-        result = subprocess.run(
-            [sys.executable, "-m", "pytest", script_path, "--base-url", base_url, "-q", "--tb=line"],
-            capture_output=True, text=True, timeout=30
-        )
+        try:
+            result = subprocess.run(
+                [sys.executable, "-m", "pytest", script_path, "--base-url", base_url, "-q", "--tb=line"],
+                capture_output=True, text=True, timeout=args.timeout or 60
+            )
+        except subprocess.TimeoutExpired:
+            print(f"[TestForge] ⚠ Timeout ({args.timeout or 60}s) — tentando healing...")
+            result = None
 
         fallback = FallbackRunner(page)
         oracle = OracleRunner(page)
         gate = PromotionGate()
 
         healed = False
-        if result.returncode != 0:
+        if result is None or result.returncode != 0:
+            error_text = (result.stderr or result.stdout) if result else "timeout"
             print(f"[TestForge] ⚠ Script falhou — tentando healing...")
             classifier = FailureClassifier()
-            failure = classifier.classify(result.stderr or result.stdout)
+            failure = classifier.classify(error_text)
 
             print(f"  Falha: {failure.code} ({failure.family.value})")
             print(f"  Recuperavel: {failure.recoverable}")
 
             # Auto-aprende com a falha
-            _auto_learn(result.stderr or result.stdout,
+            _auto_learn(error_text,
                         f"fallback deterministico para {script_path}",
                         "generic")
 
@@ -233,7 +239,7 @@ def cmd_run(args):
 
         metrics.record_run(
             healed=healed,
-            false_heal=not healed and result.returncode != 0,
+            false_heal=not healed and (result is None or result.returncode != 0),
             oracle_passed=1 if healed else 0,
             oracle_failed=0 if healed else 1,
         )
@@ -499,7 +505,7 @@ def main():
 
     # compile
     comp = sub.add_parser("compile", help="Compilar gravacao em script Playwright")
-    comp.add_argument("recording", nargs="+", help="ID da gravacao (ex: REC-20260613)")
+    comp.add_argument("recording", help="ID da gravacao (ex: REC-20260613)")
     comp.add_argument("--app", help="Nome da aplicacao")
     comp.add_argument("--base-url", help="URL base override")
     comp.add_argument("--output", help="Diretorio de saida")
@@ -507,8 +513,9 @@ def main():
 
     # run
     run = sub.add_parser("run", help="Executar script Playwright com healing")
-    run.add_argument("script", nargs="+", help="Caminho do script Python")
+    run.add_argument("script", help="Caminho do script Python")
     run.add_argument("--headless", action="store_true", help="Modo headless")
+    run.add_argument("--timeout", type=int, default=60, help="Timeout em segundos")
     run.set_defaults(func=cmd_run)
 
     # pipeline

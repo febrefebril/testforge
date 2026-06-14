@@ -14,7 +14,9 @@ class PlaywrightCompiler:
     def compile(self, test_case: SemanticTestCase, output_dir: str) -> str:
         os.makedirs(output_dir, exist_ok=True)
         import re
-        test_name = re.sub(r'[^a-zA-Z0-9_]', '_', test_case.test_id).lower()
+        safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', test_case.test_id)
+        os.makedirs(output_dir, exist_ok=True)
+        test_name = safe_id.lower()
         filename = f"test_{test_name}.py"
         path = os.path.join(output_dir, filename)
 
