@@ -155,21 +155,24 @@ def cmd_compile(args):
     normalizer = RecordingNormalizer()
     stc = normalizer.normalize(rec_dir, f"ST-{rec_id}", app or "app", base_url or "http://localhost")
 
+    # Output directory (sanitized)
+    safe_rec_id = _sanitize_name(rec_id)
+    out_dir = args.output or str(_PROJECT_ROOT / f"semantic_tests/ST-{safe_rec_id}")
+
     # Data-driven: extrai massa de dados externa
     data_file = ""
     if getattr(args, 'data', False):
         from testforge.semantic.data_extractor import generate_test_data_file
+        os.makedirs(out_dir, exist_ok=True)
         data_path = generate_test_data_file(
             rec_dir,
-            os.path.join(str(_PROJECT_ROOT / f"recordings/{rec_id}"), "test_data.json"),
+            os.path.join(out_dir, "test_data.json"),
             scenarios=getattr(args, 'scenarios', False),
         )
         data_file = data_path
         print(f"[TestForge] ✓ Massa de dados: {data_file}")
 
     compiler = PlaywrightCompiler()
-    safe_rec_id = _sanitize_name(rec_id)
-    out_dir = args.output or str(_PROJECT_ROOT / f"semantic_tests/ST-{safe_rec_id}")
     path = compiler.compile(stc, out_dir, data_file=data_file)
 
     print(f"[TestForge] ✓ SemanticTestCase: {len(stc.steps)} steps")
