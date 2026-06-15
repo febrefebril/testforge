@@ -53,7 +53,7 @@ def cmd_record(args):
         recorder = RecorderController(page)
 
         ts = time.strftime("%Y%m%d-%H%M%S")
-        rid = args.name or f"REC-{ts}"
+        rid = _sanitize_name(args.name) if args.name else f"REC-{ts}"
 
         print(f"[TestForge] Gravando: {rid}")
         print(f"  URL: {args.url}")
