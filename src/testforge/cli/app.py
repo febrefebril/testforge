@@ -447,20 +447,13 @@ def _heal_step(page, step, error_msg: str, base_url: str, step_num: int,
 
     payload = collector.build_llm_payload(step_context, include_screenshot=False)
 
-    # Step runner que executa no page
+    # Smart step runner that supports all healing strategies
+    from testforge.runner.fallback_runner import SmartStepRunner
+    smart_runner = SmartStepRunner(page)
+
     def step_runner(step_data):
-        patched_sel = step_data.get("selector", "")
-        patched_action = step_data.get("action", "click")
-        patched_value = step_data.get("value", "")
-
-        if patched_action == "fill":
-            page.fill(patched_sel, patched_value, timeout=5000)
-            page.wait_for_timeout(200)
-        elif patched_action == "click":
-            page.click(patched_sel, timeout=5000)
-            page.wait_for_timeout(300)
-
-        return True
+        strategy = step_data.get("strategy", "")
+        return smart_runner.execute(step_data, strategy)
 
     curator = CuradorAutomatico(
         catalog=HealingCatalog(),

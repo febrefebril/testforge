@@ -601,6 +601,7 @@ KEYWORD_PATTERNS: list[tuple[str, str, str]] = [
     ("navigation timeout", "FAM-02", "TIM-007"),
     ("timeout exceeded", "FAM-02", "TIM-005"),
     ("net::err", "FAM-02", "TIM-003"),
+    ("connection refused", "FAM-10", "OBS-003"),
     ("session expired", "FAM-04", "STA-001"),
     ("access denied", "FAM-04", "STA-005"),
     ("403 forbidden", "FAM-04", "STA-005"),

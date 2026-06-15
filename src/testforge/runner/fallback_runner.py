@@ -5,6 +5,131 @@ from typing import Optional
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeout
 
 from ..taxonomy.taxonomy import FailureClassifier, FailureClassification, FailureFamily
+from playwright.sync_api import Page, TimeoutError as PlaywrightTimeout
+
+
+class SmartStepRunner:
+    """Strategy-aware step executor for healing pipeline.
+
+    Supports all 10 healing strategies with proper Playwright implementation.
+    Used by CuradorAutomatico step_runner in cmd_run and healing tests.
+    """
+
+    FILL_TIMEOUT = 5000
+    CLICK_TIMEOUT = 5000
+    WAIT_TIMEOUT = 10000
+
+    def __init__(self, page: Page):
+        self._page = page
+
+    def execute(self, step_data: dict, strategy: str = "") -> bool:
+        """Execute a step using the specified healing strategy.
+
+        Args:
+            step_data: dict with 'selector', 'action', 'value', 'strategy'
+            strategy: healing strategy name (overrides step_data['strategy'])
+
+        Returns True if step succeeded, False otherwise.
+        """
+        sel = step_data.get("selector", "")
+        action = step_data.get("action", "click")
+        value = step_data.get("value", "")
+        strat = strategy or step_data.get("strategy", "")
+
+        try:
+            # Handle strategy-specific behaviors
+            if strat == "visibility_wait" or strat == "wait_for_enabled":
+                self._page.wait_for_selector(sel, state="visible", timeout=self.WAIT_TIMEOUT)
+
+            if strat == "overlay_dismiss":
+                self._dismiss_overlays()
+
+            if strat == "dialog_handler":
+                self._register_dialog_handler()
+
+            if strat == "iframe_switch":
+                sel = self._handle_iframe(sel)
+
+            if strat == "synthetic_click":
+                self._page.evaluate(f"document.querySelector('{sel}').click()")
+                self._page.wait_for_timeout(300)
+                return True
+
+            # Execute the action
+            if action == "fill":
+                if strat == "press_sequentially" or strat == "masked_input_detection":
+                    self._page.press_sequentially(sel, value, timeout=self.FILL_TIMEOUT)
+                else:
+                    self._page.fill(sel, value, timeout=self.FILL_TIMEOUT)
+                self._page.wait_for_timeout(200)
+
+            elif action == "click":
+                if strat == "label_click":
+                    # Try clicking the label first
+                    try:
+                        label_sel = f"label[for='{sel.lstrip('#')}']"
+                        self._page.click(label_sel, timeout=self.CLICK_TIMEOUT)
+                    except Exception:
+                        self._page.click(sel, timeout=self.CLICK_TIMEOUT)
+                else:
+                    self._page.click(sel, timeout=self.CLICK_TIMEOUT)
+                self._page.wait_for_timeout(300)
+
+            elif action == "assert":
+                self._page.wait_for_selector(sel, state="visible", timeout=self.WAIT_TIMEOUT)
+                text = self._page.locator(sel).first.text_content(timeout=3000)
+                if value and value.lower() not in (text or "").lower():
+                    return False
+
+            return True
+
+        except Exception:
+            return False
+
+    def _dismiss_overlays(self):
+        """Try to dismiss overlays/modals."""
+        # Try Escape key
+        try:
+            self._page.keyboard.press("Escape")
+            self._page.wait_for_timeout(300)
+        except Exception:
+            pass
+        # Try clicking common overlay close selectors
+        for close_sel in ['.overlay', '[role="dialog"] .close', '.modal .close',
+                          '.mat-dialog-container', '.cdk-overlay-backdrop']:
+            try:
+                if self._page.locator(close_sel).count() > 0:
+                    self._page.click(close_sel, timeout=2000)
+                    self._page.wait_for_timeout(300)
+                    break
+            except Exception:
+                continue
+
+    def _register_dialog_handler(self):
+        """Register handler for native dialogs."""
+        try:
+            self._page.on("dialog", lambda dialog: dialog.accept())
+        except Exception:
+            pass
+
+    def _handle_iframe(self, sel: str) -> str:
+        """Try to switch to iframe context. Returns adjusted selector."""
+        # Try to find and switch to iframe
+        try:
+            iframes = self._page.locator("iframe")
+            count = iframes.count()
+            for i in range(count):
+                frame = self._page.frame_locator(f"iframe >> nth={i}")
+                try:
+                    element = frame.locator(sel)
+                    if element.count() > 0:
+                        sel = f"iframe >> nth={i} >> {sel}"
+                        break
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return sel
 
 
 @dataclass

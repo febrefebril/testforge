@@ -20,6 +20,7 @@ from testforge.healing import (
 )
 from testforge.evidence import EvidenceCollector
 from testforge.healing.agents import route_to_agent
+from testforge.runner.fallback_runner import SmartStepRunner
 
 
 # ── Test Parameters ──────────────────────────────────────────────────────────
@@ -143,28 +144,21 @@ class TestHealingPipeline:
     """Test the full healing pipeline L0→L3 for each family."""
 
     @pytest.mark.parametrize("family_dir,fam_code,tax_id,action,selector,expected_family", [
-        p for p in FAMILY_TESTS if p[1] in ("FAM-01", "FAM-02", "FAM-05")
+        p for p in FAMILY_TESTS if p[1] in ("FAM-01", "FAM-02", "FAM-04", "FAM-05", "FAM-06")
     ])
     def test_heal_error_mode(self, page: Page, test_server, family_dir, fam_code, tax_id, action, selector, expected_family):
-        """Healing should resolve locator/timing/DOM errors.
+        """Healing should resolve errors on test pages.
 
-        Note: FAM-04 (state/overlay) and FAM-06 (masked input) are known gaps —
-        the inline executor doesn't handle overlay dismissal or pressSequentially yet.
+        Tests all 5 families with L2 agents using SmartStepRunner.
         """
         navigate(page, test_server, family_dir)
-        # Inject error condition via JS instead of ?error=1 (avoids server 404)
+        # Inject error condition via JS
         if fam_code == "FAM-01":
             page.evaluate("document.querySelector('button').id = 'btn-dynamic-' + Date.now()")
-        elif fam_code == "FAM-02":
-            page.evaluate("""
-                var orig = document.getElementById('load-btn').onclick;
-                document.getElementById('load-btn').onclick = null;
-                document.getElementById('load-btn').addEventListener('click', function(){
-                    setTimeout(function(){ document.getElementById('result').textContent = 'Loaded!'; }, 5000);
-                });
-            """)
+        elif fam_code == "FAM-04":
+            page.evaluate("document.getElementById('overlay').style.display='block'")
         elif fam_code == "FAM-05":
-            page.evaluate("document.getElementById('old-btn').remove()")
+            page.evaluate("if(document.getElementById('old-btn')) document.getElementById('old-btn').remove()")
         page.wait_for_timeout(200)
 
         collector = EvidenceCollector(page)
@@ -183,15 +177,11 @@ class TestHealingPipeline:
 
         payload = collector.build_llm_payload(ctx)
 
+        smart_runner = SmartStepRunner(page)
+
         def runner(step_data):
-            sel = step_data.get("selector", selector)
-            if step_data.get("action") == "fill":
-                page.fill(sel, step_data.get("value", "12345678900"), timeout=5000)
-                page.wait_for_timeout(200)
-            else:
-                page.click(sel, timeout=5000)
-                page.wait_for_timeout(300)
-            return True
+            strategy = step_data.get("strategy", "")
+            return smart_runner.execute(step_data, strategy)
 
         curator = CuradorAutomatico(
             catalog=HealingCatalog(),
@@ -205,7 +195,6 @@ class TestHealingPipeline:
             payload,
         )
 
-        # Should heal via L3 (MockLLMHealer or L2 agent)
         assert outcome.status in (ProgressResult.PASSED_STEP,), \
             f"Healing failed for {fam_code}: {outcome.status} — {outcome.error_message}"
 

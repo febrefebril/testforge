@@ -207,7 +207,7 @@ class CuradorAutomatico:
             )
 
         # Execute with catalog fix
-        patched_step = self._build_step_copy(step_data, best.solution_selector)
+        patched_step = self._build_step_copy(step_data, best.solution_selector, best.solution_strategy)
         passed, new_error = self._try_execute_step(patched_step)
         if passed:
             self._catalog.record_success(best.recipe_id)
@@ -259,7 +259,7 @@ class CuradorAutomatico:
             )
 
         # Execute patched step
-        patched_step = self._build_step_copy(step_data, proposal.new_locator)
+        patched_step = self._build_step_copy(step_data, proposal.new_locator, proposal.strategy)
         passed, new_error = self._try_execute_step(patched_step)
         result = classify_step_result(error_message, new_error, passed)
 
@@ -319,7 +319,7 @@ class CuradorAutomatico:
             return outcome
 
         # Execute patched step
-        patched_step = self._build_step_copy(step_data, proposal.new_locator)
+        patched_step = self._build_step_copy(step_data, proposal.new_locator, proposal.strategy)
         passed, new_error = self._try_execute_step(patched_step)
         result = classify_step_result(error_message, new_error, passed)
 
@@ -346,10 +346,12 @@ class CuradorAutomatico:
 
     # ── Helpers ─────────────────────────────────────────────────────────
 
-    def _build_step_copy(self, step_data: dict, new_locator: str) -> dict:
-        """Clone step_data with replaced selector."""
+    def _build_step_copy(self, step_data: dict, new_locator: str, strategy: str = "") -> dict:
+        """Clone step_data with replaced selector and strategy."""
         patched = copy.deepcopy(step_data)
         patched["selector"] = new_locator
+        if strategy:
+            patched["strategy"] = strategy
         return patched
 
     def _try_execute_step(self, step_data: dict) -> tuple[bool, str]:
