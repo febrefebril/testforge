@@ -42,7 +42,7 @@ class ShadowValidator:
                 status="pending_review",
             )
 
-        if classification.family == FailureFamily.ACTIONABILITY:
+        if classification.family in (FailureFamily.STATE, FailureFamily.DYNAMIC_DOM, FailureFamily.INPUT):
             return HealingSuggestion(
                 step_id=step_id,
                 original_selector=original_selector,
