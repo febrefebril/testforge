@@ -27,6 +27,38 @@ def _is_hash_class(cls: str) -> bool:
     return False
 
 
+# Material icon ligatures that appear in text content but are not real text
+_MATERIAL_ICONS = {
+    "home", "search", "calculate", "calculate_outline", "attach_money",
+    "trending_up", "schedule", "arrow_forward", "arrow_back", "check",
+    "close", "menu", "settings", "person", "delete", "edit", "add",
+    "remove", "refresh", "download", "upload", "share", "favorite",
+    "star", "info", "warning", "error", "visibility", "visibility_off",
+    "calendar_today", "table_view", "list", "grid_view", "filter_list",
+    "more_vert", "more_horiz", "expand_more", "expand_less", "chevron_right",
+    "chevron_left", "open_in_new", "launch", "help", "support", "feedback",
+    "account_balance", "payment", "shopping_cart", "credit_card",
+    "location_on", "place", "phone", "email", "language", "lock",
+    "cloud_upload", "cloud_download", "print", "save", "send",
+    "keyboard_arrow_down", "keyboard_arrow_up", "keyboard_arrow_right",
+    "keyboard_arrow_left", "cancel", "done", "clear",
+}
+
+
+def _clean_text(text: str) -> str:
+    """Remove material icon ligatures from text content and truncate."""
+    if not text:
+        return ""
+    # Split by whitespace and filter out material icons
+    parts = text.split()
+    cleaned = [p for p in parts if p.lower().replace("_", "") not in _MATERIAL_ICONS]
+    result = " ".join(cleaned).strip()
+    # Truncate long text for selector use
+    if len(result) > 60:
+        result = result[:57] + "..."
+    return result
+
+
 class RecordingNormalizer:
     """Converte raw events em SemanticTestCase."""
 
@@ -130,11 +162,11 @@ class RecordingNormalizer:
         # Prioridade de estrategias (score deterministico)
         if target_data.get("role"):
             role = target_data["role"]
-            name = target_data.get("accessible_name") or target_data.get("text") or ""
+            name = target_data.get("accessible_name") or _clean_text(target_data.get("text") or "")
             selector = f"role={role}"
-            if name:
+            if name and len(name) <= 40:
                 selector += f"[name=\"{name}\"]"
-            candidates.append(LocatorCandidate("role", selector, 0.95, "role + accessible name"))
+            candidates.append(LocatorCandidate("role", selector, 0.95 if name else 0.70, "role + accessible name"))
 
         if target_data.get("label") and target_data.get("id"):
             label = target_data["label"]
@@ -157,12 +189,19 @@ class RecordingNormalizer:
             candidates.append(LocatorCandidate("name", f"[name=\"{name}\"]", 0.70, f"name={name}"))
 
         if target_data.get("text"):
-            text = target_data["text"][:50]
-            candidates.append(LocatorCandidate("text", f"text={text}", 0.60, f"visible text"))
+            text = _clean_text(target_data["text"])
+            if text:
+                candidates.append(LocatorCandidate("text", f"text={text}", 0.60, f"visible text"))
 
-        # Fallback: CSS classes (stable, non-hash)
+        # Fallback: CSS classes (stable, non-hash, non-generic)
         class_list = target_data.get("class_list") or []
-        stable_classes = [c for c in class_list if not _is_hash_class(c) and len(c) >= 2]
+        # Exclude generic framework classes that match too broadly
+        _generic_classes = {"mat-focus-indicator", "mat-ripple", "mat-button-focus-overlay",
+                           "cdk-focused", "cdk-program-focused", "ng-star-inserted", "ng-untouched",
+                           "ng-pristine", "ng-valid", "mat-form-field", "mat-form-field-flex"}
+        stable_classes = [c for c in class_list
+                         if not _is_hash_class(c) and len(c) >= 2
+                         and c not in _generic_classes]
         if stable_classes and not candidates:
             cls_sel = ".".join(stable_classes[:3])
             candidates.append(LocatorCandidate("class", f".{cls_sel}", 0.35, f"CSS classes: {cls_sel}"))
@@ -178,6 +217,9 @@ class RecordingNormalizer:
             if attr_value and len(attr_value) < 80 and attr_name != "aria-label":
                 sel = f"[{attr_name}='{attr_value}']"
                 candidates.append(LocatorCandidate("aria_attr", sel, 0.30, f"{attr_name}={attr_value}"))
+
+        # Sort candidates by score (descending) for deterministic ordering
+        candidates.sort(key=lambda c: c.score, reverse=True)
 
         return SemanticTarget(
             role=target_data.get("role"),

@@ -9,7 +9,7 @@ Reference: conhecimento_ancestral/projeto-anterior/llm/prompts.py
 from __future__ import annotations
 
 CURATION_PROMPT_TEMPLATE = """You are a Playwright test healing specialist.
-Analyze the failure below and propose a fix.
+Your task: return ONLY a JSON object with the healing proposal. No other text.
 
 ## Step Context
 - Action: {action}
@@ -32,24 +32,25 @@ Analyze the failure below and propose a fix.
 ## Available Taxonomies
 {taxonomy_hint}
 
-## Instructions
-Analyze the failure and respond ONLY with valid JSON in this format:
+## Response Format (MANDATORY — JSON ONLY)
 {{
   "taxonomy_id": "SEL-004",
   "family": "FAM-01",
   "strategy": "semantic_locator_conversion",
   "new_locator": "button:has-text('Search')",
   "confidence": 0.85,
-  "rationale": "Button found by text content — ID changed but text is stable"
+  "rationale": "One sentence explaining the fix"
 }}
 
 Rules:
-- taxonomy_id must be a valid code from the list above
-- family must be the corresponding FAM code
-- strategy must be one of: semantic_locator_conversion, has_text_fallback, masked_input_detection, press_sequentially, dialog_handler, visibility_wait, iframe_switch, label_click, synthetic_click, xpath_fallback
-- new_locator must be a valid CSS/Playwright selector string (e.g., 'text=Example', 'button:has-text(\"Search\")', '[data-testid=\"btn\"]', '#my-id'). Do NOT use Playwright API chains like page.get_by_role() — use plain selectors only.
-- confidence between 0.0 and 1.0 (only >= 0.5 accepted for auto-healing)
-- rationale: 1-2 sentences explaining the analysis
+- taxonomy_id: valid code from the list above
+- family: corresponding FAM code
+- strategy: one of: semantic_locator_conversion, has_text_fallback, masked_input_detection, press_sequentially, dialog_handler, visibility_wait, iframe_switch, label_click, synthetic_click, xpath_fallback
+- new_locator: valid CSS/Playwright selector string (e.g., 'text=Search', 'button:has-text(\"Search\")', '[data-testid=\"btn\"]', '#my-id'). Do NOT use Playwright API chains like page.get_by_role() — use plain selectors only.
+- confidence: 0.0 to 1.0 (>= 0.5 accepted for auto-healing)
+- rationale: ONE sentence explaining the analysis
+
+CRITICAL: Your ENTIRE response MUST be ONLY the JSON object above. No explanation. No markdown. No analysis text. JUST the JSON.
 """
 
 FAM01_SEL_PROMPT = """You are a Playwright selector specialist.

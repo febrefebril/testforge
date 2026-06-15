@@ -101,6 +101,9 @@ def _build_prompt(payload: EvidencePayload, error_message: str, family: str = ""
     if len(prompt) > MAX_PROMPT_CHARS:
         prompt = prompt[:MAX_PROMPT_CHARS] + "\n[TRUNCATED]"
 
+    # Always append CRITICAL JSON-only instruction
+    prompt += "\n\nCRITICAL: Your ENTIRE response MUST be ONLY the JSON object. No explanation. No markdown. Just the JSON."
+
     return prompt
 
 
