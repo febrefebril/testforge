@@ -1,0 +1,8 @@
+<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>FAM-07: File</title></head>
+<body>
+<h1>FAM-07: File Upload / Download (FILE-001)</h1>
+<label for="file-input">Selecionar arquivo:</label>
+<input id="file-input" type="file" accept=".txt,.pdf">
+<button id="upload-btn" onclick="var f=document.getElementById('file-input').files[0];document.getElementById('result').textContent=f?'Arquivo selecionado: '+f.name:'Nenhum arquivo'">Upload</button>
+<div id="result" role="status" style="margin-top:10px"></div>
+</body></html>

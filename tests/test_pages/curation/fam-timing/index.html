@@ -1,0 +1,13 @@
+<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>FAM-02: Timing</title></head>
+<body>
+<h1>FAM-02: Synchronization (TIM-005)</h1>
+<button id="load-btn">Carregar conteúdo</button>
+<div id="result" role="status"></div>
+<script>
+document.getElementById('load-btn').addEventListener('click', function(){
+  setTimeout(function(){
+    document.getElementById('result').textContent = 'Conteúdo carregado com sucesso!';
+  }, location.search.includes('error=1') ? 5000 : 1000);
+});
+</script>
+</body></html>

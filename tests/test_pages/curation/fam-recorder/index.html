@@ -1,0 +1,15 @@
+<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>FAM-09: Recorder</title></head>
+<body>
+<h1>FAM-09: Recorder / Overlay (REC-002)</h1>
+<button id="capture-btn" onclick="captureIntent()">Capturar intenção</button>
+<div id="result" role="status" style="margin-top:10px"></div>
+<script>
+function captureIntent(){
+  var btn = document.getElementById('capture-btn');
+  var intent = {action:'click', target:btn.id, text:btn.textContent, intent:'Click capture button'};
+  // Simulate recorder overlay capture
+  window.__tfOverlayCapture = intent;
+  document.getElementById('result').textContent = 'Intenção capturada: ' + intent.intent;
+}
+</script>
+</body></html>

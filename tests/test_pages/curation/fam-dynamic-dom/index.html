@@ -1,0 +1,18 @@
+<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>FAM-05: Dynamic DOM</title></head>
+<body>
+<h1>FAM-05: Dynamic DOM (DOM-001, DOM-002)</h1>
+<div id="container">
+  <button id="old-btn" onclick="replaceDOM()">Substituir DOM</button>
+</div>
+<div id="result" role="status" style="margin-top:10px"></div>
+<script>
+function replaceDOM(){
+  var container = document.getElementById('container');
+  container.innerHTML = '<p>DOM substituído</p><button id="new-btn" onclick="document.getElementById(\'result\').textContent=\'Novo DOM clicado!\'">Novo DOM</button>';
+}
+if(location.search.includes('error=1')){
+  // Pre-substitute DOM on load (simulates stale element after SPA navigation)
+  setTimeout(function(){ replaceDOM(); }, 500);
+}
+</script>
+</body></html>

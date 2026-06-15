@@ -1,0 +1,17 @@
+<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>FAM-11: Browser Limits</title></head>
+<body>
+<h1>FAM-11: Browser Limits (LIM-001)</h1>
+<div id="captcha-area" style="border:2px dashed #ccc;padding:20px;text-align:center">
+  <p>CAPTCHA — requer validação humana</p>
+  <div style="background:#f0f0f0;padding:15px;font-family:monospace;font-size:20px;letter-spacing:5px">A3X9K</div>
+  <input id="captcha-input" placeholder="Digite o código acima">
+  <button id="captcha-verify" onclick="verifyCaptcha()">Verificar</button>
+</div>
+<div id="result" role="status" style="margin-top:10px"></div>
+<script>
+function verifyCaptcha(){
+  var v = document.getElementById('captcha-input').value;
+  document.getElementById('result').textContent = v==='A3X9K' ? 'CAPTCHA validado' : 'CAPTCHA inválido';
+}
+</script>
+</body></html>

@@ -1,0 +1,16 @@
+<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>FAM-04: State</title></head>
+<body>
+<h1>FAM-04: Application State (STA-002, STA-001)</h1>
+<div style="position:relative">
+  <button id="target-btn" onclick="document.getElementById('result').textContent='Clicado!'">Botão alvo</button>
+  <div id="overlay" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10" onclick="this.style.display='none'">Overlay — clique para fechar</div>
+</div>
+<button id="disabled-btn" disabled>Botão desabilitado</button>
+<button id="enable-btn" onclick="document.getElementById('disabled-btn').disabled=false;this.textContent='Habilitado!'">Habilitar botão</button>
+<div id="result" role="status" style="margin-top:10px"></div>
+<script>
+if(location.search.includes('error=1')){
+  document.getElementById('overlay').style.display='block';
+}
+</script>
+</body></html>
