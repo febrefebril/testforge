@@ -1,6 +1,7 @@
 # Roadmap — TestForge v1
 
 ## Milestone 1: Fundacao + Synthetic Lab (Sprint 1) ✅
+
 **Objetivo:** Estrutura do repositorio + fake app + mutation matrix
 
 | Fase | Tarefas | Status |
@@ -11,6 +12,7 @@
 | 1.4 | Implementar mutacoes + testes Playwright | ✅ |
 
 ## Milestone 2: Recorder Sensorial (Sprint 2) ✅
+
 | Fase | Tarefas | Status |
 |------|---------|--------|
 | 2.1 | RecordingSession + RecorderController | ✅ |
@@ -20,6 +22,7 @@
 | 2.5 | Teste E2E da gravacao | ✅ |
 
 ## Milestone 3: Evidence (Sprint 3) ✅
+
 | Fase | Tarefas | Status |
 |------|---------|--------|
 | 3.1 | EvidenceCollector: screenshots, DOM, manifest | ✅ |
@@ -28,6 +31,7 @@
 | 3.4 | pending_reviews query | ✅ |
 
 ## Milestone 4: MIS + Compiler (Sprint 4) ✅
+
 | Fase | Tarefas | Status |
 |------|---------|--------|
 | 4.1 | SemanticTestCase + SemanticAction model | ✅ |
@@ -37,6 +41,7 @@
 | 4.5 | Compilacao de 4 tipos de assert | ✅ |
 
 ## Milestone 5: Oracle + Gate (Sprint 5) ✅
+
 | Fase | Tarefas | Status |
 |------|---------|--------|
 | 5.1 | OracleRunner: visual_dom | ✅ |
@@ -45,6 +50,7 @@
 | 5.4 | PromotionGate: 3 estados + 5 bloqueios | ✅ |
 
 ## Milestone 6: Taxonomia + Shadow (Sprint 6) ✅
+
 | Fase | Tarefas | Status |
 |------|---------|--------|
 | 6.1 | FailureClassifier: keyword + group + word-boundary | ✅ |
@@ -52,12 +58,14 @@
 | 6.3 | ShadowValidator + FallbackRunner deterministico | ✅ |
 
 ## Milestone 7: Metricas (Sprint 7) ✅
+
 | Fase | Tarefas | Status |
 |------|---------|--------|
 | 7.1 | MetricsRepository: precision, false_heal_rate | ✅ |
 | 7.2 | Review CLI: listar pendentes | ✅ |
 
 ## Milestone 8: CLI + Pipeline (Sprint 8) ✅
+
 | Fase | Tarefas | Status |
 |------|---------|--------|
 | 8.1 | `testforge` CLI entry point (console_scripts) | ✅ |
@@ -68,6 +76,7 @@
 | 8.6 | Demo healing real com fake-bank + mutation | ✅ |
 
 ## Milestone 9: LLM Self-Healing L3 (Sprint 9) 🔧
+
 **Objetivo:** Curador automatico com LLM off critical path
 
 | Fase | Tarefas | Status |
@@ -82,6 +91,7 @@
 | 9.8 | L2 Agents especialistas (opcional) | ⏳ |
 
 ## Milestone 10: Prompt Pack + Docs (Sprint 10)
+
 | Fase | Tarefas | Status |
 |------|---------|--------|
 | 10.1 | Prompt pack GSD v0.2.0 | ⏳ |
@@ -90,7 +100,19 @@
 | 10.4 | TUTORIAL.md para LLM healing | ⏳ |
 
 ## Fora do MVP
+
 - LLM Curator integrado (L3c)
 - Dashboard web
 - Multiplos frameworks alem de React/PrimeFaces
 - Mascaramento automatico de dados sensiveis
+
+### Phase 6: 6 LLM EvidencePayload estruturado
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 5
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 6 to break down)
