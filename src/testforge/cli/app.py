@@ -15,7 +15,9 @@ from testforge.promotion import PromotionGate
 from testforge.taxonomy import FailureClassifier
 from testforge.runner import FallbackRunner
 from testforge.metrics import MetricsRepository
-from testforge.healing import HealingCatalog, HealingRecipe
+from testforge.healing import HealingCatalog, HealingRecipe, EvidencePayload
+from testforge.healing import CuradorAutomatico, CurationOutcome, ProgressResult
+from testforge.evidence import EvidenceCollector
 
 import pathlib
 _PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent.parent
@@ -157,7 +159,7 @@ def cmd_compile(args):
 
 
 def cmd_run(args):
-    """Executa script Playwright com fallback healing."""
+    """Executa script Playwright com healing L0→L3 via CuradorAutomatico."""
     script_path = args.script
     if not os.path.exists(script_path):
         print(f"[TestForge] ✗ Script nao encontrado: {script_path}")
@@ -165,7 +167,6 @@ def cmd_run(args):
 
     metrics = MetricsRepository()
 
-    # Carrega script e extrai base_url
     with open(script_path) as f:
         code = f.read()
 
@@ -175,10 +176,19 @@ def cmd_run(args):
             base_url = line.split('"')[1]
             break
 
+    # Extrai recording_id do source (docstring)
+    recording_id = None
+    for line in code.split("\n"):
+        if "source:" in line:
+            recording_id = line.split("source:")[-1].strip().rstrip('."\'')
+            break
+
     print(f"[TestForge] Executando: {script_path}")
     print(f"  URL base: {base_url}")
+    if recording_id:
+        print(f"  Recording: {recording_id}")
 
-    # Executa como pytest (subprocess — browser proprio do pytest-playwright)
+    # Executa como pytest (subprocess)
     import subprocess
     try:
         result = subprocess.run(
@@ -186,77 +196,104 @@ def cmd_run(args):
             capture_output=True, text=True, timeout=args.timeout or 60
         )
     except subprocess.TimeoutExpired:
-        print(f"[TestForge] ⚠ Timeout ({args.timeout or 60}s) — tentando healing...")
+        print(f"[TestForge] ⚠ Timeout ({args.timeout or 60}s)")
         result = None
 
     healed = False
+    layer_used = ""
+    llm_used = False
+
     if result is None or result.returncode != 0:
         error_text = (result.stderr or result.stdout) if result else "timeout"
-        print(f"[TestForge] ⚠ Script falhou — tentando healing...")
+        print(f"[TestForge] ⚠ Script falhou — iniciando pipeline de cura L0→L3...")
+
+        # Classificar falha
         classifier = FailureClassifier()
         failure = classifier.classify(error_text)
-
-        print(f"  Falha: {failure.code} ({failure.family.value})")
+        print(f"  Falha: {failure.code} ({failure.family.value}) [{failure.family_code}]")
         print(f"  Recuperavel: {failure.recoverable}")
 
         # Auto-aprende com a falha
         _auto_learn(error_text,
-                    f"fallback deterministico para {script_path}",
+                    f"curador pipeline para {script_path}",
                     "generic")
 
         if failure.recoverable:
-            # Tenta healing generico com candidatos do MIS
             try:
-                recording_id = None
-                for line in code.split("\n"):
-                    if "source:" in line:
-                        recording_id = line.split("source:")[-1].strip().rstrip('."\'')
-                        break
-                if recording_id:
-                    rec_dir = str(_PROJECT_ROOT / "recordings" / recording_id)
-                    if os.path.isdir(rec_dir):
-                        stc = RecordingNormalizer().normalize(rec_dir, f"HEAL-{recording_id}", "", "")
+                with sync_playwright() as pw:
+                    browser = pw.chromium.launch(headless=args.headless)
+                    page = browser.new_page()
+                    page.set_viewport_size({"width": 1280, "height": 720})
 
-                        # So abre browser para healing
-                        with sync_playwright() as pw:
-                            browser = pw.chromium.launch(headless=args.headless)
-                            page = browser.new_page()
-                            page.set_viewport_size({"width": 1280, "height": 720})
+                    # Navegar para a pagina alvo
+                    page.goto(base_url)
+                    page.wait_for_timeout(500)
 
-                            fallback = FallbackRunner(page)
-                            page.goto(base_url)
-                            page.wait_for_timeout(500)
+                    # Coletar evidencias
+                    collector = EvidenceCollector(page)
+                    collector.start("heal-run")
+                    page.wait_for_timeout(300)
 
-                            for step in stc.steps:
-                                if step.action == "fill" and step.target and step.target.candidates:
-                                    candidates = [{"selector": c.selector, "score": c.score} for c in step.target.candidates[:3]]
-                                    ok = fallback.try_fill(candidates, step.value or "")
-                                    if ok:
-                                        print(f"  ✓ fill com candidato alternativo")
-                                elif step.action == "click" and step.target and step.target.candidates:
-                                    candidates = [{"selector": c.selector, "score": c.score} for c in step.target.candidates[:3]]
-                                    ok = fallback.try_click(candidates)
-                                    if ok:
-                                        print(f"  ✓ click com candidato alternativo")
-                                        healed = True
+                    # Construir payload para LLM
+                    step_context = {
+                        "action": "execute_script",
+                        "selector": script_path,
+                        "value": base_url,
+                        "intention": f"E2E test: {script_path}",
+                        "url": base_url,
+                        "framework": "generic",
+                        "family": failure.family_code,
+                        "taxonomy_id": failure.taxonomy_id,
+                    }
 
-                            browser.close()
-                    else:
-                        print(f"  ⚠ Recording nao encontrado: {recording_id}")
-                else:
-                    print(f"  ⚠ source recording nao identificado no script")
+                    payload = collector.build_llm_payload(step_context, include_screenshot=False)
+
+                    # Curador Automatico L0→L3
+                    curator = CuradorAutomatico(
+                        catalog=HealingCatalog(),
+                        step_runner=None,  # steps are executed by pytest, not inline
+                    )
+
+                    cure_data = {
+                        "selector": script_path,
+                        "action": "execute_test",
+                        "base_url": base_url,
+                    }
+
+                    outcome = curator.cure(cure_data, error_text, payload)
+
+                    # Report
+                    print(f"  Curador: {outcome.status}")
+                    print(f"  Layer: {outcome.layer_used}")
+                    if outcome.proposal:
+                        print(f"  Proposal: {outcome.proposal.strategy} → {outcome.proposal.new_locator[:80]}")
+                        print(f"  Confidence: {outcome.proposal.confidence:.2f}")
+                        print(f"  Rationale: {outcome.proposal.rationale[:120]}")
+
+                    if outcome.status == ProgressResult.PASSED_STEP:
+                        healed = True
+                        layer_used = outcome.layer_used
+                        llm_used = (outcome.layer_used == "L3")
+                    elif outcome.rollback_applied:
+                        print(f"  ⚠ Rollback aplicado")
+
+                    browser.close()
             except Exception as e:
-                print(f"  ⚠ Healing generico falhou: {e}")
+                print(f"  ⚠ Curador falhou: {e}")
 
+    # Metricas
     metrics.record_run(
         healed=healed,
         false_heal=not healed and (result is None or result.returncode != 0),
         oracle_passed=1 if healed else 0,
         oracle_failed=0 if healed else 1,
+        llm_used=llm_used,
     )
 
     print(f"\n[TestForge] Metricas:")
     print(metrics.summary())
+    if layer_used:
+        print(f"  Healing layer: {layer_used}")
 
 
 def cmd_pipeline(args):
