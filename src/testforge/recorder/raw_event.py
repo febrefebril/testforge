@@ -16,6 +16,10 @@ class TargetInfo:
     placeholder: Optional[str] = None
     label: Optional[str] = None
     attributes: dict = field(default_factory=dict)
+    class_list: list = field(default_factory=list)
+    aria_attrs: dict = field(default_factory=dict)
+    data_attrs: dict = field(default_factory=dict)
+    parent_text: Optional[str] = None
     bounding_box: Optional[dict] = None
     parent_chain: list = field(default_factory=list)
     sibling_summary: list = field(default_factory=list)

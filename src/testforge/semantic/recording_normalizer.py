@@ -5,9 +5,26 @@ Gera multiplos candidatos de locator ordenados por score deterministico.
 """
 import json
 import os
+import re as _re
 from typing import Optional
 
 from .model import LocatorCandidate, SemanticAction, SemanticTarget, SemanticTestCase
+
+
+def _is_hash_class(cls: str) -> bool:
+    """Detect CSS classes that look like auto-generated hashes (e.g., 'css-1a2b3c4')."""
+    if not cls:
+        return True
+    # Hashes usually have numbers mixed with letters and hyphens
+    if _re.match(r'^[a-z]+-\d+[a-z0-9-]*$', cls):
+        return True
+    # Very short classes
+    if len(cls) <= 1:
+        return True
+    # Namespaced hash-like: ng-star-inserted, mat-focus-indicator, etc.
+    if _re.match(r'^(ng|mat|cdk|agm|leaflet|gm)-', cls):
+        return False  # Framework classes are stable
+    return False
 
 
 class RecordingNormalizer:
@@ -96,6 +113,19 @@ class RecordingNormalizer:
 
     def _build_target(self, target_data: dict) -> SemanticTarget:
         candidates = []
+        text = target_data.get("text") or ""
+
+        # 0. data-testid (most stable)
+        if target_data.get("test_id"):
+            tid = target_data["test_id"]
+            candidates.append(LocatorCandidate("test_id", f"[data-testid=\"{tid}\"]", 0.80, f"test_id={tid}"))
+
+        # 0.1 data-* attributes (generic)
+        data_attrs = target_data.get("data_attrs") or {}
+        for attr_name, attr_value in data_attrs.items():
+            if attr_name.startswith("data-") and attr_value and len(attr_value) < 60:
+                sel = f"[{attr_name}='{attr_value}']"
+                candidates.append(LocatorCandidate("data_attr", sel, 0.65, f"{attr_name}={attr_value}"))
 
         # Prioridade de estrategias (score deterministico)
         if target_data.get("role"):
@@ -118,11 +148,7 @@ class RecordingNormalizer:
             ph = target_data["placeholder"]
             candidates.append(LocatorCandidate("placeholder", f"[placeholder=\"{ph}\"]", 0.85, f"placeholder={ph}"))
 
-        if target_data.get("test_id"):
-            tid = target_data["test_id"]
-            candidates.append(LocatorCandidate("test_id", f"[data-testid=\"{tid}\"]", 0.80, f"test_id={tid}"))
-
-        if target_data.get("id"):
+        if target_data.get("id") and target_data["id"] != "mat-input-0" and target_data["id"] != "mat-input-1":
             el_id = target_data["id"]
             candidates.append(LocatorCandidate("id", f"#{el_id}", 0.75, f"id={el_id}"))
 
@@ -133,6 +159,25 @@ class RecordingNormalizer:
         if target_data.get("text"):
             text = target_data["text"][:50]
             candidates.append(LocatorCandidate("text", f"text={text}", 0.60, f"visible text"))
+
+        # Fallback: CSS classes (stable, non-hash)
+        class_list = target_data.get("class_list") or []
+        stable_classes = [c for c in class_list if not _is_hash_class(c) and len(c) >= 2]
+        if stable_classes and not candidates:
+            cls_sel = ".".join(stable_classes[:3])
+            candidates.append(LocatorCandidate("class", f".{cls_sel}", 0.35, f"CSS classes: {cls_sel}"))
+
+        # Fallback: parent text for context
+        parent_text = target_data.get("parent_text") or ""
+        if parent_text and not candidates:
+            candidates.append(LocatorCandidate("parent_text", f"text={parent_text[:60]}", 0.25, "parent text context"))
+
+        # Fallback: aria attributes
+        aria_attrs = target_data.get("aria_attrs") or {}
+        for attr_name, attr_value in aria_attrs.items():
+            if attr_value and len(attr_value) < 80 and attr_name != "aria-label":
+                sel = f"[{attr_name}='{attr_value}']"
+                candidates.append(LocatorCandidate("aria_attr", sel, 0.30, f"{attr_name}={attr_value}"))
 
         return SemanticTarget(
             role=target_data.get("role"),

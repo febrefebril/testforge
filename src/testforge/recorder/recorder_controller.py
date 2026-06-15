@@ -132,6 +132,10 @@ class RecorderController:
                     "type": target_data.get("type"),
                     "value": target_data.get("value"),
                 },
+                class_list=target_data.get("class_list") or [],
+                aria_attrs=target_data.get("aria_attrs") or {},
+                data_attrs=target_data.get("data_attrs") or {},
+                parent_text=target_data.get("parent_text"),
                 bounding_box=target_data.get("bounding_box"),
             )
         event = RawRecordedEvent(
@@ -236,9 +240,41 @@ class RecorderController:
             if (!el || el === document.body || el === document.documentElement) return null;
             var rect = el.getBoundingClientRect ? el.getBoundingClientRect() : {};
             var labelEl = el.id ? document.querySelector('label[for="' + el.id + '"]') : null;
+
+            // Collect aria-* attributes
+            var ariaAttrs = {};
+            if (el.attributes) {
+                for (var i = 0; i < el.attributes.length; i++) {
+                    var a = el.attributes[i];
+                    if (a.name.startsWith('aria-')) ariaAttrs[a.name] = a.value;
+                }
+            }
+
+            // Collect data-* attributes
+            var dataAttrs = {};
+            if (el.attributes) {
+                for (var i = 0; i < el.attributes.length; i++) {
+                    var d = el.attributes[i];
+                    if (d.name.startsWith('data-')) dataAttrs[d.name] = d.value;
+                }
+            }
+
+            // Collect CSS classes as array
+            var classList = [];
+            if (typeof el.className === 'string' && el.className.trim()) {
+                classList = el.className.trim().split(/\\s+/).filter(function(c) { return c && !c.startsWith('tf-'); });
+            }
+
+            // Parent text for context (when element has no text itself)
+            var parentText = null;
+            var elText = (el.textContent||'').trim().substring(0,200) || null;
+            if (!elText && el.parentElement && el.parentElement !== document.body) {
+                parentText = (el.parentElement.textContent||'').trim().substring(0,200) || null;
+            }
+
             return {
                 tag: (el.tagName||'').toLowerCase(),
-                text: (el.textContent||'').trim().substring(0,200) || null,
+                text: elText,
                 role: el.getAttribute('role') || null,
                 accessible_name: el.getAttribute('aria-label') || el.getAttribute('title') || null,
                 id: el.id || null,
@@ -247,6 +283,10 @@ class RecorderController:
                 placeholder: el.getAttribute('placeholder') || null,
                 label: labelEl ? labelEl.textContent.trim() : null,
                 className: (typeof el.className === 'string') ? el.className : null,
+                class_list: classList,
+                aria_attrs: ariaAttrs,
+                data_attrs: dataAttrs,
+                parent_text: parentText,
                 type: el.getAttribute('type') || null,
                 value: (el.value||'').substring(0,100) || null,
                 bounding_box: {x:Math.round(rect.x||0), y:Math.round(rect.y||0), width:Math.round(rect.width||0), height:Math.round(rect.height||0)}
