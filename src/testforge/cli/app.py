@@ -165,69 +165,68 @@ def cmd_run(args):
 
     metrics = MetricsRepository()
 
-    with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=args.headless)
-        page = browser.new_page()
-        page.set_viewport_size({"width": 1280, "height": 720})
+    # Carrega script e extrai base_url
+    with open(script_path) as f:
+        code = f.read()
 
-        # Carrega script e extrai steps
-        with open(script_path) as f:
-            code = f.read()
+    base_url = "http://localhost:8765"
+    for line in code.split("\n"):
+        if line.startswith("BASE_URL"):
+            base_url = line.split('"')[1]
+            break
 
-        base_url = "http://localhost:8765"
-        for line in code.split("\n"):
-            if line.startswith("BASE_URL"):
-                base_url = line.split('"')[1]
-                break
+    print(f"[TestForge] Executando: {script_path}")
+    print(f"  URL base: {base_url}")
 
-        print(f"[TestForge] Executando: {script_path}")
-        print(f"  URL base: {base_url}")
+    # Executa como pytest (subprocess — browser proprio do pytest-playwright)
+    import subprocess
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest", script_path, "--base-url", base_url, "-q", "--tb=line"],
+            capture_output=True, text=True, timeout=args.timeout or 60
+        )
+    except subprocess.TimeoutExpired:
+        print(f"[TestForge] ⚠ Timeout ({args.timeout or 60}s) — tentando healing...")
+        result = None
 
-        # Executa como pytest
-        import subprocess
-        try:
-            result = subprocess.run(
-                [sys.executable, "-m", "pytest", script_path, "--base-url", base_url, "-q", "--tb=line"],
-                capture_output=True, text=True, timeout=args.timeout or 60
-            )
-        except subprocess.TimeoutExpired:
-            print(f"[TestForge] ⚠ Timeout ({args.timeout or 60}s) — tentando healing...")
-            result = None
+    healed = False
+    if result is None or result.returncode != 0:
+        error_text = (result.stderr or result.stdout) if result else "timeout"
+        print(f"[TestForge] ⚠ Script falhou — tentando healing...")
+        classifier = FailureClassifier()
+        failure = classifier.classify(error_text)
 
-        fallback = FallbackRunner(page)
-        oracle = OracleRunner(page)
-        gate = PromotionGate()
+        print(f"  Falha: {failure.code} ({failure.family.value})")
+        print(f"  Recuperavel: {failure.recoverable}")
 
-        healed = False
-        if result is None or result.returncode != 0:
-            error_text = (result.stderr or result.stdout) if result else "timeout"
-            print(f"[TestForge] ⚠ Script falhou — tentando healing...")
-            classifier = FailureClassifier()
-            failure = classifier.classify(error_text)
+        # Auto-aprende com a falha
+        _auto_learn(error_text,
+                    f"fallback deterministico para {script_path}",
+                    "generic")
 
-            print(f"  Falha: {failure.code} ({failure.family.value})")
-            print(f"  Recuperavel: {failure.recoverable}")
+        if failure.recoverable:
+            # Tenta healing generico com candidatos do MIS
+            try:
+                recording_id = None
+                for line in code.split("\n"):
+                    if "source:" in line:
+                        recording_id = line.split("source:")[-1].strip().rstrip('."\'')
+                        break
+                if recording_id:
+                    rec_dir = str(_PROJECT_ROOT / "recordings" / recording_id)
+                    if os.path.isdir(rec_dir):
+                        stc = RecordingNormalizer().normalize(rec_dir, f"HEAL-{recording_id}", "", "")
 
-            # Auto-aprende com a falha
-            _auto_learn(error_text,
-                        f"fallback deterministico para {script_path}",
-                        "generic")
+                        # So abre browser para healing
+                        with sync_playwright() as pw:
+                            browser = pw.chromium.launch(headless=args.headless)
+                            page = browser.new_page()
+                            page.set_viewport_size({"width": 1280, "height": 720})
 
-            if failure.recoverable:
-                # Tenta healing generico com candidatos do MIS
-                try:
-                    recording_id = None
-                    for line in code.split("\n"):
-                        if "source:" in line:
-                            recording_id = line.split("source:")[-1].strip().rstrip('."\'')
-                            break
-                    if recording_id:
-                        rec_dir = str(_PROJECT_ROOT / "recordings" / recording_id)
-                        if os.path.isdir(rec_dir):
-                            stc = RecordingNormalizer().normalize(rec_dir, f"HEAL-{recording_id}", "", "")
                             fallback = FallbackRunner(page)
                             page.goto(base_url)
                             page.wait_for_timeout(500)
+
                             for step in stc.steps:
                                 if step.action == "fill" and step.target and step.target.candidates:
                                     candidates = [{"selector": c.selector, "score": c.score} for c in step.target.candidates[:3]]
@@ -240,23 +239,24 @@ def cmd_run(args):
                                     if ok:
                                         print(f"  ✓ click com candidato alternativo")
                                         healed = True
-                        else:
-                            print(f"  ⚠ Recording nao encontrado: {recording_id}")
+
+                            browser.close()
                     else:
-                        print(f"  ⚠ source recording nao identificado no script")
-                except Exception as e:
-                    print(f"  ⚠ Healing generico falhou: {e}")
+                        print(f"  ⚠ Recording nao encontrado: {recording_id}")
+                else:
+                    print(f"  ⚠ source recording nao identificado no script")
+            except Exception as e:
+                print(f"  ⚠ Healing generico falhou: {e}")
 
-        metrics.record_run(
-            healed=healed,
-            false_heal=not healed and (result is None or result.returncode != 0),
-            oracle_passed=1 if healed else 0,
-            oracle_failed=0 if healed else 1,
-        )
+    metrics.record_run(
+        healed=healed,
+        false_heal=not healed and (result is None or result.returncode != 0),
+        oracle_passed=1 if healed else 0,
+        oracle_failed=0 if healed else 1,
+    )
 
-        print(f"\n[TestForge] Metricas:")
-        print(metrics.summary())
-        browser.close()
+    print(f"\n[TestForge] Metricas:")
+    print(metrics.summary())
 
 
 def cmd_pipeline(args):
