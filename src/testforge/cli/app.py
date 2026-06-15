@@ -129,7 +129,14 @@ def _auto_learn(error_msg: str, solution: str, framework: str = "generic"):
 
 def cmd_compile(args):
     rec_id = args.recording
+    # Strip recordings/ prefix if user passes full path
+    if rec_id.startswith("recordings/"):
+        rec_id = rec_id[len("recordings/"):]
     rec_dir = str(_PROJECT_ROOT / "recordings" / rec_id)
+    # Fallback: try user-provided path directly if constructed path doesn't exist
+    if not os.path.isdir(rec_dir) and os.path.isdir(args.recording):
+        rec_dir = os.path.abspath(args.recording)
+        rec_id = os.path.basename(rec_dir)
     if not os.path.isdir(rec_dir):
         print(f"[TestForge] ✗ Gravacao nao encontrada: {rec_dir}")
         return
