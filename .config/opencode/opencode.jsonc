@@ -19,6 +19,16 @@
       "command": ["npx", "-y", "@playwright/mcp"],
       "enabled": false,
       "timeout": 30000
+    },
+
+    "figma": {
+      "type": "local",
+      "command": ["npx", "-y", "figma-mcp", "--figma-token", "${FIGMA_API_KEY}"],
+      "enabled": false,
+      "timeout": 30000,
+      "env": {
+        "FIGMA_API_KEY": "${FIGMA_API_KEY}"
+      }
     }
   },
 

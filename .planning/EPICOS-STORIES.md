@@ -155,6 +155,66 @@
 
 ---
 
+## EP-12: Pipeline CI + Qualidade (v0.4.0) ⏳
+
+**Objetivo:** Integração contínua, controle de LLM, relatórios, melhorias no recorder
+
+| Story | Descricao | Status |
+|-------|-----------|--------|
+| US-12.01 | GitHub Actions CI — `pytest tests/` em push/PR, matrix Python 3.10-3.13 | Pendente |
+| US-12.02 | Flag `--llm` / `--no-llm` no CLI — controle explícito do healing | Pendente |
+| US-12.03 | Melhorar Recorder — CSS path, parent hierarchy (3 níveis), nth-child | Pendente |
+| US-12.04 | `testforge report` — relatório Markdown com métricas e breakdown por família | Pendente |
+| US-12.05 | Testes: data_extractor, SmartStepRunner (cada estratégia), cmd_run edge cases | Pendente |
+| US-12.06 | TUTORIAL.md com exemplos de cada família de healing | Pendente |
+
+### Tarefas Detalhadas
+
+#### US-12.01: GitHub Actions CI
+- [ ] Criar `.github/workflows/test.yml`
+- [ ] `on: [push, pull_request]`
+- [ ] Matrix: `python-version: ["3.10", "3.11", "3.12", "3.13"]`
+- [ ] Steps: checkout → setup python → install deps → pytest
+- [ ] Upload artifacts: screenshots, logs, evidence
+- [ ] Badge no README: ![tests](https://github.com/.../workflows/test/badge.svg)
+
+#### US-12.02: Flag --llm / --no-llm
+- [ ] `testforge run script.py --llm` → força `LLMHealer` mesmo sem API key (erro se não configurado)
+- [ ] `testforge run script.py --no-llm` → força `MockLLMHealer` (útil para CI)
+- [ ] Default (sem flag): auto-detect via env vars
+- [ ] Mostrar no output: `Healer: MockLLMHealer (--no-llm)` ou `Healer: LLM real (--llm)`
+
+#### US-12.03: Melhorar Recorder
+- [ ] `_tf_extractTarget()`: adicionar `css_path` (seletor CSS único)
+- [ ] `_tf_extractTarget()`: adicionar `parent_chain` (tag + class + text até 3 níveis)
+- [ ] `_tf_extractTarget()`: adicionar `nth_child` para desambiguação
+- [ ] `TargetInfo`: novos campos `css_path`, `parent_chain[]`, `nth_child`
+- [ ] MIS: gerar candidatos de `css_path` e `parent_chain` como fallback
+
+#### US-12.04: Relatório de Execução
+- [ ] Comando `testforge report [--history] [--family FAM-XX]`
+- [ ] Formato Markdown com:
+  - Total runs, healings, true_heals, false_heals
+  - Breakdown por família de falha (FAM-01 a FAM-11)
+  - Timeline das últimas N execuções
+  - LLM escalations rate
+  - Layer distribution (L0/L1/L2/L3)
+- [ ] Output: `reports/report-{date}.md`
+
+#### US-12.05: Mais Testes
+- [ ] `tests/test_data_extractor.py` — extração, dedup, sensitive detection
+- [ ] `tests/test_smart_step_runner.py` — cada estratégia individualmente
+- [ ] `tests/test_cmd_run_edge_cases.py` — timeout, script inexistente, recording vazio
+- [ ] Meta: 180+ testes no total
+
+#### US-12.06: Tutorial por Família
+- [ ] Exemplo prático para cada FAM-01 a FAM-06 (com agentes L2)
+- [ ] Como simular a falha
+- [ ] Como verificar que o healing funcionou
+- [ ] Output esperado do `testforge run`
+
+---
+
 ## EP-10: Data-Driven Testing + Docs (v0.3.0) ✅
 
 **Objetivo:** Massa de dados externa em JSON, prompt pack, tutorial
