@@ -1,7 +1,7 @@
-# Sprint Planning — TestForge v0.2.0 → v0.3.0
+# Sprint Planning — TestForge v0.3.1
 
 **Data:** 2026-06-15
-**Status:** Sprint 8 ✅ | Sprint 9 ✅ | Sprint 10 ⏳
+**Status:** Sprint 8 ✅ | Sprint 9 ✅ | Sprint 10 ✅ | Sprint 11 ✅
 
 ---
 
@@ -125,12 +125,35 @@
 
 ---
 
+---
+
+## Sprint 11: Debug + Robustez ✅
+
+**Objetivo:** Corrigir 5 bugs de healing, implementar SmartStepRunner, criar testes de curadoria
+
+### Bugs Corrigidos
+- ✅ BUG-STA-001: Overlay blocking → SmartStepRunner._dismiss_overlays()
+- ✅ BUG-INP-001: Masked input → press_sequentially
+- ✅ BUG-TIM-001: Timeout → visibility_wait
+- ✅ BUG-DOM-001: Stale DOM → has_text_fallback + reacquire
+- ✅ BUG-CLS-001: Classification net::ERR_ → connection refused keyword
+
+### Entregas
+- ✅ SmartStepRunner: 10/10 estratégias de healing implementadas
+- ✅ 12 páginas de teste de curadoria (uma por família)
+- ✅ test_curation_pipeline.py: 39 testes parametrizados
+- ✅ BUGS.md: documento com 5 bugs documentados e corrigidos
+- ✅ PLANO-DE-TESTE.md: 27 casos de teste manuais
+- ✅ 162/162 testes passando (100%)
+
+---
+
 ## Backlog (futuro)
 
 | # | O quê | Prioridade |
 |---|-------|-----------|
-| P2 | cmd_run: re-execução do step curado inline (hoje pytest subprocess limita) | Média |
-| P3 | L2 Specialist Agents (Selector, Timing, Input, Context, State, DynamicDOM) | Baixa |
-| P4 | Flag `--llm` / `--no-llm` no CLI | Baixa |
-| P5 | Pipeline CI (GitHub Actions / Azure DevOps) | Baixa |
-| P6 | Dashboard web de métricas | Fora do MVP |
+| P1 | Pipeline CI (GitHub Actions / Azure DevOps) | Média |
+| P2 | Flag `--llm` / `--no-llm` no CLI | Baixa |
+| P3 | Dashboard web de métricas | Fora do MVP |
+| P4 | Mascaramento automático de dados sensíveis | Fora do MVP |
+| P5 | Suporte a mais frameworks (PrimeFaces widgets, autocomplete) | Fora do MVP |

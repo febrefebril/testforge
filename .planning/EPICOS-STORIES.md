@@ -177,34 +177,34 @@
 
 ---
 
-## EP-11: Debug + Robustez do Healing (v0.3.1) 🔧
+## EP-11: Debug + Robustez do Healing (v0.3.1) ✅
 
 **Objetivo:** Diagnosticar e corrigir falhas de cura em gravações reais (CAIXA)
 
 ### Diagnóstico (2026-06-15)
 
-Gravação de 18 passos no site CAIXA revelou:
-
-| Problema | Causa | Impacto |
-|----------|-------|---------|
-| 5 steps sem seletor | Recorder capturou clicks em elementos sem text/id/role | Steps pulados, sem cobertura |
-| "click step N falhou" não classifica | Mensagem genérica → classifier cai em OBS-001 (FAM-10) | LLM não recebe família correta |
-| LLM retorna confidence 0 | Prompt sem contexto (selector vazio) + taxonomy FAM-10 não tem agente L2 | Cura falha mesmo com LLM real |
-| Steps 4,5,6,8,10 pulados | `sel` vazio + `candidates` vazio → "skip (sem seletor)" | Perda de cobertura de teste |
-
-### Correções Aplicadas
-
 | Story | Descricao | Status |
 |-------|-----------|--------|
 | US-11.01 | Compiler: mensagem de erro inclui seletores tentados | ✓ |
-| US-11.02 | cmd_run: mensagem de erro inclui seletor/candidates para classifier | ✓ |
-| US-11.03 | _heal_step: inferir seletor do target (role, id, tag) quando candidates vazio | ✓ |
-| US-11.04 | _heal_step: log do raw_response do LLM quando confidence < 0.3 | ✓ |
-| US-11.05 | cmd_run: status do healer (Mock/LLM real) visível no output | ✓ |
-| US-11.06 | Recorder: capturar CSS classes (array), aria-*, data-*, parent_text | ✓ |
-| US-11.07 | MIS: gerar candidates de fallback (class_list, aria_attrs, data_attrs, parent_text) | ✓ |
+| US-11.02 | cmd_run: mensagem de erro inclui seletor para classifier | ✓ |
+| US-11.03 | _heal_step: inferir seletor do target quando candidates vazio | ✓ |
+| US-11.04 | LLM: CRITICAL JSON-only enforcement | ✓ |
+| US-11.05 | MIS: _clean_text remove material icons, truncate role names | ✓ |
+| US-11.06 | Recorder: capturar CSS classes, aria-*, data-*, parent_text | ✓ |
+| US-11.07 | MIS: fallback candidates (class_list, aria_attrs, data_attrs) | ✓ |
+| US-11.08 | SmartStepRunner: 10 healing strategies implemented | ✓ |
+| US-11.09 | FallbackRunner timeout 2s→5s | ✓ |
+| US-11.10 | _parse_response: accept 'selector' alias + fill defaults | ✓ |
+| US-11.11 | text= → :has-text() substring match | ✓ |
+| US-11.12 | Exclusive generic CSS classes (.mat-focus-indicator, etc) | ✓ |
+| US-11.13 | Classification: 51 keywords, 11/11 families covered | ✓ |
+| US-11.14 | BUGS.md: 5 bugs documented, all fixed | ✓ |
+| US-11.15 | 12 curation test pages + parametrized pipeline tests | ✓ |
+| US-11.16 | PLANO-DE-TESTE.md: 27 manual test cases | ✓ |
 
-### Próximos Passos
-- Melhorar Recorder para capturar mais atributos de elementos sem texto/id
-- MIS gerar candidates a partir de DOM path e contexto do elemento pai
-- Testar novamente contra site CAIXA após correções
+### Bugs Corrigidos
+- BUG-STA-001 (Alta): Overlay blocking → SmartStepRunner._dismiss_overlays()
+- BUG-INP-001 (Média): Masked input → SmartStepRunner press_sequentially
+- BUG-TIM-001 (Média): Timeout → SmartStepRunner visibility_wait
+- BUG-DOM-001 (Média): Stale DOM → SmartStepRunner has_text_fallback
+- BUG-CLS-001 (Baixa): net::ERR_ classification → connection refused keyword
