@@ -201,8 +201,8 @@ Gravação de 18 passos no site CAIXA revelou:
 | US-11.03 | _heal_step: inferir seletor do target (role, id, tag) quando candidates vazio | ✓ |
 | US-11.04 | _heal_step: log do raw_response do LLM quando confidence < 0.3 | ✓ |
 | US-11.05 | cmd_run: status do healer (Mock/LLM real) visível no output | ✓ |
-| US-11.06 | Recorder: melhorar captura de atributos (parent text, CSS classes, aria-*) | Pendente |
-| US-11.07 | MIS: gerar candidates de fallback (DOM path, parent context) | Pendente |
+| US-11.06 | Recorder: capturar CSS classes (array), aria-*, data-*, parent_text | ✓ |
+| US-11.07 | MIS: gerar candidates de fallback (class_list, aria_attrs, data_attrs, parent_text) | ✓ |
 
 ### Próximos Passos
 - Melhorar Recorder para capturar mais atributos de elementos sem texto/id
