@@ -1,0 +1,179 @@
+@startuml
+title TestForge — Sequência: Pipeline de Curadoria L0→L1→L2→L3
+
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 15
+skinparam BoxPadding 10
+
+participant "cmd_run\norquestrador" as CMD
+participant "FailureClassifier" as FC
+participant "HealingCatalog\n(L0)" as CAT
+participant "FallbackRunner\n(L1)" as FR
+participant "EvidenceCollector" as EC
+participant "CuradorAutomatico\n(orquestrador L3)" as CUR
+participant "LLMHealer\n(Mock ou Real)" as LLM
+participant "PatchValidator" as PV
+participant "ProgressDetector" as PD
+database "HealingCatalog\n(aprender)" as CAT2
+
+== 1. Classificacao ==
+
+CMD -> FC: classify(error_message)
+activate FC
+FC -> FC: keyword matching\n(~30 keywords, word-boundary)
+note right: "not found" → LOCATOR_NOT_FOUND\n"intercept" → ACTIONABILITY_OBSCURED\n"timeout" → TIMEOUT
+FC -> FC: group fallback\n(SEL|TIM|INP|CTX|STA regex)
+FC --> CMD: family=FAM-01, taxonomy=SEL-004\nconfidence=0.9, matched_by=keyword
+deactivate FC
+
+== 2. L0 — Recipe Catalog (<50ms, zero LLM) ==
+
+CMD -> CAT: match(family, error_message)
+activate CAT
+CAT -> CAT: busca substring no symptom\nvs error_message
+alt match encontrado (pre_populated | reviewed | learned)
+  CAT --> CMD: entry com fix confiável
+  deactivate CAT
+  CMD -> CMD: aplica fix → executa step
+  CMD -> PD: classifica resultado
+  activate PD
+  alt PASSED_STEP
+    PD --> CMD: sucesso L0
+    CMD -> CAT2: record_success(entry_id)
+    CMD --> CMD: ✅ curado por L0
+  else falhou
+    PD --> CMD: → L1
+    deactivate PD
+  end
+else sem match
+  CAT --> CMD: null
+  deactivate CAT
+end
+
+== 3. L1 — Fallback Deterministico ==
+
+CMD -> FR: try_click(candidates) / try_fill(candidates)
+activate FR
+FR -> FR: tenta candidatos MIS\nem ordem de score (max 3)
+alt candidato funciona
+  FR --> CMD: ok=True
+  deactivate FR
+  CMD --> CMD: ✅ curado por L1
+else todos falham
+  FR --> CMD: ok=False
+  deactivate FR
+end
+
+== 4. L2 — Evidencias para LLM ==
+
+CMD -> EC: build_llm_payload(step_context)
+activate EC
+EC -> EC: DOM snippet (trunc 3000 chars)\nconsole errors (ultimos 5)\nnetwork state (ultimas 3)\nscreenshot b64 (opcional)
+EC --> CMD: EvidencePayload
+deactivate EC
+
+CMD -> CUR: cure(step_data, error_message, payload)
+activate CUR
+
+CUR -> CUR: verifica evidence.is_sufficient
+alt evidencia insuficiente
+  CUR --> CMD: UNRESOLVED
+  deactivate CUR
+end
+
+== 5. L3a — LLM Healer ==
+
+CUR -> LLM: heal_or_unresolved(payload, error, family)
+activate LLM
+
+LLM -> LLM: _build_prompt()\nseleciona template da familia\n(FAM01_SEL_PROMPT, FAM02_TIM_PROMPT...)\nou CURATION_PROMPT_TEMPLATE
+
+alt AZURE_OPENAI_KEY definida
+  LLM -> LLM: Azure OpenAI\nclient.chat.completions.create()\nmodel=gpt-4o-mini, temp=0.3\nmax_tokens=500
+  LLM -> LLM: _parse_response()\nextrai JSON → LLMHealingProposal
+  LLM -> LLM: valida:\n strategy ∈ ALLOWED_STRATEGIES\n family ∈ FAMILIES\n taxonomy ∈ TAXONOMIES[family]
+else sem env vars
+  LLM -> LLM: MockLLMHealer\nproposta deterministica\nconfidence=0.85
+end
+
+alt confidence >= 0.5
+  LLM --> CUR: LLMHealingProposal\n(new_locator, strategy, rationale)
+  deactivate LLM
+else confidence < 0.5 ou parse falhou
+  LLM --> CUR: confidence=0.0
+  deactivate LLM
+  CUR --> CMD: UNRESOLVED
+  deactivate CUR
+end
+
+== 6. L3b — Validar + Executar + Classificar ==
+
+CUR -> PV: validar proposta
+activate PV
+PV -> PV: verifica sintaxe Playwright\nseguranca (sem eval/sensitive)\nrastreabilidade
+alt patch valido
+  PV --> CUR: aprovado
+  deactivate PV
+else patch invalido
+  PV --> CUR: rejeitado
+  deactivate PV
+  CUR --> CMD: UNRESOLVED
+  deactivate CUR
+end
+
+CUR -> CUR: _build_step_copy()\nsubstitui selector por new_locator
+
+CUR -> CUR: _try_execute_step(patched_step)
+CUR -> PD: classify_step_result(original_error, new_error, passed)
+activate PD
+
+alt PASSED_STEP
+  PD --> CUR: sucesso
+  deactivate PD
+  CUR -> CAT2: _register_learned()\nfix_type=learned
+  activate CAT2
+  CAT2 --> CUR: entry_id
+  deactivate CAT2
+  CUR --> CMD: ✅ PASSED_STEP (L3)
+  deactivate CUR
+
+else ERROR_CHANGED (e nao e retry)
+  PD --> CUR: erro mudou
+  deactivate PD
+  CUR -> CUR: _run_healing_cycle() retry\ndepth+1 (max depth=1)
+  note right: Reclassifica com novo erro\ntenta novamente L3
+
+  alt PASSED_STEP no retry
+    CUR -> CAT2: _register_learned()
+    CUR --> CMD: ✅ PASSED_STEP (L3 retry)
+  else ainda falha
+    CUR -> CAT2: _register_unresolved()
+    CUR --> CMD: UNRESOLVED (rollback)
+  end
+
+else REGRESSED ou STAGNATED
+  PD --> CUR: rollback necessario
+  deactivate PD
+  CUR -> CUR: rollback_applied=True
+  CUR -> CAT2: _register_unresolved()
+  deactivate CAT2
+  CUR --> CMD: UNRESOLVED
+  deactivate CUR
+
+end
+
+== 7. Pos-Cura ==
+
+alt status = UNRESOLVED
+  CMD -> CAT2: increment_failure_count(taxonomy_id)
+  CMD -> CMD: se count >= 5 → notificar review
+  note right: TF_REVIEW_THRESHOLD=5\nnotifica email/Teams se configurado
+else status = PASSED_STEP
+  CMD -> CAT2: reset_failure_count(taxonomy_id)
+  CMD -> CMD: stale detection (90+ dias)
+end
+
+CMD --> CMD: registra metricas\n(healed, layer_used, llm_used)
+
+@enduml

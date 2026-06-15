@@ -1,0 +1,78 @@
+@startuml
+title TestForge — Estados: CurationOutcome (Pipeline L0→L3)
+
+skinparam backgroundColor #FFFFFF
+skinparam stateBackgroundColor #F0F0F0
+skinparam stateBorderColor #333333
+skinparam ArrowColor #666666
+
+state "ERRO\n(step falhou)" as ERROR #FFB3B3
+
+state "Classificar\n(classifier.classify)" as CLASSIFY
+state "L0: Catalog\n(match family+symptom)" as L0
+state "L1: Fallback\n(candidatos MIS)" as L1
+state "L2: Evidence\n(build_llm_payload)" as L2
+state "L3a: LLM Healer\n(heal_or_unresolved)" as L3A
+state "L3b: Validar\n(patch syntax+security)" as L3B
+state "L3c: Executar\n(try_execute_step)" as L3C
+
+state "PASSED_STEP ✅" as PASSED #90EE90
+state "ERROR_CHANGED 🔄" as ERRCHG #FFD700
+state "REGRESSED ⚠" as REGRESSED #FFA500
+state "STAGNATED ⚠" as STAGNATED #FFA500
+state "UNRESOLVED ❌" as UNRESOLVED #FF6B6B
+
+state "Retry L3\n(depth+1, max 1)" as RETRY
+state "Rollback\nrestaurar anterior" as ROLLBACK
+state "Register Learned\n(catalog.add)" as LEARN
+state "Register Unresolved\n(catalog.add)" as UNREG
+state "Increment Failure\n(failure_count++)" as INCFAIL
+state "Reset Failure\n(failure_count=0)" as RESFAIL
+state "Notify Review\n(count >= 5)" as NOTIFY
+state "Stale Detection\n(90+ dias)" as STALE
+
+[*] --> ERROR
+ERROR --> CLASSIFY
+
+CLASSIFY --> L0
+L0 --> PASSED : match + exec OK
+L0 --> L1 : sem match / falhou
+
+L1 --> PASSED : candidato funciona
+L1 --> L2 : todos falham
+
+L2 --> L3A
+
+L3A --> L3B : confidence >= 0.5
+L3A --> UNRESOLVED : confidence < 0.5 / parse fail
+
+L3B --> L3C : patch valido
+L3B --> UNRESOLVED : patch invalido
+
+L3C --> PASSED : step executou OK
+L3C --> ERRCHG : erro diferente do original
+L3C --> REGRESSED : pior que antes
+L3C --> STAGNATED : mesmo erro
+
+ERRCHG --> RETRY : nao e retry
+RETRY --> L3A : reclassifica, depth++
+ERRCHG --> UNRESOLVED : ja e retry (depth >= max)
+
+REGRESSED --> ROLLBACK
+STAGNATED --> ROLLBACK
+ROLLBACK --> UNRESOLVED
+
+PASSED --> LEARN : _register_learned()
+PASSED --> RESFAIL : reset_failure_count()
+PASSED --> STALE : stale detection
+
+UNRESOLVED --> UNREG : _register_unresolved()
+UNRESOLVED --> INCFAIL : increment_failure_count()
+
+INCFAIL --> NOTIFY : count >= REVIEW_THRESHOLD (5)
+
+LEARN --> [*]
+NOTIFY --> [*]
+RESFAIL --> [*]
+
+@enduml

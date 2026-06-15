@@ -1,0 +1,204 @@
+@startuml
+title TestForge — Classes: LLM Self-Healing Dataclasses
+
+skinparam backgroundColor #FFFFFF
+skinparam classBackgroundColor #F5F5F5
+skinparam classBorderColor #333333
+
+' === L3 Core Dataclasses ===
+
+class LLMHealingProposal {
+  + taxonomy_id: str
+  + family: str
+  + strategy: str
+  + new_locator: str
+  + confidence: float
+  + rationale: str
+  + raw_response: str
+}
+
+enum ALLOWED_STRATEGIES {
+  semantic_locator_conversion
+  has_text_fallback
+  masked_input_detection
+  press_sequentially
+  dialog_handler
+  visibility_wait
+  iframe_switch
+  label_click
+  synthetic_click
+  xpath_fallback
+}
+
+LLMHealingProposal ..> ALLOWED_STRATEGIES : "strategy ∈"
+
+class EvidencePayload {
+  + step_context: dict
+  + dom_snapshot: str
+  + console_errors: list
+  + network_state: list
+  + screenshot_b64: str
+  + is_sufficient: bool
+  + insufficiency_reason: str
+  --
+  + build(collector, ctx): EvidencePayload
+}
+
+note right of EvidencePayload
+  DOM truncado em 3000 chars
+  Console: ultimos 5 erros
+  Network: ultimas 3 requests
+  Screenshot: base64 opcional
+end note
+
+' === Curador ===
+
+class CuradorAutomatico {
+  - _catalog: HealingCatalog
+  - _healer: LLMHealer
+  - _step_runner: Callable
+  - _classifier: FailureClassifier
+  + MAX_RETRY_DEPTH: int = 1
+  + REVIEW_THRESHOLD: int = 5
+  --
+  + cure(step_data, error, evidence): CurationOutcome
+  - _try_layer1_catalog(family, step, evidence, error): CurationOutcome
+  - _try_layer2_agents(family, step, evidence, error): CurationOutcome
+  - _run_healing_cycle(step, evidence, error, depth): CurationOutcome
+  - _build_step_copy(step_data, new_locator): dict
+  - _try_execute_step(step_data): (bool, str)
+  - _register_learned(step, proposal, evidence): str
+  - _register_unresolved(step, reason, evidence): str
+  - _mark_stale_entries(limit): int
+  - _notify_review_needed(taxonomy, family, count, error): None
+}
+
+class CurationOutcome {
+  + status: str
+  + proposal: LLMHealingProposal
+  + evidence: EvidencePayload
+  + entry_id: str
+  + error_message: str
+  + rollback_applied: bool
+  + reclassification_used: bool
+  + layer_used: str
+  + family: str
+  + taxonomy_id: str
+  + classification_layer: str
+  + classification_confidence: float
+}
+
+enum ProgressResult {
+  PASSED_STEP
+  ERROR_CHANGED
+  REGRESSED
+  STAGNATED
+  UNRESOLVED
+}
+
+CurationOutcome ..> ProgressResult : "status ∈"
+CuradorAutomatico ..> CurationOutcome : "retorna"
+CuradorAutomatico ..> LLMHealingProposal : "consome"
+CuradorAutomatico ..> EvidencePayload : "recebe"
+
+' === LLM Healer ===
+
+class LLMHealer {
+  - _api_key: str
+  - _azure_endpoint: str
+  - _model: str
+  - _temperature: float
+  - _max_retries: int
+  - _client: AzureOpenAI
+  --
+  + heal(payload, error, family): LLMHealingProposal
+  + heal_or_unresolved(payload, error, family): LLMHealingProposal
+  - _build_prompt(payload, error, family): str
+  - _parse_response(text): LLMHealingProposal
+}
+
+class MockLLMHealer {
+  --
+  + heal(payload, error, family): LLMHealingProposal
+}
+
+LLMHealer <|-- MockLLMHealer
+LLMHealer ..> EvidencePayload : "recebe payload"
+LLMHealer ..> LLMHealingProposal : "retorna"
+CuradorAutomatico --> LLMHealer : "_healer"
+
+' === Taxonomy ===
+
+class FailureClassifier {
+  + classify(error_message, element_info): FailureClassification
+  - _keyword_match(msg): (family, taxonomy_id, confidence)
+  - _group_fallback(msg): (family, taxonomy_id, confidence)
+}
+
+class FailureClassification {
+  + family: FailureFamily
+  + code: str
+  + description: str
+  + recoverable: bool
+  + suggested_strategy: str
+}
+
+enum FailureFamily {
+  LOCATOR_RESOLUTION
+  ACTIONABILITY
+  SYNCHRONIZATION
+  ORACLE
+  ENVIRONMENT
+  CONTEXT
+}
+
+FailureClassifier ..> FailureClassification : "retorna"
+FailureClassification ..> FailureFamily : "family ∈"
+CuradorAutomatico --> FailureClassifier : "_classifier"
+
+' === Catalog ===
+
+class HealingCatalog {
+  + add_recipe(recipe): str
+  + match_recipes(error, framework, family): list
+  + record_success(recipe_id)
+  + increment_failure_count(taxonomy_id)
+  + get_failure_count(taxonomy_id): int
+  + reset_failure_count(taxonomy_id)
+}
+
+class HealingRecipe {
+  + recipe_id: str
+  + trigger_family: str
+  + trigger_code: str
+  + trigger_pattern: str
+  + trigger_framework: str
+  + solution_strategy: str
+  + solution_selector: str
+  + priority: int
+  + usage_count: int
+  + success_count: int
+  + status: str
+}
+
+HealingCatalog ..> HealingRecipe : "armazena"
+CuradorAutomatico --> HealingCatalog : "_catalog"
+
+' === LLM Client ===
+
+class LLMClient {
+  + {static} chat(system, user, temperature, max_tokens, images): str
+  + {static} extract_code_block(text, lang): str
+}
+
+LLMHealer ..> LLMClient : "chat()"
+
+' === Legend ===
+
+legend bottom
+  |= Cor |= Significado |
+  | Branco | Novo — Fase 3-4 |
+  | <#LightGreen> | Existente — sera estendido |
+endlegend
+
+@enduml

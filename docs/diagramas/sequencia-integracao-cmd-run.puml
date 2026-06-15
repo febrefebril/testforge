@@ -1,0 +1,117 @@
+@startuml
+title TestForge — Sequência: Integração cmd_run com CuradorAutomatico
+
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 12
+skinparam BoxPadding 8
+
+actor "QA" as QA
+participant "CLI\n(testforge run)" as CLI
+participant "Subprocess\n(pytest)" as PYTEST
+participant "Browser\n(headless/headed)" as BROWSER
+participant "EvidenceCollector" as EC
+participant "CuradorAutomatico" as CUR
+participant "LLMHealer\n(Mock ou Real)" as LLM
+participant "HealingCatalog" as CAT
+database "Metricas\n(MetricsRepository)" as MET
+
+== 1. Setup ==
+
+QA -> CLI: testforge run script.py
+CLI -> CLI: le script, extrai BASE_URL\nidentifica source_recording_id
+
+== 2. Execucao Primaria (subprocess) ==
+
+CLI -> PYTEST: subprocess.run(pytest script.py)\ntimeout=60s, capture_output=True
+activate PYTEST
+PYTEST -> PYTEST: pytest-playwright\nabre browser proprio\nexecuta page.goto(BASE_URL)
+PYTEST -> PYTEST: executa steps do script
+
+alt script passa (returncode=0)
+  PYTEST --> CLI: stdout
+  deactivate PYTEST
+  CLI -> MET: record_run(healed=False)
+  CLI --> QA: ✅ 93/93 testes passando
+  CLI --> CLI: fim
+else script falha ou timeout
+  PYTEST --> CLI: stderr / TimeoutExpired
+  deactivate PYTEST
+end
+
+== 3. Coleta de Evidencias ==
+
+CLI -> BROWSER: sync_playwright().chromium.launch()
+CLI -> BROWSER: page.goto(BASE_URL)
+CLI -> EC: start(run_id)
+activate EC
+
+loop para cada step do script
+  CLI -> EC: capture_dom(step_id, "before")
+  CLI -> EC: capture_screenshot(step_id, "before")
+  CLI -> EC: capture_network_log(entries)
+  CLI -> EC: capture_console_errors()
+end
+
+CLI -> EC: build_llm_payload(step_context)
+EC -> EC: DOM snippet (trunc 3000)\nconsole errors (ultimos 5)\nnetwork state (ultimas 3)
+EC --> CLI: EvidencePayload
+deactivate EC
+
+== 4. Pipeline de Cura L0→L3 ==
+
+CLI -> CUR: cure(step_data, error_message, payload)
+activate CUR
+
+CUR -> CAT: match(family, error_message)
+alt L0: catalog match
+  CAT --> CUR: entry (pre_populated)
+  CUR -> BROWSER: executa step com fix do catalogo
+  BROWSER --> CUR: OK
+  CUR --> CLI: PASSED_STEP (L0)
+  deactivate CUR
+else L0: sem match
+  CUR -> BROWSER: tenta candidatos MIS (L1)
+  alt L1: candidato funciona
+    BROWSER --> CUR: OK
+    CUR --> CLI: PASSED_STEP (L1)
+    deactivate CUR
+  else L1: falhou
+    CUR -> LLM: heal_or_unresolved(payload, error, family)
+    activate LLM
+
+    alt LLM disponivel (Azure key)
+      LLM -> LLM: Azure OpenAI\n_generate_recipe_from_failure()
+      LLM -> LLM: valida proposal\n(confidence, taxonomy, strategy)
+      LLM --> CUR: LLMHealingProposal
+    else LLM indisponivel
+      LLM -> LLM: MockLLMHealer\nproposta generica
+      LLM --> CUR: LLMHealingProposal
+    end
+    deactivate LLM
+
+    alt confidence >= 0.5
+      CUR -> BROWSER: executa step com new_locator
+      BROWSER --> CUR: PASSED
+      CUR -> CAT: _register_learned()
+      CAT --> CUR: entry_id
+      CUR --> CLI: PASSED_STEP (L3)
+    else confidence < 0.5
+      CUR -> CAT: _register_unresolved()
+      CUR --> CLI: UNRESOLVED
+    end
+    deactivate CUR
+  end
+end
+
+== 5. Metricas ==
+
+CLI -> EC: finalize() → manifest.json
+CLI -> MET: record_run(\n  healed=True/False,\n  layer_used="L0"|"L1"|"L3",\n  llm_used=True/False,\n  oracle_passed=1/0)
+
+CLI -> CLI: imprime resumo:\n  Total runs, Healings, Layer\n  False heal rate, Precision\n  LLM rate
+
+CLI -> BROWSER: browser.close()
+CLI --> QA: relatorio final
+
+@enduml

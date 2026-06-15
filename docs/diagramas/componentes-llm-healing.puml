@@ -1,0 +1,90 @@
+@startuml
+title TestForge — LLM Self-Healing: Componentes (L0→L3)
+
+skinparam packageStyle rectangle
+skinparam backgroundColor #FFFFFF
+skinparam componentStyle rectangle
+
+' === Módulos existentes (atualizados) ===
+
+package "Taxonomy (Atualizar)" as taxonomy #LightYellow {
+  [FailureClassifier\n(+regex +group +keyword)] as FC
+  [FAMILIES + TAXONOMIES\n(11 families, 40+ ids)] as FT
+}
+
+package "Evidence (Atualizar)" as evidence #LightYellow {
+  [EvidenceCollector\n(+build_llm_payload)] as EC
+}
+
+package "Healing - L0 (Existente)" as l0 #LightGreen {
+  [HealingCatalog\n(+match +failure_count)] as HC
+}
+
+package "Healing - L1 (Existente)" as l1 #LightGreen {
+  [FallbackRunner\n(try_fill, try_click)] as FR
+}
+
+' === Novos módulos L3 ===
+
+package "Healing - L3 LLM (Novo)" as l3 #LightBlue {
+  [LLMClient\n(Azure OpenAI / OpenAI)] as LClient
+  [LLMHealer\n(+MockLLMHealer)] as LHealer
+  [llm_prompts.py\n(11 family prompts)] as LPrompts
+  [EvidencePayload\n(DOM, console, network)] as EPayload
+  [CuratorAutomatico\n(L0→L1→L2→L3 pipeline)] as Curator
+  [CurationOutcome\n(PASSED/UNRESOLVED/...)] as COutcome
+}
+
+' === L2 Agents (Opcional) ===
+
+package "Healing - L2 Agents (Futuro)" as l2 #LightGray {
+  [SelectorAgent\n(FAM-01)] as SA
+  [TimingAgent\n(FAM-02)] as TA
+  [InputAgent\n(FAM-06/07)] as IA
+  [ContextAgent\n(FAM-03)] as CA
+  [StateAgent\n(FAM-04)] as StA
+  [DynamicDOMAgent\n(FAM-05)] as DA
+}
+
+' === CLI ===
+
+package "CLI (Atualizar)" as cli #LightYellow {
+  [app.py\n(cmd_run)] as CMD
+}
+
+' === Dependências ===
+
+CMD -down-> Curator : "cure(step, error, evidence)"
+LClient ..> LHealer : "chat()"
+
+EC -down-> EPayload : "build_llm_payload()"
+EPayload -down-> LHealer : "payload"
+LPrompts ..> LHealer : "FAMILY_PROMPTS"
+LHealer -down-> COutcome : "LLMHealingProposal"
+
+FC -down-> Curator : "classify()"
+HC -down-> Curator : "match()"
+FT ..> FC : "valida family/taxonomy"
+FT ..> LHealer : "valida family/taxonomy"
+
+Curator -down-> HC : "_register_learned()\n_register_unresolved()"
+Curator -down-> LHealer : "_run_healing_cycle()"
+Curator -down-> COutcome : "CurationOutcome"
+
+FR ..> Curator : "L1: fallback deterministico"
+
+SA ..> LHealer : "_llm_fallback()"
+TA ..> LHealer : "_llm_fallback()"
+IA ..> LHealer : "_llm_fallback()"
+
+' === Legend ===
+
+legend right
+  |= Cor |= Significado |
+  | <#LightGreen> | Existente — sem mudanças |
+  | <#LightYellow> | Existente — será atualizado |
+  | <#LightBlue> | Novo — Fase 3-4 |
+  | <#LightGray> | Futuro — Fase 7 (opcional) |
+endlegend
+
+@enduml
