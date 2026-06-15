@@ -141,13 +141,27 @@ def cmd_compile(args):
     normalizer = RecordingNormalizer()
     stc = normalizer.normalize(rec_dir, f"ST-{rec_id}", app or "app", base_url or "http://localhost")
 
+    # Data-driven: extrai massa de dados externa
+    data_file = ""
+    if getattr(args, 'data', False):
+        from testforge.semantic.data_extractor import generate_test_data_file
+        data_path = generate_test_data_file(
+            rec_dir,
+            os.path.join(str(_PROJECT_ROOT / f"recordings/{rec_id}"), "test_data.json"),
+            scenarios=getattr(args, 'scenarios', False),
+        )
+        data_file = data_path
+        print(f"[TestForge] ✓ Massa de dados: {data_file}")
+
     compiler = PlaywrightCompiler()
     safe_rec_id = rec_id.replace(" ", "_").replace("/", "_")
     out_dir = args.output or str(_PROJECT_ROOT / f"semantic_tests/ST-{safe_rec_id}")
-    path = compiler.compile(stc, out_dir)
+    path = compiler.compile(stc, out_dir, data_file=data_file)
 
     print(f"[TestForge] ✓ SemanticTestCase: {len(stc.steps)} steps")
     print(f"[TestForge] ✓ Script gerado: {path}")
+    if data_file:
+        print(f"[TestForge] ✓ Script data-driven (le {os.path.basename(data_file)})")
 
     with open(path) as f:
         code = f.read()
@@ -714,6 +728,8 @@ def main():
     comp.add_argument("--app", help="Nome da aplicacao")
     comp.add_argument("--base-url", help="URL base override")
     comp.add_argument("--output", help="Diretorio de saida")
+    comp.add_argument("--data", action="store_true", help="Extrair massa de dados para JSON externo")
+    comp.add_argument("--scenarios", action="store_true", help="Gerar JSON com suporte a multiplos cenarios")
     comp.set_defaults(func=cmd_compile)
 
     # run

@@ -1,0 +1,175 @@
+"""TestForge — Test Data Extractor.
+
+Extracts fill values from recording raw_events.jsonl into external JSON fixtures.
+Generates test_data.json with named fields, sensitive data detection, and multi-scenario support.
+"""
+import json
+import os
+import re
+from typing import Optional
+
+
+# Sensitive field patterns (label or placeholder matches)
+SENSITIVE_PATTERNS = [
+    r"(?i)cpf",
+    r"(?i)senha|password",
+    r"(?i)cartao|card|credit",
+    r"(?i)email|e-mail",
+    r"(?i)telefone|phone|celular",
+    r"(?i)cep",
+    r"(?i)rg|identidade",
+    r"(?i)conta|agencia",
+    r"(?i)token|chave|key",
+]
+
+
+def _is_sensitive(name: str) -> bool:
+    """Check if a field name matches sensitive data patterns."""
+    for pattern in SENSITIVE_PATTERNS:
+        if re.search(pattern, name):
+            return True
+    return False
+
+
+def _best_field_name(event: dict, idx: int) -> str:
+    """Generate the best field name from event target attributes.
+
+    Priority: label > placeholder > element_id > generic 'field_N'.
+    """
+    target = event.get("target", {}) or {}
+
+    label = (target.get("label") or "").strip()
+    if label and len(label) <= 40:
+        # Sanitize: lowercase, replace spaces/accents with underscore
+        name = re.sub(r"[^a-zA-Z0-9_]", "_", label.lower())
+        name = re.sub(r"_+", "_", name).strip("_")
+        if name:
+            return name
+
+    placeholder = (target.get("placeholder") or "").strip()
+    if placeholder and len(placeholder) <= 40:
+        name = re.sub(r"[^a-zA-Z0-9_]", "_", placeholder.lower())
+        name = re.sub(r"_+", "_", name).strip("_")
+        if name:
+            return name
+
+    element_id = (target.get("element_id") or "").strip()
+    if element_id and len(element_id) <= 40:
+        name = re.sub(r"[^a-zA-Z0-9_]", "_", element_id.lower())
+        name = re.sub(r"_+", "_", name).strip("_")
+        if name:
+            return name
+
+    return f"field_{idx}"
+
+
+def extract_test_data(recording_dir: str, scenarios: bool = False) -> dict:
+    """Extract fill values from recording into structured test data.
+
+    Args:
+        recording_dir: Path to recording directory (contains raw_events.jsonl).
+        scenarios: If True, wrap data in {"default": {...}} for multi-scenario support.
+
+    Returns:
+        Dict with "fields" and "sensitive_alerts" keys.
+    """
+    jsonl_path = os.path.join(recording_dir, "raw_events.jsonl")
+    if not os.path.exists(jsonl_path):
+        return {"fields": {}, "sensitive_alerts": []}
+
+    fields = {}
+    sensitive_alerts = []
+    fill_idx = 0
+
+    with open(jsonl_path) as f:
+        for line in f:
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            if event.get("type") != "fill":
+                continue
+
+            fill_idx += 1
+            value = event.get("value") or ""
+            name = _best_field_name(event, fill_idx)
+
+            # Deduplicate: skip if same value already exists for this name
+            if name in fields and fields[name] == value:
+                continue
+
+            # Ensure unique field names for different values
+            base_name = name
+            counter = 1
+            while name in fields and fields[name] != value:
+                name = f"{base_name}_{counter}"
+                counter += 1
+
+            fields[name] = value
+
+            # Check for sensitive data
+            if _is_sensitive(name):
+                sensitive_alerts.append({
+                    "field": name,
+                    "reason": "Matches sensitive data pattern (CPF, password, etc.)",
+                    "policy": "alert_only",
+                    "masking_applied": False,
+                })
+
+    result = {
+        "fields": fields,
+        "sensitive_alerts": sensitive_alerts,
+    }
+
+    if scenarios:
+        result = {
+            "scenarios": {
+                "default": fields,
+            },
+            "sensitive_alerts": sensitive_alerts,
+        }
+
+    return result
+
+
+def generate_test_data_file(
+    recording_dir: str,
+    output_path: Optional[str] = None,
+    scenarios: bool = False,
+) -> str:
+    """Generate test_data.json from recording.
+
+    Args:
+        recording_dir: Path to recording directory.
+        output_path: Output file path. Defaults to recording_dir/test_data.json.
+        scenarios: If True, generate multi-scenario format.
+
+    Returns:
+        Path to generated file.
+    """
+    data = extract_test_data(recording_dir, scenarios=scenarios)
+
+    if output_path is None:
+        output_path = os.path.join(recording_dir, "test_data.json")
+
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+
+    with open(output_path, "w") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+    # Print sensitive data alerts
+    for alert in data.get("sensitive_alerts", []):
+        print(f"  ⚠ Sensitive: {alert['field']} — {alert['reason']}")
+
+    return output_path
+
+
+def add_scenario(data: dict, scenario_name: str, fields: dict) -> dict:
+    """Add a new scenario to existing test data."""
+    if "scenarios" not in data:
+        data["scenarios"] = {"default": data.get("fields", {})}
+        if "fields" in data:
+            del data["fields"]
+    data["scenarios"][scenario_name] = fields
+    return data

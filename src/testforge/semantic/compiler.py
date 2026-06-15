@@ -1,43 +1,116 @@
 """TestForge — Playwright Python Compiler.
 
 Le SemanticTestCase e gera script Python executavel com fallback loop.
+Suporte a data-driven testing: extrai valores para JSON externo.
 """
 import os
+import re
 import textwrap
+import json as _json
 
 from .model import SemanticTestCase, SemanticAction
+from .data_extractor import _best_field_name
 
 
 class PlaywrightCompiler:
     """Gera script Playwright Python a partir de SemanticTestCase."""
 
-    def compile(self, test_case: SemanticTestCase, output_dir: str) -> str:
+    def compile(
+        self,
+        test_case: SemanticTestCase,
+        output_dir: str,
+        data_file: str = "",
+    ) -> str:
+        """Compile test case to Playwright Python script.
+
+        Args:
+            test_case: SemanticTestCase to compile.
+            output_dir: Output directory for the generated script.
+            data_file: Optional path to JSON test data file.
+                       If provided, script reads values from JSON instead of hardcoding.
+        """
         os.makedirs(output_dir, exist_ok=True)
-        import re
         safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', test_case.test_id)
         os.makedirs(output_dir, exist_ok=True)
         test_name = safe_id.lower()
         filename = f"test_{test_name}.py"
         path = os.path.join(output_dir, filename)
 
-        code = self._generate(test_case)
+        code = self._generate(test_case, data_file=data_file)
         with open(path, "w") as f:
             f.write(code)
 
         return path
 
-    def _generate(self, tc: SemanticTestCase) -> str:
+    def _generate(self, tc: SemanticTestCase, data_file: str = "") -> str:
         lines = []
         lines.append('"""Teste gerado pelo TestForge — fonte de verdade: SemanticTestCase."""')
         lines.append("from playwright.sync_api import Page, expect")
+        lines.append("import json, os")
+
+        if data_file:
+            # Data-driven: load external JSON
+            data_path = os.path.basename(data_file)
+            lines.append("")
+            lines.append(f"# Test data: external JSON fixture")
+            lines.append(f"_DATA_FILE = os.path.join(os.path.dirname(__file__), \"{data_path}\")")
+            lines.append("_data = {}")
+            lines.append("if os.path.exists(_DATA_FILE):")
+            lines.append("    with open(_DATA_FILE) as f:")
+            lines.append("        _raw = json.load(f)")
+            lines.append("    # Support both flat and scenario-based formats")
+            lines.append("    if \"scenarios\" in _raw:")
+            lines.append("        _data = _raw[\"scenarios\"].get(\"default\", {})")
+            lines.append("    elif \"fields\" in _raw:")
+            lines.append("        _data = _raw[\"fields\"]")
+            lines.append("    else:")
+            lines.append("        _data = _raw")
+            lines.append("")
+
         lines.append("")
         lines.append(f"BASE_URL = \"{tc.base_url}\"")
         lines.append("")
-        lines.append("")
-        import re
+
         safe_name = re.sub(r'[^a-zA-Z0-9_]', '_', tc.test_id).lower()
         lines.append(f"def test_{safe_name}(page: Page):")
         lines.append(f'    """{tc.application or "Fluxo gravado"} — source: {tc.source_recording_id}."""')
+
+        step_idx = 0
+        for action in tc.steps:
+            if action.action == "navigation":
+                lines.append(f"    page.goto(BASE_URL)")
+            elif action.action == "fill":
+                step_idx += 1
+                lines.extend(self._gen_fill(action, step_idx, data_file))
+            elif action.action == "click":
+                step_idx += 1
+                lines.extend(self._gen_click(action, step_idx))
+            elif action.action == "assert":
+                step_idx += 1
+                lines.extend(self._gen_assert(action, step_idx))
+
+        return "\n".join(lines) + "\n"
+
+    def _data_field_name(self, action: SemanticAction) -> str:
+        """Get the JSON field name for a fill action's value."""
+        if action.target:
+            label = (action.target.label or "").strip()
+            if label:
+                return _best_field_name({"target": {"label": label}}, 0)
+            placeholder = (action.target.placeholder or "").strip()
+            if placeholder:
+                return _best_field_name({"target": {"placeholder": placeholder}}, 0)
+        return ""
+
+    def _resolved_value(self, action: SemanticAction, idx: int, data_file: str) -> str:
+        """Resolve fill value: from JSON data_file or hardcoded fallback."""
+        value = action.value or ""
+        escaped_value = value.replace('"', '\\"')
+        if data_file:
+            field = self._data_field_name(action)
+            if field:
+                return f'_data.get("{field}", "{escaped_value}")'
+        return f'"{escaped_value}"'
 
         step_idx = 0
         for action in tc.steps:
@@ -71,8 +144,8 @@ class PlaywrightCompiler:
             return f"#{t.element_id}"
         return "input"
 
-    def _gen_fill(self, action: SemanticAction, idx: int) -> list[str]:
-        value = action.value or ""
+    def _gen_fill(self, action: SemanticAction, idx: int, data_file: str = "") -> list[str]:
+        value = self._resolved_value(action, idx, data_file)
         candidates = action.target.candidates if action.target else []
 
         # Ordena por score decrescente
@@ -82,19 +155,19 @@ class PlaywrightCompiler:
             sel = self._fallback_selector(action)
             lines = [
                 f"    # Step {idx}: fill {action.target.label if action.target else 'input'}",
-                f"    page.fill({self._esc(sel)}, \"{value}\")",
+                f"    page.fill({self._esc(sel)}, {value})",
                 f"    page.wait_for_timeout(200)",
                 "",
             ]
             return lines
 
-        lines = [f"    # Step {idx}: fill (value=\"{value[:30]}\")"]
+        lines = [f"    # Step {idx}: fill ({self._data_field_name(action) or action.value})"]
         selectors = [self._esc(c.selector) for c in sorted_candidates[:5]]
 
         lines.append(f"    _sels = [{', '.join(selectors)}]")
         lines.append("    for _sel in _sels:")
         lines.append("        try:")
-        lines.append(f"            page.fill(_sel, \"{value}\")")
+        lines.append(f"            page.fill(_sel, {value})")
         lines.append("            page.wait_for_timeout(200)")
         lines.append("            break")
         lines.append("        except Exception:")
