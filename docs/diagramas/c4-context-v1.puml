@@ -1,33 +1,44 @@
 @startuml
-title TestForge v1 — C4 Context (codigo: 9 modulos, 1876 LOC, 93 testes)
+title TestForge v0.3.0 — C4 Context
 
-!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+skinparam backgroundColor #FFFFFF
+skinparam packageStyle rectangle
 
-LAYOUT_WITH_LEGEND()
+actor "QA Engineer" as QA
 
-Person(qa, "QA Engineer", "Grava fluxos e recebe scripts com self-healing.")
+rectangle "TestForge CLI\nv0.3.0" as TF #LightBlue {
+  usecase "Gravar fluxo\n(record)" as UC1
+  usecase "Compilar script\n(compile --data)" as UC2
+  usecase "Executar + Curar\n(run L0→L3)" as UC3
+  usecase "Pipeline completa\n(pipeline)" as UC4
+  usecase "Demo healing\n(demo-heal)" as UC5
+}
 
-System(testforge, "TestForge CLI", "Python CLI (Typer)\n9 modulos implementados")
+actor "Dev" as DEV
+actor "Pipeline CI" as CI
 
-System_Ext(web_app, "Aplicacao Web Alvo", "PrimeFaces, Angular, JSF, React")
+rectangle "Aplicacao Web Alvo\n(PrimeFaces, Angular, React)" as APP #LightGreen
 
-System_Ext(llm, "LLM Gateway", "Opcional — off critical path")
+cloud "Azure OpenAI\n(GPT-4.1-mini)\n[Opcional]" as LLM #LightGray
 
-Rel(qa, testforge, "Usa CLI", "record, run, compile")
-Rel(testforge, web_app, "Playwright nativo", "page.on(), page.fill(), page.click()")
-Rel(testforge, llm, "Consulta quando deterministico falha", "Prompt estruturado")
+database "recordings/\n(JSONL + screenshots)" as REC
+database "semantic_tests/\n(scripts gerados)" as ST
+database "test_data.json\n(massa externa)" as TD
 
-note right of testforge
-  Implementado (v0.1.0):
-  - recorder (JS injection)
-  - evidence (JSONL store)
-  - semantic (MIS + Compiler)
-  - oracle (visual_dom + business_state)
-  - promotion (Gate com 3 estados)
-  - taxonomy (11 codigos, 6 familias)
-  - runner (ShadowValidator + FallbackRunner)
-  - metrics (precision, false_heal_rate)
-  - cli (app.py)
-end note
+QA --> UC1
+QA --> UC2
+QA --> UC3
+QA --> UC4
+QA --> UC5
+
+DEV --> UC3
+CI --> UC3
+
+TF --> APP : Playwright\n(page.goto, fill, click)
+TF --> REC : salva/le gravacoes
+TF --> ST : gera scripts
+TF --> TD : extrai/le massa
+
+TF ..> LLM : HTTPS (L3 healing)\n[off critical path]
 
 @enduml

@@ -1,97 +1,112 @@
 @startuml
-title TestForge v1 — Sequencia: Gravacao → MIS → Compilacao → Execucao → Healing
+title TestForge v0.3.0 — Sequencia: Gravacao → MIS → Compilacao → Data-Driven → Execucao → Healing L0→L3
 
 skinparam backgroundColor #FFFFFF
 skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 12
 
-actor "QA Engineer" as QA
+actor "QA" as QA
 participant "CLI\n(record)" as CLI_R
 participant "Recorder\nSensorial" as REC
-participant "Aplicacao\nWeb Alvo" as APP
-database "Storage\n(JSONL)" as STORE
-participant "CLI\n(compile)" as CLI_C
+participant "Aplicacao\nWeb" as APP
+
+database "recordings/\n(raw_events.jsonl)" as STORE
+
+participant "CLI\n(compile --data)" as CLI_C
 participant "MIS\nNormalizer" as MIS
+participant "Data\nExtractor" as DE
 participant "Compiler\nPlaywright" as COMP
+database "test_data.json" as TDATA
+database "semantic_tests/\n(script.py)" as GEN
+
 participant "CLI\n(run)" as CLI_X
-participant "Runner" as RUN
-participant "Healing\nEngine" as HEAL
-participant "LLM\n(Opcional)" as LLM
+participant "Runner\nInline" as RUN
+participant "Evidence\nCollector" as EC
+participant "Failure\nClassifier" as FC
+participant "Curador\nAutomatico" as CUR
+participant "L0: Catalog" as L0
+participant "L2: Agents" as L2
+participant "L3: LLM\n(Mock ou Azure)" as L3
+participant "Oracle\n+ Gate" as OG
 
 == Fase 1: Gravacao ==
 
-QA -> CLI_R: record --name "consulta-cliente"
+QA -> CLI_R: record --name "fluxo"
 CLI_R -> REC: start()
 REC -> APP: page.goto(url)
-REC -> REC: Injeta listeners\n(page.on('pointerup'),\npage.on('input'), etc.)
+REC -> REC: inject JS listeners\n(pointerup, input, keydown)
 
-QA -> APP: Preenche CPF "12345678900"
-APP -> REC: input event + keydown
-REC -> REC: Cria RawRecordedEvent\n(type=fill, target={role, label, placeholder, ...})
+QA -> APP: preenche CPF, clica
+APP -> REC: eventos capturados
+REC -> REC: cria RawRecordedEvent\n(target: role, label, placeholder, text)
+REC -> STORE: salva raw_events.jsonl\n+ screenshots + DOM snapshots
 
-QA -> APP: Clica "Pesquisar"
-APP -> REC: pointerup event
-REC -> REC: Cria RawRecordedEvent\n(type=click, target={role, accessible_name, text, ...})
+== Fase 2: Compilacao + Data-Driven ==
 
-QA -> CLI_R: stop()
-CLI_R -> REC: stop()
-REC -> STORE: Persiste recordings/{id}/\n(raw_events.jsonl, screenshots/,\ndom_snapshots/, ax_snapshots/,\nnetwork_log.json, metadata.json)
+QA -> CLI_C: compile "fluxo" --data
+CLI_C -> MIS: normalize(rec_dir) → SemanticTestCase
+MIS -> STORE: le raw_events.jsonl
+MIS -> CLI_C: 46 steps (fill/click/assert)
 
-== Fase 2: MIS (Modelo Intermediario Semantico) ==
+CLI_C -> DE: extract_test_data(rec_dir)
+DE -> STORE: le raw_events.jsonl
+DE -> DE: extrai valores fill\nnomeia por label/placeholder\ndetecta campos sensiveis
+DE -> TDATA: test_data.json\n{"fields":{"cpf":"123"}}
 
-QA -> CLI_C: compile
-CLI_C -> STORE: Le recordings/{id}/raw_events.jsonl
-CLI_C -> MIS: normalize()
-MIS -> MIS: RawRecordedEvent → SemanticAction
-MIS -> MIS: Extrai SemanticTarget\n(role, accessible_name, label,\nplaceholder, test_id, text)
-MIS -> MIS: Gera LocatorCandidates\n(score deterministico:\nrole+name > label > placeholder >\ntestid > text > css)
-MIS -> STORE: Persiste semantic_tests/{id}/\nsemantic_test_case.yaml
+CLI_C -> COMP: compile(stc, data_file=test_data.json)
+COMP -> COMP: gera script com fallback loop\n_data.get("cpf", "123")
+COMP -> GEN: test_st_fluxo.py
 
-== Fase 3: Compilacao ==
+== Fase 3: Execucao inline + Healing ==
 
-CLI_C -> COMP: compile()
-COMP -> STORE: Le semantic_tests/{id}/semantic_test_case.yaml
-COMP -> COMP: Gera script Python com\nfallback loop (for/else/try/except)
-COMP -> STORE: Persiste generated_tests/{id}/test_*.py
+QA -> CLI_X: run script.py
+CLI_X -> RUN: carrega recording → 46 steps
 
-== Fase 4: Execucao ==
+loop para cada step
+  RUN -> APP: page.goto / fill / click / assert
+  APP --> RUN: resultado
 
-QA -> CLI_X: run
-CLI_X -> RUN: execute()
-RUN -> STORE: Le generated_tests/{id}/test_*.py
-RUN -> STORE: Le semantic_tests/{id}/ (candidatos)
-RUN -> APP: page.goto(url)
-RUN -> APP: page.fill(cpf_selector, "12345678900")
+  alt step OK
+    RUN -> RUN: ✓ Step N: fill 12345678900
+  else step FALHA
+    RUN -> FC: classify(error)
+    FC -> FC: keyword match → group fallback
+    FC --> RUN: FAM-06 / INP-007
 
-alt Seletor funciona
-  APP -> RUN: OK
-else Seletor falha (ex: ID mudou)
-  RUN -> RUN: Tenta proximo candidato\n(label > placeholder > testid > text)
-  alt Candidato deterministico funciona
-    APP -> RUN: OK
-  else Candidatos esgotados
-    RUN -> HEAL: Solicita healing
+    RUN -> EC: build_llm_payload(ctx)
+    EC -> EC: DOM snippet (3k chars)\nconsole errors (last 5)\nnetwork state (last 3)
+    EC --> RUN: EvidencePayload
 
-    == Fase 5: Healing (off critical path) ==
+    RUN -> CUR: cure(step_data, error, payload)
 
-    HEAL -> HEAL: Layer 0: Recipe Catalog (<50ms)
-    alt Recipe encontrada
-      HEAL -> RUN: Aplica recipe
-    else Sem recipe
-      HEAL -> HEAL: Layer 1: Specialist Agent (~200 tok)
-      alt Agente resolve
-        HEAL -> RUN: Aplica solucao
-      else Agente falha
-        HEAL -> HEAL: Layer 2: Evidence Collector\n(coleta DOM, screenshot, network)
-        HEAL -> LLM: Layer 3: LLM Healer\n(payload estruturado)
-        LLM -> HEAL: Sugestao de locator
-        HEAL -> RUN: Aplica sugestao (modo shadow)
-      end
+    CUR -> L0: match(family, symptom)
+    L0 --> CUR: null (sem match)
+
+    CUR -> L2: route_to_agent(FAM-06)
+    L2 -> L2: InputAgent: press_sequentially?\nmasked_input_detection?
+    L2 --> CUR: proposal (conf=0.82)
+
+    alt L2 confidence >= 0.7
+      CUR -> CUR: executa step_runner(proposal)
+      CUR --> RUN: PASSED_STEP (L2)
+      CUR -> L0: _register_learned() → recipe
+    else L2 falha
+      CUR -> L3: heal_or_unresolved(payload, error)
+      L3 -> L3: MockLLMHealer\nou Azure GPT-4.1-mini
+      L3 --> CUR: proposal (conf=0.85)
+      CUR -> CUR: executa step_runner(proposal)
+      CUR --> RUN: PASSED_STEP (L3)
+      CUR -> L0: _register_learned() → recipe
     end
+
+    RUN -> RUN: ✓ curado (L2/L3)
   end
 end
 
-RUN -> APP: page.click(btn_selector)
-RUN -> RUN: Oracle: visual_dom\n(resultado visivel?)
-RUN -> STORE: Persiste evidence/{run_id}/
+RUN -> OG: oracle.run_all()
+OG --> RUN: visual_dom ✓, business_state ✓
+
+RUN -> CLI_X: metricas
+CLI_X --> QA: 46 steps, 1 falha curada, L3
 
 @enduml

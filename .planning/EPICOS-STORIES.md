@@ -152,3 +152,25 @@
 - Confidence gate ≥ 0.5 ✅
 - Max retry depth = 1 ✅
 - Auto-learn: curas bem-sucedidas viram receitas no HealingCatalog ✅
+
+---
+
+## EP-10: Data-Driven Testing + Docs (v0.3.0) ✅
+
+**Objetivo:** Massa de dados externa em JSON, prompt pack, tutorial
+
+| Story | Descricao | Status |
+|-------|-----------|--------|
+| US-10.01 | DataExtractor: extrai valores fill da gravação → test_data.json | ✓ |
+| US-10.02 | Compiler data-driven: script lê _data.get() em vez de hardcoded | ✓ |
+| US-10.03 | Suporte --scenarios para múltiplos cenários no mesmo JSON | ✓ |
+| US-10.04 | Detecção de campos sensíveis (CPF, senha) — alert_only | ✓ |
+| US-10.05 | Prompt Pack GSD v0.3.0 (7 prompts: base, record, compile, run, review, verify, new feature) | ✓ |
+| US-10.06 | TUTORIAL-LLM-HEALING.md (8 seções: visão geral, debug, métricas, troubleshooting) | ✓ |
+| US-10.07 | Sanitização de nomes de teste (regex, collapse underscore) | ✓ |
+| US-10.08 | 15 diagramas PlantUML atualizados (componentes, sequência, C4, data-driven) | ✓ |
+
+**Principios:**
+- Dados de teste versionáveis separados do código
+- Script não precisa ser recompilado para mudar massa
+- Sensitive data: alert_only no MVP

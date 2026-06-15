@@ -1,61 +1,110 @@
 @startuml
-title TestForge v1 — C4 Container Diagram
+title TestForge v0.3.0 — C4 Container (28 modulos, L0→L3 healing)
 
-!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+skinparam backgroundColor #FFFFFF
+skinparam packageStyle rectangle
 
-LAYOUT_WITH_LEGEND()
-
-Person(qa, "QA Engineer", "Grava fluxos e recebe scripts com self-healing.")
-
-System_Boundary(testforge, "TestForge v1 — Runtime") {
-
-  Container(recorder, "Recorder Sensorial", "Python + Playwright", "Captura eventos do usuario (pointerup, input, keydown). Gera RawRecordedSession com eventos JSONL, screenshots, DOM/AX snapshots. NAO gera script final.")
-
-  Container(mis, "Modelo Intermediario Semantico", "Python", "Converte RawRecordedSession em SemanticTestCase YAML. Gera multiplos candidatos de locator com scoring deterministico. Fonte de verdade do teste.")
-
-  Container(compiler, "Compiler Playwright", "Python", "Le SemanticTestCase e gera script Python com fallback loop (for/else/try/except). Script derivado, regeneravel.")
-
-  Container(runner, "Runner + Healing", "Python + Playwright", "Executa script gerado. 4-layer healing: Recipe Catalog → Specialist Agent → Evidence Collector → LLM Healer (so quando deterministico falha).")
-
-  ContainerDb(storage, "Storage", "JSONL + YAML + Filesystem", "recordings/, semantic_tests/, generated_tests/, evidence/. Zero DB no MVP.")
-
-  Container(cli, "CLI (Typer)", "Python", "Comandos: record, compile, run, report. Interface unica para o usuario.")
-
+rectangle "TestForge CLI\nPython 3.10+" as CLI #LightYellow {
+  component "app.py\nComandos: record,\ncompile --data, run,\npipeline, demo-heal" as App
 }
 
-System_Ext(web_app, "Aplicacao Web Alvo", "PrimeFaces, Angular, JSF, etc.")
+rectangle "Recorder Sensorial\nPlaywright sync_api" as Recorder #LightGreen {
+  component "RecorderController\n+ RecordingSession\n+ RawEvent" as REC
+}
 
-System_Ext(llm, "LLM Gateway", "Opcional, off critical path")
+rectangle "Semantic (MIS)\nModelo Intermediario" as Semantic #LightYellow {
+  component "RecordingNormalizer\n+ SemanticTestCase\n+ SemanticAction" as MIS
+  component "PlaywrightCompiler\n+ data-driven support" as COMP
+  component "DataExtractor\n+ test_data.json" as DE
+}
 
-Rel(qa, cli, "Usa CLI", "record, run, report")
-Rel(cli, recorder, "Aciona gravacao", "record")
-Rel(cli, runner, "Aciona execucao", "run")
-Rel(cli, compiler, "Aciona compilacao", "compile")
+rectangle "Evidence\nCollector + Store" as Evidence #LightGreen {
+  component "EvidenceCollector\n+ build_llm_payload()\n+ console/network buffers" as EC
+  component "EvidenceStore\nSQLite" as ES
+}
 
-Rel(recorder, web_app, "Instrumenta navegador", "Playwright page.on()")
-Rel(recorder, storage, "Persiste RawRecordedSession", "recordings/{id}/")
+rectangle "Taxonomy\n11 families, 88 codes" as Taxonomy #LightBlue {
+  component "FailureClassifier\nkeyword+group+word-boundary" as FC
+  component "FailureFamily\n+ FailureClassification" as FF
+}
 
-Rel(mis, storage, "Le RawRecordedSession", "recordings/")
-Rel(mis, storage, "Persiste SemanticTestCase", "semantic_tests/")
+rectangle "Healing L0\nRecipe Catalog" as L0 #LightGreen {
+  component "HealingCatalog\nJSONL, 54 recipes\n<50ms match" as HC
+}
 
-Rel(compiler, storage, "Le SemanticTestCase", "semantic_tests/")
-Rel(compiler, storage, "Gera script Python", "generated_tests/")
+rectangle "Healing L1\nFallback Runner" as L1 #LightGreen {
+  component "FallbackRunner\ntry_fill, try_click\nMIS candidates" as FR
+}
 
-Rel(runner, web_app, "Executa script contra app alvo", "Playwright")
-Rel(runner, storage, "Le script + candidatos", "generated_tests/ + semantic_tests/")
-Rel(runner, storage, "Persiste evidencias", "evidence/")
+rectangle "Healing L2\nSpecialist Agents" as L2 #LightBlue {
+  component "SelectorAgent\n(FAM-01)" as SA
+  component "TimingAgent\n(FAM-02)" as TA
+  component "ContextAgent\n(FAM-03)" as CA
+  component "StateAgent\n(FAM-04)" as StA
+  component "DynamicDOMAgent\n(FAM-05)" as DA
+  component "InputAgent\n(FAM-06/07)" as IA
+}
 
-Rel(runner, llm, "Consulta LLM (so quando deterministico falha)", "EvidencePackage estruturado")
+rectangle "Healing L3\nLLM Healer" as L3 #LightBlue {
+  component "CuradorAutomatico\nL0→L1→L2→L3 pipeline\nfailure tracker" as CUR
+  component "LLMHealer\n+ MockLLMHealer" as LLM
+  component "LLMClient\nAzure/OpenAI" as LClient
+  component "LLMPrompts\n11 family prompts (EN)" as LPrompts
+  component "EvidencePayload\nDOM + console + network" as EP
+}
 
-note right of recorder
-  Playwright nativo — sem extensao browser.
-  Eventos: pointerup, input, keydown, change.
-  Listener no window, nao document.
-end note
+rectangle "Oracle + Gate" as Oracle #LightGreen {
+  component "OracleRunner\nvisual_dom\nbusiness_state" as OR
+  component "PromotionGate\n3 estados\n5 bloqueios" as PG
+}
 
-note right of mis
-  SemanticTestCase YAML = fonte de verdade.
-  Script Python = artefato derivado, regeneravel.
-end note
+rectangle "Metrics" as Metrics #LightGreen {
+  component "MetricsRepository\nfalse_heal_rate\nprecision\nllm_rate" as MR
+}
+
+database "recordings/\nJSONL + screenshots" as RECDB
+database "evidence/\nmanifest + DOM" as EVIDB
+database "semantic_tests/\nscripts gerados" as STDB
+database "test_data.json\nmassa externa" as TDB
+
+cloud "Azure OpenAI\n(GPT-4.1-mini)\n[off critical path]" as AZURE
+
+' --- Connections ---
+
+App --> REC : record
+App --> MIS : compile
+App --> COMP : compile
+App --> DE : compile --data
+App --> CUR : run
+
+REC --> RECDB : salva gravacoes
+
+MIS --> RECDB : le raw_events.jsonl
+MIS --> COMP : SemanticTestCase
+DE --> RECDB : le raw_events.jsonl
+DE --> TDB : test_data.json
+COMP --> STDB : script.py
+
+CUR --> HC : L0: match()
+CUR --> FR : L1: fallback
+CUR --> SA : L2: route
+CUR --> TA
+CUR --> CA
+CUR --> StA
+CUR --> DA
+CUR --> IA
+CUR --> LLM : L3: heal()
+LLM --> LClient : chat()
+LLM --> LPrompts : prompts
+LLM --> EP : payload
+CUR --> EC : evidence
+EC --> EVIDB : manifest
+
+FC --> CUR : classify()
+OR --> App : validate
+PG --> OR : evaluate
+MR --> CUR : metrics
+
+LClient ..> AZURE : HTTPS
 
 @enduml

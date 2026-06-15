@@ -1,79 +1,141 @@
 @startuml
-title TestForge v1 — Componentes (9 modulos, 1876 LOC)
+title TestForge v0.3.0 — Componentes (28 modulos, 84 commits, 124 testes)
 
 skinparam packageStyle rectangle
 skinparam backgroundColor #FFFFFF
+skinparam componentStyle rectangle
 
-package "CLI (Typer)" as cli {
-  [app.py] as App
+' === CLI ===
+package "CLI" as cli #LightYellow {
+  [app.py\n(record, compile --data,\nrun inline healing,\npipeline, demo-heal)] as App
 }
 
-package "Recorder" as recorder {
+' === Recorder ===
+package "Recorder" as recorder #LightGreen {
   [recorder_controller.py] as RC
   [recording_session.py] as RS
   [raw_event.py] as RE
   [raw_recording_store.py] as RRS
 }
 
-package "Evidence" as evidence {
-  [evidence_collector.py] as EC
+' === Evidence ===
+package "Evidence" as evidence #LightGreen {
+  [evidence_collector.py\n(+build_llm_payload)] as EC
   [evidence_store.py] as ES
 }
 
-package "Semantic (MIS)" as semantic {
+' === Semantic (MIS) ===
+package "Semantic (MIS)" as semantic #LightYellow {
   [model.py] as Model
   [recording_normalizer.py] as RN
-  [compiler.py] as Compiler
+  [compiler.py\n(+data-driven)] as Compiler
+  [data_extractor.py\n(test_data.json)] as DE
 }
 
-package "Oracle" as oracle {
+' === Healing L0-L3 ===
+package "Healing - L0" as l0 #LightGreen {
+  [healing_catalog.py\n(54 recipes, JSONL)] as HC
+}
+
+package "Healing - L1" as l1 #LightGreen {
+  [fallback_runner.py\n(MIS candidates)] as FR
+}
+
+package "Healing - L2 Agents" as l2 #LightBlue {
+  [agents/selector_agent.py] as SA
+  [agents/timing_agent.py] as TA
+  [agents/context_agent.py] as CA
+  [agents/state_agent.py] as StA
+  [agents/dynamic_dom_agent.py] as DA
+  [agents/input_agent.py] as IA
+}
+
+package "Healing - L3 LLM" as l3 #LightBlue {
+  [llm_healer.py\n(LLMHealer + MockLLMHealer)] as LHealer
+  [llm_client.py\n(Azure/OpenAI)] as LClient
+  [llm_prompts.py\n(11 family prompts EN)] as LPrompts
+  [evidence_payload.py\n(DOM, console, network)] as EP
+  [curator.py\n(CuradorAutomatico L0→L3)] as Curator
+}
+
+' === Oracle + Gate ===
+package "Oracle" as oracle #LightGreen {
   [oracle_runner.py] as OR
 }
 
-package "Promotion" as promotion {
+package "Promotion" as promotion #LightGreen {
   [promotion_gate.py] as PG
 }
 
-package "Taxonomy" as taxonomy {
-  [taxonomy.py] as TX
+' === Taxonomy ===
+package "Taxonomy" as taxonomy #LightBlue {
+  [taxonomy.py\n(11 families, 88 codes,\nkeyword+group classifier)] as TX
 }
 
-package "Runner" as runner {
-  [fallback_runner.py] as FR
-  [ShadowValidator] as SV
+' === Metrics ===
+package "Metrics" as metrics #LightGreen {
+  [metrics_repository.py\n(false_heal_rate, llm_rate)] as MR
 }
 
-package "Metrics" as metrics {
-  [metrics_repository.py] as MR
-}
-
+' === Storage ===
 database "recordings/" as rec
 database "evidence/" as ev
 database "semantic_tests/" as st
-database "generated_tests/" as gt
 
+' === CLI → Commands ===
 App --> RC : record
 App --> RN : compile
+App --> Compiler : compile
+App --> DE : compile --data
+App --> Curator : run (healing)
+
+' === Recorder Flow ===
 RC --> RE : RawRecordedEvent
 RC --> RS : RecordingSession
 RC --> RRS : JSONL persist
 RC --> rec : recordings/
 
+' === Semantic Flow ===
 RN --> rec : le raw_events.jsonl
 RN --> Model : SemanticTestCase
 Model --> Compiler
 Compiler --> st : semantic_tests/
-Compiler --> gt : generated_tests/
+DE --> rec : le raw_events.jsonl
+DE --> rec : test_data.json
 
+' === Healing Pipeline L0→L3 ===
+Curator --> HC : L0: match()
+Curator --> SA : L2: route_to_agent()
+Curator --> TA
+Curator --> CA
+Curator --> StA
+Curator --> DA
+Curator --> IA
+Curator --> LHealer : L3: heal()
+LHealer --> LClient : chat()
+LHealer --> LPrompts : FAMILY_PROMPTS
+LHealer --> EP : EvidencePayload
+Curator --> EC : collect evidence
+
+' === Oracle + Gate ===
 OR --> App : visual_dom, business_state
 PG --> OR : avalia resultados
-PG --> ev : le evidencias
 EC --> ev : evidence/
 
-FR --> App : fallback deterministico
-SV --> TX : classifica falha
+' === Taxonomy ===
+TX --> Curator : classify()
 TX --> FR : estrategia sugerida
 
-MR --> PG : coleta metricas
+' === Metrics ===
+MR --> Curator : coleta metricas
+MR --> App : summary
+
+' === Legend ===
+legend right
+  |= Cor |= Significado |
+  | <#LightGreen> | v0.1.0 — estável |
+  | <#LightYellow> | v0.3.0 — atualizado |
+  | <#LightBlue> | v0.3.0 — novo |
+endlegend
 
 @enduml
