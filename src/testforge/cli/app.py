@@ -22,6 +22,14 @@ from testforge.evidence import EvidenceCollector
 import pathlib
 _PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent.parent
 import pathlib
+import re as _re
+
+
+def _sanitize_name(name: str) -> str:
+    """Sanitize test/recording name: remove special chars, keep alnum, underscore, hyphen."""
+    sanitized = _re.sub(r'[^a-zA-Z0-9_-]', '_', name)
+    sanitized = _re.sub(r'_+', '_', sanitized).strip('_')
+    return sanitized or "unnamed"
 
 
 def _check_python_keyboard(page, recorder):
@@ -154,7 +162,7 @@ def cmd_compile(args):
         print(f"[TestForge] ✓ Massa de dados: {data_file}")
 
     compiler = PlaywrightCompiler()
-    safe_rec_id = rec_id.replace(" ", "_").replace("/", "_")
+    safe_rec_id = _sanitize_name(rec_id)
     out_dir = args.output or str(_PROJECT_ROOT / f"semantic_tests/ST-{safe_rec_id}")
     path = compiler.compile(stc, out_dir, data_file=data_file)
 
