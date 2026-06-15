@@ -127,7 +127,7 @@ def _extract_json(text: str) -> Optional[str]:
 
 
 def _parse_response(text: str) -> Optional[LLMHealingProposal]:
-    """Parse LLM response into LLMHealingProposal. Returns None if invalid."""
+    """Parse LLM response into LLMHealingProposal. Accepts both full format and simple 'selector' alias."""
     json_str = _extract_json(text)
     if not json_str:
         return None
@@ -135,6 +135,22 @@ def _parse_response(text: str) -> Optional[LLMHealingProposal]:
         data = json.loads(json_str)
     except json.JSONDecodeError:
         return None
+
+    # Accept 'selector' as alias for 'new_locator'
+    if "selector" in data and "new_locator" not in data:
+        data["new_locator"] = data["selector"]
+
+    # Fill in defaults for missing fields
+    if "taxonomy_id" not in data:
+        data["taxonomy_id"] = "SEL-004"
+    if "family" not in data:
+        data["family"] = "FAM-01"
+    if "strategy" not in data:
+        data["strategy"] = "has_text_fallback"
+    if "confidence" not in data:
+        data["confidence"] = 0.85
+    if "rationale" not in data:
+        data["rationale"] = "LLM proposed fix via 'selector' field"
 
     required = {"taxonomy_id", "family", "strategy", "new_locator", "confidence", "rationale"}
     if not required.issubset(data.keys()):

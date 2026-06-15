@@ -324,13 +324,27 @@ def cmd_run(args):
                             if ok:
                                 print(f"  ✓ Step {step_num}: click")
                             else:
-                                raise Exception(f"click step {step_num} falhou")
+                                # Re-try with longer wait before failing
+                                page.wait_for_timeout(1000)
+                                ok = fallback.try_click(candidates)
+                                if ok:
+                                    print(f"  ✓ Step {step_num}: click (after wait)")
+                                else:
+                                    tried = ', '.join([c['selector'][:40] for c in candidates[:3]])
+                                    raise Exception(f"click step {step_num} falhou — candidates: [{tried}]")
                         elif sel:
-                            page.click(sel, timeout=5000)
-                            page.wait_for_timeout(300)
-                            print(f"  ✓ Step {step_num}: click")
-                        else:
-                            print(f"  - Step {step_num}: click skip (sem seletor)")
+                            try:
+                                page.click(sel, timeout=5000)
+                                page.wait_for_timeout(300)
+                                print(f"  ✓ Step {step_num}: click")
+                            except Exception:
+                                page.wait_for_timeout(1000)
+                                try:
+                                    page.click(sel, timeout=5000)
+                                    page.wait_for_timeout(300)
+                                    print(f"  ✓ Step {step_num}: click (after wait)")
+                                except Exception as e2:
+                                    raise Exception(f"click step {step_num} falhou — selector '{sel[:80]}' not found") from e2
 
                     elif action == "assert":
                         assert_type = step.context.get("assert_type", "textual") if step.context else "textual"

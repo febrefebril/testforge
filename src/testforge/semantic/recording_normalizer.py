@@ -191,7 +191,8 @@ class RecordingNormalizer:
         if target_data.get("text"):
             text = _clean_text(target_data["text"])
             if text:
-                candidates.append(LocatorCandidate("text", f"text={text}", 0.60, f"visible text"))
+                # Use :has-text (substring match, more robust) instead of text= (exact match)
+                candidates.append(LocatorCandidate("text", f":has-text(\"{text}\")", 0.55, f"visible text"))
 
         # Fallback: CSS classes (stable, non-hash, non-generic)
         class_list = target_data.get("class_list") or []

@@ -75,7 +75,7 @@ class FallbackRunner:
         """Tenta preencher com cada candidato ate funcionar."""
         for c in candidates:
             try:
-                self._page.fill(c["selector"], value, timeout=2000)
+                self._page.fill(c["selector"], value, timeout=5000)
                 self._page.wait_for_timeout(100)
                 return True
             except Exception:
@@ -86,7 +86,7 @@ class FallbackRunner:
         """Tenta clicar com cada candidato ate funcionar."""
         for c in candidates:
             try:
-                self._page.click(c["selector"], timeout=2000)
+                self._page.click(c["selector"], timeout=5000)
                 self._page.wait_for_timeout(100)
                 return True
             except Exception:
@@ -98,7 +98,7 @@ class FallbackRunner:
         all_selectors = [primary] + fallbacks
         for sel in all_selectors:
             try:
-                self._page.fill(sel, value, timeout=2000)
+                self._page.fill(sel, value, timeout=5000)
                 self._page.wait_for_timeout(100)
                 return True, sel
             except Exception:
@@ -110,7 +110,7 @@ class FallbackRunner:
         all_selectors = [primary] + fallbacks
         for sel in all_selectors:
             try:
-                self._page.click(sel, timeout=2000)
+                self._page.click(sel, timeout=5000)
                 self._page.wait_for_timeout(100)
                 return True, sel
             except Exception:
