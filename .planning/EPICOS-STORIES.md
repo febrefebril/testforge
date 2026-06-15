@@ -174,3 +174,37 @@
 - Dados de teste versionáveis separados do código
 - Script não precisa ser recompilado para mudar massa
 - Sensitive data: alert_only no MVP
+
+---
+
+## EP-11: Debug + Robustez do Healing (v0.3.1) 🔧
+
+**Objetivo:** Diagnosticar e corrigir falhas de cura em gravações reais (CAIXA)
+
+### Diagnóstico (2026-06-15)
+
+Gravação de 18 passos no site CAIXA revelou:
+
+| Problema | Causa | Impacto |
+|----------|-------|---------|
+| 5 steps sem seletor | Recorder capturou clicks em elementos sem text/id/role | Steps pulados, sem cobertura |
+| "click step N falhou" não classifica | Mensagem genérica → classifier cai em OBS-001 (FAM-10) | LLM não recebe família correta |
+| LLM retorna confidence 0 | Prompt sem contexto (selector vazio) + taxonomy FAM-10 não tem agente L2 | Cura falha mesmo com LLM real |
+| Steps 4,5,6,8,10 pulados | `sel` vazio + `candidates` vazio → "skip (sem seletor)" | Perda de cobertura de teste |
+
+### Correções Aplicadas
+
+| Story | Descricao | Status |
+|-------|-----------|--------|
+| US-11.01 | Compiler: mensagem de erro inclui seletores tentados | ✓ |
+| US-11.02 | cmd_run: mensagem de erro inclui seletor/candidates para classifier | ✓ |
+| US-11.03 | _heal_step: inferir seletor do target (role, id, tag) quando candidates vazio | ✓ |
+| US-11.04 | _heal_step: log do raw_response do LLM quando confidence < 0.3 | ✓ |
+| US-11.05 | cmd_run: status do healer (Mock/LLM real) visível no output | ✓ |
+| US-11.06 | Recorder: melhorar captura de atributos (parent text, CSS classes, aria-*) | Pendente |
+| US-11.07 | MIS: gerar candidates de fallback (DOM path, parent context) | Pendente |
+
+### Próximos Passos
+- Melhorar Recorder para capturar mais atributos de elementos sem texto/id
+- MIS gerar candidates a partir de DOM path e contexto do elemento pai
+- Testar novamente contra site CAIXA após correções
