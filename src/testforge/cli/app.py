@@ -348,7 +348,15 @@ def cmd_run(args):
                 except Exception as e:
                     failed_steps += 1
                     error_msg = str(e)[:300]
-                    print(f"  ✗ Step {step_num}: {action} FAILED — {error_msg[:80]}")
+                    # Include selector info for better classification
+                    if sel:
+                        error_msg = f"Step {step_num}: {action} failed — selector '{sel[:80]}' not found. {error_msg}"
+                    elif candidates:
+                        tried = ', '.join([c['selector'][:40] for c in candidates[:3]])
+                        error_msg = f"Step {step_num}: {action} failed — candidates [{tried}] all failed. {error_msg}"
+                    else:
+                        error_msg = f"Step {step_num}: {action} failed — no selector available for target. {error_msg}"
+                    print(f"  ✗ Step {step_num}: {action} FAILED — {error_msg[:100]}")
 
                     # Pipeline de cura para este step
                     healed_step = _heal_step(
@@ -389,7 +397,7 @@ def _heal_step(page, step, error_msg: str, base_url: str, step_num: int,
     if not failure.recoverable:
         return False
 
-    # Coletar evidencias
+    # Coletar evidencias com DOM do momento da falha
     collector = EvidenceCollector(page)
     collector.start(f"heal-step-{step_num}")
 
@@ -399,16 +407,28 @@ def _heal_step(page, step, error_msg: str, base_url: str, step_num: int,
     text_val = step.target.text if step.target else ""
     value = step.value or ""
 
+    # If no selector, try to guess from target data
+    if not sel and step.target:
+        if step.target.element_id:
+            sel = f"#{step.target.element_id}"
+        elif step.target.role and step.target.text:
+            sel = f"[role='{step.target.role}']:has-text('{step.target.text[:40]}')"
+        elif step.target.role:
+            sel = f"[role='{step.target.role}']"
+        elif step.target.tag:
+            sel = step.target.tag
+
     step_context = {
         "action": step.action,
-        "selector": sel,
+        "selector": sel or "(empty — no selector available)",
         "text": text_val or "",
         "value": value,
-        "intention": f"{step.action} {text_val or sel}",
+        "intention": f"{step.action} step {step_num}" + (f" on '{text_val}'" if text_val else ""),
         "url": base_url,
         "framework": app_name or "generic",
         "family": failure.family_code,
         "taxonomy_id": failure.taxonomy_id,
+        "step_number": step_num,
     }
 
     payload = collector.build_llm_payload(step_context, include_screenshot=False)
@@ -436,7 +456,7 @@ def _heal_step(page, step, error_msg: str, base_url: str, step_num: int,
     print(f"    Healer: {curator._healer_type}")
 
     cure_data = {
-        "selector": sel,
+        "selector": sel or "",
         "action": step.action,
         "base_url": base_url,
         "value": value,
@@ -447,6 +467,8 @@ def _heal_step(page, step, error_msg: str, base_url: str, step_num: int,
     print(f"    Curador: {outcome.status} [{outcome.layer_used}]", end="")
     if outcome.proposal:
         print(f" → {outcome.proposal.new_locator[:60]} (conf={outcome.proposal.confidence:.2f})")
+        if outcome.proposal.confidence < 0.3 and outcome.proposal.raw_response:
+            print(f"    LLM raw: {outcome.proposal.raw_response[:200]}")
     else:
         print()
 

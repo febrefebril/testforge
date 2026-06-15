@@ -174,7 +174,8 @@ class PlaywrightCompiler:
         lines.append("        except Exception:")
         lines.append("            continue")
         lines.append("    else:")
-        lines.append(f"        raise AssertionError(f\"fill step {idx} falhou\")")
+        lines.append(f"        raise AssertionError(f\"fill step {idx} falhou "
+                      f"— selectors tried: {{_sels}}\")")
         lines.append("")
         return lines
 
@@ -203,7 +204,8 @@ class PlaywrightCompiler:
         lines.append("        except Exception:")
         lines.append("            continue")
         lines.append("    else:")
-        lines.append(f"        raise AssertionError(f\"click step {idx} falhou\")")
+        lines.append(f"        raise AssertionError(f\"click step {idx} falhou "
+                      f"— selectors tried: {{_sels}}\")")
         lines.append("")
         return lines
 
