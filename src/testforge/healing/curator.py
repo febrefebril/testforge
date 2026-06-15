@@ -135,9 +135,11 @@ class CuradorAutomatico:
         from .llm_client import is_available
         if is_available():
             self._healer: LLMHealer = LLMHealer()
+            self._healer_type = "LLM real (Azure/OpenAI)"
             logger.info("LLMHealer real ativado (Azure OpenAI / OpenAI)")
         else:
             self._healer = MockLLMHealer()
+            self._healer_type = "MockLLMHealer (deterministico)"
             logger.info("MockLLMHealer ativado (deterministico) — configure AZURE_OPENAI_KEY para LLM real")
 
     # ── Public API ──────────────────────────────────────────────────────

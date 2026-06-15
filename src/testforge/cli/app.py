@@ -216,6 +216,14 @@ def cmd_run(args):
 
     print(f"[TestForge] Executando: {script_path}")
     print(f"  URL base: {base_url}")
+
+    # Check LLM availability
+    from testforge.healing.llm_client import is_available
+    if is_available():
+        print(f"  Healer: LLM real (Azure/OpenAI)")
+    else:
+        print(f"  Healer: MockLLMHealer (deterministico — configure AZURE_OPENAI_ENDPOINT para LLM real)")
+
     if recording_id:
         print(f"  Recording: {recording_id}")
 
@@ -424,6 +432,8 @@ def _heal_step(page, step, error_msg: str, base_url: str, step_num: int,
         catalog=HealingCatalog(),
         step_runner=step_runner,
     )
+
+    print(f"    Healer: {curator._healer_type}")
 
     cure_data = {
         "selector": sel,
