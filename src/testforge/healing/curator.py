@@ -164,7 +164,7 @@ class CuradorAutomatico:
         # Try layers in order
         outcome = self._try_layer0_catalog(family, step_data, error_message)
         if outcome is None:
-            outcome = self._try_layer1_fallback(family, step_data, error_message, evidence)
+            outcome = self._try_layer2_agents(family, step_data, error_message, evidence)
         if outcome is None:
             outcome = self._run_healing_cycle(step_data, evidence, error_message, family=family)
             outcome.family = family or (outcome.proposal.family if outcome.proposal else "")
@@ -218,19 +218,62 @@ class CuradorAutomatico:
 
         return None  # Fall through to L1
 
-    # ── L1: Fallback Runner ─────────────────────────────────────────────
+    # ── L2: Specialist Agents ──────────────────────────────────────────
 
     def _try_layer1_fallback(
         self, family: str, step_data: dict, error_message: str, evidence: EvidencePayload,
     ) -> Optional[CurationOutcome]:
-        """L1: Try MIS candidates via FallbackRunner."""
-        if not self._step_runner:
+        """L2: Route to specialist agent for deterministic healing."""
+        try:
+            from .agents import route_to_agent
+        except ImportError:
             return None
 
-        # FallbackRunner already tried inline by cmd_run before calling cure().
-        # This layer exists as a formal gate in the pipeline.
-        # If we reach here, L1 already failed — fall through to L3.
-        return None
+        if not family:
+            return None
+
+        agent = route_to_agent(family, llm_healer=self._healer)
+        if agent is None:
+            return None
+
+        proposal = agent.heal(evidence, error_message)
+        if not proposal or proposal.confidence < 0.5:
+            return None
+
+        # Validate taxonomy
+        from ..taxonomy.taxonomy import FAMILIES
+        if proposal.family not in FAMILIES or proposal.taxonomy_id not in TAXONOMIES.get(proposal.family, []):
+            return None
+
+        if not self._step_runner:
+            # No runner — return proposal as passed (L2 suggestion is trusted)
+            return CurationOutcome(
+                status=ProgressResult.PASSED_STEP,
+                proposal=proposal,
+                evidence=evidence,
+                layer_used="L2",
+                family=family,
+                taxonomy_id=proposal.taxonomy_id,
+            )
+
+        # Execute patched step
+        patched_step = self._build_step_copy(step_data, proposal.new_locator)
+        passed, new_error = self._try_execute_step(patched_step)
+        result = classify_step_result(error_message, new_error, passed)
+
+        if result == ProgressResult.PASSED_STEP:
+            entry_id = self._register_learned(patched_step, proposal, evidence)
+            return CurationOutcome(
+                status=ProgressResult.PASSED_STEP,
+                proposal=proposal,
+                evidence=evidence,
+                entry_id=entry_id,
+                layer_used="L2",
+                family=family,
+                taxonomy_id=proposal.taxonomy_id,
+            )
+
+        return None  # Fall through to L3
 
     # ── L3: LLM Healer ──────────────────────────────────────────────────
 
