@@ -113,15 +113,15 @@
 
 ---
 
-## Sprint 10: Prompt Pack + Docs Finais ⏳
+## Sprint 10: Prompt Pack + Docs Finais ✅
 
 | Tarefa | Status |
 |--------|--------|
-| T-10.01 — Criar `.planning/prompt-pack-v0.2.0.md` | Pendente |
-| T-10.02 — Prompts para cada fase (record, compile, run, heal) | Pendente |
-| T-10.03 — Prompt de code review | Pendente |
-| T-10.04 — Prompt de verificacao | Pendente |
-| T-10.05 — TUTORIAL.md para LLM healing | Pendente |
+| T-10.01 — Criar `.planning/prompt-pack-v0.3.0.md` | ✅ |
+| T-10.02 — Prompts para cada fase (record, compile, run, heal) | ✅ |
+| T-10.03 — Prompt de code review + verificacao | ✅ |
+| T-10.04 — TUTORIAL.md para LLM healing | ✅ |
+| T-10.05 — Data-driven testing (massa de dados externa) | ✅ |
 
 ---
 

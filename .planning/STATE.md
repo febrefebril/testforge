@@ -1,17 +1,19 @@
 # TestForge — Estado do Projeto
 
 **Inicio:** 2026-06-13
-**Versao:** 0.2.0-dev
-**Fase:** LLM Self-Healing L3 — Fase 1 concluida (taxonomia)
-**Ultimo commit:** `b66803f` feat: expandir taxonomia 6→11 familias, 80+ codigos, keyword+group classifier
+**Versao:** 0.3.0
+**Fase:** v0.3.0 Shipada — LLM Self-Healing completo
+**Ultimo commit:** `17a4708` feat: data-driven testing
 
 ## Metricas
-- **65 commits** no main
-- **99 testes** passando
-- **3239 linhas** de codigo
-- **16 modulos** implementados
+- **19 commits** nesta sessão (77 total no projeto)
+- **124 testes** passando
+- **24 modulos** implementados
 - **13 diagramas** PlantUML
 - **88 falhas** catalogadas na taxonomia
+- **6 agentes** especialistas L2
+- **11 prompts** família-específicos (EN)
+- **LLM real validado:** Azure GPT-4.1-mini curou `change_id` (conf 0.90)
 
 ## Milestones Concluidos
 - [x] BMAD Brainstorming (Failure Analysis + Five Whys)
