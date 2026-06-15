@@ -1,11 +1,14 @@
 """TestForge — Evidence Collector."""
 import json
 import os
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
 from playwright.sync_api import Page
+
+from ..healing.evidence_payload import EvidencePayload
 
 
 @dataclass
@@ -30,6 +33,9 @@ class EvidenceCollector:
         self._pkg: Optional[EvidencePackage] = None
         self._screenshot_dir: str = ""
         self._dom_dir: str = ""
+        self._console_buffer: list[dict] = []
+        self._network_buffer: list[dict] = []
+        self._listeners_active: bool = False
 
     def start(self, run_id: str, metadata: dict = None):
         self._pkg = EvidencePackage(
@@ -41,6 +47,9 @@ class EvidenceCollector:
         self._dom_dir = os.path.join(self._root, run_id, "dom")
         os.makedirs(self._screenshot_dir, exist_ok=True)
         os.makedirs(self._dom_dir, exist_ok=True)
+        self._console_buffer.clear()
+        self._network_buffer.clear()
+        self._setup_listeners()
 
     def capture_screenshot(self, step_id: str, phase: str = "after") -> str:
         """Captura screenshot. phase = 'before' ou 'after'."""
@@ -122,6 +131,89 @@ class EvidenceCollector:
                 json.dump(data, f, indent=2, default=str)
 
         return pkg_dir
+
+    def _setup_listeners(self):
+        """Registra listeners de console e network no page."""
+        if self._listeners_active or not self._page:
+            return
+        try:
+            self._page.on("console", self._on_console)
+            self._page.on("response", self._on_response)
+            self._listeners_active = True
+        except Exception:
+            pass
+
+    def _on_console(self, msg):
+        """Handler: console message."""
+        try:
+            self._console_buffer.append({
+                "text": str(msg.text)[:500],
+                "level": msg.type,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            })
+        except Exception:
+            pass
+
+    def _on_response(self, response):
+        """Handler: network response."""
+        try:
+            self._network_buffer.append({
+                "method": response.request.method,
+                "url": response.url[:300],
+                "status": response.status,
+                "timing_ms": 0,
+            })
+        except Exception:
+            pass
+
+    def build_llm_payload(
+        self,
+        step_context: dict,
+        include_screenshot: bool = False,
+    ) -> EvidencePayload:
+        """Build structured evidence payload for LLM Healer (L3).
+
+        Collects DOM snapshot, recent console errors, recent network requests,
+        and optional screenshot. Sanitizes DOM before inclusion.
+        """
+        dom_html = ""
+        screenshot_bytes = None
+
+        if self._page:
+            try:
+                dom_html = self._page.content()
+            except Exception:
+                dom_html = ""
+
+            if include_screenshot:
+                try:
+                    screenshot_bytes = self._page.screenshot(type="png", full_page=False)
+                except Exception:
+                    screenshot_bytes = None
+
+        # Last 5 console errors (filter warnings/errors)
+        recent_console = [e for e in self._console_buffer[-5:]
+                         if e.get("level", "") in ("error", "warning", "info")]
+
+        # Last 3 network requests (truncate URLs)
+        recent_network = []
+        for entry in self._network_buffer[-3:]:
+            entry_copy = dict(entry)
+            entry_copy["url"] = EvidencePayload.truncate_url(entry_copy.get("url", ""), 120)
+            recent_network.append(entry_copy)
+
+        return EvidencePayload.from_collector(
+            step_context=step_context,
+            dom_html=dom_html,
+            console_entries=recent_console,
+            network_entries=recent_network,
+            screenshot_bytes=screenshot_bytes,
+        )
+
+    def clear_buffers(self):
+        """Clear console and network buffers (between runs)."""
+        self._console_buffer.clear()
+        self._network_buffer.clear()
 
     @property
     def package(self) -> Optional[EvidencePackage]:
