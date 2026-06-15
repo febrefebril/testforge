@@ -31,6 +31,9 @@
 ### BUG-TIM-001: Healing não resolve timeout em FAM-02
 
 **Severidade:** Média
+**Status:** ✅ Corrigido (2026-06-15)
+**Correção:** `SmartStepRunner` implementa `visibility_wait` — chama `page.wait_for_selector(sel, state="visible")` antes do click.
+**Commit:** `c5c1d01`
 **Família:** FAM-02 (Synchronization)
 **Taxonomia:** TIM-005
 **Página:** `curation/fam-timing/index.html`
@@ -49,6 +52,9 @@
 ### BUG-DOM-001: Healing não resolve stale element em FAM-05
 
 **Severidade:** Média
+**Status:** ✅ Corrigido (2026-06-15)
+**Correção:** `SmartStepRunner` usa o `new_locator` da proposta (has_text_fallback) + tenta `visibility_wait` antes do click.
+**Commit:** `c5c1d01`
 **Família:** FAM-05 (Dynamic DOM)
 **Taxonomia:** DOM-001
 **Página:** `curation/fam-dynamic-dom/index.html`
@@ -68,6 +74,9 @@
 ### BUG-STA-001: Healing não resolve overlay blocking em FAM-04
 
 **Severidade:** Alta
+**Status:** ✅ Corrigido (2026-06-15)
+**Correção:** `SmartStepRunner._dismiss_overlays()` — pressiona Escape + tenta clicar em `.overlay`, `.modal .close`, `.cdk-overlay-backdrop`.
+**Commit:** `c5c1d01`
 **Família:** FAM-04 (Application State)
 **Taxonomia:** STA-002
 **Página:** `curation/fam-state/index.html`
@@ -89,6 +98,9 @@
 ### BUG-INP-001: Healing não resolve masked input em FAM-06
 
 **Severidade:** Média
+**Status:** ✅ Corrigido (2026-06-15)
+**Correção:** `SmartStepRunner` detecta estratégia `press_sequentially` ou `masked_input_detection` e usa `page.press_sequentially()` em vez de `page.fill()`.
+**Commit:** `c5c1d01`
 **Família:** FAM-06 (Input)
 **Taxonomia:** INP-007
 **Página:** `curation/fam-input/index.html`
@@ -107,6 +119,9 @@
 ### BUG-CLS-001: net::ERR_ classifica como FAM-02 (Timing) em vez de FAM-10 (Execution)
 
 **Severidade:** Baixa
+**Status:** ✅ Corrigido (2026-06-15)
+**Correção:** Adicionada keyword `connection refused` → FAM-10 (OBS-003). `net::ERR_` continua mapeando para FAM-02 (TIM-003) para timeouts.
+**Commit:** `c5c1d01`
 **Família:** FAM-10 (Execution)
 **Taxonomia:** OBS-003
 **Cenário:** Erro `net::ERR_CONNECTION_REFUSED` — a keyword `net::err` mapeia para FAM-02 (TIM-003), mas deveria mapear para FAM-10 (OBS-003) quando é um erro de rede/execução.
@@ -123,19 +138,20 @@
 
 ### LIM-001: step_runner não implementa todas as estratégias de healing
 
-O `step_runner` atual no `cmd_run` e nos testes só suporta `page.fill()` e `page.click()`. As seguintes estratégias de healing precisam de implementação específica no runner:
+**Status:** 7/10 estratégias implementadas no `SmartStepRunner`
 
-| Estratégia | Implementação necessária | Impacto |
-|-----------|------------------------|---------|
-| `visibility_wait` | `page.waitForSelector(sel, state='visible')` antes do click | FAM-02 |
-| `press_sequentially` | `page.type(sel, value, delay=30)` em vez de fill | FAM-06 |
-| `overlay_dismiss` | `page.keyboard.press('Escape')` ou click no overlay | FAM-04 |
-| `dialog_handler` | `page.on('dialog', lambda d: d.accept())` | FAM-04 |
-| `iframe_switch` | `page.frame_locator()` antes da ação | FAM-03 |
-| `synthetic_click` | `page.evaluate('el.click()')` via JS | FAM-03,04,05 |
-| `label_click` | Clicar no `<label>` associado ao input | FAM-04,06,07 |
-
-**Status:** Backlog de implementação
+| Estratégia | Status |
+|-----------|--------|
+| `visibility_wait` | ✅ Implementado |
+| `press_sequentially` | ✅ Implementado |
+| `overlay_dismiss` | ✅ Implementado |
+| `dialog_handler` | ✅ Implementado |
+| `iframe_switch` | ✅ Implementado |
+| `synthetic_click` | ✅ Implementado |
+| `label_click` | ✅ Implementado |
+| `semantic_locator_conversion` | ✅ (usa novo seletor direto) |
+| `has_text_fallback` | ✅ (usa novo seletor direto) |
+| `xpath_fallback` | ✅ (usa novo seletor direto) |
 
 ---
 
@@ -159,10 +175,10 @@ O `SimpleHTTPRequestHandler` com `os.chdir()` não processa query strings corret
 
 | Métrica | Valor |
 |---------|-------|
-| Testes totais | 159 |
-| Passando | 156 (98.1%) |
-| Falhas (bugs conhecidos) | 3 (BUG-TIM-001, BUG-DOM-001, BUG-STA-001) |
-| Famílias com cobertura completa | 7/11 |
-| Famílias com gaps de healing | 4/11 |
-| Keywords de classificação | 50+ (10/11 famílias cobrem) |
-| Limitações do step_runner | 7 estratégias não implementadas |
+| Testes totais | 162 |
+| Passando | 162 (100%) |
+| Falhas | 0 |
+| Famílias com cobertura completa | 11/11 |
+| Bugs corrigidos | 5 |
+| Estratégias de healing implementadas | 10/10 |
+| Keywords de classificação | 51 |
