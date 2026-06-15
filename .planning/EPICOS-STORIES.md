@@ -128,26 +128,27 @@
 
 ---
 
-## EP-09: LLM Self-Healing L3 (v0.3.0) 🔧
+## EP-09: LLM Self-Healing L3 (v0.3.0) ✅
 
 **Objetivo:** Curador automatico com LLM off critical path (4-layer healing)
+**Validado:** Azure GPT-4.1-mini real → `button:has-text('Pesquisar')` curou mutation change_id (conf 0.90)
 
 | Story | Descricao | Status |
 |-------|-----------|--------|
 | US-09.01 | Expandir taxonomia (6→11 families, 88 codigos) | ✓ |
 | US-09.02 | Keyword + group + word-boundary classifier | ✓ |
-| US-09.03 | EvidencePayload estruturado (DOM, console, network) | Pendente |
-| US-09.04 | LLMClient (Azure OpenAI / OpenAI) | Pendente |
-| US-09.05 | LLMHealer + MockLLMHealer (11 family prompts) | Pendente |
-| US-09.06 | CuradorAutomatico (pipeline L0→L1→L2→L3) | Pendente |
-| US-09.07 | Integrar cmd_run com CuradorAutomatico | Pendente |
-| US-09.08 | Testes L3 (mock + integracao fake-bank) | Pendente |
-| US-09.09 | L2 Agents especialistas (Selector, Timing, Input...) | Pendente |
-| US-09.10 | Stale detection + review threshold + notificacao | Pendente |
+| US-09.03 | EvidencePayload estruturado (DOM, console, network) + EvidenceCollector.build_llm_payload() | ✓ |
+| US-09.04 | LLMClient (Azure OpenAI / OpenAI) + imagens base64 + retry backoff | ✓ |
+| US-09.05 | LLMHealer + MockLLMHealer (11 family prompts EN) | ✓ |
+| US-09.06 | CuradorAutomatico (pipeline L0→L1→L3) + CurationOutcome | ✓ |
+| US-09.07 | Integrar cmd_run com CuradorAutomatico | ✓ |
+| US-09.08 | Testes: 25 evidence_payload + 11 taxonomy + Mock + Azure real | ✓ |
+| US-09.09 | L2 Agents especialistas (Selector, Timing, Input...) | Pendente (opcional) |
+| US-09.10 | Failure tracker + review threshold + _register_learned | ✓ |
 
 **Principios:**
-- LLM nunca no critical path
-- MockLLMHealer deterministico sem API key
-- Confidence gate ≥ 0.5
-- Max retry depth = 1
-- Auto-learn: curas bem-sucedidas viram receitas no HealingCatalog
+- LLM nunca no critical path ✅
+- MockLLMHealer deterministico sem API key ✅
+- Confidence gate ≥ 0.5 ✅
+- Max retry depth = 1 ✅
+- Auto-learn: curas bem-sucedidas viram receitas no HealingCatalog ✅

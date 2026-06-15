@@ -1,39 +1,31 @@
 # Sprint Planning — TestForge v0.2.0 → v0.3.0
 
 **Data:** 2026-06-15
-**Status:** Sprint 8 concluida ✅ | Sprint 9 em andamento 🔧
+**Status:** Sprint 8 ✅ | Sprint 9 ✅ | Sprint 10 ⏳
 
 ---
 
 ## Sprint 8: CLI + Pipeline Integrada ✅
 
 ### US-07.01: CLI Entry Point ✅
-
-| Tarefa | Status |
-|--------|--------|
-| T-07.01.01 — Atualizar `pyproject.toml` com `[project.scripts]` | ✅ |
-| T-07.01.02 — `testforge = "testforge.cli.app:main"` | ✅ |
-| T-07.01.03 — `pip install -e .` → comando `testforge` disponivel | ✅ |
-| T-07.01.04 — `testforge --help` mostra comandos | ✅ |
-
 ### US-07.02: Comando Record ✅
 ### US-07.03: Comando Compile ✅
 ### US-07.04: Comando Run ✅
 ### US-07.05: Pipeline Completa ✅
 ### US-07.06: Demo Healing Real ✅
 
-**Criterios de Aceite da Sprint 8:**
+**Criterios de Aceite:**
 - [x] `testforge record http://localhost:8765` grava fluxo
 - [x] `testforge compile REC-001` gera script valido
 - [x] `testforge run semantic_tests/test_*.py` executa com healing
 - [x] Demo: gravar → quebrar seletor → healing corrige
-- [x] 99/99 testes passando
 
 ---
 
-## Sprint 9: LLM Self-Healing L3 🔧
+## Sprint 9: LLM Self-Healing L3 ✅
 
 **Objetivo:** Curador automatico com LLM off critical path
+**Validado:** Azure GPT-4.1-mini real curou seletor quebrado no fake-bank
 
 ### US-09.01: Expandir Taxonomia ✅
 
@@ -47,83 +39,81 @@
 | T-09.01.06 — Atualizar FallbackRunner (FailureFamily.ACTIONABILITY → STATE/DOM/INPUT) | ✅ |
 | T-09.01.07 — 11 novos testes de classificacao | ✅ |
 
-### US-09.02: EvidencePayload Estruturado ⏳
+### US-09.02: EvidencePayload Estruturado ✅
 
 | Tarefa | Status |
 |--------|--------|
-| T-09.02.01 — `EvidencePayload` dataclass (step_context, dom, console, network) | Pendente |
-| T-09.02.02 — Sanitizacao: DOM trunc 3000 chars | Pendente |
-| T-09.02.03 — Adaptar `EvidenceCollector.build_llm_payload()` | Pendente |
-| T-09.02.04 — `is_sufficient` + `insufficiency_reason` | Pendente |
+| T-09.02.01 — `EvidencePayload` dataclass (step_context, dom, console, network) | ✅ |
+| T-09.02.02 — Sanitizacao: DOM trunc 3000 chars, strip scripts/styles | ✅ |
+| T-09.02.03 — Adaptar `EvidenceCollector.build_llm_payload()` | ✅ |
+| T-09.02.04 — `is_sufficient` (DOM ≥100 chars) | ✅ |
 
-### US-09.03: LLM Client ⏳
-
-| Tarefa | Status |
-|--------|--------|
-| T-09.03.01 — `LLMClient.chat()` — Azure OpenAI / OpenAI | Pendente |
-| T-09.03.02 — Auto-detectar provider via env vars | Pendente |
-| T-09.03.03 — Suporte a imagens base64 (screenshots) | Pendente |
-| T-09.03.04 — Retry com exponential backoff (429) | Pendente |
-| T-09.03.05 — `extract_code_block()` e `_parse_response()` | Pendente |
-
-### US-09.04: LLMHealer + MockLLMHealer ⏳
+### US-09.03: LLM Client ✅
 
 | Tarefa | Status |
 |--------|--------|
-| T-09.04.01 — `LLMHealingProposal` dataclass | Pendente |
-| T-09.04.02 — 11 prompts familia-especificos (FAM01 a FAM11) | Pendente |
-| T-09.04.03 — `CURATION_PROMPT_TEMPLATE` generico | Pendente |
-| T-09.04.04 — `LLMHealer.heal()` — chama LLM → parse JSON → valida | Pendente |
-| T-09.04.05 — `MockLLMHealer` — deterministico, confidence 0.85 | Pendente |
-| T-09.04.06 — Ativacao automatica: Azure key → real, sem key → mock | Pendente |
+| T-09.03.01 — `LLMClient.chat()` — Azure OpenAI / OpenAI | ✅ |
+| T-09.03.02 — Auto-detectar provider via env vars | ✅ |
+| T-09.03.03 — Suporte a imagens base64 (screenshots) | ✅ |
+| T-09.03.04 — Retry com exponential backoff (429) | ✅ |
+| T-09.03.05 — `extract_code_block()` | ✅ |
 
-### US-09.05: CuradorAutomatico ⏳
-
-| Tarefa | Status |
-|--------|--------|
-| T-09.05.01 — `CurationOutcome` + `ProgressResult` dataclasses | Pendente |
-| T-09.05.02 — `CuradorAutomatico.cure()` — orquestrador L0→L3 | Pendente |
-| T-09.05.03 — `_try_layer1_catalog()` — HealingCatalog.match() | Pendente |
-| T-09.05.04 — `_try_layer2_agents()` — placeholder para agentes | Pendente |
-| T-09.05.05 — `_run_healing_cycle()` — LLMHealer → validar → executar | Pendente |
-| T-09.05.06 — `_register_learned()` / `_register_unresolved()` | Pendente |
-| T-09.05.07 — Failure count + review threshold (5) + notificacao | Pendente |
-| T-09.05.08 — Stale detection (90 dias) | Pendente |
-| T-09.05.09 — Rollback automatico (REGRESSED/STAGNATED) | Pendente |
-
-### US-09.06: Integrar cmd_run ⏳
+### US-09.04: LLMHealer + MockLLMHealer ✅
 
 | Tarefa | Status |
 |--------|--------|
-| T-09.06.01 — Coletar EvidencePayload durante execucao | Pendente |
-| T-09.06.02 — Chamar `CuradorAutomatico.cure()` na falha | Pendente |
-| T-09.06.03 — Registrar metricas (layer_used, llm_used) | Pendente |
-| T-09.06.04 — Report final com layer+confidence | Pendente |
+| T-09.04.01 — `LLMHealingProposal` dataclass | ✅ |
+| T-09.04.02 — 11 prompts familia-especificos (FAM01 a FAM11 — EN) | ✅ |
+| T-09.04.03 — `CURATION_PROMPT_TEMPLATE` generico | ✅ |
+| T-09.04.04 — `LLMHealer.heal()` — chama LLM → parse JSON → valida | ✅ |
+| T-09.04.05 — `MockLLMHealer` — deterministico, CSS selectors, confidence 0.85 | ✅ |
+| T-09.04.06 — Ativacao automatica: Azure key → real, sem key → mock | ✅ |
 
-### US-09.07: Testes L3 ⏳
+### US-09.05: CuradorAutomatico ✅
 
 | Tarefa | Status |
 |--------|--------|
-| T-09.07.01 — `test_llm_healer.py` — MockLLMHealer, parse, prompts | Pendente |
-| T-09.07.02 — `test_curator.py` — fluxo L0→L3, retry, threshold | Pendente |
-| T-09.07.03 — `test_evidence_payload.py` — trunc, sanitizacao | Pendente |
-| T-09.07.04 — `test_healing_l3_e2e.py` — fake-bank + change_id mutation | Pendente |
+| T-09.05.01 — `CurationOutcome` + `ProgressResult` dataclasses | ✅ |
+| T-09.05.02 — `CuradorAutomatico.cure()` — orquestrador L0→L3 | ✅ |
+| T-09.05.03 — `_try_layer0_catalog()` — HealingCatalog.match() | ✅ |
+| T-09.05.04 — `_try_layer1_fallback()` — placeholder para agentes | ✅ |
+| T-09.05.05 — `_run_healing_cycle()` — LLMHealer → validar → executar | ✅ |
+| T-09.05.06 — `_register_learned()` / `_register_unresolved()` | ✅ |
+| T-09.05.07 — Failure count + review threshold (5) + notificacao | ✅ |
+| T-09.05.08 — Stale detection (90 dias) | ✅ |
+| T-09.05.09 — Rollback automatico (REGRESSED/STAGNATED) | ✅ |
+
+### US-09.06: Integrar cmd_run ✅
+
+| Tarefa | Status |
+|--------|--------|
+| T-09.06.01 — Coletar EvidencePayload durante execucao | ✅ |
+| T-09.06.02 — Chamar `CuradorAutomatico.cure()` na falha | ✅ |
+| T-09.06.03 — Registrar metricas (layer_used, llm_used) | ✅ |
+| T-09.06.04 — Report final com layer+confidence | ✅ |
+
+### US-09.07: Testes ✅
+
+| Tarefa | Status |
+|--------|--------|
+| T-09.07.01 — `test_evidence_payload.py` — 25 testes: validacao, sanitizacao, integracao | ✅ |
+| T-09.07.02 — `test_taxonomy_runner.py` — 11 testes de classificacao expandidos | ✅ |
+| T-09.07.03 — Teste real: MockLLMHealer cura change_id | ✅ |
+| T-09.07.04 — Teste real: Azure GPT-4.1-mini cura change_id (conf 0.90) | ✅ |
+
+**Criterios de Aceite da Sprint 9:**
+- [x] `EvidencePayload` gerado com DOM truncado, console, network
+- [x] `MockLLMHealer` cura `change_id` sem API key
+- [x] `CuradorAutomatico.cure()` pipeline L0→L1→L3 funcional
+- [x] Curas bem-sucedidas registradas no HealingCatalog (`_register_learned`)
+- [x] Failure tracker + review threshold (5 falhas → notificacao)
+- [x] `testforge run` integrado com curador
+- [x] 124/124 testes passando
+- [x] LLM real validado: Azure GPT-4.1-mini → `button:has-text('Pesquisar')` (conf 0.90) → PASSED_STEP
 
 ---
 
-## Criterios de Aceite da Sprint 9
-
-- [ ] `EvidencePayload` gerado com DOM truncado, console, network
-- [ ] `MockLLMHealer` cura `change_id` sem API key
-- [ ] `CuradorAutomatico.cure()` pipeline L0→L1→L3 funcional
-- [ ] Curas bem-sucedidas registradas no HealingCatalog
-- [ ] 5 falhas consecutivas → notificacao
-- [ ] `testforge run` integrado com curador
-- [ ] 100% testes passando
-
----
-
-## Sprint 10: Prompt Pack + Docs Finais
+## Sprint 10: Prompt Pack + Docs Finais ⏳
 
 | Tarefa | Status |
 |--------|--------|
@@ -132,3 +122,15 @@
 | T-10.03 — Prompt de code review | Pendente |
 | T-10.04 — Prompt de verificacao | Pendente |
 | T-10.05 — TUTORIAL.md para LLM healing | Pendente |
+
+---
+
+## Backlog (futuro)
+
+| # | O quê | Prioridade |
+|---|-------|-----------|
+| P2 | cmd_run: re-execução do step curado inline (hoje pytest subprocess limita) | Média |
+| P3 | L2 Specialist Agents (Selector, Timing, Input, Context, State, DynamicDOM) | Baixa |
+| P4 | Flag `--llm` / `--no-llm` no CLI | Baixa |
+| P5 | Pipeline CI (GitHub Actions / Azure DevOps) | Baixa |
+| P6 | Dashboard web de métricas | Fora do MVP |
