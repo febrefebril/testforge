@@ -21,7 +21,6 @@ from testforge.evidence import EvidenceCollector
 
 import pathlib
 _PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent.parent
-import pathlib
 import re as _re
 
 

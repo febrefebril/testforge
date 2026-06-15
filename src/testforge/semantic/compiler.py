@@ -31,8 +31,8 @@ class PlaywrightCompiler:
         """
         os.makedirs(output_dir, exist_ok=True)
         safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', test_case.test_id)
-        os.makedirs(output_dir, exist_ok=True)
-        test_name = safe_id.lower()
+        safe_id = re.sub(r'_+', '_', safe_id).strip('_').lower()
+        test_name = safe_id
         filename = f"test_{test_name}.py"
         path = os.path.join(output_dir, filename)
 
@@ -72,6 +72,7 @@ class PlaywrightCompiler:
         lines.append("")
 
         safe_name = re.sub(r'[^a-zA-Z0-9_]', '_', tc.test_id).lower()
+        safe_name = re.sub(r'_+', '_', safe_name).strip('_')
         lines.append(f"def test_{safe_name}(page: Page):")
         lines.append(f'    """{tc.application or "Fluxo gravado"} — source: {tc.source_recording_id}."""')
 

@@ -220,7 +220,7 @@ class CuradorAutomatico:
 
     # ── L2: Specialist Agents ──────────────────────────────────────────
 
-    def _try_layer1_fallback(
+    def _try_layer2_agents(
         self, family: str, step_data: dict, error_message: str, evidence: EvidencePayload,
     ) -> Optional[CurationOutcome]:
         """L2: Route to specialist agent for deterministic healing."""
