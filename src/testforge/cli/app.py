@@ -159,7 +159,7 @@ def cmd_compile(args):
 
 
 def cmd_run(args):
-    """Executa script Playwright com healing L0→L3 via CuradorAutomatico."""
+    """Executa script Playwright inline com healing L0→L3 via CuradorAutomatico."""
     script_path = args.script
     if not os.path.exists(script_path):
         print(f"[TestForge] ✗ Script nao encontrado: {script_path}")
@@ -188,112 +188,270 @@ def cmd_run(args):
     if recording_id:
         print(f"  Recording: {recording_id}")
 
-    # Executa como pytest (subprocess)
-    import subprocess
-    try:
-        result = subprocess.run(
-            [sys.executable, "-m", "pytest", script_path, "--base-url", base_url, "-q", "--tb=line"],
-            capture_output=True, text=True, timeout=args.timeout or 60
-        )
-    except subprocess.TimeoutExpired:
-        print(f"[TestForge] ⚠ Timeout ({args.timeout or 60}s)")
-        result = None
+    # Carrega passos da gravacao via SemanticTestCase
+    steps = []
+    app_name = "web"
+    if recording_id:
+        rec_dir = str(_PROJECT_ROOT / "recordings" / recording_id)
+        if os.path.isdir(rec_dir):
+            normalizer = RecordingNormalizer()
+            stc = normalizer.normalize(rec_dir, f"ST-{recording_id}", "web", base_url)
+            steps = stc.steps
+            app_name = stc.application or "web"
+            print(f"  Carregados {len(steps)} passos da gravacao")
+        else:
+            print(f"  ⚠ Recording nao encontrado: {rec_dir} — executando via pytest")
+    else:
+        print(f"  ⚠ Sem recording_id — executando via pytest")
 
     healed = False
     layer_used = ""
     llm_used = False
+    healed_steps = 0
+    failed_steps = 0
 
-    if result is None or result.returncode != 0:
-        error_text = (result.stderr or result.stdout) if result else "timeout"
-        print(f"[TestForge] ⚠ Script falhou — iniciando pipeline de cura L0→L3...")
+    if not steps:
+        # Fallback: executa via pytest subprocess (modo antigo)
+        import subprocess
+        try:
+            result = subprocess.run(
+                [sys.executable, "-m", "pytest", script_path, "--base-url", base_url, "-q", "--tb=line"],
+                capture_output=True, text=True, timeout=args.timeout or 60
+            )
+        except subprocess.TimeoutExpired:
+            print(f"[TestForge] ⚠ Timeout ({args.timeout or 60}s)")
+            result = None
 
-        # Classificar falha
-        classifier = FailureClassifier()
-        failure = classifier.classify(error_text)
-        print(f"  Falha: {failure.code} ({failure.family.value}) [{failure.family_code}]")
-        print(f"  Recuperavel: {failure.recoverable}")
+        if result is None or result.returncode != 0:
+            error_text = (result.stderr or result.stdout) if result else "timeout"
+            print(f"[TestForge] ⚠ Script falhou — tentando healing...")
+            # Tenta curar inline
+            healed = _try_heal_inline(base_url, args.headless, error_text, script_path, recording_id)
+            if healed:
+                layer_used = "L3"
+                llm_used = True
+    else:
+        # Modo inline: executa passos com healing L0→L3
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=args.headless)
+            page = browser.new_page()
+            page.set_viewport_size({"width": 1280, "height": 720})
 
-        # Auto-aprende com a falha
-        _auto_learn(error_text,
-                    f"curador pipeline para {script_path}",
-                    "generic")
+            # Navegar
+            page.goto(base_url)
+            page.wait_for_timeout(500)
+            print()
 
-        if failure.recoverable:
-            try:
-                with sync_playwright() as pw:
-                    browser = pw.chromium.launch(headless=args.headless)
-                    page = browser.new_page()
-                    page.set_viewport_size({"width": 1280, "height": 720})
+            for i, step in enumerate(steps):
+                step_num = i + 1
+                action = step.action
+                sel = ""
+                candidates = []
 
-                    # Navegar para a pagina alvo
-                    page.goto(base_url)
-                    page.wait_for_timeout(500)
+                if step.target:
+                    if step.target.candidates and len(step.target.candidates) > 0:
+                        sel = step.target.candidates[0].selector or ""
+                    if step.target.candidates:
+                        candidates = [{"selector": c.selector, "score": c.score}
+                                      for c in step.target.candidates[:3]]
 
-                    # Coletar evidencias
-                    collector = EvidenceCollector(page)
-                    collector.start("heal-run")
-                    page.wait_for_timeout(300)
+                value = step.value or ""
 
-                    # Construir payload para LLM
-                    step_context = {
-                        "action": "execute_script",
-                        "selector": script_path,
-                        "value": base_url,
-                        "intention": f"E2E test: {script_path}",
-                        "url": base_url,
-                        "framework": "generic",
-                        "family": failure.family_code,
-                        "taxonomy_id": failure.taxonomy_id,
-                    }
+                try:
+                    if action == "navigation":
+                        page.goto(base_url)
+                        page.wait_for_timeout(500)
+                        print(f"  ✓ Step {step_num}: navigation")
 
-                    payload = collector.build_llm_payload(step_context, include_screenshot=False)
+                    elif action == "fill":
+                        if candidates:
+                            fallback = FallbackRunner(page)
+                            ok = fallback.try_fill(candidates, value)
+                            if ok:
+                                print(f"  ✓ Step {step_num}: fill {value[:20]}")
+                            else:
+                                raise Exception(f"fill step {step_num} falhou")
+                        elif sel:
+                            page.fill(sel, value, timeout=5000)
+                            page.wait_for_timeout(200)
+                            print(f"  ✓ Step {step_num}: fill {value[:20]}")
+                        else:
+                            print(f"  - Step {step_num}: fill skip (sem seletor)")
 
-                    # Curador Automatico L0→L3
-                    curator = CuradorAutomatico(
-                        catalog=HealingCatalog(),
-                        step_runner=None,  # steps are executed by pytest, not inline
+                    elif action == "click":
+                        if candidates:
+                            fallback = FallbackRunner(page)
+                            ok = fallback.try_click(candidates)
+                            if ok:
+                                print(f"  ✓ Step {step_num}: click")
+                            else:
+                                raise Exception(f"click step {step_num} falhou")
+                        elif sel:
+                            page.click(sel, timeout=5000)
+                            page.wait_for_timeout(300)
+                            print(f"  ✓ Step {step_num}: click")
+                        else:
+                            print(f"  - Step {step_num}: click skip (sem seletor)")
+
+                    elif action == "assert":
+                        assert_type = step.context.get("assert_type", "textual") if step.context else "textual"
+                        expected = value
+                        if sel and expected:
+                            text = page.locator(sel).first.text_content(timeout=3000)
+                            if expected.lower() in (text or "").lower():
+                                print(f"  ✓ Step {step_num}: assert \"{expected[:30]}\"")
+                            else:
+                                print(f"  ✗ Step {step_num}: assert FAILED — got \"{(text or '')[:30]}\"")
+                                failed_steps += 1
+                        else:
+                            print(f"  - Step {step_num}: assert skip (sem seletor/expected)")
+
+                except Exception as e:
+                    failed_steps += 1
+                    error_msg = str(e)[:300]
+                    print(f"  ✗ Step {step_num}: {action} FAILED — {error_msg[:80]}")
+
+                    # Pipeline de cura para este step
+                    healed_step = _heal_step(
+                        page, step, error_msg, base_url, step_num,
+                        recording_id or "", app_name,
                     )
-
-                    cure_data = {
-                        "selector": script_path,
-                        "action": "execute_test",
-                        "base_url": base_url,
-                    }
-
-                    outcome = curator.cure(cure_data, error_text, payload)
-
-                    # Report
-                    print(f"  Curador: {outcome.status}")
-                    print(f"  Layer: {outcome.layer_used}")
-                    if outcome.proposal:
-                        print(f"  Proposal: {outcome.proposal.strategy} → {outcome.proposal.new_locator[:80]}")
-                        print(f"  Confidence: {outcome.proposal.confidence:.2f}")
-                        print(f"  Rationale: {outcome.proposal.rationale[:120]}")
-
-                    if outcome.status == ProgressResult.PASSED_STEP:
+                    if healed_step:
+                        healed_steps += 1
                         healed = True
-                        layer_used = outcome.layer_used
-                        llm_used = (outcome.layer_used == "L3")
-                    elif outcome.rollback_applied:
-                        print(f"  ⚠ Rollback aplicado")
 
-                    browser.close()
-            except Exception as e:
-                print(f"  ⚠ Curador falhou: {e}")
+            browser.close()
 
     # Metricas
     metrics.record_run(
         healed=healed,
-        false_heal=not healed and (result is None or result.returncode != 0),
-        oracle_passed=1 if healed else 0,
-        oracle_failed=0 if healed else 1,
+        false_heal=not healed and (failed_steps > 0),
+        oracle_passed=healed_steps,
+        oracle_failed=failed_steps - healed_steps if failed_steps > healed_steps else 0,
         llm_used=llm_used,
     )
 
     print(f"\n[TestForge] Metricas:")
     print(metrics.summary())
+    if steps:
+        print(f"  Steps: {len(steps)} total, {failed_steps} falhas, {healed_steps} curados")
     if layer_used:
         print(f"  Healing layer: {layer_used}")
+
+
+def _heal_step(page, step, error_msg: str, base_url: str, step_num: int,
+               recording_id: str, app_name: str) -> bool:
+    """Tenta curar um step falho usando o pipeline L0→L3."""
+    classifier = FailureClassifier()
+    failure = classifier.classify(error_msg)
+
+    print(f"    Falha: {failure.code} [{failure.family_code}]")
+
+    if not failure.recoverable:
+        return False
+
+    # Coletar evidencias
+    collector = EvidenceCollector(page)
+    collector.start(f"heal-step-{step_num}")
+
+    sel = (step.target.candidates[0].selector
+           if step.target and step.target.candidates and len(step.target.candidates) > 0
+           else "")
+    text_val = step.target.text if step.target else ""
+    value = step.value or ""
+
+    step_context = {
+        "action": step.action,
+        "selector": sel,
+        "text": text_val or "",
+        "value": value,
+        "intention": f"{step.action} {text_val or sel}",
+        "url": base_url,
+        "framework": app_name or "generic",
+        "family": failure.family_code,
+        "taxonomy_id": failure.taxonomy_id,
+    }
+
+    payload = collector.build_llm_payload(step_context, include_screenshot=False)
+
+    # Step runner que executa no page
+    def step_runner(step_data):
+        patched_sel = step_data.get("selector", "")
+        patched_action = step_data.get("action", "click")
+        patched_value = step_data.get("value", "")
+
+        if patched_action == "fill":
+            page.fill(patched_sel, patched_value, timeout=5000)
+            page.wait_for_timeout(200)
+        elif patched_action == "click":
+            page.click(patched_sel, timeout=5000)
+            page.wait_for_timeout(300)
+
+        return True
+
+    curator = CuradorAutomatico(
+        catalog=HealingCatalog(),
+        step_runner=step_runner,
+    )
+
+    cure_data = {
+        "selector": sel,
+        "action": step.action,
+        "base_url": base_url,
+        "value": value,
+    }
+
+    outcome = curator.cure(cure_data, error_msg, payload)
+
+    print(f"    Curador: {outcome.status} [{outcome.layer_used}]", end="")
+    if outcome.proposal:
+        print(f" → {outcome.proposal.new_locator[:60]} (conf={outcome.proposal.confidence:.2f})")
+    else:
+        print()
+
+    if outcome.status == ProgressResult.PASSED_STEP:
+        return True
+    return False
+
+
+def _try_heal_inline(base_url: str, headless: bool, error_text: str,
+                     script_path: str, recording_id: str) -> bool:
+    """Fallback: tenta curar script inteiro inline (modo antigo)."""
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=headless)
+            page = browser.new_page()
+            page.set_viewport_size({"width": 1280, "height": 720})
+            page.goto(base_url)
+            page.wait_for_timeout(500)
+
+            collector = EvidenceCollector(page)
+            collector.start("heal-run")
+
+            classifier = FailureClassifier()
+            failure = classifier.classify(error_text)
+
+            payload = collector.build_llm_payload({
+                "action": "execute_script",
+                "selector": script_path,
+                "value": base_url,
+                "intention": f"E2E test: {script_path}",
+                "url": base_url,
+                "framework": "generic",
+                "family": failure.family_code,
+                "taxonomy_id": failure.taxonomy_id,
+            })
+
+            curator = CuradorAutomatico(catalog=HealingCatalog(), step_runner=None)
+            outcome = curator.cure(
+                {"selector": script_path, "action": "execute_test", "base_url": base_url},
+                error_text, payload,
+            )
+
+            browser.close()
+            return outcome.status == ProgressResult.PASSED_STEP
+    except Exception:
+        return False
 
 
 def cmd_pipeline(args):
