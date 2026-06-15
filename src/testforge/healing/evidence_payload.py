@@ -28,8 +28,8 @@ class EvidencePayload:
     def validate(self) -> None:
         """Set is_sufficient based on evidence quality.
 
-        Sufficient when: DOM snapshot exists (>=100 chars)
-        AND at least one additional context source is present.
+        Sufficient when: DOM snapshot exists (>=100 chars).
+        Console errors, network state, and screenshot are bonus context.
         """
         has_dom = len(self.dom_snapshot) >= 100
         has_console = len(self.console_errors) > 0
@@ -39,14 +39,16 @@ class EvidencePayload:
         if not has_dom:
             self.is_sufficient = False
             self.insufficiency_reason = "DOM snapshot missing or too small (<100 chars)"
-        elif not (has_console or has_network or has_screenshot):
-            self.is_sufficient = False
-            self.insufficiency_reason = (
-                "Insufficient context: no console errors, network state, or screenshot"
-            )
         else:
             self.is_sufficient = True
             self.insufficiency_reason = ""
+            # Note: console/network/screenshot absence is tolerated
+            # — they provide bonus context but are not required
+            if not (has_console or has_network or has_screenshot):
+                self.insufficiency_reason = (
+                    "Note: no console errors, network state, or screenshot available "
+                    "(bonus context missing but DOM sufficient)"
+                )
 
     @staticmethod
     def sanitize_dom(html: str, max_chars: int = 3000) -> str:

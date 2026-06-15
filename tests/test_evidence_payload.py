@@ -60,8 +60,9 @@ class TestEvidencePayloadValidation:
             dom_snapshot="<html><body>" + "a" * 100 + "</body></html>",
         )
         p.validate()
-        assert p.is_sufficient is False
-        assert "context" in p.insufficiency_reason.lower()
+        # DOM-only is now sufficient (bonus context is optional)
+        assert p.is_sufficient is True
+        assert "bonus context missing" in p.insufficiency_reason.lower()
 
 
 class TestEvidencePayloadSanitize:
@@ -150,7 +151,8 @@ class TestEvidencePayloadFactory:
             step_context={"action": "click"},
             dom_html="<html><body>" + "x" * 100 + "</body></html>",
         )
-        assert p.is_sufficient is False
+        # DOM-only is now sufficient (bonus context optional)
+        assert p.is_sufficient is True
 
 
 class TestEvidenceCollectorLLMPayload:

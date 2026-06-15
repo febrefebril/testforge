@@ -278,14 +278,15 @@ class MockLLMHealer(LLMHealer):
         text_val = ctx.get("text", "")
         action = ctx.get("action", "")
 
-        # Build a reasonable fallback locator
+        # Build a CSS-compatible selector (page.click expects CSS, not Playwright API)
         if text_val:
-            new_locator = f"page.get_by_text('{text_val[:50]}')"
+            new_locator = f"text={text_val[:80]}"
         elif sel and "#" in sel:
-            # Try to use the ID part
             new_locator = sel
+        elif sel:
+            new_locator = f"text={sel[:80]}"
         else:
-            new_locator = f"page.get_by_text('click target')"
+            new_locator = "button"
 
         # Map family to appropriate strategy
         strategy_map = {
