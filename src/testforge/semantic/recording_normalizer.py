@@ -105,23 +105,35 @@ class RecordingNormalizer:
                 page_title=raw.get("page_title"),
             )
 
+        # postback events are server-side page reloads after form submission.
+        # They are not separate user actions — the submit already implies navigation.
+        # Skip them to avoid page reload flicker in recorded tests.
+        if event_type == "postback":
+            return None
+
         target = self._build_target(target_data)
 
         action_map = {
             "click": "click",
             "fill": "fill",
             "keypress": "fill",
+            "submit": "click",  # submit is a click on a submit button
         }
         action = action_map.get(event_type)
         if not action:
             return None
 
+        is_submit = event_type == "submit"
         return SemanticAction(
             action=action,
             target=target,
             value=raw.get("value"),
             url=raw.get("url"),
             page_title=raw.get("page_title"),
+            context={
+                "is_submit": is_submit,
+                "submit_method": raw.get("submit_method", ""),
+            } if is_submit else {},
         )
 
     def _convert_step(self, step: dict) -> Optional[SemanticAction]:
