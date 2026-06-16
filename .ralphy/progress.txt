@@ -6,3 +6,15 @@
 - [✓] 2026-06-16 01:46 - BUG-004 event_id monotonic (ralphy)
 - [✓] 2026-06-16 01:52 - Sessões diferentes anexadas no mesmo recording
 - [✓] 2026-06-16 02:04 - Browser Playwright bloqueado sem fallback corporativo
+- [✓] 2026-06-16 02:35 - Digitação caractere por caractere gera dezenas de fills
+- [✓] 2026-06-16 02:41 - Dependência httpx ausente no pyproject.toml
+- [✓] 2026-06-16 03:18 - goto() excessivo no script gerado
+- [✓] 2026-06-16 03:27 - Healer sugere candidatos genéricos (text=Selecione)
+- [✓] 2026-06-16 03:32 - Assertions frágeis por CSS estrutural
+- [✓] 2026-06-16 03:42 - Métricas de healing inconsistentes
+- [✓] 2026-06-16 03:58 - Elementos com bounding box zero aceitos
+- [✓] 2026-06-16 04:06 - URL com & quebra no PowerShell
+- [✓] 2026-06-16 04:14 - Logs truncados (candidates: [:h...)
+- [✓] 2026-06-16 04:19 - Steps pulados não explicados
+- [✓] 2026-06-16 04:24 - Sem artefato semântico auditável
+- [✓] 2026-06-16 04:44 - Contrato instável documentação
