@@ -23,7 +23,8 @@
       "files": [
         "src/testforge/cli/app.py"
       ],
-      "status": "pending"
+      "status": "completed",
+      "completed": true
     },
     {
       "id": "BUG-006",
@@ -34,7 +35,7 @@
       "files": [
         "src/testforge/cli/app.py"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "BUG-007",
