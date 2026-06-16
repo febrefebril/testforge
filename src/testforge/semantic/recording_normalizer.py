@@ -60,6 +60,42 @@ def _clean_text(text: str) -> str:
     return result
 
 
+# Generic UI text that produces poor, brittle locators.
+# Scored at 0.10 to deprioritize below all structural strategies.
+_GENERIC_TEXT_SET = {
+    "ok", "cancel", "cancelar", "submit", "enviar", "search", "buscar",
+    "select", "selecione", "choose", "escolha", "next", "previous",
+    "back", "voltar", "close", "fechar", "save", "salvar", "delete",
+    "excluir", "edit", "editar", "add", "adicionar", "remove", "remover",
+    "filter", "filtrar", "sort", "ordenar", "reset", "limpar",
+    "página inicial", "pagina inicial", "home", "início", "inicio",
+    "calculate", "calcular", "download", "upload", "print", "imprimir",
+    "refresh", "atualizar", "help", "ajuda", "settings", "configurações",
+    "yes", "sim", "no", "não", "nao", "confirm", "confirmar",
+    "login", "logout", "sign in", "sign out", "register", "cadastrar",
+    "load more", "carregar mais", "show more", "mostrar mais",
+    "read more", "saiba mais", "click here", "clique aqui",
+}
+
+
+def _is_generic_text(text: str) -> bool:
+    """Check if text is a generic UI label that produces brittle locators.
+
+    Returns True for text like 'OK', 'Cancelar', 'Selecione', etc.
+    These are common across many pages and produce non-unique selectors.
+    """
+    if not text or not text.strip():
+        return True
+    clean = text.strip().lower()
+    # Exact match in generic set
+    if clean in _GENERIC_TEXT_SET:
+        return True
+    # Single character or only digits
+    if len(clean) <= 1 or clean.isdigit():
+        return True
+    return False
+
+
 class RecordingNormalizer:
     """Converte raw events em SemanticTestCase."""
 
@@ -270,7 +306,9 @@ class RecordingNormalizer:
                 candidates.append(LocatorCandidate("label", f"select[aria-label='{target_data['label']}']", 0.75, f"select aria-label={target_data['label']}"))
             # Fallback: text content (options text)
             if text:
-                candidates.append(LocatorCandidate("text", f"select:has-text('{_clean_text(text)[:40]}')", 0.35, "select containing text"))
+                select_text = _clean_text(text)[:40]
+                select_score = 0.10 if _is_generic_text(select_text) else 0.35
+                candidates.append(LocatorCandidate("text", f"select:has-text('{select_text}')", select_score, "select containing text"))
 
         # Prioridade de estrategias (score deterministico)
         if target_data.get("role"):
@@ -305,7 +343,9 @@ class RecordingNormalizer:
             text = _clean_text(target_data["text"])
             if text:
                 # Use :has-text (substring match, more robust) instead of text= (exact match)
-                candidates.append(LocatorCandidate("text", f":has-text(\"{text}\")", 0.55, "visible text"))
+                # Penalize generic text like "OK", "Cancelar", "Selecione" — brittle locators
+                text_score = 0.10 if _is_generic_text(text) else 0.55
+                candidates.append(LocatorCandidate("text", f":has-text(\"{text}\")", text_score, "visible text"))
 
         # Fallback: CSS classes (stable, non-hash, non-generic)
         class_list = target_data.get("class_list") or []

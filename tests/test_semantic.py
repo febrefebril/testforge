@@ -7,6 +7,7 @@ from testforge.semantic import (
     LocatorCandidate, SemanticAction, SemanticTarget,
     SemanticTestCase, RecordingNormalizer, PlaywrightCompiler,
 )
+from testforge.semantic.recording_normalizer import _is_generic_text
 
 
 def _create_raw_events(tmpdir: str):
@@ -243,6 +244,87 @@ class TestRecordingNormalizer:
         result = normalizer._compact_fill_events(events)
         assert len(result) == 1
         assert result[0]["value"] == "something"
+
+
+class TestGenericTextDetection:
+    """Tests for _is_generic_text — penalizes brittle generic UI labels."""
+
+    def test_generic_portuguese_ok(self):
+        assert _is_generic_text("OK") is True
+        assert _is_generic_text("ok") is True
+        assert _is_generic_text("Ok") is True
+
+    def test_generic_portuguese_cancelar(self):
+        assert _is_generic_text("Cancelar") is True
+        assert _is_generic_text("cancelar") is True
+
+    def test_generic_portuguese_selecione(self):
+        assert _is_generic_text("Selecione") is True
+        assert _is_generic_text("SELECIONE") is True
+
+    def test_generic_portuguese_pagina_inicial(self):
+        assert _is_generic_text("Página inicial") is True
+        assert _is_generic_text("pagina inicial") is True
+
+    def test_generic_portuguese_calcular(self):
+        assert _is_generic_text("Calcular") is True
+        assert _is_generic_text("calcular") is True
+
+    def test_generic_english_labels(self):
+        assert _is_generic_text("Cancel") is True
+        assert _is_generic_text("Select") is True
+        assert _is_generic_text("Submit") is True
+        assert _is_generic_text("Home") is True
+
+    def test_empty_and_whitespace(self):
+        assert _is_generic_text("") is True
+        assert _is_generic_text("   ") is True
+        assert _is_generic_text(None) is True  # type: ignore
+
+    def test_single_char(self):
+        assert _is_generic_text("x") is True
+        assert _is_generic_text("1") is True
+
+    def test_digits_only(self):
+        assert _is_generic_text("12345") is True
+
+    def test_non_generic_text(self):
+        assert _is_generic_text("Pesquisar CPF") is False
+        assert _is_generic_text("Nome completo do cliente") is False
+        assert _is_generic_text("123.456.789-00") is False
+        assert _is_generic_text("btnSubmitForm") is False
+
+    def test_build_target_penalizes_generic_text(self):
+        """Text-based candidates with generic text get score 0.10."""
+        normalizer = RecordingNormalizer()
+        target_data = {
+            "tag": "button",
+            "text": "OK",
+        }
+        target = normalizer._build_target(target_data)
+        text_candidate = next(
+            (c for c in target.candidates if c.strategy == "text"), None
+        )
+        assert text_candidate is not None
+        assert text_candidate.score == 0.10, (
+            f"Expected 0.10 for generic text, got {text_candidate.score}"
+        )
+
+    def test_build_target_normal_text_unchanged(self):
+        """Non-generic text keeps normal score 0.55."""
+        normalizer = RecordingNormalizer()
+        target_data = {
+            "tag": "button",
+            "text": "Pesquisar CPF",
+        }
+        target = normalizer._build_target(target_data)
+        text_candidate = next(
+            (c for c in target.candidates if c.strategy == "text"), None
+        )
+        assert text_candidate is not None
+        assert text_candidate.score == 0.55, (
+            f"Expected 0.55 for non-generic text, got {text_candidate.score}"
+        )
 
 
 class TestCompiler:
