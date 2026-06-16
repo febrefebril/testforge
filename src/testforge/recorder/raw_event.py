@@ -30,7 +30,7 @@ class TargetInfo:
 @dataclass
 class RawRecordedEvent:
     event_id: str
-    event_type: str  # click, fill, navigation, select, keypress, submit
+    event_type: str  # click, fill, navigation, select, keypress, submit, postback
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     url: Optional[str] = None
     page_title: Optional[str] = None
@@ -40,6 +40,8 @@ class RawRecordedEvent:
     screenshot_path: Optional[str] = None
     dom_snapshot_path: Optional[str] = None
     ax_snapshot_path: Optional[str] = None
+    is_postback: bool = False  # True if this event is a form postback (ASP classic)
+    submit_method: Optional[str] = None  # HTTP method used for form submission (GET/POST)
 
     def to_dict(self) -> dict:
         result = {
@@ -61,4 +63,8 @@ class RawRecordedEvent:
             result["dom_snapshot"] = self.dom_snapshot_path
         if self.ax_snapshot_path:
             result["ax_snapshot"] = self.ax_snapshot_path
+        if self.is_postback:
+            result["is_postback"] = True
+        if self.submit_method:
+            result["submit_method"] = self.submit_method
         return result
