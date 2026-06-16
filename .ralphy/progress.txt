@@ -1,2 +1,6 @@
 # Ralphy Progress Log
 
+- [✓] 2026-06-16 00:00 - BUG-001 select_option fix (manual)
+- [✓] 2026-06-16 00:00 - BUG-002 DOM snapshot validation (manual)
+- [✓] 2026-06-16 00:00 - BUG-003 counters breakdown (manual)
+- [✓] 2026-06-16 01:46 - BUG-004 event_id monotonic (ralphy)

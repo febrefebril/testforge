@@ -4,18 +4,19 @@
   "tasks": [
     {
       "id": "BUG-004",
-      "title": "event_id reinicia após navegação",
+      "title": "event_id reinicia ap\u00f3s navega\u00e7\u00e3o",
       "description": "Make event_id monotonic within a recording session. Currently evt_0001 appears multiple times after navigation. Fix: use global counter in RecorderController that never resets.",
       "priority": "P0",
       "test": "source activate.sh && python -m pytest tests/ --ignore=tests/test_pages --ignore=tests/test_healing_e2e.py -q",
       "files": [
         "src/testforge/recorder/recorder_controller.py"
       ],
-      "status": "completed"
+      "status": "completed",
+      "completed": true
     },
     {
       "id": "BUG-005",
-      "title": "Sessões diferentes anexadas no mesmo recording",
+      "title": "Sess\u00f5es diferentes anexadas no mesmo recording",
       "description": "Prevent record --name X from silently appending to existing recordings. If recordings/X exists, create recordings/X_2 instead. Never merge silently.",
       "priority": "P0",
       "test": "source activate.sh && python -m pytest tests/ --ignore=tests/test_pages --ignore=tests/test_healing_e2e.py -q",
@@ -27,7 +28,7 @@
     {
       "id": "BUG-006",
       "title": "Browser Playwright bloqueado sem fallback corporativo",
-      "description": "Add --browser edge|chrome|chromium flag. Fallback chain: chromium → channel=msedge → channel=chrome → connect_over_cdp. For CAIXA corporate environment.",
+      "description": "Add --browser edge|chrome|chromium flag. Fallback chain: chromium \u2192 channel=msedge \u2192 channel=chrome \u2192 connect_over_cdp. For CAIXA corporate environment.",
       "priority": "P0",
       "test": "source activate.sh && python -m pytest tests/ --ignore=tests/test_pages --ignore=tests/test_healing_e2e.py -q",
       "files": [
@@ -37,7 +38,7 @@
     },
     {
       "id": "BUG-007",
-      "title": "Tela pisca/recarrega no SIMAX durante gravação",
+      "title": "Tela pisca/recarrega no SIMAX durante grava\u00e7\u00e3o",
       "description": "Distinguish click vs submit vs postback in recorder. For ASP classic pages: detect form postback as intentional navigation. Avoid page reload flicker.",
       "priority": "P0",
       "test": "source activate.sh && python -m pytest tests/ --ignore=tests/test_pages --ignore=tests/test_healing_e2e.py -q",
@@ -49,7 +50,7 @@
     },
     {
       "id": "BUG-008",
-      "title": "Digitação caractere por caractere gera dezenas de fills",
+      "title": "Digita\u00e7\u00e3o caractere por caractere gera dezenas de fills",
       "description": "Compact sequential fill events. For same selector within 500ms window, keep only the final value. Add _compact_fill_events() method in RecordingNormalizer.",
       "priority": "P1",
       "test": "source activate.sh && python -m pytest tests/ --ignore=tests/test_pages --ignore=tests/test_healing_e2e.py -q",
@@ -71,8 +72,8 @@
     },
     {
       "id": "BUG-010",
-      "title": "Healer sugere candidatos genéricos (text=Selecione)",
-      "description": "Add _is_generic_text() with list of penalized texts: Selecione, OK, Cancelar, Página inicial, Calcular. Score reduced to 0.10 for generic text without scope context.",
+      "title": "Healer sugere candidatos gen\u00e9ricos (text=Selecione)",
+      "description": "Add _is_generic_text() with list of penalized texts: Selecione, OK, Cancelar, P\u00e1gina inicial, Calcular. Score reduced to 0.10 for generic text without scope context.",
       "priority": "P1",
       "test": "source activate.sh && python -m pytest tests/ --ignore=tests/test_pages --ignore=tests/test_healing_e2e.py -q",
       "files": [
@@ -82,7 +83,7 @@
     },
     {
       "id": "BUG-011",
-      "title": "Métricas de healing inconsistentes",
+      "title": "M\u00e9tricas de healing inconsistentes",
       "description": "Separate metrics: falhas_detectadas, healings_tentados, aplicados, validados, rejeitados. Per-step reporting, not just global totals. Fix MetricsRepository display.",
       "priority": "P1",
       "test": "source activate.sh && python -m pytest tests/ --ignore=tests/test_pages --ignore=tests/test_healing_e2e.py -q",
@@ -93,7 +94,7 @@
     },
     {
       "id": "BUG-012",
-      "title": "Assertions frágeis por CSS estrutural longo",
+      "title": "Assertions fr\u00e1geis por CSS estrutural longo",
       "description": "Prefer semantic assertions: page.get_by_text(), page.get_by_role(), page.locator('body').to_contain_text(). CSS structural chains only as last resort.",
       "priority": "P1",
       "test": "source activate.sh && python -m pytest tests/ --ignore=tests/test_pages --ignore=tests/test_healing_e2e.py -q",
@@ -115,7 +116,7 @@
     },
     {
       "id": "BUG-014",
-      "title": "Dependência httpx ausente no pyproject.toml",
+      "title": "Depend\u00eancia httpx ausente no pyproject.toml",
       "description": "Add httpx>=0.27 to pyproject.toml dependencies. Verify clean install works: pip install -e . && python -c 'from testforge.healing.llm_client import chat'.",
       "priority": "P1",
       "test": "source activate.sh && python -m pytest tests/ --ignore=tests/test_pages --ignore=tests/test_healing_e2e.py -q",
@@ -149,8 +150,8 @@
     },
     {
       "id": "BUG-017",
-      "title": "Steps pulados não explicados (Step 14 → Step 17)",
-      "description": "Log skip reason for every omitted step: 'Step N: skipped — duplicate compacted', 'Step N: skipped — empty selector', 'Step N: skipped — non-actionable target'.",
+      "title": "Steps pulados n\u00e3o explicados (Step 14 \u2192 Step 17)",
+      "description": "Log skip reason for every omitted step: 'Step N: skipped \u2014 duplicate compacted', 'Step N: skipped \u2014 empty selector', 'Step N: skipped \u2014 non-actionable target'.",
       "priority": "P2",
       "test": "source activate.sh && python -m pytest tests/ --ignore=tests/test_pages --ignore=tests/test_healing_e2e.py -q",
       "files": [
@@ -160,7 +161,7 @@
     },
     {
       "id": "BUG-018",
-      "title": "Compile sem artefato semântico auditável",
+      "title": "Compile sem artefato sem\u00e2ntico audit\u00e1vel",
       "description": "Generate semantic_steps.jsonl alongside the script during compile. Contains normalized steps for auditing. Document contract between raw_events, steps, and semantic_steps.",
       "priority": "P2",
       "test": "source activate.sh && python -m pytest tests/ --ignore=tests/test_pages --ignore=tests/test_healing_e2e.py -q",
@@ -171,8 +172,8 @@
     },
     {
       "id": "BUG-019",
-      "title": "Runner continua após falhas críticas de estado",
-      "description": "If UF selection fails, Edifício/Data should be marked as blocked_by_previous_failure, not executed independently. Add step dependency: blocking=true + depends_on=step_N.",
+      "title": "Runner continua ap\u00f3s falhas cr\u00edticas de estado",
+      "description": "If UF selection fails, Edif\u00edcio/Data should be marked as blocked_by_previous_failure, not executed independently. Add step dependency: blocking=true + depends_on=step_N.",
       "priority": "P2",
       "test": "source activate.sh && python -m pytest tests/ --ignore=tests/test_pages --ignore=tests/test_healing_e2e.py -q",
       "files": [
@@ -182,7 +183,7 @@
     },
     {
       "id": "BUG-020",
-      "title": "Contrato instável raw_events vs steps vs semantic_steps",
+      "title": "Contrato inst\u00e1vel raw_events vs steps vs semantic_steps",
       "description": "Document the contract: raw_events.jsonl (raw capture), steps.jsonl (manual/curated/asserts), semantic_steps.jsonl (compiled output, NEW), script.py (executable render). Add validation in compile.",
       "priority": "P2",
       "test": "source activate.sh && python -m pytest tests/ --ignore=tests/test_pages --ignore=tests/test_healing_e2e.py -q",
