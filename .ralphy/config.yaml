@@ -1,0 +1,27 @@
+# Ralphy Config — TestForge v0.3.1
+project:
+  name: "testforge-v1"
+  language: "Python"
+  framework: "Playwright + GSD Core"
+
+commands:
+  test: "source activate.sh && python -m pytest tests/ --ignore=tests/test_pages --ignore=tests/test_healing_e2e.py -q"
+  test_all: "source activate.sh && python -m pytest tests/ -q"
+  lint: "ruff check src/"
+
+rules:
+  - "Use GSD pipeline: discuss → plan → execute → verify for each bug"
+  - "Commit after every fix with conventional commits: fix: BUG-XXX description"
+  - "Run pytest after every change — no regression allowed"
+  - "Clean context between bugs — one bug at a time"
+  - "Each bug follows verify → fix → test cycle"
+  - "Use caveman mode for efficient communication"
+  - "Never commit API keys or secrets"
+  - "Python source in src/testforge/, tests in tests/"
+  - "Use Playwright sync API (not async)"
+
+boundaries:
+  never_touch:
+    - ".venv/**"
+    - "node_modules/**"
+    - "conhecimento_ancestral/**"
