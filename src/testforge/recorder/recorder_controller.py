@@ -32,8 +32,6 @@ class RecorderController:
     def start(self, recording_id: str, application: str = "", base_url: str = "", headless: bool = False) -> RecordingSession:
         session = self._session_manager.start(recording_id, application, base_url)
         self._store = RawRecordingStore(session.session_dir)
-        self._event_counter = 0
-        self._step_counter = 0
         self._network_entries = []
         self._sensitive_alerts = []
         self._command_queue = []
@@ -138,8 +136,9 @@ class RecorderController:
                 parent_text=target_data.get("parent_text"),
                 bounding_box=target_data.get("bounding_box"),
             )
+        self._event_counter += 1
         event = RawRecordedEvent(
-            event_id=data.get("event_id", f"evt_{self._event_counter:04d}"),
+            event_id=f"evt_{self._event_counter:05d}",
             event_type=data.get("type", "unknown"),
             timestamp=data.get("timestamp", ""),
             url=data.get("url"),
@@ -147,7 +146,6 @@ class RecorderController:
             target=target,
             value=data.get("value"),
         )
-        self._event_counter += 1
         self._capture_snapshots(event)
         self._store.append_event(event)
 
