@@ -5,3 +5,4 @@
 - [✓] 2026-06-16 00:00 - BUG-003 counters breakdown (manual)
 - [✓] 2026-06-16 01:46 - BUG-004 event_id monotonic (ralphy)
 - [✓] 2026-06-16 01:52 - Sessões diferentes anexadas no mesmo recording
+- [✓] 2026-06-16 02:04 - Browser Playwright bloqueado sem fallback corporativo

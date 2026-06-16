@@ -35,7 +35,8 @@
       "files": [
         "src/testforge/cli/app.py"
       ],
-      "status": "completed"
+      "status": "completed",
+      "completed": true
     },
     {
       "id": "BUG-007",
@@ -47,7 +48,7 @@
         "src/testforge/recorder/recorder_controller.py",
         "src/testforge/semantic/recording_normalizer.py"
       ],
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "BUG-008",
