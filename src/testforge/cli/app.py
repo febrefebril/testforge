@@ -92,6 +92,13 @@ def cmd_record(args):
 
         recorder.stop()
         recorder.finalize()
+        # Count raw events and display breakdown
+        raw_count = 0
+        steps_jsonl = str(_PROJECT_ROOT / "recordings" / rid / "steps.jsonl")
+        if os.path.exists(steps_jsonl):
+            with open(steps_jsonl) as f:
+                raw_count = sum(1 for _ in f)
+        print(f"[TestForge] Eventos brutos: {raw_count}")
         print(f"[TestForge] Sessao salva: recordings/{rid}/")
         browser.close()
 
@@ -176,6 +183,10 @@ def cmd_compile(args):
     path = compiler.compile(stc, out_dir, data_file=data_file)
 
     print(f"[TestForge] ✓ SemanticTestCase: {len(stc.steps)} steps")
+    # Breakdown
+    interactions = sum(1 for s in stc.steps if s.action in ("fill", "click", "select_option"))
+    asserts = sum(1 for s in stc.steps if s.action == "assert")
+    print(f"[TestForge]   Interacoes: {interactions} | Asserts: {asserts}")
     print(f"[TestForge] ✓ Script gerado: {path}")
     if data_file:
         print(f"[TestForge] ✓ Script data-driven (le {os.path.basename(data_file)})")
@@ -411,7 +422,9 @@ def cmd_run(args):
     print(f"\n[TestForge] Metricas:")
     print(metrics.summary())
     if steps:
-        print(f"  Steps: {len(steps)} total, {failed_steps} falhas, {healed_steps} curados")
+        interactions = sum(1 for s in steps if s.action in ("fill", "click", "select_option"))
+        asserts_run = sum(1 for s in steps if s.action == "assert")
+        print(f"  Steps: {len(steps)} total ({interactions} interacoes + {asserts_run} asserts), {failed_steps} falhas, {healed_steps} curados")
     if layer_used:
         print(f"  Healing layer: {layer_used}")
 
