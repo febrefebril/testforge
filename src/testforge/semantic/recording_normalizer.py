@@ -134,6 +134,7 @@ class RecordingNormalizer:
         # Post-process: detect and mark skipped steps
         self._deduplicate_steps(stc.steps)
         self._mark_non_actionable(stc.steps)
+        self._detect_step_dependencies(stc.steps)
 
         return stc
 
@@ -279,6 +280,30 @@ class RecordingNormalizer:
                 target=target,
                 value=step.get("expected_value", ""),
                 context={"assert_type": assert_type, "assert_state": assert_state},
+            )
+        # Non-assert curated steps (fill, click, select_option, etc.)
+        if step_action in ("fill", "click", "select_option", "navigation"):
+            target_data = {
+                "tag": step.get("tagName", ""),
+                "text": step.get("text", ""),
+                "id": step.get("selector", "").lstrip("#"),
+                "role": step.get("role", ""),
+                "accessible_name": step.get("accessible_name", ""),
+                "label": step.get("label", ""),
+                "placeholder": step.get("placeholder", ""),
+                "name": step.get("name", ""),
+                "test_id": step.get("test_id", ""),
+            }
+            target = self._build_target(target_data)
+            return SemanticAction(
+                action=step_action,
+                target=target,
+                value=step.get("value", ""),
+                url=step.get("url", ""),
+                page_title=step.get("page_title", ""),
+                context=step.get("context", {}),
+                blocking=step.get("blocking", False),
+                depends_on=step.get("depends_on", ""),
             )
         return None
 
@@ -437,3 +462,75 @@ class RecordingNormalizer:
                 continue
             if step.target and len(step.target.candidates) == 0:
                 step.skip_reason = "non-actionable target"
+
+    def _detect_step_dependencies(self, steps: list) -> None:
+        """Detect step dependencies for cascading failure prevention.
+
+        When consecutive data-entry actions (fill, click, select_option)
+        occur on the same page with at least one <select> element involved,
+        they are likely dependent: the first select populates the next
+        dropdown (e.g., UF → Edifício → Data on SIMAX).
+
+        The first step in the chain is marked `blocking: True`. Subsequent
+        steps get `depends_on` referencing the blocking step by its 1-based
+        index (e.g., 'step_0003').
+
+        Steps that already have explicit `depends_on` or `blocking` set
+        (via curated steps.jsonl) are preserved and not auto-detected.
+        """
+        # Find groups of consecutive data-entry steps between navigation
+        # boundaries. Only create dependency when at least one <select>
+        # element is involved (SIMAX pattern: UF → Edifício → Data).
+        DEPENDENT_ACTIONS = {"select_option", "fill", "click"}
+
+        i = 0
+        while i < len(steps):
+            step = steps[i]
+            # Skip steps that already have explicit dependency annotations
+            if step.depends_on or step.blocking:
+                i += 1
+                continue
+            if step.action not in DEPENDENT_ACTIONS:
+                i += 1
+                continue
+            if step.skip_reason:
+                i += 1
+                continue
+
+            # Find the end of this dependent chain (stops at navigation or assert)
+            chain_start = i
+            j = i + 1
+            while j < len(steps):
+                next_step = steps[j]
+                if next_step.action == "navigation":
+                    break
+                if next_step.action == "assert":
+                    break
+                if next_step.skip_reason:
+                    break
+                if next_step.depends_on or next_step.blocking:
+                    break
+                if next_step.action not in DEPENDENT_ACTIONS:
+                    j += 1
+                    continue
+                j += 1
+
+            chain_end = j
+            chain_length = chain_end - chain_start
+
+            # Only create dependency if chain has 2+ steps AND at least one
+            # involves a <select> element (the SIMAX cascading dropdown pattern).
+            if chain_length >= 2:
+                has_select = any(
+                    steps[k].target and (steps[k].target.tag or "").lower() == "select"
+                    for k in range(chain_start, chain_end)
+                )
+                if has_select:
+                    # First step in chain is blocking
+                    steps[chain_start].blocking = True
+                    # Subsequent steps depend on the first
+                    for k in range(chain_start + 1, chain_end):
+                        step_num = chain_start + 1  # 1-based index
+                        steps[k].depends_on = f"step_{step_num:04d}"
+
+            i = chain_end

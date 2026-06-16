@@ -904,3 +904,258 @@ class TestSemanticStepsJsonl:
         assert "target" not in record
         assert "context" not in record
         assert "url" not in record
+        assert "blocking" not in record
+        assert "depends_on" not in record
+
+    def test_step_to_record_blocking(self):
+        """_step_to_record includes blocking when True."""
+        compiler = PlaywrightCompiler()
+        step = SemanticAction(action="click", blocking=True)
+        record = compiler._step_to_record(step)
+        assert record["blocking"] is True
+
+    def test_step_to_record_depends_on(self):
+        """_step_to_record includes depends_on when set."""
+        compiler = PlaywrightCompiler()
+        step = SemanticAction(action="click", depends_on="step_0003")
+        record = compiler._step_to_record(step)
+        assert record["depends_on"] == "step_0003"
+
+
+class TestStepDependencyDetection:
+    """Tests for _detect_step_dependencies in RecordingNormalizer."""
+
+    def _make_select_step(self, action="select_option", tag="select",
+                          element_id="uf", text=""):
+        """Helper to create a SemanticAction for select/fill steps."""
+        target = SemanticTarget(
+            tag=tag, element_id=element_id, text=text,
+            candidates=[LocatorCandidate("id", f"#{element_id}", 0.90)],
+        )
+        return SemanticAction(action=action, target=target)
+
+    def test_single_step_no_dependency(self):
+        """Single select step: no dependency created."""
+        normalizer = RecordingNormalizer()
+        steps = [self._make_select_step(element_id="uf")]
+        normalizer._detect_step_dependencies(steps)
+        assert steps[0].blocking is False
+        assert steps[0].depends_on == ""
+
+    def test_two_select_steps_create_dependency(self):
+        """Two consecutive select steps: first is blocking, second depends."""
+        normalizer = RecordingNormalizer()
+        steps = [
+            self._make_select_step(element_id="uf", text="UF"),
+            self._make_select_step(element_id="edificio", text="Edifício"),
+        ]
+        normalizer._detect_step_dependencies(steps)
+        assert steps[0].blocking is True
+        assert steps[0].depends_on == ""
+        assert steps[1].blocking is False
+        assert steps[1].depends_on == "step_0001"
+
+    def test_three_select_steps_chain(self):
+        """Three consecutive selects: first blocks, others depend on first."""
+        normalizer = RecordingNormalizer()
+        steps = [
+            self._make_select_step(element_id="uf", text="UF"),
+            self._make_select_step(element_id="edificio", text="Edifício"),
+            self._make_select_step(element_id="data", text="Data"),
+        ]
+        normalizer._detect_step_dependencies(steps)
+        assert steps[0].blocking is True
+        assert steps[1].depends_on == "step_0001"
+        assert steps[2].depends_on == "step_0001"
+
+    def test_navigation_breaks_chain(self):
+        """Navigation between selects breaks dependency chain."""
+        normalizer = RecordingNormalizer()
+        steps = [
+            self._make_select_step(element_id="uf"),
+            SemanticAction(action="navigation", url="http://localhost/page2"),
+            self._make_select_step(element_id="edificio"),
+        ]
+        normalizer._detect_step_dependencies(steps)
+        assert steps[0].blocking is False  # chain length 1 (stopped by nav)
+        assert steps[2].blocking is False  # chain length 1
+
+    def test_assert_breaks_chain(self):
+        """Assert between selects breaks dependency chain."""
+        normalizer = RecordingNormalizer()
+        steps = [
+            self._make_select_step(element_id="uf"),
+            SemanticAction(action="assert", value="visible",
+                          target=SemanticTarget(text="resultado")),
+            self._make_select_step(element_id="edificio"),
+        ]
+        normalizer._detect_step_dependencies(steps)
+        assert steps[0].blocking is False  # chain length 1
+        assert steps[2].blocking is False  # chain length 1
+
+    def test_fill_and_select_in_same_chain(self):
+        """Fill and select in same chain with a <select>: first is blocking."""
+        normalizer = RecordingNormalizer()
+        fill_step = SemanticAction(
+            action="fill", value="123",
+            target=SemanticTarget(tag="input", element_id="cpf",
+                                  candidates=[LocatorCandidate("id", "#cpf", 0.90)]),
+        )
+        select_step = self._make_select_step(element_id="uf")
+        steps = [fill_step, select_step]
+        normalizer._detect_step_dependencies(steps)
+        assert steps[0].blocking is True
+        assert steps[1].depends_on == "step_0001"
+
+    def test_fills_only_no_select_no_dependency(self):
+        """Multiple fills on same page without any <select>: no dependency."""
+        normalizer = RecordingNormalizer()
+        steps = [
+            SemanticAction(
+                action="fill", value="123",
+                target=SemanticTarget(tag="input", element_id="cpf",
+                                      candidates=[LocatorCandidate("id", "#cpf", 0.90)]),
+            ),
+            SemanticAction(
+                action="fill", value="João",
+                target=SemanticTarget(tag="input", element_id="nome",
+                                      candidates=[LocatorCandidate("id", "#nome", 0.90)]),
+            ),
+            SemanticAction(
+                action="fill", value="Silva",
+                target=SemanticTarget(tag="input", element_id="sobrenome",
+                                      candidates=[LocatorCandidate("id", "#sobrenome", 0.90)]),
+            ),
+        ]
+        normalizer._detect_step_dependencies(steps)
+        assert all(s.blocking is False for s in steps)
+        assert all(s.depends_on == "" for s in steps)
+
+    def test_click_in_chain(self):
+        """Click in data-entry chain: included in dependency."""
+        normalizer = RecordingNormalizer()
+        steps = [
+            self._make_select_step(element_id="uf"),
+            SemanticAction(
+                action="click",
+                target=SemanticTarget(role="button", text="OK",
+                                      candidates=[LocatorCandidate("text", "text=OK", 0.55)]),
+            ),
+            self._make_select_step(element_id="edificio"),
+        ]
+        normalizer._detect_step_dependencies(steps)
+        assert steps[0].blocking is True
+        assert steps[1].depends_on == "step_0001"
+        assert steps[2].depends_on == "step_0001"
+
+    def test_explicit_dependency_preserved(self):
+        """Step with explicit depends_on is not auto-detected."""
+        normalizer = RecordingNormalizer()
+        steps = [
+            self._make_select_step(element_id="uf"),
+            SemanticAction(
+                action="select_option", depends_on="step_0005",
+                target=SemanticTarget(tag="select", element_id="edificio",
+                                      candidates=[LocatorCandidate("id", "#edificio", 0.90)]),
+            ),
+        ]
+        normalizer._detect_step_dependencies(steps)
+        assert steps[0].blocking is False  # chain broken by explicit dep
+        assert steps[1].depends_on == "step_0005"  # preserved
+
+    def test_explicit_blocking_preserved(self):
+        """Step with explicit blocking=True is not auto-detected."""
+        normalizer = RecordingNormalizer()
+        steps = [
+            SemanticAction(
+                action="select_option", blocking=True,
+                target=SemanticTarget(tag="select", element_id="uf",
+                                      candidates=[LocatorCandidate("id", "#uf", 0.90)]),
+            ),
+            self._make_select_step(element_id="edificio"),
+        ]
+        normalizer._detect_step_dependencies(steps)
+        assert steps[0].blocking is True  # preserved
+        assert steps[1].depends_on == ""  # second is part of different chain
+
+    def test_skipped_step_breaks_chain(self):
+        """Step with skip_reason breaks the chain."""
+        normalizer = RecordingNormalizer()
+        steps = [
+            self._make_select_step(element_id="uf"),
+            SemanticAction(
+                action="select_option", skip_reason="non-actionable target",
+                target=SemanticTarget(tag="select", element_id="edificio",
+                                      candidates=[]),
+            ),
+            self._make_select_step(element_id="data"),
+        ]
+        normalizer._detect_step_dependencies(steps)
+        assert steps[0].blocking is False  # chain broken by skipped step
+
+    def test_empty_steps(self):
+        """Empty step list: no error."""
+        normalizer = RecordingNormalizer()
+        steps = []
+        normalizer._detect_step_dependencies(steps)
+        assert steps == []
+
+    def test_only_navigation(self):
+        """Navigation-only steps: no dependencies."""
+        normalizer = RecordingNormalizer()
+        steps = [
+            SemanticAction(action="navigation", url="http://localhost"),
+            SemanticAction(action="navigation", url="http://localhost/page2"),
+        ]
+        normalizer._detect_step_dependencies(steps)
+        assert all(s.blocking is False for s in steps)
+        assert all(s.depends_on == "" for s in steps)
+
+
+class TestStepsJsonlDependencies:
+    """Tests for reading blocking/depends_on from steps.jsonl."""
+
+    def test_steps_jsonl_with_blocking(self):
+        """Convert step from steps.jsonl with blocking=True."""
+        normalizer = RecordingNormalizer()
+        step_data = {
+            "action": "select_option",
+            "value": "SP",
+            "tagName": "select",
+            "id": "ufSelect",
+            "blocking": True,
+        }
+        result = normalizer._convert_step(step_data)
+        assert result is not None
+        assert result.action == "select_option"
+        assert result.blocking is True
+        assert result.depends_on == ""
+
+    def test_steps_jsonl_with_depends_on(self):
+        """Convert step from steps.jsonl with depends_on."""
+        normalizer = RecordingNormalizer()
+        step_data = {
+            "action": "select_option",
+            "value": "Edifício A",
+            "tagName": "select",
+            "id": "edificioSelect",
+            "depends_on": "step_0003",
+        }
+        result = normalizer._convert_step(step_data)
+        assert result is not None
+        assert result.depends_on == "step_0003"
+        assert result.blocking is False
+
+    def test_steps_jsonl_with_context(self):
+        """Convert step with context dict from steps.jsonl."""
+        normalizer = RecordingNormalizer()
+        step_data = {
+            "action": "click",
+            "tagName": "button",
+            "text": "Pesquisar",
+            "context": {"is_submit": True, "postback_url": "http://localhost/result"},
+        }
+        result = normalizer._convert_step(step_data)
+        assert result is not None
+        assert result.context.get("is_submit") is True
+        assert result.context.get("postback_url") == "http://localhost/result"

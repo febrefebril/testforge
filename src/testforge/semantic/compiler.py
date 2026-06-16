@@ -90,6 +90,10 @@ class PlaywrightCompiler:
             record["context"] = step.context
         if step.skip_reason:
             record["skip_reason"] = step.skip_reason
+        if step.blocking:
+            record["blocking"] = True
+        if step.depends_on:
+            record["depends_on"] = step.depends_on
 
         if step.target:
             t: dict = {}

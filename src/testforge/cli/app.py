@@ -288,6 +288,9 @@ def cmd_run(args):
     llm_used = False
     healed_steps = 0
     failed_steps = 0
+    blocked_steps = 0
+    # Track which step indices (0-based) failed irrecoverably (block dependents)
+    failed_step_indices: set = set()
 
     # BUG-016: RunReport captures full step details (untruncated) saved to file
     run_report = RunReport(
@@ -333,6 +336,16 @@ def cmd_run(args):
             for i, step in enumerate(steps):
                 step_num = i + 1
                 action = step.action
+
+                # Check if this step depends on a previously failed blocking step
+                if step.depends_on and not step.skip_reason:
+                    # Parse the 1-based step index from depends_on (e.g., "step_0003")
+                    dep_match = _re.match(r'step_(\d+)', step.depends_on)
+                    if dep_match:
+                        dep_step_idx = int(dep_match.group(1)) - 1  # convert to 0-based
+                        if dep_step_idx in failed_step_indices:
+                            step.skip_reason = f"blocked_by_previous_failure (depends on {step.depends_on})"
+                            blocked_steps += 1
                 sel = ""
                 candidates = []
                 all_candidates_full = []  # BUG-016: untruncated
@@ -564,6 +577,21 @@ def cmd_run(args):
                                 selector=selector_used,
                             )
 
+                    # Track irrecoverable failure for blocking step dependency
+                    if step.blocking:
+                        # Step is considered irrecoverable if healing was not attempted
+                        # or healing was rejected/failed (not passed)
+                        healing_saved = (
+                            outcome is not None
+                            and outcome.status == ProgressResult.PASSED_STEP
+                        )
+                        if not healing_saved:
+                            failed_step_indices.add(i)
+
+                # Track blocking step failure that didn't raise (e.g., assert failure)
+                if step.blocking and step_report.error_message and i not in failed_step_indices:
+                    failed_step_indices.add(i)
+
                 # BUG-016: add full step report to run report
                 run_report.add_step(step_report)
 
@@ -583,7 +611,7 @@ def cmd_run(args):
     if steps:
         interactions = sum(1 for s in steps if s.action in ("fill", "click", "select_option"))
         asserts_run = sum(1 for s in steps if s.action == "assert")
-        print(f"  Steps: {len(steps)} total ({interactions} interacoes + {asserts_run} asserts), {failed_steps} falhas, {healed_steps} curados")
+        print(f"  Steps: {len(steps)} total ({interactions} interacoes + {asserts_run} asserts), {failed_steps} falhas, {healed_steps} curados, {blocked_steps} bloqueados")
     if layer_used:
         print(f"  Healing layer: {layer_used}")
 

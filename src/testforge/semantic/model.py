@@ -34,6 +34,8 @@ class SemanticAction:
     page_title: Optional[str] = None
     context: dict = field(default_factory=dict)
     skip_reason: str = ""
+    blocking: bool = False
+    depends_on: str = ""
 
 
 @dataclass
@@ -82,5 +84,7 @@ class SemanticTestCase:
             if step.page_title: s["page_title"] = step.page_title
             if step.context: s["context"] = step.context
             if step.skip_reason: s["skip_reason"] = step.skip_reason
+            if step.blocking: s["blocking"] = True
+            if step.depends_on: s["depends_on"] = step.depends_on
             result["semantic_test_case"]["steps"].append(s)
         return result
