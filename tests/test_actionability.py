@@ -173,19 +173,19 @@ class TestActionabilityValidator:
         assert "not_attached" in result.failures
 
     def test_element_removed_from_dom(self, page: Page):
-        """Element exists but js removes it → not_attached when evaluating."""
-        page.set_content("""
-            <div id="container"></div>
-            <script>
-                setTimeout(() => {
-                    const el = document.createElement('button');
-                    el.id = 'btn';
-                    document.body.appendChild(el);
-                }, 50);
-            </script>
+        """Element removed from DOM before validation → not_attached."""
+        page.set_content('<div id="container"></div>')
+        # Dynamically create then immediately destroy element
+        page.evaluate("""
+            const el = document.createElement('button');
+            el.id = 'btn';
+            document.body.appendChild(el);
         """)
+        # Verify element exists
+        assert page.locator("#btn").count() == 1
+        # Now remove it
+        page.evaluate("document.getElementById('btn').remove()")
         validator = ActionabilityValidator(page)
-        # #btn does not exist in initial DOM
         result = validator.validate("#btn", timeout=500)
         assert result.actionable is False
         assert "not_attached" in result.failures
