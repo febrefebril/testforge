@@ -2,37 +2,47 @@
 
 Sandbox for reproducing, debugging, and fixing TestForge bugs.
 
+## Cycle: reproduce → verify → fix → validate
+
+Every bug follows this 4-step cycle:
+
+| Phase | Action | Command / File |
+|-------|--------|---------------|
+| **reproduce** | Create minimal HTML page + test that triggers the bug | `bug_lab/pages/<bug>/index.html` + `bug_lab/tests/<bug>_test.py` |
+| **verify** | Run the test, confirm the bug exists and understand the root cause | `pytest bug_lab/tests/<bug>_test.py -v` |
+| **fix** | Apply the fix in `src/testforge/` | Commit with `fix: BUG-XXX — description` |
+| **validate** | Re-run the bug lab test + full suite, confirm no regressions | `pytest bug_lab/ tests/ -v` |
+
+After validation, promote the test to `tests/` for permanent coverage.
+
+## Quick Start
+
+```bash
+# 1. Copy the template
+cp -r bug_lab/pages/template bug_lab/pages/BUG-001
+cp bug_lab/tests/template_test.py bug_lab/tests/BUG-001_test.py
+
+# 2. Reproduce — edit the HTML and test to trigger the bug
+# 3. Verify — run the test
+pytest bug_lab/tests/BUG-001_test.py -v
+
+# 4. Fix — edit src/testforge/ to resolve
+# 5. Validate — re-run and confirm green
+pytest bug_lab/tests/BUG-001_test.py tests/ -v
+```
+
 ## Structure
 
 ```
 bug_lab/
-├── pages/       # HTML pages to reproduce bugs
-├── tests/       # Pytest files that trigger the bug
-├── fixtures/    # Test data (recordings, JSON, configs)
-└── README.md    # This file
+├── pages/                # HTML pages to reproduce bugs
+│   └── template/         # Minimal counter template to copy
+├── tests/                # Pytest files that trigger the bug
+│   └── template_test.py  # Example test demonstrating the cycle
+├── fixtures/             # Test data (recordings, JSON, configs)
+├── conftest.py           # Shared fixtures (test_server, browser, page)
+└── README.md             # This file
 ```
-
-## Workflow: Report → Reproduce → Fix → Verify
-
-### 1. Create bug directory
-```bash
-mkdir -p bug_lab/tests/bugs/BUG-XXX
-```
-
-### 2. Add reproduction artifacts
-- `pages/` — minimal HTML page that triggers the bug
-- `tests/` — pytest file that exercises the failing path
-- `fixtures/` — recordings, test data, or config that caused the bug
-
-### 3. Fix the code in `src/testforge/`
-
-### 4. Verify fix
-```bash
-pytest bug_lab/tests/bugs/BUG-XXX/ -v
-```
-
-### 5. Promote to permanent test
-Move the test to `tests/` and the fixture to `tests/test_pages/`.
 
 ## Bug Template
 
@@ -42,13 +52,10 @@ Move the test to `tests/` and the fixture to `tests/test_pages/`.
 ## Symptoms
 What failed? Error message, stack trace, unexpected behavior.
 
-## Reproduction Steps
-1. Load page: `bug_lab/pages/BUG-XXX/index.html`
-2. Run: `pytest bug_lab/tests/bugs/BUG-XXX/test_bug.py`
+## Reproduction
+1. Page: `bug_lab/pages/BUG-XXX/index.html`
+2. Test: `pytest bug_lab/tests/BUG-XXX_test.py -v`
 3. Observe: ...
-
-## Expected Behavior
-What should happen instead.
 
 ## Root Cause
 Which file/function is broken and why.
@@ -56,9 +63,9 @@ Which file/function is broken and why.
 ## Fix
 Commit hash and summary of the fix.
 
-## Verification
+## Validation
 ```bash
-pytest bug_lab/tests/bugs/BUG-XXX/ tests/ -v -k "relevant_test"
+pytest bug_lab/tests/BUG-XXX_test.py tests/ -v
 ```
 ```
 
@@ -71,3 +78,4 @@ pytest bug_lab/tests/bugs/BUG-XXX/ tests/ -v -k "relevant_test"
 | `semantic_tests/` | Compiled semantic test runs (runtime artifacts) | Ignored |
 | `tests/` | Permanent test suite | Tracked |
 | `synthetic_lab/` | Fake apps for testing | Tracked |
+| `src/testforge/` | Source code (fixes applied here) | Tracked |
