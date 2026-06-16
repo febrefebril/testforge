@@ -93,5 +93,5 @@ def launch_browser(
         logger.error(f"CDP connection failed: {exc}")
 
     raise RuntimeError(
-        f"All browser launch strategies failed:\n  " + "\n  ".join(errors)
+        "All browser launch strategies failed:\n  " + "\n  ".join(errors)
     )
