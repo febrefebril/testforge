@@ -6,7 +6,7 @@ Checks: visible, enabled, area > 0 (rejects bb width=height=0).
 from dataclasses import dataclass, field
 from typing import Optional
 
-from playwright.sync_api import Page, Locator, TimeoutError as PlaywrightTimeout
+from playwright.sync_api import Page, TimeoutError as PlaywrightTimeout
 
 
 @dataclass
@@ -65,11 +65,6 @@ class ActionabilityValidator:
         except (PlaywrightTimeout, Exception):
             result.failures.append("not_attached")
             result.message = f"Element '{selector}' not attached to DOM"
-            return result
-
-        if locator.count() == 0:
-            result.failures.append("not_found")
-            result.message = f"Element '{selector}' not found in DOM"
             return result
 
         el = locator.first

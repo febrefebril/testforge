@@ -4,8 +4,7 @@ Validates element actionability: visible, enabled, area > 0.
 Rejects bb width=height=0.
 """
 
-import pytest
-from playwright.sync_api import Page, TimeoutError as PlaywrightTimeout
+from playwright.sync_api import Page
 
 from testforge.actionability import ActionabilityValidator, ActionabilityResult
 
