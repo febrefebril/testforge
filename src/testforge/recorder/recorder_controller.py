@@ -215,7 +215,46 @@ class RecorderController:
         window.__tfCommandQueue = [];
         window.__tfEventCounter = window.__tfEventCounter || 0;
         window.__tfAssertWaiting = false;
-        window.__tfPendingSubmit = null;  // { url, method, timestamp } or null
+        window.__tfPendingSubmit = null;  // { url, method, timestamp } or null — restored from sessionStorage
+
+        // Restore pending submit flag from sessionStorage (survives page navigation).
+        // This tells us the page load is a form postback (ASP classic / ASP.NET).
+        try {
+            var _storedPending = sessionStorage.getItem('__tfPendingSubmit');
+            if (_storedPending) {
+                window.__tfPendingSubmit = JSON.parse(_storedPending);
+                sessionStorage.removeItem('__tfPendingSubmit');
+            }
+        } catch(_e) { /* sessionStorage unavailable (e.g. file://) */ }
+
+        // Restore unflushed events from previous page (saved by beforeunload handler).
+        // The submit event that triggered navigation is in here with full target info.
+        try {
+            var _unflushedEvents = sessionStorage.getItem('__tfUnflushedEvents');
+            if (_unflushedEvents) {
+                var _evts = JSON.parse(_unflushedEvents);
+                // Merge postback metadata into restored submit events.
+                // This avoids page reload flicker: the submit event appears on the
+                // new page with postback context, not as a separate postback event.
+                if (window.__tfPendingSubmit) {
+                    for (var i = 0; i < _evts.length; i++) {
+                        if (_evts[i].type === 'submit') {
+                            _evts[i].is_postback = true;
+                            _evts[i].submit_method = _evts[i].submit_method || window.__tfPendingSubmit.method;
+                            _evts[i].postback_url = window.__tfPendingSubmit.url;
+                        }
+                    }
+                }
+                window.__tfEventQueue = _evts;
+                sessionStorage.removeItem('__tfUnflushedEvents');
+                console.log('[TestForge] restored ' + _evts.length + ' unflushed event(s) from previous page');
+            }
+            var _unflushedSteps = sessionStorage.getItem('__tfUnflushedSteps');
+            if (_unflushedSteps) {
+                window.__tfStepQueue = JSON.parse(_unflushedSteps);
+                sessionStorage.removeItem('__tfUnflushedSteps');
+            }
+        } catch(_e) { /* ignore */ }
 
         window._tf_getSelector = function(el) {
             try {
@@ -459,28 +498,33 @@ class RecorderController:
                 } else if (el && el.closest) {
                     form = el.closest('form');
                 }
-                // Mark pending submit for postback detection on next page load
-                window.__tfPendingSubmit = {
+                // Mark pending submit for postback detection on next page load.
+                // Persist to sessionStorage so it survives page navigation.
+                // The actual submit event is saved via beforeunload → __tfUnflushedEvents.
+                // This flag tells the next page that the load is a postback (not navigation).
+                var _pending = {
                     url: form ? (form.action || window.location.href) : window.location.href,
                     method: (form && form.method) ? form.method.toUpperCase() : 'POST',
                     timestamp: Date.now()
                 };
-                setTimeout(function() { _tf_pushEvent('submit', el); }, 0);
+                window.__tfPendingSubmit = _pending;
+                try { sessionStorage.setItem('__tfPendingSubmit', JSON.stringify(_pending)); } catch(_e) {}
+                _tf_pushEvent('submit', el);
                 return;
             }
-            setTimeout(function() { _tf_pushEvent('click', el); }, 0);
+            _tf_pushEvent('click', el);
         }, true);
 
         window.addEventListener('input', function(e) {
             if (window.__tfAssertWaiting) return;
-            setTimeout(function() { _tf_pushEvent('fill', e.target); }, 0);
+            _tf_pushEvent('fill', e.target);
         }, true);
 
         window.addEventListener('change', function(e) {
             if (window.__tfAssertWaiting) return;
             var el = e.target;
             if (el && (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA')) {
-                setTimeout(function() { _tf_pushEvent('fill', el); }, 0);
+                _tf_pushEvent('fill', el);
             }
         }, true);
 
@@ -599,26 +643,56 @@ class RecorderController:
         }
 
         window.addEventListener('load', function() {
-            // Check if this page load is a form postback (ASP classic / ASP.NET pattern)
+            // Check if this page load is a form postback (ASP classic / ASP.NET pattern).
+            // If the submit event was already restored from sessionStorage (see init block),
+            // we do NOT push a duplicate postback — the submit event already carries
+            // is_postback:true and submit_method. Only push a standalone postback if
+            // the pending flag is set but no submit event was restored (legacy path).
             if (window.__tfPendingSubmit) {
-                var pending = window.__tfPendingSubmit;
-                var eventData = {
-                    event_id: 'evt_' + String(++window.__tfEventCounter).padStart(5,'0'),
-                    type: 'postback',
-                    timestamp: new Date().toISOString(),
-                    url: window.location.href,
-                    page_title: document.title,
-                    target: null,
-                    value: null,
-                    is_postback: true,
-                    submit_method: pending.method
-                };
-                window.__tfEventQueue.push(eventData);
+                var _alreadyRestored = false;
+                for (var i = 0; i < window.__tfEventQueue.length; i++) {
+                    if (window.__tfEventQueue[i].type === 'submit' && window.__tfEventQueue[i].is_postback) {
+                        _alreadyRestored = true;
+                        break;
+                    }
+                }
+                if (!_alreadyRestored) {
+                    var pending = window.__tfPendingSubmit;
+                    var eventData = {
+                        event_id: 'evt_' + String(++window.__tfEventCounter).padStart(5,'0'),
+                        type: 'postback',
+                        timestamp: new Date().toISOString(),
+                        url: window.location.href,
+                        page_title: document.title,
+                        target: null,
+                        value: null,
+                        is_postback: true,
+                        submit_method: pending.method
+                    };
+                    window.__tfEventQueue.push(eventData);
+                    console.log('[TestForge] postback detected (legacy) — method:', pending.method, 'url:', window.location.href);
+                } else {
+                    console.log('[TestForge] postback already captured via restored submit event');
+                }
                 window.__tfPendingSubmit = null;
-                console.log('[TestForge] postback detected — method:', pending.method, 'url:', window.location.href);
             } else {
                 setTimeout(function() { _tf_pushEvent('navigation'); }, 0);
             }
             setTimeout(function() { _tf_showOverlay(); }, 100);
+        });
+
+        // Persist unflushed events to sessionStorage before navigation.
+        // When the page navigates (form submit, link click), in-flight events
+        // that haven't been flushed by the Python side are lost. This handler
+        // saves them so they can be restored on the next page.
+        window.addEventListener('beforeunload', function() {
+            try {
+                if (window.__tfEventQueue && window.__tfEventQueue.length > 0) {
+                    sessionStorage.setItem('__tfUnflushedEvents', JSON.stringify(window.__tfEventQueue));
+                }
+                if (window.__tfStepQueue && window.__tfStepQueue.length > 0) {
+                    sessionStorage.setItem('__tfUnflushedSteps', JSON.stringify(window.__tfStepQueue));
+                }
+            } catch(_e) { /* ignore */ }
         });
     """

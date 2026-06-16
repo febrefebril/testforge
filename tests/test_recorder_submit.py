@@ -187,18 +187,22 @@ class TestClickVsSubmitIntegration:
 
     @pytest.fixture
     def submit_page(self, page: Page):
-        """Load the fam-submit test page with recorder overlay injected."""
+        """Load the fam-submit test page with recorder overlay injected via add_init_script.
+        
+        Uses add_init_script so the overlay persists across page navigations,
+        enabling postback detection on subsequent pages.
+        """
+        from testforge.recorder.recorder_controller import RecorderController
+        page.add_init_script(RecorderController._OVERLAY_JS)
         import os as _os
         page_dir = _os.path.join(
             _os.path.dirname(__file__), "test_pages", "curation", "fam-submit"
         )
         page.goto(f"file://{page_dir}/index.html")
-        # Overlay gets injected automatically after page load since we use add_init_script
-        # But for direct testing, inject it manually
-        from testforge.recorder.recorder_controller import RecorderController
-        page.evaluate(RecorderController._OVERLAY_JS)
         page.evaluate("_tf_showOverlay()")
         page.wait_for_timeout(200)
+        # Clear initial events (navigation + overlay startup)
+        page.evaluate("window.__tfEventQueue = []")
         return page
 
     def _get_events(self, page: Page) -> list:
@@ -248,25 +252,35 @@ class TestClickVsSubmitIntegration:
         )
         assert "click" in event_types, f"Expected 'click' in {event_types}"
 
-    def test_regular_link_records_as_click(self, submit_page):
-        """Click on regular link records 'click', NOT submit."""
-        submit_page.click("#link-regular")
-        submit_page.wait_for_timeout(100)
-        events = self._get_events(submit_page)
-        event_types = [e["type"] for e in events]
-        assert "submit" not in event_types, (
-            f"Regular link should NOT be submit! Got: {event_types}"
-        )
-        assert "click" in event_types, f"Expected 'click' in {event_types}"
-
-    def test_asp_classic_link_records_as_submit(self, submit_page):
-        """Click on ASP classic document.forms submit link records 'submit'."""
+    def test_asp_classic_link_produces_postback(self, submit_page):
+        """Click on ASP classic document.forms submit link navigates → submit event survives.
+        
+        The submit event is now saved via beforeunload handler to sessionStorage
+        and restored on the new page with postback metadata (is_postback:true,
+        submit_method). The normalizer treats this as a click with is_submit context.
+        No separate postback event is generated — the submit event is the authoritative
+        record of the user action, with postback as metadata.
+        """
         submit_page.click("#link-asp-classic-href")
         submit_page.wait_for_timeout(100)
         events = self._get_events(submit_page)
         event_types = [e["type"] for e in events]
+        # Submit event survives navigation via beforeunload → sessionStorage.
+        # It carries is_postback:true metadata instead of a separate postback event.
         assert "submit" in event_types, (
-            f"ASP classic href should be submit! Got: {event_types}"
+            f"ASP classic href should produce submit event (survived navigation). Got: {event_types}"
+        )
+        # Verify the restored submit event has postback metadata
+        submit_events = [e for e in events if e["type"] == "submit"]
+        assert len(submit_events) == 1, (
+            f"Expected exactly 1 submit event, got: {events}"
+        )
+        postback_submit = submit_events[0]
+        assert postback_submit.get("is_postback") is True, (
+            f"Restored submit should have is_postback=true. Got: {postback_submit}"
+        )
+        assert postback_submit.get("submit_method") == "POST", (
+            f"Expected POST method, got: {postback_submit.get('submit_method')}"
         )
 
     def test_dopostback_link_records_as_submit(self, submit_page):
@@ -405,14 +419,14 @@ class TestPostbackDetection:
 
     @pytest.fixture
     def submit_page(self, page: Page):
-        """Load fam-submit page with overlay."""
+        """Load fam-submit page with add_init_script for persistent overlay."""
+        from testforge.recorder.recorder_controller import RecorderController
+        page.add_init_script(RecorderController._OVERLAY_JS)
         import os as _os
         page_dir = _os.path.join(
             _os.path.dirname(__file__), "test_pages", "curation", "fam-submit"
         )
         page.goto(f"file://{page_dir}/index.html")
-        from testforge.recorder.recorder_controller import RecorderController
-        page.evaluate(RecorderController._OVERLAY_JS)
         page.evaluate("_tf_showOverlay()")
         page.wait_for_timeout(200)
         # Clear initial events
@@ -467,7 +481,124 @@ class TestPostbackDetection:
 
 
 # ---------------------------------------------------------------------------
-# Testes do normalizador: postback skipped, submit → click
+# Testes de beforeunload: eventos sobrevivem a navegacao
+# ---------------------------------------------------------------------------
+
+class TestBeforeunloadEventPersistence:
+    """Testa que eventos sao persistidos via beforeunload e restaurados na nova pagina."""
+
+    @pytest.fixture
+    def submit_page(self, page: Page):
+        """Load fam-submit page with add_init_script for persistent overlay."""
+        from testforge.recorder.recorder_controller import RecorderController
+        page.add_init_script(RecorderController._OVERLAY_JS)
+        import os as _os
+        page_dir = _os.path.join(
+            _os.path.dirname(__file__), "test_pages", "curation", "fam-submit"
+        )
+        page.goto(f"file://{page_dir}/index.html")
+        page.evaluate("_tf_showOverlay()")
+        page.wait_for_timeout(200)
+        page.evaluate("window.__tfEventQueue = []")
+        return page
+
+    def _get_events(self, page: Page) -> list:
+        return page.evaluate("""() => {
+            var q = window.__tfEventQueue || [];
+            window.__tfEventQueue = [];
+            return q;
+        }""")
+
+    def test_beforeunload_persists_events_to_session_storage(self, submit_page):
+        """beforeunload handler salva eventos no sessionStorage antes de navegar."""
+        # Push a known event
+        submit_page.evaluate("""() => {
+            window.__tfEventQueue.push({
+                event_id: 'evt_test',
+                type: 'click',
+                timestamp: new Date().toISOString(),
+                url: window.location.href,
+                page_title: document.title,
+                target: {tag: 'a', text: 'Test'}
+            });
+            // Simulate beforeunload
+            sessionStorage.setItem('__tfUnflushedEvents', JSON.stringify(window.__tfEventQueue));
+        }""")
+        stored = submit_page.evaluate("() => sessionStorage.getItem('__tfUnflushedEvents')")
+        assert stored is not None, "beforeunload should persist events to sessionStorage"
+        parsed = __import__("json").loads(stored)
+        assert len(parsed) == 1
+        assert parsed[0]["type"] == "click"
+
+    def test_restored_submit_event_has_postback_metadata(self, submit_page):
+        """Submit event restored from sessionStorage has is_postback and submit_method."""
+        submit_page.evaluate("""() => {
+            sessionStorage.setItem('__tfPendingSubmit', JSON.stringify({
+                url: 'page2.html', method: 'POST', timestamp: Date.now()
+            }));
+            sessionStorage.setItem('__tfUnflushedEvents', JSON.stringify([{
+                event_id: 'evt_restored',
+                type: 'submit',
+                timestamp: new Date().toISOString(),
+                url: window.location.href,
+                page_title: document.title,
+                target: {tag: 'input', text: 'Submit', id: 'btn1'},
+                value: null
+            }]));
+        }""")
+        # Reload to trigger init block restoration
+        submit_page.reload()
+        submit_page.wait_for_timeout(300)
+        events = self._get_events(submit_page)
+        submit_events = [e for e in events if e["type"] == "submit"]
+        assert len(submit_events) >= 1, (
+            f"Should have restored submit event. Got: {events}"
+        )
+        restored = submit_events[0]
+        assert restored.get("is_postback") is True, (
+            f"Restored submit should have is_postback=true. Got keys: {list(restored.keys())}"
+        )
+        assert restored.get("submit_method") == "POST"
+
+    def test_restored_submit_event_has_target_info(self, submit_page):
+        """Submit event restored preserves target information."""
+        submit_page.evaluate("""() => {
+            sessionStorage.setItem('__tfPendingSubmit', JSON.stringify({
+                url: 'page2.html', method: 'GET', timestamp: Date.now()
+            }));
+            sessionStorage.setItem('__tfUnflushedEvents', JSON.stringify([{
+                event_id: 'evt_target_test',
+                type: 'submit',
+                timestamp: new Date().toISOString(),
+                url: window.location.href,
+                page_title: document.title,
+                target: {tag: 'button', text: 'Save', id: 'btn-save', role: 'button'},
+                value: null
+            }]));
+        }""")
+        submit_page.reload()
+        submit_page.wait_for_timeout(300)
+        events = self._get_events(submit_page)
+        submit_events = [e for e in events if e["type"] == "submit"]
+        assert len(submit_events) >= 1
+        target = submit_events[0].get("target") or {}
+        assert target.get("tag") == "button"
+        assert target.get("text") == "Save"
+        assert target.get("id") == "btn-save"
+
+    def test_regular_navigation_does_not_get_postback_metadata(self, submit_page):
+        """Regular navigation (click on non-submit link) should NOT get is_postback."""
+        # Navigate to page2 via regular link
+        submit_page.evaluate("window.__tfEventQueue = []")
+        submit_page.click("#link-regular")
+        submit_page.wait_for_timeout(300)
+        # Check sessionStorage cleanup on new page
+        pending = submit_page.evaluate("() => sessionStorage.getItem('__tfPendingSubmit')")
+        assert pending is None, "Regular navigation should not leave pending submit"
+
+
+# ---------------------------------------------------------------------------
+# Testes do normalizador: postback skipped, submit → click, restored submit
 # ---------------------------------------------------------------------------
 
 class TestPostbackNormalization:
@@ -504,6 +635,28 @@ class TestPostbackNormalization:
         assert result.action == "click", f"Expected 'click', got '{result.action}'"
         assert result.context.get("is_submit") is True
         assert result.context.get("submit_method") == "POST"
+
+    def test_restored_submit_event_with_postback_metadata(self):
+        """Submit event restaurado apos navegacao (is_postback:true) converte para click com contexto completo."""
+        from testforge.semantic.recording_normalizer import RecordingNormalizer
+
+        normalizer = RecordingNormalizer()
+        result = normalizer._convert_event({
+            "type": "submit",
+            "url": "http://localhost/form",
+            "page_title": "Page 2",
+            "target": {"tag": "a", "text": "Submit Form", "id": "link1"},
+            "value": None,
+            "is_postback": True,
+            "submit_method": "POST",
+            "postback_url": "http://localhost/page2",
+        })
+        assert result is not None, "restored submit should produce an action"
+        assert result.action == "click"
+        assert result.context.get("is_submit") is True
+        assert result.context.get("is_postback") is True
+        assert result.context.get("submit_method") == "POST"
+        assert result.context.get("postback_url") == "http://localhost/page2"
 
     def test_click_event_passes_through(self):
         """click events normais passam sem alteracao."""
@@ -557,6 +710,23 @@ class TestRawEventPostbackFields:
         assert d["submit_method"] == "GET"
         # is_postback should default to False for submit events
         assert d.get("is_postback") is not True
+
+    def test_restored_submit_event_has_postback_fields(self):
+        """Submit event restaurado apos navegacao carrega is_postback e submit_method."""
+        from testforge.recorder.raw_event import RawRecordedEvent
+
+        evt = RawRecordedEvent(
+            event_id="evt_00042",
+            event_type="submit",
+            url="http://localhost/page2",
+            page_title="Page 2",
+            is_postback=True,
+            submit_method="POST",
+        )
+        d = evt.to_dict()
+        assert d["type"] == "submit"
+        assert d["is_postback"] is True
+        assert d["submit_method"] == "POST"
 
     def test_regular_click_omits_postback_fields(self):
         from testforge.recorder.raw_event import RawRecordedEvent
