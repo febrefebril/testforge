@@ -312,9 +312,9 @@ def cmd_run(args):
 
                 try:
                     if action == "navigation":
-                        page.goto(base_url)
-                        page.wait_for_timeout(500)
-                        print(f"  ✓ Step {step_num}: navigation")
+                        # Already at base_url from initial goto at line 294.
+                        # Navigation step is a no-op when URL unchanged.
+                        print(f"  ✓ Step {step_num}: navigation (already at {base_url})")
 
                     elif action == "fill" and step.target and (step.target.tag or "").lower() == "select":
                         # Select element: use select_option
@@ -348,30 +348,55 @@ def cmd_run(args):
                             print(f"  - Step {step_num}: fill skip (sem seletor)")
 
                     elif action == "click":
+                        is_submit = step.context.get("is_submit", False) if step.context else False
+
                         if candidates:
                             fallback = FallbackRunner(page)
-                            ok = fallback.try_click(candidates)
-                            if ok:
-                                print(f"  ✓ Step {step_num}: click")
+                            if is_submit:
+                                # Submit click: use expect_navigation with first candidate
+                                sel_candidate = candidates[0]["selector"]
+                                try:
+                                    with page.expect_navigation(wait_until="load"):
+                                        page.click(sel_candidate, timeout=5000)
+                                    print(f"  ✓ Step {step_num}: click (submit)")
+                                except Exception:
+                                    page.wait_for_timeout(1000)
+                                    try:
+                                        with page.expect_navigation(wait_until="load"):
+                                            page.click(sel_candidate, timeout=5000)
+                                        print(f"  ✓ Step {step_num}: click (submit, after wait)")
+                                    except Exception as e_sub:
+                                        raise Exception(f"click step {step_num} falhou — submit: {sel_candidate[:80]}") from e_sub
                             else:
-                                # Re-try with longer wait before failing
-                                page.wait_for_timeout(1000)
                                 ok = fallback.try_click(candidates)
                                 if ok:
-                                    print(f"  ✓ Step {step_num}: click (after wait)")
+                                    print(f"  ✓ Step {step_num}: click")
                                 else:
-                                    tried = ', '.join([c['selector'][:40] for c in candidates[:3]])
-                                    raise Exception(f"click step {step_num} falhou — candidates: [{tried}]")
+                                    page.wait_for_timeout(1000)
+                                    ok = fallback.try_click(candidates)
+                                    if ok:
+                                        print(f"  ✓ Step {step_num}: click (after wait)")
+                                    else:
+                                        tried = ', '.join([c['selector'][:40] for c in candidates[:3]])
+                                        raise Exception(f"click step {step_num} falhou — candidates: [{tried}]")
                         elif sel:
                             try:
-                                page.click(sel, timeout=5000)
-                                page.wait_for_timeout(300)
+                                if is_submit:
+                                    with page.expect_navigation(wait_until="load"):
+                                        page.click(sel, timeout=5000)
+                                else:
+                                    page.click(sel, timeout=5000)
+                                    page.wait_for_timeout(300)
                                 print(f"  ✓ Step {step_num}: click")
                             except Exception:
                                 page.wait_for_timeout(1000)
                                 try:
-                                    page.click(sel, timeout=5000)
-                                    page.wait_for_timeout(300)
+                                    if is_submit:
+                                        with page.expect_navigation(wait_until="load"):
+                                            page.click(sel, timeout=5000)
+                                    else:
+                                        page.click(sel, timeout=5000)
+                                        page.wait_for_timeout(300)
                                     print(f"  ✓ Step {step_num}: click (after wait)")
                                 except Exception as e2:
                                     raise Exception(f"click step {step_num} falhou — selector '{sel[:80]}' not found") from e2

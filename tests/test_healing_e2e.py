@@ -310,15 +310,13 @@ class TestFAM11BrowserLimits:
 class TestHealingIntegration:
     """Test that healing pipeline works end-to-end for key scenarios."""
 
-    def test_selector_healing_mock(self, page: Page, test_server):
+    def test_selector_healing_mock(self, page: Page):
         """Test healing with MockLLMHealer on a broken selector."""
         from testforge.healing import CuradorAutomatico, EvidencePayload, ProgressResult
         from testforge.healing.healing_catalog import HealingCatalog
         from testforge.evidence import EvidenceCollector
 
-        page.goto(f"{test_server}/pagina-de-teste-completa.html")
-        page.wait_for_timeout(500)
-
+        # navigate fixture already loaded the page (autouse=True)
         collector = EvidenceCollector(page)
         collector.start("test-healing-e2e")
 
@@ -381,16 +379,14 @@ class TestHealingIntegration:
         assert r4.family_code == "FAM-05"
         assert r4.taxonomy_id.startswith("DOM")
 
-    def test_evidence_payload_sufficient(self, page: Page, test_server):
+    def test_evidence_payload_sufficient(self, page: Page):
         """Test that evidence payload is correctly marked sufficient."""
         from testforge.evidence import EvidenceCollector
 
         collector = EvidenceCollector(page)
         collector.start("test-sufficiency")
 
-        page.goto(f"{test_server}/pagina-de-teste-completa.html")
-        page.wait_for_timeout(500)
-
+        # navigate fixture already loaded the page (autouse=True)
         payload = collector.build_llm_payload({
             "action": "click",
             "selector": "#test",
