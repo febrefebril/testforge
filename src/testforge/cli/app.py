@@ -15,7 +15,7 @@ from testforge.oracle import OracleRunner
 from testforge.promotion import PromotionGate
 from testforge.taxonomy import FailureClassifier
 from testforge.runner import FallbackRunner
-from testforge.metrics import MetricsRepository
+from testforge.metrics import MetricsRepository, StepOutcome
 from testforge.healing import HealingCatalog, HealingRecipe, EvidencePayload
 from testforge.healing import CuradorAutomatico, CurationOutcome, ProgressResult
 from testforge.evidence import EvidenceCollector
@@ -435,14 +435,51 @@ def cmd_run(args):
                         error_msg = f"Step {step_num}: {action} failed — no selector available for target. {error_msg}"
                     print(f"  ✗ Step {step_num}: {action} FAILED — {error_msg[:100]}")
 
+                    # BUG-011: per-step metric — falha detectada
+                    metrics.record_step(
+                        StepOutcome.FAILURE_DETECTED,
+                        step_num=step_num, action=action,
+                    )
+
                     # Pipeline de cura para este step
-                    healed_step = _heal_step(
+                    outcome = _heal_step(
                         page, step, error_msg, base_url, step_num,
                         recording_id or "", app_name,
                     )
-                    if healed_step:
-                        healed_steps += 1
-                        healed = True
+                    if outcome is not None:
+                        # BUG-011: healing tentado
+                        family_code = outcome.family
+                        healing_layer = outcome.layer_used
+                        selector_used = sel or (candidates[0]["selector"] if candidates else "")
+
+                        metrics.record_step(
+                            StepOutcome.HEALING_ATTEMPTED,
+                            step_num=step_num, action=action,
+                            family_code=family_code,
+                            healing_layer=healing_layer,
+                            selector=selector_used,
+                        )
+
+                        if outcome.status == ProgressResult.PASSED_STEP:
+                            healed_steps += 1
+                            healed = True
+                            # BUG-011: healing aplicado com sucesso
+                            metrics.record_step(
+                                StepOutcome.HEALING_APPLIED,
+                                step_num=step_num, action=action,
+                                family_code=family_code,
+                                healing_layer=healing_layer,
+                                selector=selector_used,
+                            )
+                        else:
+                            # BUG-011: healing rejeitado/falhou
+                            metrics.record_step(
+                                StepOutcome.HEALING_REJECTED,
+                                step_num=step_num, action=action,
+                                family_code=family_code,
+                                healing_layer=healing_layer,
+                                selector=selector_used,
+                            )
 
             browser.close()
 
@@ -466,15 +503,19 @@ def cmd_run(args):
 
 
 def _heal_step(page, step, error_msg: str, base_url: str, step_num: int,
-               recording_id: str, app_name: str) -> bool:
-    """Tenta curar um step falho usando o pipeline L0→L3."""
+               recording_id: str, app_name: str):
+    """Tenta curar um step falho usando o pipeline L0→L3.
+
+    Returns:
+        CurationOutcome, or None if failure is unrecoverable.
+    """
     classifier = FailureClassifier()
     failure = classifier.classify(error_msg)
 
     print(f"    Falha: {failure.code} [{failure.family_code}]")
 
     if not failure.recoverable:
-        return False
+        return None
 
     # Coletar evidencias com DOM do momento da falha
     collector = EvidenceCollector(page)
@@ -544,9 +585,7 @@ def _heal_step(page, step, error_msg: str, base_url: str, step_num: int,
     else:
         print()
 
-    if outcome.status == ProgressResult.PASSED_STEP:
-        return True
-    return False
+    return outcome
 
 
 def _try_heal_inline(base_url: str, headless: bool, error_text: str,
@@ -707,7 +746,18 @@ def cmd_pipeline(args):
     # Step 4: Metrics
     print("\n📊 Fase 4: Metricas")
     metrics = MetricsRepository()
-    metrics.record_run(healed=healed, oracle_passed=sum(1 for r in results if r.status == "passed"))
+    # BUG-011: per-step recording for inline pipeline steps
+    oracle_passed = 0
+    for r in results:
+        step_num = 1
+        metrics.record_step(
+            StepOutcome.ORACLE_VALIDATED if r.status == "passed" else StepOutcome.HEALING_REJECTED,
+            step_num=step_num, action=f"oracle_{r.oracle_type}",
+            healing_layer="L3" if healed else "N/A",
+        )
+        if r.status == "passed":
+            oracle_passed += 1
+    metrics.record_run(healed=healed, oracle_passed=oracle_passed)
     print(metrics.summary())
 
     print(f"\n  Artefatos: recordings/{rid}/ | semantic_tests/ST-{rid}/")
