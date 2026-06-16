@@ -1,0 +1,30 @@
+<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>BUG-001: Select Test</title></head>
+<body>
+<h1>BUG-001: Verificar select_option</h1>
+<form>
+  <label for="lstUf">UF:</label>
+  <select id="lstUf" name="lstUf">
+    <option value="">Selecione</option>
+    <option value="MT">MT</option>
+    <option value="DF">DF</option>
+    <option value="GO">GO</option>
+  </select>
+  <br><br>
+  <label for="lstEdificio">Edifício:</label>
+  <select id="lstEdificio" name="lstEdificio">
+    <option value="">Selecione</option>
+    <option value="SEDE">SEDE</option>
+    <option value="ANEXO">ANEXO</option>
+  </select>
+  <br><br>
+  <button type="button" id="btnEnviar">Enviar</button>
+</form>
+<div id="resultado" role="status" style="margin-top:10px"></div>
+<script>
+document.getElementById('btnEnviar').addEventListener('click', function(){
+  var uf = document.getElementById('lstUf').value;
+  var ed = document.getElementById('lstEdificio').value;
+  document.getElementById('resultado').textContent = 'Selecionado: UF=' + uf + ' Edificio=' + ed;
+});
+</script>
+</body></html>

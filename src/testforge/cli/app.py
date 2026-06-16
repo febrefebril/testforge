@@ -302,6 +302,22 @@ def cmd_run(args):
                         page.wait_for_timeout(500)
                         print(f"  ✓ Step {step_num}: navigation")
 
+                    elif action == "fill" and step.target and (step.target.tag or "").lower() == "select":
+                        # Select element: use select_option
+                        if candidates:
+                            fallback = FallbackRunner(page)
+                            ok = fallback.try_fill(candidates, value)
+                            if ok:
+                                print(f"  ✓ Step {step_num}: select {value[:20]}")
+                            else:
+                                raise Exception(f"select step {step_num} falhou — candidates: {[c['selector'][:40] for c in candidates[:3]]}")
+                        elif sel:
+                            page.select_option(sel, value, timeout=5000)
+                            page.wait_for_timeout(200)
+                            print(f"  ✓ Step {step_num}: select {value[:20]}")
+                        else:
+                            print(f"  - Step {step_num}: select skip (sem seletor)")
+
                     elif action == "fill":
                         if candidates:
                             fallback = FallbackRunner(page)

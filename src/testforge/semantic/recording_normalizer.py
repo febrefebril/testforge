@@ -146,6 +146,7 @@ class RecordingNormalizer:
     def _build_target(self, target_data: dict) -> SemanticTarget:
         candidates = []
         text = target_data.get("text") or ""
+        tag = (target_data.get("tag") or "").lower()
 
         # 0. data-testid (most stable)
         if target_data.get("test_id"):
@@ -158,6 +159,19 @@ class RecordingNormalizer:
             if attr_name.startswith("data-") and attr_value and len(attr_value) < 60:
                 sel = f"[{attr_name}='{attr_value}']"
                 candidates.append(LocatorCandidate("data_attr", sel, 0.65, f"{attr_name}={attr_value}"))
+
+        # For <select> elements: prefer name/id, NEVER use label + input
+        if tag == "select":
+            if target_data.get("name"):
+                sel = f"select[name='{target_data['name']}']"
+                candidates.append(LocatorCandidate("name", sel, 0.93, f"select name={target_data['name']}"))
+            if target_data.get("id"):
+                candidates.append(LocatorCandidate("id", f"#{target_data['id']}", 0.90, f"select id={target_data['id']}"))
+            if target_data.get("label"):
+                candidates.append(LocatorCandidate("label", f"select[aria-label='{target_data['label']}']", 0.75, f"select aria-label={target_data['label']}"))
+            # Fallback: text content (options text)
+            if text:
+                candidates.append(LocatorCandidate("text", f"select:has-text('{_clean_text(text)[:40]}')", 0.35, f"select containing text"))
 
         # Prioridade de estrategias (score deterministico)
         if target_data.get("role"):

@@ -80,6 +80,9 @@ class PlaywrightCompiler:
         for action in tc.steps:
             if action.action == "navigation":
                 lines.append(f"    page.goto(BASE_URL)")
+            elif action.action == "fill" and action.target and (action.target.tag or "").lower() == "select":
+                step_idx += 1
+                lines.extend(self._gen_select(action, step_idx, data_file))
             elif action.action == "fill":
                 step_idx += 1
                 lines.extend(self._gen_fill(action, step_idx, data_file))
@@ -117,9 +120,12 @@ class PlaywrightCompiler:
         for action in tc.steps:
             if action.action == "navigation":
                 lines.append(f"    page.goto(BASE_URL)")
+            elif action.action == "fill" and action.target and (action.target.tag or "").lower() == "select":
+                step_idx += 1
+                lines.extend(self._gen_select(action, step_idx, data_file))
             elif action.action == "fill":
                 step_idx += 1
-                lines.extend(self._gen_fill(action, step_idx))
+                lines.extend(self._gen_fill(action, step_idx, data_file))
             elif action.action == "click":
                 step_idx += 1
                 lines.extend(self._gen_click(action, step_idx))
@@ -135,6 +141,13 @@ class PlaywrightCompiler:
 
     def _fallback_selector(self, action: SemanticAction) -> str:
         t = action.target
+        tag = (t.tag or "").lower() if t else ""
+        if tag == "select":
+            if t and t.name:
+                return f"select[name='{t.name}']"
+            if t and t.element_id:
+                return f"#{t.element_id}"
+            return "select"
         if t and t.label and t.element_id:
             return f"label[for='{t.element_id}']"
         if t and t.label:
@@ -144,6 +157,38 @@ class PlaywrightCompiler:
         if t and t.element_id:
             return f"#{t.element_id}"
         return "input"
+
+    def _gen_select(self, action: SemanticAction, idx: int, data_file: str = "") -> list[str]:
+        """Generate page.select_option() for <select> elements."""
+        value = self._resolved_value(action, idx, data_file)
+        candidates = action.target.candidates if action.target else []
+        sorted_candidates = sorted(candidates, key=lambda c: c.score, reverse=True)
+
+        if not sorted_candidates:
+            sel = self._fallback_selector(action)
+            lines = [
+                f"    # Step {idx}: select {action.target.label if action.target else 'select'}",
+                f"    page.select_option({self._esc(sel)}, {value})",
+                f"    page.wait_for_timeout(200)",
+                "",
+            ]
+            return lines
+
+        selectors = [self._esc(c.selector) for c in sorted_candidates[:5]]
+        lines = [f"    # Step {idx}: select ({self._data_field_name(action) or action.value})"]
+        lines.append(f"    _sels = [{', '.join(selectors)}]")
+        lines.append("    for _sel in _sels:")
+        lines.append("        try:")
+        lines.append(f"            page.select_option(_sel, {value})")
+        lines.append("            page.wait_for_timeout(200)")
+        lines.append("            break")
+        lines.append("        except Exception:")
+        lines.append("            continue")
+        lines.append("    else:")
+        lines.append(f"        raise AssertionError(f\"select step {idx} falhou "
+                      f"— selectors tried: {{_sels}}\")")
+        lines.append("")
+        return lines
 
     def _gen_fill(self, action: SemanticAction, idx: int, data_file: str = "") -> list[str]:
         value = self._resolved_value(action, idx, data_file)
