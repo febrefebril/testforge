@@ -20,6 +20,7 @@ from testforge.healing import HealingCatalog, HealingRecipe, EvidencePayload
 from testforge.healing import CuradorAutomatico, CurationOutcome, ProgressResult
 from testforge.evidence import EvidenceCollector
 from testforge.validation import validate_url
+from testforge.reporting import RunReport, StepReport
 
 import pathlib
 _PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent.parent
@@ -284,6 +285,14 @@ def cmd_run(args):
     healed_steps = 0
     failed_steps = 0
 
+    # BUG-016: RunReport captures full step details (untruncated) saved to file
+    run_report = RunReport(
+        recording_id=recording_id or "unknown",
+        base_url=base_url,
+        script_path=script_path,
+        total_steps=len(steps),
+    )
+
     if not steps:
         # Fallback: executa via pytest subprocess (modo antigo)
         import subprocess
@@ -322,6 +331,7 @@ def cmd_run(args):
                 action = step.action
                 sel = ""
                 candidates = []
+                all_candidates_full = []  # BUG-016: untruncated
 
                 if step.target:
                     if step.target.candidates and len(step.target.candidates) > 0:
@@ -329,8 +339,21 @@ def cmd_run(args):
                     if step.target.candidates:
                         candidates = [{"selector": c.selector, "score": c.score}
                                       for c in step.target.candidates[:3]]
+                        # BUG-016: full candidates for report (untruncated)
+                        all_candidates_full = [{"selector": c.selector, "score": c.score}
+                                               for c in step.target.candidates]
 
                 value = step.value or ""
+
+                # BUG-016: StepReport captures full per-step details
+                step_report = StepReport(
+                    step_num=step_num,
+                    action=action,
+                    value=value,
+                    candidates=all_candidates_full,
+                    selector_used=sel,
+                    is_submit=step.context.get("is_submit", False) if step.context else False,
+                )
 
                 try:
                     if action == "navigation":
@@ -436,17 +459,30 @@ def cmd_run(args):
                         expected = value
                         if sel and expected:
                             text = page.locator(sel).first.text_content(timeout=3000)
+                            step_report.assert_type = assert_type
+                            step_report.assert_expected = expected
+                            step_report.assert_actual = (text or "")
                             if expected.lower() in (text or "").lower():
                                 print(f"  ✓ Step {step_num}: assert \"{expected[:30]}\"")
+                                step_report.success = True
                             else:
                                 print(f"  ✗ Step {step_num}: assert FAILED — got \"{(text or '')[:30]}\"")
+                                step_report.error_message = f"assert FAILED: expected '{expected}', got '{(text or '')[:100]}'"
                                 failed_steps += 1
                         else:
                             print(f"  - Step {step_num}: assert skip (sem seletor/expected)")
+                            step_report.skip_reason = "sem seletor/expected"
+                            step_report.success = True
+
+                    # BUG-016: mark step success unless error_message already set (e.g. assert fail)
+                    if not step_report.error_message:
+                        step_report.success = True
 
                 except Exception as e:
                     failed_steps += 1
                     error_msg = str(e)[:300]
+                    # BUG-016: full untruncated error for report
+                    step_report.error_message = str(e)
                     # Include selector info for better classification
                     if sel:
                         error_msg = f"Step {step_num}: {action} failed — selector '{sel[:80]}' not found. {error_msg}"
@@ -468,6 +504,15 @@ def cmd_run(args):
                         page, step, error_msg, base_url, step_num,
                         recording_id or "", app_name,
                     )
+                    # BUG-016: capture full healing details (untruncated)
+                    if outcome is not None:
+                        step_report.healing_attempted = True
+                        step_report.healing_layer = outcome.layer_used
+                        step_report.healing_family = outcome.family
+                        if outcome.proposal:
+                            step_report.healing_proposal_locator = outcome.proposal.new_locator
+                            step_report.healing_confidence = outcome.proposal.confidence
+                            step_report.healing_raw_response = outcome.proposal.raw_response or ""
                     if outcome is not None:
                         # BUG-011: healing tentado
                         family_code = outcome.family
@@ -485,6 +530,7 @@ def cmd_run(args):
                         if outcome.status == ProgressResult.PASSED_STEP:
                             healed_steps += 1
                             healed = True
+                            step_report.healing_success = True
                             # BUG-011: healing aplicado com sucesso
                             metrics.record_step(
                                 StepOutcome.HEALING_APPLIED,
@@ -502,6 +548,9 @@ def cmd_run(args):
                                 healing_layer=healing_layer,
                                 selector=selector_used,
                             )
+
+                # BUG-016: add full step report to run report
+                run_report.add_step(step_report)
 
             browser.close()
 
@@ -522,6 +571,16 @@ def cmd_run(args):
         print(f"  Steps: {len(steps)} total ({interactions} interacoes + {asserts_run} asserts), {failed_steps} falhas, {healed_steps} curados")
     if layer_used:
         print(f"  Healing layer: {layer_used}")
+
+    # BUG-016: save full untruncated report to file
+    run_report.failed_steps = failed_steps
+    run_report.healed_steps = healed_steps
+    if recording_id:
+        report_dir = str(_PROJECT_ROOT / "recordings" / recording_id)
+    else:
+        report_dir = str(_PROJECT_ROOT / "reports")
+    report_path = run_report.save(report_dir)
+    print(f"\n[TestForge] Full report saved: {report_path}")
 
 
 def _heal_step(page, step, error_msg: str, base_url: str, step_num: int,
