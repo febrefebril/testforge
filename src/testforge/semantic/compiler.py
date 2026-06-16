@@ -88,7 +88,8 @@ class PlaywrightCompiler:
                 lines.extend(self._gen_fill(action, step_idx, data_file))
             elif action.action == "click":
                 step_idx += 1
-                lines.extend(self._gen_click(action, step_idx))
+                is_submit = action.context.get("is_submit", False) if action.context else False
+                lines.extend(self._gen_click(action, step_idx, is_submit=is_submit))
             elif action.action == "assert":
                 step_idx += 1
                 lines.extend(self._gen_assert(action, step_idx))
@@ -115,25 +116,6 @@ class PlaywrightCompiler:
             if field:
                 return f'_data.get("{field}", "{escaped_value}")'
         return f'"{escaped_value}"'
-
-        step_idx = 0
-        for action in tc.steps:
-            if action.action == "navigation":
-                lines.append(f"    page.goto(BASE_URL)")
-            elif action.action == "fill" and action.target and (action.target.tag or "").lower() == "select":
-                step_idx += 1
-                lines.extend(self._gen_select(action, step_idx, data_file))
-            elif action.action == "fill":
-                step_idx += 1
-                lines.extend(self._gen_fill(action, step_idx, data_file))
-            elif action.action == "click":
-                step_idx += 1
-                lines.extend(self._gen_click(action, step_idx))
-            elif action.action == "assert":
-                step_idx += 1
-                lines.extend(self._gen_assert(action, step_idx))
-
-        return "\n".join(lines) + "\n"
 
     def _esc(self, sel: str) -> str:
         """Escapa seletor para string Python segura (usa aspas simples)."""
@@ -224,18 +206,21 @@ class PlaywrightCompiler:
         lines.append("")
         return lines
 
-    def _gen_click(self, action: SemanticAction, idx: int) -> list[str]:
+    def _gen_click(self, action: SemanticAction, idx: int, is_submit: bool = False) -> list[str]:
         candidates = action.target.candidates if action.target else []
         sorted_candidates = sorted(candidates, key=lambda c: c.score, reverse=True)
 
         if not sorted_candidates:
             text = (action.target.text or "")[:30]
-            return [
+            lines = [
                 f"    # Step {idx}: click",
                 f"    page.click({self._esc(text)})",
                 f"    page.wait_for_timeout(300)",
-                "",
             ]
+            if is_submit:
+                lines.append(f"    page.wait_for_load_state('networkidle')")
+            lines.append("")
+            return lines
 
         lines = [f"    # Step {idx}: click"]
         selectors = [self._esc(c.selector) for c in sorted_candidates[:5]]
@@ -245,6 +230,8 @@ class PlaywrightCompiler:
         lines.append("        try:")
         lines.append("            page.click(_sel)")
         lines.append("            page.wait_for_timeout(300)")
+        if is_submit:
+            lines.append("            page.wait_for_load_state('networkidle')")
         lines.append("            break")
         lines.append("        except Exception:")
         lines.append("            continue")
