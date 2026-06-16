@@ -355,6 +355,15 @@ def cmd_run(args):
                     is_submit=step.context.get("is_submit", False) if step.context else False,
                 )
 
+                # Check if step was marked as skipped during normalization
+                if step.skip_reason:
+                    step_report.skip_reason = step.skip_reason
+                    step_report.success = True
+                    step_report.error_message = ""
+                    print(f"  - Step {step_num}: {action} skipped — {step.skip_reason}")
+                    run_report.add_step(step_report)
+                    continue
+
                 try:
                     if action == "navigation":
                         # Navigate only if step URL differs from current page URL.
@@ -383,6 +392,7 @@ def cmd_run(args):
                             page.wait_for_timeout(200)
                             print(f"  ✓ Step {step_num}: select {value[:20]}")
                         else:
+                            step_report.skip_reason = "sem seletor"
                             print(f"  - Step {step_num}: select skip (sem seletor)")
 
                     elif action == "fill":
@@ -398,6 +408,7 @@ def cmd_run(args):
                             page.wait_for_timeout(200)
                             print(f"  ✓ Step {step_num}: fill {value[:20]}")
                         else:
+                            step_report.skip_reason = "sem seletor"
                             print(f"  - Step {step_num}: fill skip (sem seletor)")
 
                     elif action == "click":
