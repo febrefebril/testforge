@@ -19,6 +19,7 @@ from testforge.metrics import MetricsRepository, StepOutcome
 from testforge.healing import HealingCatalog, HealingRecipe, EvidencePayload
 from testforge.healing import CuradorAutomatico, CurationOutcome, ProgressResult
 from testforge.evidence import EvidenceCollector
+from testforge.validation import validate_url
 
 import pathlib
 _PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent.parent
@@ -30,6 +31,25 @@ def _sanitize_name(name: str) -> str:
     sanitized = _re.sub(r'[^a-zA-Z0-9_-]', '_', name)
     sanitized = _re.sub(r'_+', '_', sanitized).strip('_')
     return sanitized or "unnamed"
+
+
+def _validate_and_warn_url(url: str) -> bool:
+    """Validate URL and print warnings. Returns True if there are critical warnings."""
+    if not url:
+        return False
+    warnings = validate_url(url)
+    if not warnings:
+        return False
+    has_critical = False
+    for w in warnings:
+        prefix = "⚠ CRITICAL" if w.is_critical else "⚠ Warning"
+        print(f"[TestForge] {prefix}: {w.message}", file=sys.stderr)
+        if w.is_critical:
+            has_critical = True
+    if has_critical:
+        print("[TestForge] 💡 Tip: wrap URL in quotes when using shell, e.g.:\n"
+              "    tf record \"http://example.com/page?arg=1&other=2\"", file=sys.stderr)
+    return has_critical
 
 
 def _check_python_keyboard(page, recorder):
@@ -47,6 +67,8 @@ def _check_python_keyboard(page, recorder):
 
 def cmd_record(args):
     """Grava fluxo de teste com comandos de teclado."""
+    if args.url:
+        _validate_and_warn_url(args.url)
     with sync_playwright() as pw:
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
         context = browser.new_context(viewport={"width": 1280, "height": 720})
@@ -631,6 +653,8 @@ def _try_heal_inline(base_url: str, headless: bool, error_text: str,
 
 def cmd_pipeline(args):
     """Pipeline completa: record → compile → run."""
+    if args.url:
+        _validate_and_warn_url(args.url)
     print("=" * 50)
     print("  TestForge — Pipeline Completa")
     print("=" * 50)
