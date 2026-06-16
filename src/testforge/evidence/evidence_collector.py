@@ -65,9 +65,15 @@ class EvidenceCollector:
             return ""
 
     def capture_dom(self, step_id: str, phase: str = "after") -> str:
-        """Captura DOM snapshot. phase = 'before' ou 'after'."""
+        """Captura DOM snapshot. phase = 'before' ou 'after'.
+        Validates content is not empty before saving."""
         try:
             html = self._page.content()
+            if not html or len(html.strip()) < 100:
+                # Register empty alert but don't save empty file
+                self._pkg.metadata["quality_flags"] = self._pkg.metadata.get("quality_flags", [])
+                self._pkg.metadata["quality_flags"].append(f"DOM_SNAPSHOT_EMPTY:{step_id}")
+                return ""
             filename = f"{phase}_{step_id}.html"
             path = os.path.join(self._dom_dir, filename)
             with open(path, "w") as f:
