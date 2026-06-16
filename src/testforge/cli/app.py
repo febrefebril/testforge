@@ -207,12 +207,16 @@ def cmd_compile(args):
     compiler = PlaywrightCompiler()
     path = compiler.compile(stc, out_dir, data_file=data_file)
 
+    # Generate semantic_steps.jsonl for audit trail
+    semantic_path = compiler.compile_semantic_steps(stc, out_dir)
+
     print(f"[TestForge] ✓ SemanticTestCase: {len(stc.steps)} steps")
     # Breakdown
     interactions = sum(1 for s in stc.steps if s.action in ("fill", "click", "select_option"))
     asserts = sum(1 for s in stc.steps if s.action == "assert")
     print(f"[TestForge]   Interacoes: {interactions} | Asserts: {asserts}")
     print(f"[TestForge] ✓ Script gerado: {path}")
+    print(f"[TestForge] ✓ Semantic steps: {semantic_path}")
     if data_file:
         print(f"[TestForge] ✓ Script data-driven (le {os.path.basename(data_file)})")
 

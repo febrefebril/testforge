@@ -42,6 +42,89 @@ class PlaywrightCompiler:
 
         return path
 
+    def compile_semantic_steps(
+        self,
+        test_case: SemanticTestCase,
+        output_dir: str,
+    ) -> str:
+        """Generate semantic_steps.jsonl alongside compiled script.
+
+        Each line is a self-contained JSON object representing one
+        semantic step — includes action, value, target, candidates,
+        url, context, and skip_reason for full audit trail.
+
+        Returns path to generated file.
+        """
+        os.makedirs(output_dir, exist_ok=True)
+        path = os.path.join(output_dir, "semantic_steps.jsonl")
+
+        with open(path, "w") as f:
+            # Header line: metadata
+            metadata = {
+                "type": "metadata",
+                "test_id": test_case.test_id,
+                "source_recording_id": test_case.source_recording_id,
+                "application": test_case.application,
+                "base_url": test_case.base_url,
+                "step_count": len(test_case.steps),
+            }
+            f.write(_json.dumps(metadata, ensure_ascii=False) + "\n")
+
+            # One step per line
+            for step in test_case.steps:
+                record = self._step_to_record(step)
+                f.write(_json.dumps(record, ensure_ascii=False) + "\n")
+
+        return path
+
+    def _step_to_record(self, step: SemanticAction) -> dict:
+        """Convert a SemanticAction to a JSONL record dict."""
+        record: dict = {"action": step.action}
+        if step.value:
+            record["value"] = step.value
+        if step.url:
+            record["url"] = step.url
+        if step.page_title:
+            record["page_title"] = step.page_title
+        if step.context:
+            record["context"] = step.context
+        if step.skip_reason:
+            record["skip_reason"] = step.skip_reason
+
+        if step.target:
+            t: dict = {}
+            if step.target.role:
+                t["role"] = step.target.role
+            if step.target.accessible_name:
+                t["accessible_name"] = step.target.accessible_name
+            if step.target.label:
+                t["label"] = step.target.label
+            if step.target.placeholder:
+                t["placeholder"] = step.target.placeholder
+            if step.target.test_id:
+                t["test_id"] = step.target.test_id
+            if step.target.text:
+                t["text"] = step.target.text
+            if step.target.tag:
+                t["tag"] = step.target.tag
+            if step.target.element_id:
+                t["id"] = step.target.element_id
+            if step.target.name:
+                t["name"] = step.target.name
+            if step.target.candidates:
+                t["candidates"] = [
+                    {
+                        "strategy": c.strategy,
+                        "selector": c.selector,
+                        "score": c.score,
+                        "reason": c.reason,
+                    }
+                    for c in step.target.candidates
+                ]
+            record["target"] = t
+
+        return record
+
     def _generate(self, tc: SemanticTestCase, data_file: str = "") -> str:
         lines = []
         lines.append('"""Teste gerado pelo TestForge — fonte de verdade: SemanticTestCase."""')

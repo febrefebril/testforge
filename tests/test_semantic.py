@@ -694,3 +694,213 @@ class TestCompiler:
             assert code.count("page.goto(BASE_URL)") == 1
             # No redundant goto to postback URL
             assert "resultado" not in code.lower().replace("page.goto(base_url)", "")
+
+
+class TestSemanticStepsJsonl:
+    """Tests for semantic_steps.jsonl generation alongside compiled script."""
+
+    def _build_test_case(self) -> SemanticTestCase:
+        """Build a SemanticTestCase with fill, click, assert steps."""
+        tc = SemanticTestCase(
+            test_id="ST-JSONL", source_recording_id="REC-JSONL",
+            application="fake-bank", base_url="http://localhost:8765",
+        )
+        # Navigation
+        tc.steps.append(SemanticAction(action="navigation", url="http://localhost:8765"))
+        # Fill
+        fill_target = SemanticTarget(role="textbox", label="CPF", placeholder="000.000.000-00", element_id="cpfField")
+        fill_target.candidates = [
+            LocatorCandidate("label", 'label:has-text("CPF") + input', 0.90),
+            LocatorCandidate("placeholder", '[placeholder="000.000.000-00"]', 0.85),
+        ]
+        tc.steps.append(SemanticAction(action="fill", target=fill_target, value="12345678900"))
+        # Click
+        click_target = SemanticTarget(role="button", accessible_name="Pesquisar", text="Pesquisar")
+        click_target.candidates = [
+            LocatorCandidate("role", 'role=button[name="Pesquisar"]', 0.95),
+        ]
+        tc.steps.append(SemanticAction(action="click", target=click_target))
+        # Assert
+        tc.steps.append(SemanticAction(
+            action="assert",
+            target=SemanticTarget(text="resultado", element_id="result"),
+            value="CPF consultado",
+            context={"assert_type": "textual"},
+        ))
+        return tc
+
+    def test_generates_file(self):
+        """compile_semantic_steps generates semantic_steps.jsonl."""
+        tc = self._build_test_case()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile_semantic_steps(tc, tmpdir)
+            assert os.path.exists(path)
+            assert path.endswith("semantic_steps.jsonl")
+
+    def test_metadata_header_line(self):
+        """First line is metadata JSON record."""
+        tc = self._build_test_case()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile_semantic_steps(tc, tmpdir)
+
+            with open(path) as f:
+                lines = f.readlines()
+
+            assert len(lines) >= 5  # metadata + 4 steps
+            header = json.loads(lines[0])
+            assert header["type"] == "metadata"
+            assert header["test_id"] == "ST-JSONL"
+            assert header["source_recording_id"] == "REC-JSONL"
+            assert header["application"] == "fake-bank"
+            assert header["base_url"] == "http://localhost:8765"
+            assert header["step_count"] == 4
+
+    def test_fill_step_serialized(self):
+        """Fill step has action, value, target with candidates."""
+        tc = self._build_test_case()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile_semantic_steps(tc, tmpdir)
+
+            with open(path) as f:
+                lines = f.readlines()
+
+            fill_line = json.loads(lines[2])  # line 3: fill (after metadata, nav)
+            assert fill_line["action"] == "fill"
+            assert fill_line["value"] == "12345678900"
+            target = fill_line["target"]
+            assert target["role"] == "textbox"
+            assert target["label"] == "CPF"
+            assert target["id"] == "cpfField"
+            assert len(target["candidates"]) == 2
+            assert target["candidates"][0]["strategy"] == "label"
+            assert target["candidates"][0]["score"] == 0.90
+
+    def test_click_step_serialized(self):
+        """Click step has action, target with role and candidates."""
+        tc = self._build_test_case()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile_semantic_steps(tc, tmpdir)
+
+            with open(path) as f:
+                lines = f.readlines()
+
+            click_line = json.loads(lines[3])  # line 4: click
+            assert click_line["action"] == "click"
+            target = click_line["target"]
+            assert target["role"] == "button"
+            assert target["accessible_name"] == "Pesquisar"
+            assert len(target["candidates"]) == 1
+
+    def test_assert_step_serialized(self):
+        """Assert step has action, value, context."""
+        tc = self._build_test_case()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile_semantic_steps(tc, tmpdir)
+
+            with open(path) as f:
+                lines = f.readlines()
+
+            assert_line = json.loads(lines[4])  # line 5: assert
+            assert assert_line["action"] == "assert"
+            assert assert_line["value"] == "CPF consultado"
+            assert assert_line["context"]["assert_type"] == "textual"
+            target = assert_line["target"]
+            assert target["text"] == "resultado"
+
+    def test_skip_reason_included(self):
+        """Steps with skip_reason have it in the JSONL record."""
+        tc = SemanticTestCase(test_id="ST-SKIP", source_recording_id="REC-001",
+                              application="test", base_url="http://localhost")
+        step = SemanticAction(
+            action="click",
+            target=SemanticTarget(role="button", text="OK", candidates=[]),
+            skip_reason="non-actionable target",
+        )
+        tc.steps.append(step)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile_semantic_steps(tc, tmpdir)
+
+            with open(path) as f:
+                lines = f.readlines()
+
+            assert len(lines) == 2  # metadata + 1 step
+            step_line = json.loads(lines[1])
+            assert step_line["skip_reason"] == "non-actionable target"
+
+    def test_every_line_is_valid_json(self):
+        """Every line in semantic_steps.jsonl is valid JSON."""
+        tc = self._build_test_case()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile_semantic_steps(tc, tmpdir)
+
+            with open(path) as f:
+                for i, line in enumerate(f):
+                    line = line.strip()
+                    assert line, f"Line {i + 1} is empty"
+                    obj = json.loads(line)
+                    assert isinstance(obj, dict), f"Line {i + 1} is not a dict"
+
+    def test_generated_alongside_compiled_script(self):
+        """compile() already generates the script; compile_semantic_steps()
+        generates the JSONL in same output directory."""
+        tc = self._build_test_case()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            script_path = compiler.compile(tc, tmpdir)
+            semantic_path = compiler.compile_semantic_steps(tc, tmpdir)
+
+            assert os.path.exists(script_path)
+            assert os.path.exists(semantic_path)
+            assert os.path.dirname(script_path) == os.path.dirname(semantic_path)
+
+    def test_empty_steps(self):
+        """TestCase with no steps still generates valid JSONL (metadata only)."""
+        tc = SemanticTestCase(test_id="ST-EMPTY", source_recording_id="REC-001",
+                              application="test", base_url="http://localhost")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile_semantic_steps(tc, tmpdir)
+
+            with open(path) as f:
+                lines = f.readlines()
+
+            assert len(lines) == 1  # only metadata
+            header = json.loads(lines[0])
+            assert header["step_count"] == 0
+
+    def test_navigation_step_no_target(self):
+        """Navigation step serializes without target key."""
+        tc = SemanticTestCase(test_id="ST-NAV", source_recording_id="REC-001",
+                              application="test", base_url="http://localhost")
+        tc.steps.append(SemanticAction(action="navigation", url="http://localhost/page"))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile_semantic_steps(tc, tmpdir)
+
+            with open(path) as f:
+                lines = f.readlines()
+
+            nav_line = json.loads(lines[1])
+            assert nav_line["action"] == "navigation"
+            assert nav_line["url"] == "http://localhost/page"
+            assert "target" not in nav_line
+
+    def test_step_to_record_omits_empty_values(self):
+        """_step_to_record omits keys with empty/falsy values."""
+        compiler = PlaywrightCompiler()
+        step = SemanticAction(action="click")
+        record = compiler._step_to_record(step)
+        assert record == {"action": "click"}
+        assert "value" not in record
+        assert "target" not in record
+        assert "context" not in record
+        assert "url" not in record
