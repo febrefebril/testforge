@@ -7,6 +7,7 @@ import time
 
 from playwright.sync_api import sync_playwright
 
+from testforge.browser import launch_browser
 from testforge.recorder import RecorderController
 from testforge.evidence import EvidenceCollector
 from testforge.semantic import RecordingNormalizer, PlaywrightCompiler
@@ -47,7 +48,7 @@ def _check_python_keyboard(page, recorder):
 def cmd_record(args):
     """Grava fluxo de teste com comandos de teclado."""
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=args.headless)
+        browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
         context = browser.new_context(viewport={"width": 1280, "height": 720})
         page = context.new_page()
         recorder = RecorderController(page)
@@ -277,14 +278,15 @@ def cmd_run(args):
             error_text = (result.stderr or result.stdout) if result else "timeout"
             print(f"[TestForge] ⚠ Script falhou — tentando healing...")
             # Tenta curar inline
-            healed = _try_heal_inline(base_url, args.headless, error_text, script_path, recording_id)
+            healed = _try_heal_inline(base_url, args.headless, error_text, script_path, recording_id,
+                                      getattr(args, 'browser', 'chromium'))
             if healed:
                 layer_used = "L3"
                 llm_used = True
     else:
         # Modo inline: executa passos com healing L0→L3
         with sync_playwright() as pw:
-            browser = pw.chromium.launch(headless=args.headless)
+            browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
             page = browser.new_page()
             page.set_viewport_size({"width": 1280, "height": 720})
 
@@ -515,11 +517,12 @@ def _heal_step(page, step, error_msg: str, base_url: str, step_num: int,
 
 
 def _try_heal_inline(base_url: str, headless: bool, error_text: str,
-                     script_path: str, recording_id: str) -> bool:
+                     script_path: str, recording_id: str,
+                     browser_type: str = "chromium") -> bool:
     """Fallback: tenta curar script inteiro inline (modo antigo)."""
     try:
         with sync_playwright() as pw:
-            browser = pw.chromium.launch(headless=headless)
+            browser = launch_browser(pw, browser_type, headless=headless)
             page = browser.new_page()
             page.set_viewport_size({"width": 1280, "height": 720})
             page.goto(base_url)
@@ -566,7 +569,7 @@ def cmd_pipeline(args):
     rid = f"PIPE-{ts}"
 
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=args.headless)
+        browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
         page = browser.new_page()
         page.set_viewport_size({"width": 1280, "height": 720})
         recorder = RecorderController(page)
@@ -685,7 +688,7 @@ def cmd_demo_heal(args):
     print()
 
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=args.headless)
+        browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
         page = browser.new_page()
         page.set_viewport_size({"width": 1280, "height": 720})
         recorder = RecorderController(page)
@@ -724,7 +727,7 @@ def cmd_demo_heal(args):
 
     # Abrir pagina com mutacao
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=args.headless)
+        browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
         page = browser.new_page()
         page.set_viewport_size({"width": 1280, "height": 720})
 
@@ -806,6 +809,8 @@ def main():
     rec.add_argument("--name", help="Nome/ID da gravacao")
     rec.add_argument("--app", help="Nome da aplicacao")
     rec.add_argument("--headless", action="store_true", help="Modo headless")
+    rec.add_argument("--browser", choices=["chromium", "chrome", "edge"], default="chromium",
+                     help="Browser preferido (default: chromium)")
     rec.set_defaults(func=cmd_record)
 
     # compile
@@ -823,17 +828,23 @@ def main():
     run.add_argument("script", help="Caminho do script Python")
     run.add_argument("--headless", action="store_true", help="Modo headless")
     run.add_argument("--timeout", type=int, default=60, help="Timeout em segundos")
+    run.add_argument("--browser", choices=["chromium", "chrome", "edge"], default="chromium",
+                     help="Browser preferido (default: chromium)")
     run.set_defaults(func=cmd_run)
 
     # pipeline
     pipe = sub.add_parser("pipeline", help="Pipeline completa: record → compile → run")
     pipe.add_argument("url", nargs="?", default="http://localhost:8765", help="URL da aplicacao alvo")
     pipe.add_argument("--headless", action="store_true", help="Modo headless")
+    pipe.add_argument("--browser", choices=["chromium", "chrome", "edge"], default="chromium",
+                      help="Browser preferido (default: chromium)")
     pipe.set_defaults(func=cmd_pipeline)
 
     # demo-heal
     dh = sub.add_parser("demo-heal", help="Demo de healing real (record → break → heal)")
     dh.add_argument("--headless", action="store_true", help="Modo headless")
+    dh.add_argument("--browser", choices=["chromium", "chrome", "edge"], default="chromium",
+                    help="Browser preferido (default: chromium)")
     dh.set_defaults(func=cmd_demo_heal)
 
     args = parser.parse_args()
