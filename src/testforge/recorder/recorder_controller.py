@@ -211,7 +211,7 @@ class RecorderController:
         window.__tfEventQueue = [];
         window.__tfStepQueue = [];
         window.__tfCommandQueue = [];
-        window.__tfEventCounter = 0;
+        window.__tfEventCounter = window.__tfEventCounter || 0;
         window.__tfAssertWaiting = false;
 
         window._tf_getSelector = function(el) {
@@ -312,7 +312,7 @@ class RecorderController:
         window._tf_pushEvent = function(type, el) {
             var target = _tf_extractTarget(el || document.activeElement);
             window.__tfEventQueue.push({
-                event_id: 'evt_' + String(++window.__tfEventCounter).padStart(4,'0'),
+                event_id: 'evt_' + String(++window.__tfEventCounter).padStart(5,'0'),
                 type: type,
                 timestamp: new Date().toISOString(),
                 url: window.location.href,
