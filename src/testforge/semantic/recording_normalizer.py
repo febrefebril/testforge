@@ -131,6 +131,10 @@ class RecordingNormalizer:
                     step = json.loads(line)
                     stc.steps.append(self._convert_step(step))
 
+        # Post-process: detect and mark skipped steps
+        self._deduplicate_steps(stc.steps)
+        self._mark_non_actionable(stc.steps)
+
         return stc
 
     def _compact_fill_events(self, raw_events: list) -> list:
@@ -387,3 +391,49 @@ class RecordingNormalizer:
             name=target_data.get("name"),
             candidates=candidates,
         )
+
+    def _steps_identical(self, a: SemanticAction, b: SemanticAction) -> bool:
+        """Check if two steps are identical (same action, value, target candidates)."""
+        if a.action != b.action:
+            return False
+        if (a.value or "") != (b.value or ""):
+            return False
+        # Compare target candidates (selectors and scores)
+        a_cands = a.target.candidates if a.target else []
+        b_cands = b.target.candidates if b.target else []
+        if len(a_cands) != len(b_cands):
+            return False
+        for ac, bc in zip(a_cands, b_cands):
+            if ac.selector != bc.selector or ac.score != bc.score:
+                return False
+        return True
+
+    def _deduplicate_steps(self, steps: list) -> None:
+        """Mark consecutive duplicate steps with skip_reason.
+
+        Consecutive steps with identical action, value, and target candidates
+        are flagged as duplicates. Only the first occurrence is kept active;
+        subsequent ones get skip_reason = 'Step N: skipped — duplicate'.
+        """
+        for i in range(1, len(steps)):
+            prev = steps[i - 1]
+            curr = steps[i]
+            if (not prev.skip_reason and not curr.skip_reason
+                    and self._steps_identical(prev, curr)):
+                curr.skip_reason = f"Step {i + 1}: skipped — duplicate"
+
+    def _mark_non_actionable(self, steps: list) -> None:
+        """Mark steps with no actionable target as skipped.
+
+        Steps with action in (click, fill) that have a target but zero
+        locator candidates cannot be executed reliably. Mark them with
+        skip_reason = 'non-actionable target'.
+        """
+        ACTIONABLE_ACTIONS = {"click", "fill"}
+        for i, step in enumerate(steps):
+            if step.skip_reason:
+                continue
+            if step.action not in ACTIONABLE_ACTIONS:
+                continue
+            if step.target and len(step.target.candidates) == 0:
+                step.skip_reason = "non-actionable target"
