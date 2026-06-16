@@ -182,6 +182,11 @@ class RecorderController:
         except Exception:
             pass
         try:
+            # Wait for DOM to be ready before capturing
+            try:
+                self._page.wait_for_load_state("domcontentloaded", timeout=3000)
+            except Exception:
+                pass
             dom = self._page.content()
             event.dom_snapshot_path = self._store.save_dom(eid, dom)
         except Exception:

@@ -69,7 +69,7 @@ class EvidenceCollector:
         Validates content is not empty before saving."""
         try:
             html = self._page.content()
-            if not html or len(html.strip()) < 100:
+            if not html or len(html.strip()) < 20:
                 # Register empty alert but don't save empty file
                 self._pkg.metadata["quality_flags"] = self._pkg.metadata.get("quality_flags", [])
                 self._pkg.metadata["quality_flags"].append(f"DOM_SNAPSHOT_EMPTY:{step_id}")
