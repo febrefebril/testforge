@@ -23,10 +23,27 @@ class RecordingSessionManager:
         self._recordings_root = recordings_root
         self._active_session: Optional[RecordingSession] = None
 
+    @staticmethod
+    def _resolve_name(recordings_root: str, base_name: str) -> str:
+        """Find next available recording name.
+
+        If recordings/{base_name} does not exist, returns base_name.
+        Otherwise returns base_name_2, base_name_3, etc.
+        """
+        if not os.path.isdir(os.path.join(recordings_root, base_name)):
+            return base_name
+        i = 2
+        while True:
+            candidate = f"{base_name}_{i}"
+            if not os.path.isdir(os.path.join(recordings_root, candidate)):
+                return candidate
+            i += 1
+
     def start(self, recording_id: str, application: str = "", base_url: str = "") -> RecordingSession:
         if self._active_session and self._active_session.status in ("recording", "paused"):
             raise RuntimeError(f"Sessao ativa: {self._active_session.recording_id}")
 
+        recording_id = self._resolve_name(self._recordings_root, recording_id)
         session_dir = os.path.join(self._recordings_root, recording_id)
         os.makedirs(session_dir, exist_ok=True)
         os.makedirs(os.path.join(session_dir, "screenshots"), exist_ok=True)

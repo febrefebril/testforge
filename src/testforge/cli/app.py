@@ -60,7 +60,8 @@ def cmd_record(args):
         print(f"  Shift+P=pause | Shift+S=stop | Shift+A=assert | Shift+H=hide overlay")
         print()
 
-        recorder.start(recording_id=rid, application=args.app or "web", base_url=args.url)
+        session = recorder.start(recording_id=rid, application=args.app or "web", base_url=args.url)
+        rid = session.recording_id  # may be suffixed (_2, _3) if original name exists
         page.goto(args.url)
 
         step_count = 0

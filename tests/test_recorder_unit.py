@@ -106,6 +106,55 @@ class TestRawRecordingStore:
             assert data["masking_applied"] is False
 
 
+class TestRecordingNameResolution:
+    """Tests for preventing silent overwrite of existing recordings."""
+
+    def test_no_conflict_returns_original_name(self):
+        """When directory does not exist, original name is returned."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = RecordingSessionManager._resolve_name(tmpdir, "my_test")
+            assert result == "my_test"
+
+    def test_conflict_returns_suffixed_name(self):
+        """When directory exists, returns name_2."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            os.makedirs(os.path.join(tmpdir, "my_test"))
+            result = RecordingSessionManager._resolve_name(tmpdir, "my_test")
+            assert result == "my_test_2"
+
+    def test_multiple_conflicts_returns_next_available(self):
+        """When name and name_2 exist, returns name_3."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            os.makedirs(os.path.join(tmpdir, "my_test"))
+            os.makedirs(os.path.join(tmpdir, "my_test_2"))
+            result = RecordingSessionManager._resolve_name(tmpdir, "my_test")
+            assert result == "my_test_3"
+
+    def test_name_with_trailing_suffix(self):
+        """When base name already has _N suffix and that dir also exists."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            os.makedirs(os.path.join(tmpdir, "login_flow_2"))
+            result = RecordingSessionManager._resolve_name(tmpdir, "login_flow_2")
+            assert result == "login_flow_2_2"
+
+    def test_start_uses_resolved_name(self):
+        """RecordingSessionManager.start() must create dir with resolved name."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mgr = RecordingSessionManager(tmpdir)
+            # First session
+            s1 = mgr.start("demo", "app", "http://localhost")
+            assert s1.recording_id == "demo"
+            assert os.path.isdir(os.path.join(tmpdir, "demo"))
+            mgr.stop()
+            mgr.finalize()
+
+            # Second session with same name — must get _2
+            s2 = mgr.start("demo", "app", "http://localhost")
+            assert s2.recording_id == "demo_2"
+            assert os.path.isdir(os.path.join(tmpdir, "demo_2"))
+            assert not os.path.isdir(os.path.join(tmpdir, "demo", "raw_events.jsonl"))  # untouched
+
+
 class TestRecorderControllerEventId:
     """Tests for monotonic event_id within a recording session."""
 
