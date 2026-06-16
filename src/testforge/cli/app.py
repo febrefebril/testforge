@@ -312,9 +312,17 @@ def cmd_run(args):
 
                 try:
                     if action == "navigation":
-                        # Already at base_url from initial goto at line 294.
-                        # Navigation step is a no-op when URL unchanged.
-                        print(f"  ✓ Step {step_num}: navigation (already at {base_url})")
+                        # Navigate only if step URL differs from current page URL.
+                        # Initial page.goto covers first load; subsequent navigations
+                        # are triggered by clicks/submits with expect_navigation.
+                        step_url = step.url or ""
+                        current_url = page.url
+                        if step_url and step_url != current_url:
+                            page.goto(step_url)
+                            page.wait_for_timeout(500)
+                            print(f"  ✓ Step {step_num}: navigation → {step_url}")
+                        else:
+                            print(f"  ✓ Step {step_num}: navigation (already at {current_url})")
 
                     elif action == "fill" and step.target and (step.target.tag or "").lower() == "select":
                         # Select element: use select_option
@@ -608,7 +616,8 @@ def cmd_pipeline(args):
         page.wait_for_timeout(200)
         recorder.flush_events()
 
-        page.get_by_role("button", name="Pesquisar").click()
+        with page.expect_navigation(wait_until="load"):
+            page.get_by_role("button", name="Pesquisar").click()
         page.wait_for_timeout(500)
         recorder.flush_events()
 
@@ -655,7 +664,8 @@ def cmd_pipeline(args):
             fallback.try_fill(candidates, "12345678900")
 
         try:
-            page2.get_by_role("button", name="Pesquisar").click(timeout=3000)
+            with page2.expect_navigation(wait_until="load"):
+                page2.get_by_role("button", name="Pesquisar").click(timeout=3000)
         except Exception:
             candidates = [{"selector": "button:has-text('Pesquisar')", "score": 0.8}]
             fallback.try_click(candidates)
@@ -729,7 +739,8 @@ def cmd_demo_heal(args):
         page.wait_for_timeout(200)
         recorder.flush_events()
 
-        page.get_by_role("button", name="Pesquisar").click()
+        with page.expect_navigation(wait_until="load"):
+            page.get_by_role("button", name="Pesquisar").click()
         page.wait_for_timeout(500)
         recorder.flush_events()
 

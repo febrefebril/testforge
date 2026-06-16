@@ -75,11 +75,18 @@ class PlaywrightCompiler:
         safe_name = re.sub(r'_+', '_', safe_name).strip('_')
         lines.append(f"def test_{safe_name}(page: Page):")
         lines.append(f'    """{tc.application or "Fluxo gravado"} — source: {tc.source_recording_id}."""')
+        lines.append("")
+        lines.append("    # Initial navigation: load page under test")
+        lines.append(f"    page.goto(BASE_URL)")
+        lines.append("")
 
         step_idx = 0
         for action in tc.steps:
             if action.action == "navigation":
-                lines.append(f"    page.goto(BASE_URL)")
+                # Skip redundant navigation — page already loaded at BASE_URL.
+                # Subsequent navigations are caused by submit/form postbacks
+                # and are handled via expect_navigation on the triggering action.
+                continue
             elif action.action == "fill" and action.target and (action.target.tag or "").lower() == "select":
                 step_idx += 1
                 lines.extend(self._gen_select(action, step_idx, data_file))
@@ -212,13 +219,13 @@ class PlaywrightCompiler:
 
         if not sorted_candidates:
             text = (action.target.text or "")[:30]
-            lines = [
-                f"    # Step {idx}: click",
-                f"    page.click({self._esc(text)})",
-                f"    page.wait_for_timeout(300)",
-            ]
+            lines = [f"    # Step {idx}: click"]
             if is_submit:
-                lines.append(f"    page.wait_for_load_state('networkidle')")
+                lines.append(f"    with page.expect_navigation(wait_until='load'):")
+                lines.append(f"        page.click({self._esc(text)})")
+            else:
+                lines.append(f"    page.click({self._esc(text)})")
+                lines.append(f"    page.wait_for_timeout(300)")
             lines.append("")
             return lines
 
@@ -228,10 +235,12 @@ class PlaywrightCompiler:
         lines.append(f"    _sels = [{', '.join(selectors)}]")
         lines.append("    for _sel in _sels:")
         lines.append("        try:")
-        lines.append("            page.click(_sel)")
-        lines.append("            page.wait_for_timeout(300)")
         if is_submit:
-            lines.append("            page.wait_for_load_state('networkidle')")
+            lines.append("            with page.expect_navigation(wait_until='load'):")
+            lines.append("                page.click(_sel)")
+        else:
+            lines.append("            page.click(_sel)")
+            lines.append("            page.wait_for_timeout(300)")
         lines.append("            break")
         lines.append("        except Exception:")
         lines.append("            continue")

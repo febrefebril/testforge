@@ -285,6 +285,10 @@ class TestCompiler:
             assert "from playwright.sync_api import Page, expect" in code
             assert "def test_st_001" in code
             assert "page.goto(BASE_URL)" in code
+            # Verify only one page.goto (initial navigation; redundant navigations skipped)
+            assert code.count("page.goto(BASE_URL)") == 1, (
+                f"Expected exactly 1 page.goto(), got {code.count('page.goto(BASE_URL)')}"
+            )
             # Fill com fallback loop
             assert "for _sel in _sels" in code
             assert "page.fill(_sel" in code
@@ -321,3 +325,136 @@ class TestCompiler:
             with open(path) as f:
                 code = f.read()
             assert "to_be_checked" in code
+
+    def test_compile_submit_click_uses_expect_navigation(self):
+        """Submit clicks use expect_navigation instead of wait_for_load_state."""
+        tc = SemanticTestCase(test_id="ST-SUB", source_recording_id="REC-001",
+                              application="fake-bank", base_url="http://localhost:8765")
+        # Navigation (skipped — initial goto emitted unconditionally)
+        tc.steps.append(SemanticAction(action="navigation"))
+        # Submit click with is_submit context
+        click_target = SemanticTarget(role="button", text="Pesquisar", element_id="btnPesquisar")
+        click_target.candidates = [
+            LocatorCandidate("role", "role=button[name=\"Pesquisar\"]", 0.95),
+        ]
+        tc.steps.append(SemanticAction(
+            action="click", target=click_target,
+            context={"is_submit": True},
+        ))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile(tc, tmpdir)
+            with open(path) as f:
+                code = f.read()
+
+            # Must use expect_navigation for submit
+            assert "expect_navigation" in code
+            assert "wait_until='load'" in code
+            # Must NOT use old wait_for_load_state pattern
+            assert "wait_for_load_state" not in code
+            # Only one goto (the initial)
+            assert code.count("page.goto(BASE_URL)") == 1
+
+    def test_compile_non_submit_click_no_expect_navigation(self):
+        """Regular clicks (not submit) do NOT use expect_navigation."""
+        tc = SemanticTestCase(test_id="ST-CLK", source_recording_id="REC-001",
+                              application="fake-bank", base_url="http://localhost:8765")
+        tc.steps.append(SemanticAction(action="navigation"))
+        click_target = SemanticTarget(role="button", text="Cancelar")
+        click_target.candidates = [
+            LocatorCandidate("text", "text=Cancelar", 0.90),
+        ]
+        tc.steps.append(SemanticAction(
+            action="click", target=click_target,
+            context={"is_submit": False},
+        ))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile(tc, tmpdir)
+            with open(path) as f:
+                code = f.read()
+
+            # Regular click: no expect_navigation
+            assert "expect_navigation" not in code
+            assert "page.click(_sel)" in code
+            assert "page.wait_for_timeout(300)" in code
+
+    def test_compile_multiple_navigation_skipped(self):
+        """Multiple navigation actions produce only one page.goto()."""
+        tc = SemanticTestCase(test_id="ST-MNAV", source_recording_id="REC-001",
+                              application="fake-bank", base_url="http://localhost:8765")
+        # 3 navigation steps — only first (initial) should produce goto
+        tc.steps.append(SemanticAction(action="navigation"))
+        tc.steps.append(SemanticAction(action="navigation"))
+        tc.steps.append(SemanticAction(action="navigation"))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile(tc, tmpdir)
+            with open(path) as f:
+                code = f.read()
+
+            assert code.count("page.goto(BASE_URL)") == 1, (
+                f"Expected 1 goto, got {code.count('page.goto(BASE_URL)')}"
+            )
+
+    def test_compile_navigation_skip_with_different_url(self):
+        """Navigation action with a URL different from base_url is still skipped."""
+        tc = SemanticTestCase(test_id="ST-NAVURL", source_recording_id="REC-001",
+                              application="fake-bank", base_url="http://localhost:8765")
+        # Initial navigation (page already loaded via page.goto)
+        tc.steps.append(SemanticAction(action="navigation", url="http://localhost:8765"))
+        # Click a link that navigates to a different URL
+        click_target = SemanticTarget(role="link", text="Go to Page 2")
+        click_target.candidates = [
+            LocatorCandidate("text", "text=Go to Page 2", 0.85),
+        ]
+        tc.steps.append(SemanticAction(action="click", target=click_target))
+        # Navigation event captured after the click (redundant — already navigated)
+        tc.steps.append(SemanticAction(action="navigation", url="http://localhost:8765/page2"))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile(tc, tmpdir)
+            with open(path) as f:
+                code = f.read()
+
+            # Only ONE page.goto (initial navigation)
+            assert code.count("page.goto(BASE_URL)") == 1, (
+                f"Expected 1 goto, got {code.count('page.goto(BASE_URL)')}"
+            )
+            # Navigation actions (both initial and post-click) are skipped
+            # No explicit navigation to /page2 — the click already causes it
+            assert "page.goto" not in code.replace("page.goto(BASE_URL)", "")
+            # Click is present
+            assert "page.click" in code
+
+    def test_compile_submit_with_postback_url(self):
+        """Submit click with postback_url uses expect_navigation."""
+        tc = SemanticTestCase(test_id="ST-PBACK", source_recording_id="REC-001",
+                              application="fake-bank", base_url="http://localhost:8765")
+        tc.steps.append(SemanticAction(action="navigation"))
+        click_target = SemanticTarget(role="button", text="Pesquisar", element_id="btnSubmit")
+        click_target.candidates = [
+            LocatorCandidate("role", "role=button[name=\"Pesquisar\"]", 0.95),
+        ]
+        tc.steps.append(SemanticAction(
+            action="click", target=click_target,
+            context={"is_submit": True, "postback_url": "http://localhost:8765/resultado"},
+        ))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile(tc, tmpdir)
+            with open(path) as f:
+                code = f.read()
+
+            # Must use expect_navigation for submit
+            assert "expect_navigation" in code
+            assert "wait_until='load'" in code
+            # Only one goto
+            assert code.count("page.goto(BASE_URL)") == 1
+            # No redundant goto to postback URL
+            assert "resultado" not in code.lower().replace("page.goto(base_url)", "")
