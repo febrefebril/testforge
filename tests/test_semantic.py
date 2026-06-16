@@ -327,6 +327,160 @@ class TestGenericTextDetection:
         )
 
 
+class TestSkipReason:
+    """Tests for step skip reason detection in RecordingNormalizer."""
+
+    def _make_events_with_duplicates(self, tmpdir: str) -> str:
+        """Create raw_events.jsonl with duplicate click steps."""
+        events = [
+            {"event_id": "e1", "type": "navigation", "timestamp": "2026-06-13T00:00:00",
+             "url": "http://localhost:8765", "page_title": "Test"},
+            {"event_id": "e2", "type": "fill", "timestamp": "2026-06-13T00:00:01",
+             "url": "http://localhost:8765", "page_title": "Test",
+             "target": {"tag": "input", "id": "field", "placeholder": "Digite...",
+                        "role": "textbox"},
+             "value": "123"},
+            {"event_id": "e3", "type": "click", "timestamp": "2026-06-13T00:00:02",
+             "url": "http://localhost:8765", "page_title": "Test",
+             "target": {"tag": "button", "text": "Pesquisar", "id": "btn",
+                        "role": "button", "accessible_name": "Pesquisar"}},
+            # Duplicate click on same button
+            {"event_id": "e4", "type": "click", "timestamp": "2026-06-13T00:00:03",
+             "url": "http://localhost:8765", "page_title": "Test",
+             "target": {"tag": "button", "text": "Pesquisar", "id": "btn",
+                        "role": "button", "accessible_name": "Pesquisar"}},
+        ]
+        path = os.path.join(tmpdir, "raw_events.jsonl")
+        with open(path, "w") as f:
+            for e in events:
+                f.write(json.dumps(e) + "\n")
+        return path
+
+    def test_detect_duplicate_clicks(self):
+        """Consecutive identical click steps get marked as duplicate."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._make_events_with_duplicates(tmpdir)
+            normalizer = RecordingNormalizer()
+            stc = normalizer.normalize(tmpdir, "ST-DUP", "test", "http://localhost:8765")
+
+            # Should have 4 steps: nav, fill, click, click
+            assert len(stc.steps) == 4
+
+            # First click — no skip_reason
+            click_steps = [s for s in stc.steps if s.action == "click"]
+            assert len(click_steps) == 2
+            assert click_steps[0].skip_reason == ""
+            # Second click — duplicate
+            assert "duplicate" in click_steps[1].skip_reason
+            assert "Step" in click_steps[1].skip_reason
+
+    def test_navigation_not_duplicate_of_click(self):
+        """Different action types are never duplicates."""
+        normalizer = RecordingNormalizer()
+        steps = [
+            SemanticAction(action="click",
+                           target=SemanticTarget(role="button", text="OK",
+                                                 candidates=[LocatorCandidate("text", "text=OK", 0.55)])),
+            SemanticAction(action="navigation", url="http://localhost"),
+        ]
+        normalizer._deduplicate_steps(steps)
+        assert steps[0].skip_reason == ""
+        assert steps[1].skip_reason == ""
+
+    def test_different_values_not_duplicate(self):
+        """Same target but different values are not duplicates."""
+        normalizer = RecordingNormalizer()
+        target = SemanticTarget(role="textbox", placeholder="CPF",
+                                candidates=[LocatorCandidate("placeholder", "[placeholder='CPF']", 0.85)])
+        steps = [
+            SemanticAction(action="fill", target=target, value="123"),
+            SemanticAction(action="fill", target=target, value="456"),
+        ]
+        normalizer._deduplicate_steps(steps)
+        assert steps[0].skip_reason == ""
+        assert steps[1].skip_reason == ""
+
+    def test_non_consecutive_not_duplicate(self):
+        """Same steps separated by a different step are not duplicates."""
+        normalizer = RecordingNormalizer()
+        target = SemanticTarget(role="button", text="OK",
+                                candidates=[LocatorCandidate("text", "text=OK", 0.55)])
+        steps = [
+            SemanticAction(action="click", target=target),
+            SemanticAction(action="fill", target=SemanticTarget(placeholder="x",
+                                candidates=[LocatorCandidate("placeholder", "[placeholder='x']", 0.85)]),
+                           value="data"),
+            SemanticAction(action="click", target=target),  # same as first but not consecutive
+        ]
+        normalizer._deduplicate_steps(steps)
+        assert steps[0].skip_reason == ""
+        assert steps[1].skip_reason == ""
+        assert steps[2].skip_reason == ""  # not consecutive, not marked
+
+    def test_already_skipped_not_rechecked(self):
+        """Steps already marked with skip_reason are not re-evaluated."""
+        normalizer = RecordingNormalizer()
+        target = SemanticTarget(role="button", text="OK",
+                                candidates=[LocatorCandidate("text", "text=OK", 0.55)])
+        steps = [
+            SemanticAction(action="click", target=target, skip_reason="non-actionable target"),
+            SemanticAction(action="click", target=target),  # identical to first
+        ]
+        normalizer._deduplicate_steps(steps)
+        # First already has skip_reason, so second is not compared against it
+        assert "non-actionable target" in steps[0].skip_reason
+        assert steps[1].skip_reason == ""
+
+    def test_non_actionable_target_no_candidates(self):
+        """Step with target but zero candidates gets 'non-actionable target'."""
+        normalizer = RecordingNormalizer()
+        steps = [
+            SemanticAction(action="click",
+                           target=SemanticTarget(role="button", text="Invisible",
+                                                 candidates=[])),
+            SemanticAction(action="fill",
+                           target=SemanticTarget(tag="input", placeholder="...",
+                                                 candidates=[]),
+                           value="test"),
+        ]
+        normalizer._mark_non_actionable(steps)
+        assert steps[0].skip_reason == "non-actionable target"
+        assert steps[1].skip_reason == "non-actionable target"
+
+    def test_assert_not_flagged_non_actionable(self):
+        """Assert steps are never flagged as non-actionable."""
+        normalizer = RecordingNormalizer()
+        steps = [
+            SemanticAction(action="assert",
+                           target=SemanticTarget(text="some text", candidates=[]),
+                           value="expected"),
+        ]
+        normalizer._mark_non_actionable(steps)
+        assert steps[0].skip_reason == ""
+
+    def test_actionable_with_candidates_not_flagged(self):
+        """Step with candidates is not flagged."""
+        normalizer = RecordingNormalizer()
+        steps = [
+            SemanticAction(action="click",
+                           target=SemanticTarget(role="button",
+                                                 candidates=[LocatorCandidate("role", "role=button", 0.90)])),
+        ]
+        normalizer._mark_non_actionable(steps)
+        assert steps[0].skip_reason == ""
+
+    def test_navigation_not_flagged_non_actionable(self):
+        """Navigation steps (no target needed) are not flagged."""
+        normalizer = RecordingNormalizer()
+        steps = [
+            SemanticAction(action="navigation", url="http://localhost"),
+            SemanticAction(action="click", target=None),
+        ]
+        normalizer._mark_non_actionable(steps)
+        assert steps[0].skip_reason == ""
+        assert steps[1].skip_reason == ""
+
+
 class TestCompiler:
     def test_compile_generates_file(self):
         tc = SemanticTestCase(test_id="ST-001", source_recording_id="REC-001",
