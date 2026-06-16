@@ -145,6 +145,8 @@ class RecorderController:
             page_title=data.get("page_title"),
             target=target,
             value=data.get("value"),
+            is_postback=data.get("is_postback", False),
+            submit_method=data.get("submit_method"),
         )
         self._capture_snapshots(event)
         self._store.append_event(event)
@@ -211,6 +213,7 @@ class RecorderController:
         window.__tfCommandQueue = [];
         window.__tfEventCounter = window.__tfEventCounter || 0;
         window.__tfAssertWaiting = false;
+        window.__tfPendingSubmit = null;  // { url, method, timestamp } or null
 
         window._tf_getSelector = function(el) {
             try {
@@ -305,6 +308,26 @@ class RecorderController:
                 }
             }
             return attrs;
+        }
+
+        window._tf_isSubmitTrigger = function(el) {
+            // Check if element triggers form submission (submit button, or link with postback)
+            if (!el) return false;
+            var tag = (el.tagName || '').toLowerCase();
+            if (tag === 'input' && (el.type === 'submit' || el.type === 'image')) return true;
+            if (tag === 'button' && (!el.type || el.type === 'submit')) return true;
+            // Detect ASP.NET __doPostBack pattern
+            if (tag === 'a' && el.href && (
+                el.href.indexOf('__doPostBack') !== -1 ||
+                el.href.indexOf('javascript:__doPostBack') !== -1 ||
+                el.href.indexOf('javascript:WebForm_DoPostBackWithOptions') !== -1
+            )) return true;
+            // Detect ASP classic form submission pattern (href="javascript:document.forms[...].submit()")
+            if (tag === 'a' && el.href && (
+                el.href.indexOf('document.forms') !== -1 ||
+                el.href.indexOf('document.') !== -1
+            )) return true;
+            return false;
         }
 
         window._tf_pushEvent = function(type, el) {
@@ -414,6 +437,23 @@ class RecorderController:
                 var status = document.getElementById('tf-status');
                 if (dot) dot.style.color = '#e94560';
                 if (status) status.textContent = 'Gravando...';
+                return;
+            }
+            // Detect submit triggers: record as "submit" and set pending postback flag
+            if (_tf_isSubmitTrigger(el) || (el && el.closest && el.closest('form'))) {
+                var form = null;
+                if (el && el.form) {
+                    form = el.form;
+                } else if (el && el.closest) {
+                    form = el.closest('form');
+                }
+                // Mark pending submit for postback detection on next page load
+                window.__tfPendingSubmit = {
+                    url: form ? (form.action || window.location.href) : window.location.href,
+                    method: (form && form.method) ? form.method.toUpperCase() : 'POST',
+                    timestamp: Date.now()
+                };
+                setTimeout(function() { _tf_pushEvent('submit', el); }, 0);
                 return;
             }
             setTimeout(function() { _tf_pushEvent('click', el); }, 0);
@@ -547,6 +587,26 @@ class RecorderController:
         }
 
         window.addEventListener('load', function() {
-            setTimeout(function() { _tf_pushEvent('navigation'); _tf_showOverlay(); }, 100);
+            // Check if this page load is a form postback (ASP classic / ASP.NET pattern)
+            if (window.__tfPendingSubmit) {
+                var pending = window.__tfPendingSubmit;
+                var eventData = {
+                    event_id: 'evt_' + String(++window.__tfEventCounter).padStart(5,'0'),
+                    type: 'postback',
+                    timestamp: new Date().toISOString(),
+                    url: window.location.href,
+                    page_title: document.title,
+                    target: null,
+                    value: null,
+                    is_postback: true,
+                    submit_method: pending.method
+                };
+                window.__tfEventQueue.push(eventData);
+                window.__tfPendingSubmit = null;
+                console.log('[TestForge] postback detected — method:', pending.method, 'url:', window.location.href);
+            } else {
+                setTimeout(function() { _tf_pushEvent('navigation'); }, 0);
+            }
+            setTimeout(function() { _tf_showOverlay(); }, 100);
         });
     """
