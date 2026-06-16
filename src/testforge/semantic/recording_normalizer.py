@@ -6,6 +6,7 @@ Gera multiplos candidatos de locator ordenados por score deterministico.
 import json
 import os
 import re as _re
+from datetime import datetime
 from typing import Optional
 
 from .model import LocatorCandidate, SemanticAction, SemanticTarget, SemanticTestCase
@@ -71,6 +72,8 @@ class RecordingNormalizer:
         with open(events_path) as f:
             raw_events = [json.loads(line) for line in f if line.strip()]
 
+        raw_events = self._compact_fill_events(raw_events)
+
         recording_id = os.path.basename(recording_dir)
         stc = SemanticTestCase(
             test_id=test_id or f"ST-{recording_id}",
@@ -93,6 +96,81 @@ class RecordingNormalizer:
                     stc.steps.append(self._convert_step(step))
 
         return stc
+
+    def _compact_fill_events(self, raw_events: list) -> list:
+        """Compact sequential fill events on same element within 500ms window.
+
+        When user types into a field, the recorder captures each keystroke as a
+        separate fill/keypress event. Consecutive events on the same target
+        within 500ms of each other are collapsed — only the final event (which
+        holds the complete value) is kept.
+        """
+        if not raw_events:
+            return raw_events
+
+        FILL_TYPES = {"fill", "keypress"}
+
+        def _target_key(target: dict | None) -> tuple:
+            """Derive stable key from target to identify same element."""
+            if not target:
+                return ("__none__",)
+            return (
+                target.get("tag", ""),
+                target.get("id", ""),
+                target.get("name", ""),
+                target.get("test_id", ""),
+                target.get("placeholder", ""),
+            )
+
+        def _parse_ts(ts: str) -> float:
+            try:
+                dt = datetime.fromisoformat(ts)
+                return dt.timestamp()
+            except (ValueError, TypeError):
+                return 0.0
+
+        compacted: list = []
+        i = 0
+        while i < len(raw_events):
+            event = raw_events[i]
+            event_type = event.get("type", "")
+
+            if event_type not in FILL_TYPES:
+                compacted.append(event)
+                i += 1
+                continue
+
+            # Start of a potential fill group on the same target
+            current_key = _target_key(event.get("target"))
+            current_ts = _parse_ts(event.get("timestamp", ""))
+            group_end = i
+
+            j = i + 1
+            while j < len(raw_events):
+                next_event = raw_events[j]
+                next_type = next_event.get("type", "")
+
+                if next_type not in FILL_TYPES:
+                    break
+
+                next_key = _target_key(next_event.get("target"))
+                next_ts = _parse_ts(next_event.get("timestamp", ""))
+
+                if next_key != current_key:
+                    break
+
+                if (next_ts - current_ts) > 0.5:  # 500ms sliding window
+                    break
+
+                group_end = j
+                current_ts = next_ts
+                j += 1
+
+            # Keep only the final event (holds the complete typed value)
+            compacted.append(raw_events[group_end])
+            i = j
+
+        return compacted
 
     def _convert_event(self, raw: dict) -> Optional[SemanticAction]:
         event_type = raw.get("type", "")
@@ -124,16 +202,25 @@ class RecordingNormalizer:
             return None
 
         is_submit = event_type == "submit"
+        context = {}
+        if is_submit:
+            context["is_submit"] = True
+            if raw.get("submit_method"):
+                context["submit_method"] = raw["submit_method"]
+            # If the submit event was restored from sessionStorage after navigation,
+            # it carries the postback URL (the page we landed on). Preserve it for
+            # the compiler to generate proper wait_for_load_state or URL assertion.
+            if raw.get("postback_url"):
+                context["postback_url"] = raw["postback_url"]
+            if raw.get("is_postback"):
+                context["is_postback"] = True
         return SemanticAction(
             action=action,
             target=target,
             value=raw.get("value"),
             url=raw.get("url"),
             page_title=raw.get("page_title"),
-            context={
-                "is_submit": is_submit,
-                "submit_method": raw.get("submit_method", ""),
-            } if is_submit else {},
+            context=context,
         )
 
     def _convert_step(self, step: dict) -> Optional[SemanticAction]:
@@ -183,7 +270,7 @@ class RecordingNormalizer:
                 candidates.append(LocatorCandidate("label", f"select[aria-label='{target_data['label']}']", 0.75, f"select aria-label={target_data['label']}"))
             # Fallback: text content (options text)
             if text:
-                candidates.append(LocatorCandidate("text", f"select:has-text('{_clean_text(text)[:40]}')", 0.35, f"select containing text"))
+                candidates.append(LocatorCandidate("text", f"select:has-text('{_clean_text(text)[:40]}')", 0.35, "select containing text"))
 
         # Prioridade de estrategias (score deterministico)
         if target_data.get("role"):
@@ -218,7 +305,7 @@ class RecordingNormalizer:
             text = _clean_text(target_data["text"])
             if text:
                 # Use :has-text (substring match, more robust) instead of text= (exact match)
-                candidates.append(LocatorCandidate("text", f":has-text(\"{text}\")", 0.55, f"visible text"))
+                candidates.append(LocatorCandidate("text", f":has-text(\"{text}\")", 0.55, "visible text"))
 
         # Fallback: CSS classes (stable, non-hash, non-generic)
         class_list = target_data.get("class_list") or []

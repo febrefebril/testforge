@@ -109,6 +109,141 @@ class TestRecordingNormalizer:
             assert_steps = [s for s in stc.steps if s.action == "assert"]
             assert len(assert_steps) >= 2
 
+    def test_compact_fill_events_same_selector(self):
+        """Sequential fills on same target within 500ms: keep only final event."""
+        normalizer = RecordingNormalizer()
+        events = [
+            {"event_id": "e1", "type": "fill", "timestamp": "2026-06-13T00:00:00.000",
+             "target": {"tag": "input", "id": "cpfField"}, "value": "1"},
+            {"event_id": "e2", "type": "fill", "timestamp": "2026-06-13T00:00:00.100",
+             "target": {"tag": "input", "id": "cpfField"}, "value": "12"},
+            {"event_id": "e3", "type": "fill", "timestamp": "2026-06-13T00:00:00.200",
+             "target": {"tag": "input", "id": "cpfField"}, "value": "123"},
+        ]
+        result = normalizer._compact_fill_events(events)
+        assert len(result) == 1
+        assert result[0]["value"] == "123"
+
+    def test_compact_fill_events_keypress_included(self):
+        """keypress events are also compacted as fill."""
+        normalizer = RecordingNormalizer()
+        events = [
+            {"event_id": "e1", "type": "fill", "timestamp": "2026-06-13T00:00:00.000",
+             "target": {"tag": "input", "id": "name"}, "value": "A"},
+            {"event_id": "e2", "type": "keypress", "timestamp": "2026-06-13T00:00:00.050",
+             "target": {"tag": "input", "id": "name"}, "value": "AB"},
+        ]
+        result = normalizer._compact_fill_events(events)
+        assert len(result) == 1
+        assert result[0]["value"] == "AB"
+
+    def test_compact_fill_events_leave_last_only(self):
+        """Multiple rapid fills: only the last one survives."""
+        normalizer = RecordingNormalizer()
+        events = [
+            {"event_id": "e1", "type": "fill", "timestamp": "2026-06-13T00:00:00.000",
+             "target": {"tag": "input", "id": "field"}, "value": "x"},
+            {"event_id": "e2", "type": "fill", "timestamp": "2026-06-13T00:00:00.050",
+             "target": {"tag": "input", "id": "field"}, "value": "xy"},
+            {"event_id": "e3", "type": "fill", "timestamp": "2026-06-13T00:00:00.100",
+             "target": {"tag": "input", "id": "field"}, "value": "xyz"},
+            {"event_id": "e4", "type": "fill", "timestamp": "2026-06-13T00:00:00.150",
+             "target": {"tag": "input", "id": "field"}, "value": "xyzz"},
+        ]
+        result = normalizer._compact_fill_events(events)
+        assert len(result) == 1
+        assert result[0]["value"] == "xyzz"
+
+    def test_compact_fill_events_different_selectors_not_merged(self):
+        """Fills on different elements are NOT compacted together."""
+        normalizer = RecordingNormalizer()
+        events = [
+            {"event_id": "e1", "type": "fill", "timestamp": "2026-06-13T00:00:00.000",
+             "target": {"tag": "input", "id": "cpfField"}, "value": "123"},
+            {"event_id": "e2", "type": "fill", "timestamp": "2026-06-13T00:00:00.100",
+             "target": {"tag": "input", "id": "nameField"}, "value": "João"},
+        ]
+        result = normalizer._compact_fill_events(events)
+        assert len(result) == 2
+        assert result[0]["value"] == "123"
+        assert result[1]["value"] == "João"
+
+    def test_compact_fill_events_non_fill_preserved(self):
+        """Non-fill events (navigation, click) pass through unchanged."""
+        normalizer = RecordingNormalizer()
+        events = [
+            {"event_id": "e1", "type": "navigation", "timestamp": "2026-06-13T00:00:00.000"},
+            {"event_id": "e2", "type": "fill", "timestamp": "2026-06-13T00:00:00.100",
+             "target": {"tag": "input", "id": "cpfField"}, "value": "123"},
+            {"event_id": "e3", "type": "click", "timestamp": "2026-06-13T00:00:00.200",
+             "target": {"tag": "button", "id": "btn"}},
+        ]
+        result = normalizer._compact_fill_events(events)
+        assert len(result) == 3
+
+    def test_compact_fill_events_window_boundary(self):
+        """Fills > 500ms apart are NOT compacted."""
+        normalizer = RecordingNormalizer()
+        events = [
+            {"event_id": "e1", "type": "fill", "timestamp": "2026-06-13T00:00:00.000",
+             "target": {"tag": "input", "id": "cpfField"}, "value": "123"},
+            {"event_id": "e2", "type": "fill", "timestamp": "2026-06-13T00:00:01.000",
+             "target": {"tag": "input", "id": "cpfField"}, "value": "456"},
+        ]
+        result = normalizer._compact_fill_events(events)
+        assert len(result) == 2
+
+    def test_compact_fill_events_multiple_groups(self):
+        """Multiple fill groups on different elements."""
+        normalizer = RecordingNormalizer()
+        events = [
+            {"event_id": "e1", "type": "fill", "timestamp": "2026-06-13T00:00:00.000",
+             "target": {"tag": "input", "id": "a"}, "value": "1"},
+            {"event_id": "e2", "type": "fill", "timestamp": "2026-06-13T00:00:00.100",
+             "target": {"tag": "input", "id": "a"}, "value": "12"},
+            {"event_id": "e3", "type": "fill", "timestamp": "2026-06-13T00:00:00.200",
+             "target": {"tag": "input", "id": "b"}, "value": "x"},
+            {"event_id": "e4", "type": "fill", "timestamp": "2026-06-13T00:00:00.300",
+             "target": {"tag": "input", "id": "b"}, "value": "xy"},
+        ]
+        result = normalizer._compact_fill_events(events)
+        assert len(result) == 2
+        assert result[0]["value"] == "12"
+        assert result[1]["value"] == "xy"
+
+    def test_compact_fill_events_click_resets_group(self):
+        """A click between fills on same target resets the group."""
+        normalizer = RecordingNormalizer()
+        events = [
+            {"event_id": "e1", "type": "fill", "timestamp": "2026-06-13T00:00:00.000",
+             "target": {"tag": "input", "id": "cpfField"}, "value": "123"},
+            {"event_id": "e2", "type": "click", "timestamp": "2026-06-13T00:00:00.100",
+             "target": {"tag": "button", "id": "btn"}},
+            {"event_id": "e3", "type": "fill", "timestamp": "2026-06-13T00:00:00.200",
+             "target": {"tag": "input", "id": "cpfField"}, "value": "456"},
+        ]
+        result = normalizer._compact_fill_events(events)
+        assert len(result) == 3
+        fill_values = [e["value"] for e in result if e["type"] == "fill"]
+        assert fill_values == ["123", "456"]
+
+    def test_compact_fill_events_empty_list(self):
+        """Empty list returns empty list."""
+        normalizer = RecordingNormalizer()
+        result = normalizer._compact_fill_events([])
+        assert result == []
+
+    def test_compact_fill_events_no_targets(self):
+        """Events without targets are handled."""
+        normalizer = RecordingNormalizer()
+        events = [
+            {"event_id": "e1", "type": "fill", "timestamp": "2026-06-13T00:00:00.000",
+             "value": "something"},
+        ]
+        result = normalizer._compact_fill_events(events)
+        assert len(result) == 1
+        assert result[0]["value"] == "something"
+
 
 class TestCompiler:
     def test_compile_generates_file(self):

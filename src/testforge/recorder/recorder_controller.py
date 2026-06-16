@@ -129,6 +129,8 @@ class RecorderController:
                     "class": target_data.get("className"),
                     "type": target_data.get("type"),
                     "value": target_data.get("value"),
+                    "onclick": target_data.get("onclick"),
+                    "href": target_data.get("href"),
                 },
                 class_list=target_data.get("class_list") or [],
                 aria_attrs=target_data.get("aria_attrs") or {},
@@ -295,6 +297,8 @@ class RecorderController:
                 parent_text: parentText,
                 type: el.getAttribute('type') || null,
                 value: (el.value||'').substring(0,100) || null,
+                onclick: el.getAttribute('onclick') || null,
+                href: el.getAttribute('href') || null,
                 bounding_box: {x:Math.round(rect.x||0), y:Math.round(rect.y||0), width:Math.round(rect.width||0), height:Math.round(rect.height||0)}
             };
         }
@@ -314,19 +318,25 @@ class RecorderController:
             // Check if element triggers form submission (submit button, or link with postback)
             if (!el) return false;
             var tag = (el.tagName || '').toLowerCase();
+            // Native submit elements
             if (tag === 'input' && (el.type === 'submit' || el.type === 'image')) return true;
             if (tag === 'button' && (!el.type || el.type === 'submit')) return true;
-            // Detect ASP.NET __doPostBack pattern
-            if (tag === 'a' && el.href && (
-                el.href.indexOf('__doPostBack') !== -1 ||
-                el.href.indexOf('javascript:__doPostBack') !== -1 ||
-                el.href.indexOf('javascript:WebForm_DoPostBackWithOptions') !== -1
-            )) return true;
-            // Detect ASP classic form submission pattern (href="javascript:document.forms[...].submit()")
-            if (tag === 'a' && el.href && (
-                el.href.indexOf('document.forms') !== -1 ||
-                el.href.indexOf('document.') !== -1
-            )) return true;
+            if (tag !== 'a') return false;
+
+            // Collect href + onclick for postback detection
+            var href = (el.href || el.getAttribute('href') || '').toLowerCase();
+            var onclick = (el.getAttribute('onclick') || '').toLowerCase();
+
+            // ASP.NET __doPostBack — href or onclick
+            if (href.indexOf('__dopostback') !== -1) return true;
+            if (onclick.indexOf('__dopostback') !== -1) return true;
+            // ASP.NET WebForm_DoPostBackWithOptions — href or onclick
+            if (href.indexOf('webform_dopostbackwithoptions') !== -1) return true;
+            if (onclick.indexOf('webform_dopostbackwithoptions') !== -1) return true;
+            // ASP classic document.forms[...].submit() — href or onclick
+            if (href.indexOf('document.forms') !== -1) return true;
+            if (onclick.indexOf('document.forms') !== -1) return true;
+
             return false;
         }
 
@@ -439,8 +449,10 @@ class RecorderController:
                 if (status) status.textContent = 'Gravando...';
                 return;
             }
-            // Detect submit triggers: record as "submit" and set pending postback flag
-            if (_tf_isSubmitTrigger(el) || (el && el.closest && el.closest('form'))) {
+            // Detect submit triggers: record as "submit" with postback flag.
+            // Only elements that actually trigger form submission qualify.
+            // Regular clicks inside forms (links, divs, spans, type=button) stay as "click".
+            if (_tf_isSubmitTrigger(el)) {
                 var form = null;
                 if (el && el.form) {
                     form = el.form;
