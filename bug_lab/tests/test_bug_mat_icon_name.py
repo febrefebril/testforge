@@ -23,7 +23,6 @@ Validation:
   pytest tests/test_semantic.py -v
 """
 import pytest
-from playwright.sync_api import TimeoutError as PlaywrightTimeout
 
 from testforge.semantic.recording_normalizer import _clean_text
 
