@@ -16,13 +16,18 @@ class TargetInfo:
     placeholder: Optional[str] = None
     label: Optional[str] = None
     attributes: dict = field(default_factory=dict)
+    all_attributes: dict = field(default_factory=dict)
     class_list: list = field(default_factory=list)
     aria_attrs: dict = field(default_factory=dict)
     data_attrs: dict = field(default_factory=dict)
     parent_text: Optional[str] = None
+    css_path: Optional[str] = None
+    xpath: Optional[str] = None
+    nth_child: int = 0
+    sibling_summary: list = field(default_factory=list)
+    inner_html: Optional[str] = None
     bounding_box: Optional[dict] = None
     parent_chain: list = field(default_factory=list)
-    sibling_summary: list = field(default_factory=list)
     frame_context: Optional[str] = None
     shadow_context: Optional[str] = None
 

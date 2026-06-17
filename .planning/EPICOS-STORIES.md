@@ -155,63 +155,76 @@
 
 ---
 
-## EP-12: Pipeline CI + Qualidade (v0.4.0) ⏳
+## EP-12: Captura Máxima — Fechar o Gravador (v0.4.0) 🔧
 
-**Objetivo:** Integração contínua, controle de LLM, relatórios, melhorias no recorder
+**Objetivo:** Última alteração no gravador. Capturar TUDO do elemento: todos os atributos, CSS path, XPath, nth-child, siblings, inner HTML. Depois nunca mais mexer no gravador — desenvolvimento foca no compilador/normalizer/healing.
 
-| Story | Descricao | Status |
-|-------|-----------|--------|
-| US-12.01 | GitHub Actions CI — `pytest tests/` em push/PR, matrix Python 3.10-3.13 | Pendente |
-| US-12.02 | Flag `--llm` / `--no-llm` no CLI — controle explícito do healing | Pendente |
-| US-12.03 | Melhorar Recorder — CSS path, parent hierarchy (3 níveis), nth-child | Pendente |
-| US-12.04 | `testforge report` — relatório Markdown com métricas e breakdown por família | Pendente |
-| US-12.05 | Testes: data_extractor, SmartStepRunner (cada estratégia), cmd_run edge cases | Pendente |
-| US-12.06 | TUTORIAL.md com exemplos de cada família de healing | Pendente |
+**Princípio:** Gravar intenção máxima. Compilador decide o que usar.
 
-### Tarefas Detalhadas
+### US-12.01: Capturar TODOS os atributos via _tf_captureAttr
 
-#### US-12.01: GitHub Actions CI
-- [ ] Criar `.github/workflows/test.yml`
-- [ ] `on: [push, pull_request]`
-- [ ] Matrix: `python-version: ["3.10", "3.11", "3.12", "3.13"]`
-- [ ] Steps: checkout → setup python → install deps → pytest
-- [ ] Upload artifacts: screenshots, logs, evidence
-- [ ] Badge no README: ![tests](https://github.com/.../workflows/test/badge.svg)
+| Tarefa | Status |
+|--------|--------|
+| Chamar `_tf_captureAttr(el)` no `_tf_extractTarget()` | Pendente |
+| Armazenar resultado em `target.all_attributes` | Pendente |
+| Atualizar `TargetInfo` com campo `all_attributes: dict` | Pendente |
 
-#### US-12.02: Flag --llm / --no-llm
-- [ ] `testforge run script.py --llm` → força `LLMHealer` mesmo sem API key (erro se não configurado)
-- [ ] `testforge run script.py --no-llm` → força `MockLLMHealer` (útil para CI)
-- [ ] Default (sem flag): auto-detect via env vars
-- [ ] Mostrar no output: `Healer: MockLLMHealer (--no-llm)` ou `Healer: LLM real (--llm)`
+### US-12.02: Gerar CSS path do elemento
 
-#### US-12.03: Melhorar Recorder
-- [ ] `_tf_extractTarget()`: adicionar `css_path` (seletor CSS único)
-- [ ] `_tf_extractTarget()`: adicionar `parent_chain` (tag + class + text até 3 níveis)
-- [ ] `_tf_extractTarget()`: adicionar `nth_child` para desambiguação
-- [ ] `TargetInfo`: novos campos `css_path`, `parent_chain[]`, `nth_child`
-- [ ] MIS: gerar candidatos de `css_path` e `parent_chain` como fallback
+| Tarefa | Status |
+|--------|--------|
+| JS: percorrer `parentElement` até `<body>` gerando caminho CSS | Pendente |
+| Ex: `"form#consulta > div.field > button.primary"` | Pendente |
+| Armazenar em `target.css_path` | Pendente |
 
-#### US-12.04: Relatório de Execução
-- [ ] Comando `testforge report [--history] [--family FAM-XX]`
-- [ ] Formato Markdown com:
-  - Total runs, healings, true_heals, false_heals
-  - Breakdown por família de falha (FAM-01 a FAM-11)
-  - Timeline das últimas N execuções
-  - LLM escalations rate
-  - Layer distribution (L0/L1/L2/L3)
-- [ ] Output: `reports/report-{date}.md`
+### US-12.03: Gerar XPath do elemento
 
-#### US-12.05: Mais Testes
-- [ ] `tests/test_data_extractor.py` — extração, dedup, sensitive detection
-- [ ] `tests/test_smart_step_runner.py` — cada estratégia individualmente
-- [ ] `tests/test_cmd_run_edge_cases.py` — timeout, script inexistente, recording vazio
-- [ ] Meta: 180+ testes no total
+| Tarefa | Status |
+|--------|--------|
+| JS: `_tf_domPath()` (já existe!) — usar para gerar XPath | Pendente |
+| Armazenar em `target.xpath` | Pendente |
 
-#### US-12.06: Tutorial por Família
-- [ ] Exemplo prático para cada FAM-01 a FAM-06 (com agentes L2)
-- [ ] Como simular a falha
-- [ ] Como verificar que o healing funcionou
-- [ ] Output esperado do `testforge run`
+### US-12.04: Capturar posição nth-child
+
+| Tarefa | Status |
+|--------|--------|
+| JS: calcular posição entre irmãos da mesma tag | Pendente |
+| Armazenar em `target.nth_child` | Pendente |
+
+### US-12.05: Capturar siblings próximos
+
+| Tarefa | Status |
+|--------|--------|
+| JS: capturar tag+text+id do irmão anterior e próximo | Pendente |
+| Armazenar em `target.sibling_summary: list[dict]` | Pendente |
+
+### US-12.06: Capturar inner HTML resumido
+
+| Tarefa | Status |
+|--------|--------|
+| JS: `el.innerHTML.substring(0, 200)` | Pendente |
+| Armazenar em `target.inner_html` | Pendente |
+
+### US-12.07: Atualizar MIS para usar novos atributos
+
+| Tarefa | Status |
+|--------|--------|
+| `RecordingNormalizer._build_target()`: gerar candidatos de `all_attributes`, `css_path`, `xpath`, `nth_child`, `sibling_summary` | Pendente |
+| Prioridade: data-* > id > name > css_path > xpath | Pendente |
+
+### US-12.08: Testes
+
+| Tarefa | Status |
+|--------|--------|
+| Testar gravação no fake-bank: verificar que novos campos estão no raw_events.jsonl | Pendente |
+| Testar compilação: verificar que script usa novos candidatos | Pendente |
+| Testar regressão: 124+ testes passando | Pendente |
+
+### Critérios de Aceite
+- [ ] `raw_events.jsonl` contém `all_attributes`, `css_path`, `xpath`, `nth_child`, `sibling_summary`, `inner_html`
+- [ ] `TargetInfo` tem todos os novos campos
+- [ ] MIS gera candidatos dos novos atributos
+- [ ] Nenhuma regressão nos testes existentes
 
 ---
 

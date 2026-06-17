@@ -377,8 +377,21 @@ class RecordingNormalizer:
                 text_score = 0.10 if _is_generic_text(text) else 0.55
                 candidates.append(LocatorCandidate("text", f":has-text(\"{text}\")", text_score, "visible text"))
 
-        # Fallback: CSS classes (stable, non-hash, non-generic)
-        class_list = target_data.get("class_list") or []
+        # Fallback: CSS path
+        css_path = target_data.get("css_path") or ""
+        if css_path and not candidates:
+            candidates.append(LocatorCandidate("css_path", css_path, 0.20, "CSS path fallback"))
+
+        # Fallback: XPath (lowest priority)
+        xpath = target_data.get("xpath") or ""
+        if xpath and not candidates:
+            candidates.append(LocatorCandidate("xpath", xpath, 0.10, "XPath fallback"))
+
+        # Fallback: nth-child for disambiguation
+        nth = target_data.get("nth_child") or 0
+        tag = target_data.get("tag") or ""
+        if nth > 0 and tag and not candidates:
+            candidates.append(LocatorCandidate("nth_child", f"{tag}:nth-child({nth})", 0.15, f"nth-child position"))
         # Exclude generic framework classes that match too broadly
         _generic_classes = {"mat-focus-indicator", "mat-ripple", "mat-button-focus-overlay",
                            "cdk-focused", "cdk-program-focused", "ng-star-inserted", "ng-untouched",

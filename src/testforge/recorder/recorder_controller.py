@@ -129,13 +129,17 @@ class RecorderController:
                     "class": target_data.get("className"),
                     "type": target_data.get("type"),
                     "value": target_data.get("value"),
-                    "onclick": target_data.get("onclick"),
-                    "href": target_data.get("href"),
                 },
+                all_attributes=target_data.get("all_attributes") or {},
                 class_list=target_data.get("class_list") or [],
                 aria_attrs=target_data.get("aria_attrs") or {},
                 data_attrs=target_data.get("data_attrs") or {},
                 parent_text=target_data.get("parent_text"),
+                css_path=target_data.get("css_path"),
+                xpath=target_data.get("xpath"),
+                nth_child=target_data.get("nth_child") or 0,
+                sibling_summary=target_data.get("sibling_summary") or [],
+                inner_html=target_data.get("inner_html"),
                 bounding_box=target_data.get("bounding_box"),
             )
         self._event_counter += 1
@@ -288,22 +292,19 @@ class RecorderController:
             var rect = el.getBoundingClientRect ? el.getBoundingClientRect() : {};
             var labelEl = el.id ? document.querySelector('label[for="' + el.id + '"]') : null;
 
+            // Collect ALL attributes (via _tf_captureAttr)
+            var allAttrs = window._tf_captureAttr(el);
+
             // Collect aria-* attributes
             var ariaAttrs = {};
-            if (el.attributes) {
-                for (var i = 0; i < el.attributes.length; i++) {
-                    var a = el.attributes[i];
-                    if (a.name.startsWith('aria-')) ariaAttrs[a.name] = a.value;
-                }
+            for (var key in allAttrs) {
+                if (key.startsWith('aria-')) ariaAttrs[key] = allAttrs[key];
             }
 
             // Collect data-* attributes
             var dataAttrs = {};
-            if (el.attributes) {
-                for (var i = 0; i < el.attributes.length; i++) {
-                    var d = el.attributes[i];
-                    if (d.name.startsWith('data-')) dataAttrs[d.name] = d.value;
-                }
+            for (var key in allAttrs) {
+                if (key.startsWith('data-')) dataAttrs[key] = allAttrs[key];
             }
 
             // Collect CSS classes as array
@@ -319,6 +320,64 @@ class RecorderController:
                 parentText = (el.parentElement.textContent||'').trim().substring(0,200) || null;
             }
 
+            // CSS path: walk up DOM to <body>
+            var cssPath = '';
+            try {
+                var parts = [];
+                var current = el;
+                while (current && current !== document.body && current !== document.documentElement) {
+                    var sel = (current.tagName||'').toLowerCase();
+                    if (current.id) { sel += '#' + current.id; }
+                    else if (current.className && typeof current.className === 'string') {
+                        var cls = current.className.trim().split(/\\s+/)[0];
+                        if (cls && !cls.startsWith('tf-')) sel += '.' + cls;
+                    }
+                    parts.unshift(sel);
+                    current = current.parentElement;
+                }
+                cssPath = parts.join(' > ') || '';
+            } catch(_e) { cssPath = ''; }
+
+            // XPath
+            var xpath = window._tf_domPath(el);
+
+            // nth-child position among same-tag siblings
+            var nthChild = 0;
+            try {
+                var tag = (el.tagName||'').toLowerCase();
+                var parent = el.parentElement;
+                if (parent) {
+                    var siblings = parent.children;
+                    var count = 0;
+                    for (var i = 0; i < siblings.length; i++) {
+                        if ((siblings[i].tagName||'').toLowerCase() === tag) {
+                            count++;
+                            if (siblings[i] === el) { nthChild = count; break; }
+                        }
+                    }
+                }
+            } catch(_e) { nthChild = 0; }
+
+            // Sibling summary (prev + next)
+            var siblingSummary = [];
+            try {
+                var prev = el.previousElementSibling;
+                var next = el.nextElementSibling;
+                var sumSib = function(sib) {
+                    if (!sib) return null;
+                    return {
+                        tag: (sib.tagName||'').toLowerCase(),
+                        text: (sib.textContent||'').trim().substring(0,60) || null,
+                        id: sib.id || null
+                    };
+                };
+                if (prev) siblingSummary.push(sumSib(prev));
+                if (next) siblingSummary.push(sumSib(next));
+            } catch(_e) { siblingSummary = []; }
+
+            // Inner HTML summary
+            var innerHtml = (el.innerHTML||'').substring(0,200) || null;
+
             return {
                 tag: (el.tagName||'').toLowerCase(),
                 text: elText,
@@ -333,7 +392,13 @@ class RecorderController:
                 class_list: classList,
                 aria_attrs: ariaAttrs,
                 data_attrs: dataAttrs,
+                all_attributes: allAttrs,
                 parent_text: parentText,
+                css_path: cssPath,
+                xpath: xpath,
+                nth_child: nthChild,
+                sibling_summary: siblingSummary,
+                inner_html: innerHtml,
                 type: el.getAttribute('type') || null,
                 value: (el.value||'').substring(0,100) || null,
                 onclick: el.getAttribute('onclick') || null,
