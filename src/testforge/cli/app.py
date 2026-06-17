@@ -357,6 +357,30 @@ def cmd_run(args):
                 page.wait_for_timeout(400)
                 return True, "ok"
 
+            def _wait_for_consequence(page, step, step_num, causes_navigation):
+                """Wait for the consequence of the click, not an arbitrary timeout."""
+                if causes_navigation:
+                    page.wait_for_timeout(3000)
+                    return
+
+                # No navigation. Check if next step's element exists.
+                # If not, wait up to 12s for async operations (calculations, API calls).
+                cur_idx = step_num - 1  # 0-based
+                next_step = steps[cur_idx + 1] if cur_idx + 1 < len(steps) else None
+                if next_step and not next_step.skip_reason and next_step.target and next_step.target.candidates:
+                    next_sel = next_step.target.candidates[0].selector
+                    try:
+                        page.wait_for_selector(next_sel, state="visible", timeout=12000)
+                        if verbose:
+                            print(f"  ⚡ consequence: {next_sel[:50]} appeared")
+                        page.wait_for_timeout(300)
+                        return
+                    except Exception:
+                        pass  # element didn't appear — fall through to timeout
+
+                # Default fallback
+                page.wait_for_timeout(800)
+
             def _click_with_validation(page, candidates, step, step_num, is_submit, causes_navigation) -> tuple[bool, str]:
                 """Try each candidate, validate outcome, return (success, selector_used)."""
                 url_before = page.url
@@ -370,8 +394,8 @@ def cmd_run(args):
                         # Validate click outcome
                         valid, reason = _validate_click(page, url_before, step, step_num)
                         if valid:
-                            wait_ms = 3000 if causes_navigation else 800
-                            page.wait_for_timeout(wait_ms)
+                            # Wait for the consequence: if a next step's element will appear, wait for it
+                            _wait_for_consequence(page, step, step_num, causes_navigation)
                             return True, sel
                         else:
                             if verbose:
@@ -504,11 +528,34 @@ def cmd_run(args):
                                 if fill_val:
                                     sel = step.target.candidates[0].selector if step.target.candidates else ""
                                     try:
-                                        page.fill(sel, str(fill_val), timeout=5000)
+                                        # Check if it's a currency-masked input (needs press_sequentially)
+                                        has_mask = False
+                                        try:
+                                            el = page.locator(sel).first
+                                            mask = el.get_attribute("currencymask")
+                                            has_mask = bool(mask is not None)
+                                        except Exception:
+                                            pass
+
+                                        if has_mask:
+                                            # Currency masks work in cents — multiply value by 100
+                                            raw_val = str(fill_val).replace(".", "").replace(",", "").replace(" ", "")
+                                            try:
+                                                cents = str(int(float(raw_val) * 100))
+                                            except ValueError:
+                                                cents = raw_val
+                                            el.click()
+                                            page.wait_for_timeout(200)
+                                            el.press_sequentially(cents, delay=50)
+                                            page.wait_for_timeout(300)
+                                        else:
+                                            page.fill(sel, str(fill_val), timeout=5000)
+
                                         if verbose:
                                             print(f"  ⚡ data-fill: {str(fill_val)[:20]} into {sel[:40]}")
-                                    except Exception:
-                                        pass  # fall through to normal click
+                                    except Exception as e:
+                                        if verbose:
+                                            print(f"  ⚡ data-fill FAILED: {str(e)[:50]}")
 
                         is_submit = step.context.get("is_submit", False) if step.context else False
                         causes_navigation = step.context.get("causes_navigation", False) if step.context else False
@@ -540,7 +587,7 @@ def cmd_run(args):
                                 valid, reason = _validate_click(page, url_before, step, step_num)
                                 if not valid:
                                     raise Exception(f"validation failed: {reason}")
-                                page.wait_for_timeout(3000 if causes_navigation else 800)
+                                _wait_for_consequence(page, step, step_num, causes_navigation)
                                 print(f"  ✓ Step {step_num}: click (url={page.url[:60]})")
                             except Exception:
                                 page.wait_for_timeout(1000)
@@ -554,7 +601,7 @@ def cmd_run(args):
                                     valid2, reason2 = _validate_click(page, url_before2, step, step_num)
                                     if not valid2:
                                         raise Exception(f"retry validation failed: {reason2}")
-                                    page.wait_for_timeout(3000 if causes_navigation else 500)
+                                    _wait_for_consequence(page, step, step_num, causes_navigation)
                                     print(f"  ✓ Step {step_num}: click (after wait)")
                                 except Exception as e2:
                                     raise Exception(f"click step {step_num} falhou — selector '{sel[:80]}' not found") from e2
