@@ -16,8 +16,8 @@
     },
     {
       "id": "FASE-02",
-      "title": "Criar template de p\u00e1gina de bug + template de teste",
-      "description": "Create bug_lab/pages/template/index.html with minimal structure. Create bug_lab/tests/template_test.py. Create bug_lab/README.md explaining the cycle: reproduce \u2192 verify \u2192 fix \u2192 validate.",
+      "title": "Criar template de página de bug + template de teste",
+      "description": "Create bug_lab/pages/template/index.html with minimal structure. Create bug_lab/tests/template_test.py. Create bug_lab/README.md explaining the cycle: reproduce → verify → fix → validate.",
       "priority": "P0",
       "status": "completed",
       "files": [
@@ -27,7 +27,7 @@
     },
     {
       "id": "FASE-03",
-      "title": "Bug Lab: seletor vazio/inv\u00e1lido",
+      "title": "Bug Lab: seletor vazio/inválido",
       "description": "Create bug_lab/pages/bug-empty-selector/index.html. Create test that fails when selector is empty. Document symptom, cause, reproduction steps.",
       "priority": "P1",
       "status": "completed",
@@ -39,10 +39,11 @@
     },
     {
       "id": "FASE-04",
-      "title": "Bug Lab: seletor fr\u00e1gil (ID din\u00e2mico)",
+      "title": "Bug Lab: seletor frágil (ID dinâmico)",
       "description": "Create page with dynamically changing button ID. Test that selector healing works via text fallback. Already partially covered by curation tests.",
       "priority": "P1",
       "status": "completed",
+      "completed": true,
       "files": [
         "bug_lab/pages/",
         "bug_lab/tests/"
@@ -81,11 +82,12 @@
         "bug_lab/pages/",
         "bug_lab/tests/",
         "bug_lab/fixtures/"
-      ]
+      ],
+      "completed": true
     },
     {
       "id": "FASE-08",
-      "title": "Bug Lab: m\u00faltiplos file inputs diferenciados",
+      "title": "Bug Lab: múltiplos file inputs diferenciados",
       "description": "Create page with 2+ file inputs. Test that generated selectors are distinct per input (by label, position, aria-label).",
       "priority": "P1",
       "status": "pending",
@@ -96,7 +98,7 @@
     },
     {
       "id": "FASE-09",
-      "title": "Bug Lab: select/options jQuery n\u00e3o capturados",
+      "title": "Bug Lab: select/options jQuery não capturados",
       "description": "Create page with jQuery-enhanced select. Test that recording correctly identifies select element and generates select_option(). Already partially fixed in BUG-001.",
       "priority": "P1",
       "status": "pending",
@@ -107,7 +109,7 @@
     },
     {
       "id": "FASE-10",
-      "title": "Bug Lab: datepicker sem valida\u00e7\u00e3o",
+      "title": "Bug Lab: datepicker sem validação",
       "description": "Create page with date input. Test that date selection generates proper fill/select_option and validation works.",
       "priority": "P2",
       "status": "pending",
@@ -129,7 +131,7 @@
     },
     {
       "id": "FASE-12",
-      "title": "Script de consolida\u00e7\u00e3o de artefatos para LLM",
+      "title": "Script de consolidação de artefatos para LLM",
       "description": "Create scripts/consolidate_artifacts.py that combines recordings/ and semantic_tests/ into single document for LLM analysis.",
       "priority": "P2",
       "status": "pending",

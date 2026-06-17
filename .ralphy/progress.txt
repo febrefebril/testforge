@@ -21,3 +21,5 @@
 - [✓] 2026-06-16 23:50 - Organizar estrutura de pastas (bug_lab/, recordings/, semantic_tests/)
 - [✓] 2026-06-16 23:55 - Criar template de página de bug + template de teste
 - [✓] 2026-06-16 23:58 - Bug Lab: seletor vazio/inválido
+- [✓] 2026-06-17 00:15 - Bug Lab: seletor frágil (ID dinâmico) — text fallback healing
+- [✓] 2026-06-17 00:27 - Bug Lab: upload de arquivos (set_input_files)
