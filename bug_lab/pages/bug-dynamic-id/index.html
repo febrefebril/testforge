@@ -7,24 +7,52 @@
 <body>
   <h1>Bug Lab — Dynamic Button ID</h1>
   <p>Botão com ID que muda a cada 2s. Simula IDs dinâmicos de React/Angular.</p>
+  <p>Modo sem <code>?error=1</code>: ID troca a cada 2s.</p>
+  <p>Modo com <code>?error=1</code>: ID troca a cada 0.5s (falha garantida).</p>
   <p>Selector <code>#btn-dynamic-0</code> quebra após a primeira troca de ID.</p>
+
   <button id="btn-dynamic-0">Clique Dinâmico</button>
   <div id="result" role="status" style="margin-top:10px;font-weight:bold"></div>
 
-  <script>
-    var counter = 0;
-    var btn = document.querySelector('button');
+  <hr style="margin-top:20px">
 
-    // Change button ID every 2 seconds
+  <p>Botão secundário (ID também dinâmico, texto estável):</p>
+  <button id="btn-secondary-0">Ação Secundária</button>
+  <div id="result-secondary" role="status" style="margin-top:5px;font-style:italic"></div>
+
+  <script>
+    // ── Primary button ──
+    var counter = 0;
+    var btnPrimary = document.querySelector('#btn-dynamic-0');
+    var intervalMs = location.search.includes('error=1') ? 500 : 2000;
+
     setInterval(function() {
       counter++;
-      btn.id = 'btn-dynamic-' + counter;
-    }, 2000);
+      btnPrimary.id = 'btn-dynamic-' + counter;
+    }, intervalMs);
 
-    // Click handler — always works regardless of ID changes
-    btn.addEventListener('click', function() {
+    var clickCount = 0;
+    btnPrimary.addEventListener('click', function() {
+      clickCount++;
       document.getElementById('result').textContent =
-        'Clicado! ID atual: ' + btn.id;
+        'Clicado ' + clickCount + 'x! ID atual: ' + btnPrimary.id;
+    });
+
+    // ── Secondary button ──
+    var counter2 = 0;
+    var btnSec = document.querySelector('#btn-secondary-0');
+    var intervalSec = location.search.includes('error=1') ? 700 : 3000;
+
+    setInterval(function() {
+      counter2++;
+      btnSec.id = 'btn-secondary-' + counter2;
+    }, intervalSec);
+
+    var secClickCount = 0;
+    btnSec.addEventListener('click', function() {
+      secClickCount++;
+      document.getElementById('result-secondary').textContent =
+        'Secundário clicado ' + secClickCount + 'x! ID atual: ' + btnSec.id;
     });
   </script>
 </body>
