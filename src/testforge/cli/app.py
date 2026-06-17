@@ -438,6 +438,7 @@ def cmd_run(args):
 
                     elif action == "click":
                         is_submit = step.context.get("is_submit", False) if step.context else False
+                        causes_navigation = step.context.get("causes_navigation", False) if step.context else False
 
                         if candidates:
                             fallback = FallbackRunner(page)
@@ -460,20 +461,24 @@ def cmd_run(args):
                                 ok = fallback.try_click(candidates)
                                 if ok:
                                     print(f"  ✓ Step {step_num}: click")
-                                    # Wait for page to settle after click (SPA may load content without URL change)
-                                    try:
-                                        page.wait_for_load_state('networkidle', timeout=5000)
-                                    except Exception:
-                                        page.wait_for_timeout(1000)
+                                    # Wait for page to settle after click
+                                    if causes_navigation:
+                                        try:
+                                            page.wait_for_url("**", timeout=10000)  # SPA navigation
+                                        except Exception:
+                                            pass
+                                    page.wait_for_timeout(800)  # DOM render safety net
                                 else:
                                     page.wait_for_timeout(1000)
                                     ok = fallback.try_click(candidates)
                                     if ok:
                                         print(f"  ✓ Step {step_num}: click (after wait)")
-                                        try:
-                                            page.wait_for_load_state('networkidle', timeout=5000)
-                                        except Exception:
-                                            page.wait_for_timeout(500)
+                                        if causes_navigation:
+                                            try:
+                                                page.wait_for_url("**", timeout=10000)
+                                            except Exception:
+                                                pass
+                                        page.wait_for_timeout(500)
                                     else:
                                         tried = ', '.join([c['selector'][:40] for c in candidates[:3]])
                                         raise Exception(f"click step {step_num} falhou — candidates: [{tried}]")
@@ -484,15 +489,12 @@ def cmd_run(args):
                                         page.click(sel, timeout=5000)
                                 else:
                                     page.click(sel, timeout=5000)
-                                    # Always wait for page to settle after click (SPA may load content without URL change)
-                                    try:
-                                        page.wait_for_load_state('domcontentloaded', timeout=3000)
-                                    except Exception:
-                                        pass
-                                try:
-                                    page.wait_for_load_state('networkidle', timeout=5000)
-                                except Exception:
-                                    page.wait_for_timeout(2000)
+                                    if causes_navigation:
+                                        try:
+                                            page.wait_for_url("**", timeout=10000)  # SPA navigation
+                                        except Exception:
+                                            pass
+                                    page.wait_for_timeout(800)  # DOM render safety net
                                 print(f"  ✓ Step {step_num}: click (url={page.url[:60]})")
                             except Exception:
                                 page.wait_for_timeout(1000)
@@ -502,14 +504,12 @@ def cmd_run(args):
                                             page.click(sel, timeout=5000)
                                     else:
                                         page.click(sel, timeout=5000)
-                                        try:
-                                            page.wait_for_load_state('domcontentloaded', timeout=3000)
-                                        except Exception:
-                                            pass
-                                        try:
-                                            page.wait_for_load_state('networkidle', timeout=5000)
-                                        except Exception:
-                                            page.wait_for_timeout(2000)
+                                        if causes_navigation:
+                                            try:
+                                                page.wait_for_url("**", timeout=10000)
+                                            except Exception:
+                                                pass
+                                        page.wait_for_timeout(500)
                                     print(f"  ✓ Step {step_num}: click (after wait)")
                                 except Exception as e2:
                                     raise Exception(f"click step {step_num} falhou — selector '{sel[:80]}' not found") from e2
