@@ -77,15 +77,27 @@ Summary of bugs reproduced, root-caused, and fixed in the TestForge bug lab.
 
 ---
 
+## BUG: jQuery-Enhanced Select — select_option() Failure
+
+| Field | Value |
+|-------|-------|
+| **Bug existed?** | Yes — confirmed via browser tests |
+| **Fixed?** | Not yet — bug documented, fix pending |
+| **How?** | Native `<select>` is hidden (`display:none`) by jQuery enhancement. Playwright's `select_option()` fails with visibility error. `force=True` sets value but jQuery UI does not update (event not triggered). Workaround: click jQuery custom DOM (trigger + `li[data-value]`). Fix requires InputAgent to detect hidden selects and generate interaction with custom DOM instead of `select_option()`. |
+| **Page** | `bug_lab/pages/bug-jquery-select/index.html` |
+| **Tests** | `bug_lab/tests/test_bug_jquery_select.py` — 22 tests (9 unit + 13 browser) — all pass |
+
+---
+
 ## Test Coverage Summary
 
 ```bash
 # Unit tests (fast, no browser):
-pytest bug_lab/tests/ -v -m "not slow"   # 26 tests
+pytest bug_lab/tests/ -v -m "not slow"   # 35 tests
 
 # Full suite (includes browser integration):
-pytest bug_lab/tests/ -v                  # 91 tests (26 unit + 65 slow)
+pytest bug_lab/tests/ -v                  # 113 tests (35 unit + 78 slow)
 pytest tests/ -v                          # 73+ tests
 ```
 
-**Last validated:** 2026-06-17 — all 164+ tests pass (73 semantic + 91 bug_lab), lint clean.
+**Last validated:** 2026-06-17 — all 186+ tests pass (73 semantic + 113 bug_lab), lint clean.
