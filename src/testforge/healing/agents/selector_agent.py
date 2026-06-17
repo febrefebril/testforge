@@ -121,12 +121,15 @@ class SelectorAgent:
 
     def _try_text(self, text_val: str) -> Optional[LLMHealingProposal]:
         if text_val and len(text_val) >= 2:
+            # Use exact text match (quoted) to avoid matching parent elements
+            # that contain the same text (e.g. <p> wrapping a <button>)
+            escaped = text_val[:80].replace('"', '\\"')
             return LLMHealingProposal(
                 taxonomy_id="SEL-004", family="FAM-01",
                 strategy="has_text_fallback",
-                new_locator=f"text={text_val[:80]}",
+                new_locator=f'text="{escaped}"',
                 confidence=0.70,
-                rationale=f"Fallback to visible text: '{text_val[:80]}'",
+                rationale=f"Fallback to visible text (exact): '{text_val[:80]}'",
             )
         return None
 

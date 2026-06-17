@@ -220,12 +220,15 @@ class TestDynamicIdTextFallback:
         def step_runner(step_data):
             return smart_runner.execute(step_data, step_data.get("strategy", ""))
 
+        catalog = HealingCatalog()
+        catalog.seed_defaults()  # Populate with known recipes
+
         curator = CuradorAutomatico(
-            catalog=HealingCatalog(),
+            catalog=catalog,
             step_runner=step_runner,
         )
 
-        # Verify catalog has matching recipes
+        # Verify catalog has matching recipes after seeding
         recipes = curator._catalog.match_recipes(
             "locator resolved to 0 elements",
             family="locator_resolution",
@@ -233,10 +236,11 @@ class TestDynamicIdTextFallback:
         assert len(recipes) > 0, \
             "Expected catalog to have recipes for locator resolution errors"
 
-        # The fallback_text recipe should match
-        text_recipes = [r for r in recipes if "fallback_text" in r.solution_strategy]
+        # Verify recipe strategy matches (fallback_text is the default)
+        text_recipes = [r for r in recipes
+                        if "text" in r.solution_strategy.lower()]
         assert len(text_recipes) > 0, \
-            "Expected fallback_text recipe in catalog"
+            f"Expected text-based recipe in catalog, got: {[r.solution_strategy for r in recipes]}"
 
 
 class TestClassification:

@@ -1,0 +1,154 @@
+{
+  "project": "TestForge",
+  "version": "0.3.1",
+  "tasks": [
+    {
+      "id": "BUG-008",
+      "title": "Digitação caractere por caractere gera dezenas de fills",
+      "description": "Compact sequential fill events. Same selector within 500ms window: keep only the final value. Add _compact_fill_events() in RecordingNormalizer.",
+      "priority": "P1",
+      "status": "completed",
+      "files": [
+        "src/testforge/semantic/recording_normalizer.py"
+      ],
+      "completed": true
+    },
+    {
+      "id": "BUG-014",
+      "title": "Dependência httpx ausente no pyproject.toml",
+      "description": "Add httpx>=0.27 to pyproject.toml dependencies.",
+      "priority": "P1",
+      "status": "completed",
+      "files": [
+        "pyproject.toml"
+      ],
+      "completed": true
+    },
+    {
+      "id": "BUG-009",
+      "title": "goto() excessivo no script gerado",
+      "description": "Remove redundant page.goto() calls. Only goto at start + when action causes navigation. Use expect_navigation for intentional navigations.",
+      "priority": "P1",
+      "status": "completed",
+      "files": [
+        "src/testforge/semantic/compiler.py"
+      ],
+      "completed": true
+    },
+    {
+      "id": "BUG-010",
+      "title": "Healer sugere candidatos genéricos (text=Selecione)",
+      "description": "Add _is_generic_text() penalizing: Selecione, OK, Cancelar, Página inicial, Calcular. Score 0.10 for generic text.",
+      "priority": "P1",
+      "status": "completed",
+      "files": [
+        "src/testforge/semantic/recording_normalizer.py"
+      ],
+      "completed": true
+    },
+    {
+      "id": "BUG-012",
+      "title": "Assertions frágeis por CSS estrutural",
+      "description": "Prefer get_by_text(), get_by_role(), body.to_contain_text() over long CSS chains.",
+      "priority": "P1",
+      "status": "completed",
+      "files": [
+        "src/testforge/semantic/compiler.py"
+      ],
+      "completed": true
+    },
+    {
+      "id": "BUG-011",
+      "title": "Métricas de healing inconsistentes",
+      "description": "Per-step metrics: falhas_detectadas, healings_tentados, aplicados, validados, rejeitados.",
+      "priority": "P1",
+      "status": "completed",
+      "files": [
+        "src/testforge/metrics/metrics_repository.py",
+        "src/testforge/cli/app.py"
+      ],
+      "completed": true
+    },
+    {
+      "id": "BUG-013",
+      "title": "Elementos com bounding box zero aceitos",
+      "description": "Validate actionability: visible, enabled, area > 0. Reject bb width=height=0.",
+      "priority": "P1",
+      "status": "completed",
+      "files": [
+        "src/testforge/recorder/recorder_controller.py"
+      ],
+      "completed": true
+    },
+    {
+      "id": "BUG-015",
+      "title": "URL com & quebra no PowerShell",
+      "description": "URL validation: if URL contains & without quotes, warn user. Detect truncated URL.",
+      "priority": "P2",
+      "status": "completed",
+      "files": [
+        "src/testforge/cli/app.py"
+      ],
+      "completed": true
+    },
+    {
+      "id": "BUG-016",
+      "title": "Logs truncados (candidates: [:h...)",
+      "description": "Terminal shows summary. Save full report to file.",
+      "priority": "P2",
+      "status": "completed",
+      "files": [
+        "src/testforge/cli/app.py"
+      ],
+      "completed": true
+    },
+    {
+      "id": "BUG-017",
+      "title": "Steps pulados não explicados",
+      "description": "Log skip reason: 'Step N: skipped — duplicate' or 'non-actionable target'.",
+      "priority": "P2",
+      "status": "completed",
+      "files": [
+        "src/testforge/cli/app.py"
+      ],
+      "completed": true
+    },
+    {
+      "id": "BUG-018",
+      "title": "Sem artefato semântico auditável",
+      "description": "Generate semantic_steps.jsonl alongside script during compile.",
+      "priority": "P2",
+      "status": "completed",
+      "files": [
+        "src/testforge/semantic/compiler.py"
+      ],
+      "completed": true
+    },
+    {
+      "id": "BUG-019",
+      "title": "Runner continua após falhas críticas",
+      "description": "Step dependency: blocking=true + depends_on=step_N. UF fail → block Edifício/Data.",
+      "priority": "P2",
+      "status": "completed",
+      "completed": true,
+      "files": [
+        "src/testforge/cli/app.py",
+        "src/testforge/semantic/model.py",
+        "src/testforge/semantic/recording_normalizer.py",
+        "src/testforge/semantic/compiler.py",
+        "tests/test_semantic.py"
+      ]
+    },
+    {
+      "id": "BUG-020",
+      "title": "Contrato instável documentação",
+      "description": "Document: raw_events (capture), steps (curated), semantic_steps (compiled), script (executable).",
+      "priority": "P2",
+      "status": "pending",
+      "files": [
+        "src/testforge/cli/app.py"
+      ],
+      "completed": true
+    }
+  ]
+}
