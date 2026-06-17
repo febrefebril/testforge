@@ -65,15 +65,27 @@ Summary of bugs reproduced, root-caused, and fixed in the TestForge bug lab.
 
 ---
 
+## BUG: Multi File Input — Identical/Ambiguous Selectors
+
+| Field | Value |
+|-------|-------|
+| **Bug existed?** | Yes — confirmed via browser tests |
+| **Fixed?** | Not yet — selector generation does not incorporate `type=file` for disambiguation |
+| **How?** | N/A — bug documented, fix pending. Normalizer must add `input[type=file]` + disambiguating attribute (name/id/label) to candidate chain. InputAgent must use specific selector instead of bare `input[type=file]`. |
+| **Page** | `bug_lab/pages/bug-multi-file-input/index.html` |
+| **Tests** | `bug_lab/tests/test_bug_multi_file_input.py` — 31 tests (all `@slow` browser integration) — all pass |
+
+---
+
 ## Test Coverage Summary
 
 ```bash
 # Unit tests (fast, no browser):
-pytest bug_lab/tests/ -v -m "not slow"   # 42 tests (33 original + 9 new)
+pytest bug_lab/tests/ -v -m "not slow"   # 26 tests
 
 # Full suite (includes browser integration):
-pytest bug_lab/tests/ -v                  # 53 tests (42 unit + 11 slow)
+pytest bug_lab/tests/ -v                  # 91 tests (26 unit + 65 slow)
 pytest tests/ -v                          # 73+ tests
 ```
 
-**Last validated:** 2026-06-17 — all 126+ tests pass (73 semantic + 53 bug_lab), lint clean.
+**Last validated:** 2026-06-17 — all 164+ tests pass (73 semantic + 91 bug_lab), lint clean.
