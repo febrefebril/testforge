@@ -24,3 +24,10 @@
 - [✓] 2026-06-17 00:15 - Bug Lab: seletor frágil (ID dinâmico) — text fallback healing
 - [✓] 2026-06-17 00:27 - Bug Lab: upload de arquivos (set_input_files)
 - [✓] 2026-06-17 00:47 - Bug Lab: BADSTRING/texto com aspas em seletores
+- [✓] 2026-06-17 00:56 - Bug Lab: múltiplos file inputs diferenciados
+- [✓] 2026-06-17 01:00 - Bug Lab: select/options jQuery não capturados
+- [✓] 2026-06-17 01:07 - Bug Lab: datepicker sem validação
+- [✓] 2026-06-17 01:12 - Bug Lab: encoding inconsistente
+- [✓] 2026-06-17 01:18 - Script de consolidação de artefatos para LLM
+- [✓] 2026-06-17 01:21 - Pipeline CI: GitHub Actions workflow
+- [✓] 2026-06-17 01:28 - Generate consolidated bug fix report

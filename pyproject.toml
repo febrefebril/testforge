@@ -20,6 +20,20 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
+testpaths = [
+    "tests",
+    "bug_lab",
+]
+norecursedirs = [
+    "conhecimento_ancestral",
+    ".venv",
+    "node_modules",
+    ".git",
+    "_bmad-output",
+    "_bmad",
+    ".ralphy-worktrees",
+    ".ralphy-sandboxes",
+]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
