@@ -56,9 +56,9 @@ def _clean_text(text: str) -> str:
     parts = text.split()
     cleaned = [p for p in parts if p.lower() not in _MATERIAL_ICONS]
     result = " ".join(cleaned).strip()
-    # Truncate long text for selector use
+    # Truncate long text for selector use (no "...": has-text() needs real substring)
     if len(result) > 60:
-        result = result[:57] + "..."
+        result = result[:60]
     return result
 
 

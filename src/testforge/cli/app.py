@@ -333,6 +333,50 @@ def cmd_run(args):
             page.wait_for_timeout(500)
             print()
 
+            # Post-click validation: verify click had expected effect before proceeding
+            def _validate_click(page, url_before: str, step, step_num: int) -> tuple[bool, str]:
+                """Check if click achieved expected outcome. Returns (valid, reason)."""
+                causes_nav = step.context.get("causes_navigation", False) if step.context else False
+
+                # 1. Navigation expected? Verify URL changed
+                if causes_nav:
+                    page.wait_for_timeout(800)  # brief settle
+                    if page.url == url_before:
+                        return False, "URL_NOT_CHANGED (navigation expected)"
+                    return True, "navigated"
+
+                # 2. No navigation expected — brief wait for DOM render
+                page.wait_for_timeout(400)
+                return True, "ok"
+
+            def _click_with_validation(page, candidates, step, step_num, is_submit, causes_navigation) -> tuple[bool, str]:
+                """Try each candidate, validate outcome, return (success, selector_used)."""
+                url_before = page.url
+
+                for ci, c in enumerate(candidates):
+                    sel = c["selector"] if isinstance(c, dict) else c
+                    try:
+                        if is_submit:
+                            with page.expect_navigation(wait_until="load"):
+                                page.click(sel, timeout=5000)
+                        else:
+                            page.click(sel, timeout=5000)
+
+                        # Validate click outcome
+                        valid, reason = _validate_click(page, url_before, step, step_num)
+                        if valid:
+                            wait_ms = 3000 if causes_navigation else 800
+                            page.wait_for_timeout(wait_ms)
+                            return True, sel
+                        else:
+                            # Click succeeded but wrong effect — try next candidate
+                            continue
+
+                    except Exception:
+                        continue  # Click failed — try next candidate
+
+                return False, ""
+
             for i, step in enumerate(steps):
                 step_num = i + 1
                 action = step.action
@@ -441,57 +485,47 @@ def cmd_run(args):
                         causes_navigation = step.context.get("causes_navigation", False) if step.context else False
 
                         if candidates:
-                            fallback = FallbackRunner(page)
-                            if is_submit:
-                                # Submit click: use expect_navigation with first candidate
-                                sel_candidate = candidates[0]["selector"]
-                                try:
-                                    with page.expect_navigation(wait_until="load"):
-                                        page.click(sel_candidate, timeout=5000)
-                                    print(f"  ✓ Step {step_num}: click (submit)")
-                                except Exception:
-                                    page.wait_for_timeout(1000)
-                                    try:
-                                        with page.expect_navigation(wait_until="load"):
-                                            page.click(sel_candidate, timeout=5000)
-                                        print(f"  ✓ Step {step_num}: click (submit, after wait)")
-                                    except Exception as e_sub:
-                                        raise Exception(f"click step {step_num} falhou — submit: {sel_candidate[:80]}") from e_sub
+                            ok, used_sel = _click_with_validation(
+                                page, candidates, step, step_num, is_submit, causes_navigation
+                            )
+                            if ok:
+                                print(f"  ✓ Step {step_num}: click (via {used_sel[:50]})")
                             else:
-                                ok = fallback.try_click(candidates)
+                                page.wait_for_timeout(1500)
+                                ok, used_sel = _click_with_validation(
+                                    page, candidates, step, step_num, is_submit, causes_navigation
+                                )
                                 if ok:
-                                    print(f"  ✓ Step {step_num}: click")
-                                    # Wait for page to settle after click
-                                    wait_ms = 3000 if causes_navigation else 800
-                                    page.wait_for_timeout(wait_ms)
+                                    print(f"  ✓ Step {step_num}: click (after wait, via {used_sel[:50]})")
                                 else:
-                                    page.wait_for_timeout(1000)
-                                    ok = fallback.try_click(candidates)
-                                    if ok:
-                                        print(f"  ✓ Step {step_num}: click (after wait)")
-                                        wait_ms = 3000 if causes_navigation else 500
-                                        page.wait_for_timeout(wait_ms)
-                                    else:
-                                        tried = ', '.join([c['selector'][:40] for c in candidates[:3]])
-                                        raise Exception(f"click step {step_num} falhou — candidates: [{tried}]")
+                                    tried = ', '.join([c['selector'][:40] for c in candidates[:3]])
+                                    raise Exception(f"click step {step_num} falhou — all candidates exhausted: [{tried}]")
                         elif sel:
+                            url_before = page.url
                             try:
                                 if is_submit:
                                     with page.expect_navigation(wait_until="load"):
                                         page.click(sel, timeout=5000)
                                 else:
                                     page.click(sel, timeout=5000)
-                                    page.wait_for_timeout(3000 if causes_navigation else 800)
+                                valid, reason = _validate_click(page, url_before, step, step_num)
+                                if not valid:
+                                    raise Exception(f"validation failed: {reason}")
+                                page.wait_for_timeout(3000 if causes_navigation else 800)
                                 print(f"  ✓ Step {step_num}: click (url={page.url[:60]})")
                             except Exception:
                                 page.wait_for_timeout(1000)
+                                url_before2 = page.url
                                 try:
                                     if is_submit:
                                         with page.expect_navigation(wait_until="load"):
                                             page.click(sel, timeout=5000)
                                     else:
                                         page.click(sel, timeout=5000)
-                                        page.wait_for_timeout(3000 if causes_navigation else 500)
+                                    valid2, reason2 = _validate_click(page, url_before2, step, step_num)
+                                    if not valid2:
+                                        raise Exception(f"retry validation failed: {reason2}")
+                                    page.wait_for_timeout(3000 if causes_navigation else 500)
                                     print(f"  ✓ Step {step_num}: click (after wait)")
                                 except Exception as e2:
                                     raise Exception(f"click step {step_num} falhou — selector '{sel[:80]}' not found") from e2
