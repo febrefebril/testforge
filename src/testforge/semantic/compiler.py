@@ -321,7 +321,7 @@ class PlaywrightCompiler:
             else:
                 lines.append(f"    page.click({self._esc(text)})")
                 if causes_navigation:
-                    lines.append(f"    page.wait_for_url('**', timeout=10000)  # SPA navigation detected")
+                    lines.append(f"    page.wait_for_timeout(3000)  # SPA navigation — wait for client-side route change")
                 else:
                     lines.append(f"    page.wait_for_timeout(800)  # wait for DOM render")
             lines.append("")
@@ -339,7 +339,7 @@ class PlaywrightCompiler:
         else:
             lines.append("            page.click(_sel)")
             if causes_navigation:
-                lines.append("            page.wait_for_url('**', timeout=10000)  # SPA navigation detected")
+                lines.append("            page.wait_for_timeout(3000)  # SPA navigation — wait for client-side route change")
             else:
                 lines.append("            page.wait_for_timeout(800)  # wait for DOM render")
         lines.append("            break")

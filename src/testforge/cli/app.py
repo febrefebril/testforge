@@ -333,9 +333,25 @@ def cmd_run(args):
             page.wait_for_timeout(500)
             print()
 
+            def _url_glob(url: str) -> str:
+                """Extract path glob from URL for page.wait_for_url()."""
+                from urllib.parse import urlparse
+                if not url:
+                    return "**"
+                parsed = urlparse(url)
+                return f"**{parsed.path}"
+
             for i, step in enumerate(steps):
                 step_num = i + 1
                 action = step.action
+
+                # Compute next actionable step's URL for navigation waits
+                next_url = ""
+                for j in range(i + 1, len(steps)):
+                    ns = steps[j]
+                    if ns.action != "navigation" and not ns.skip_reason and ns.url:
+                        next_url = ns.url
+                        break
 
                 # Check if this step depends on a previously failed blocking step
                 if step.depends_on and not step.skip_reason:
@@ -462,9 +478,9 @@ def cmd_run(args):
                                 if ok:
                                     print(f"  ✓ Step {step_num}: click")
                                     # Wait for page to settle after click
-                                    if causes_navigation:
+                                    if causes_navigation and next_url:
                                         try:
-                                            page.wait_for_url("**", timeout=10000)  # SPA navigation
+                                            page.wait_for_url(_url_glob(next_url), timeout=10000)
                                         except Exception:
                                             pass
                                     page.wait_for_timeout(800)  # DOM render safety net
@@ -473,9 +489,9 @@ def cmd_run(args):
                                     ok = fallback.try_click(candidates)
                                     if ok:
                                         print(f"  ✓ Step {step_num}: click (after wait)")
-                                        if causes_navigation:
+                                        if causes_navigation and next_url:
                                             try:
-                                                page.wait_for_url("**", timeout=10000)
+                                                page.wait_for_url(_url_glob(next_url), timeout=10000)
                                             except Exception:
                                                 pass
                                         page.wait_for_timeout(500)
