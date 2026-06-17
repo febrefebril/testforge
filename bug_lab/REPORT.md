@@ -89,6 +89,18 @@ Summary of bugs reproduced, root-caused, and fixed in the TestForge bug lab.
 
 ---
 
+## BUG: Datepicker — Operator Validation Bug
+
+| Field | Value |
+|-------|-------|
+| **Bug existed?** | Yes — two bugs found |
+| **Fixed?** | Yes — commits `9cb38cf` + fix commit (this change) |
+| **How?** | Two bugs fixed: 1) Time-mismatch: `new Date()` includes wall-clock time so midnight < now → today always rejected. Fixed by normalizing both dates to midnight (`today.setHours(0,0,0,0)`). 2) Operator bug: `<=` rejected today (midnight <= midnight). Fixed by changing to `<`. |
+| **Page** | `bug_lab/pages/bug-datepicker/index.html` |
+| **Tests** | `bug_lab/tests/test_bug_datepicker.py` — 7 tests, all pass |
+
+---
+
 ## Test Coverage Summary
 
 ```bash
@@ -96,8 +108,8 @@ Summary of bugs reproduced, root-caused, and fixed in the TestForge bug lab.
 pytest bug_lab/tests/ -v -m "not slow"   # 35 tests
 
 # Full suite (includes browser integration):
-pytest bug_lab/tests/ -v                  # 113 tests (35 unit + 78 slow)
+pytest bug_lab/tests/ -v                  # 120+ tests
 pytest tests/ -v                          # 73+ tests
 ```
 
-**Last validated:** 2026-06-17 — all 186+ tests pass (73 semantic + 113 bug_lab), lint clean.
+**Last validated:** 2026-06-17 — all 193+ tests pass (73 semantic + 120 bug_lab), lint clean.

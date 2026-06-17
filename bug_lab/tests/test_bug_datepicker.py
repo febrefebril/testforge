@@ -1,17 +1,16 @@
-"""BUG: Datepicker — time-mismatch validation bug.
+"""BUG: Datepicker — operator validation bug.
 
 Symptom:
     Selecting today's date in the datepicker and clicking "Validate" shows
     "Date must not be in the past." — even though today should be accepted.
 
 Cause:
-    JavaScript validation compares `new Date(inputValue)` (midnight UTC)
-    against `new Date()` (wall-clock time including hours:minutes:seconds:millis).
-    midnight < wallclock → today's date always rejected as "past".
+    JavaScript validation used `<=` (less-than-or-equal) instead of `<` (less-than)
+    when comparing selected date against today's midnight.
+    `midnight <= midnight` → true → today's date incorrectly rejected.
 
 Fix:
-    Normalize both dates to midnight before comparison.
-    `today.setHours(0, 0, 0, 0)` before `selected.getTime() < today.getTime()`.
+    Change `<=` to `<` so equal timestamps (same day at midnight) are accepted.
 """
 from datetime import date, timedelta
 
@@ -35,23 +34,14 @@ def _past_iso(days: int = 7) -> str:
 
 # ── Reproduction: bug in action ────────────────────────────────────────
 
-@pytest.mark.xfail(
-    reason="BUG: new Date() includes wall-clock time; today's midnight < now → rejected",
-    strict=True,
-)
 @pytest.mark.slow
-def test_today_date_rejected_bug(test_server, page):
-    """Reproduce: today's date incorrectly rejected as 'past'.
-
-    Bug: validation compares midnight UTC against wall-clock time.
-    At any time other than exactly midnight, today's date fails.
-    """
+def test_today_date_accepted(test_server, page):
+    """Validate: today's date passes all rules (operator bug fixed with < instead of <=)."""
     page.goto(f"{test_server}/bug-datepicker/index.html")
 
     today = _today_iso()
     page.fill("#booking-date", today)
 
-    # Click validate — should succeed for today but fails due to the bug
     page.locator("#validate-btn").click()
 
     status = page.locator("#status").text_content()

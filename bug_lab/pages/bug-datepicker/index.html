@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>BUG: Datepicker — Time-Mismatch Validation Bug</title>
+  <title>BUG: Datepicker — Operator Validation Bug</title>
   <style>
     body { font-family: sans-serif; max-width: 500px; margin: 2rem auto; }
     label { display: block; margin: 1rem 0 0.25rem; font-weight: bold; }
@@ -44,21 +44,21 @@
         return false;
       }
 
-      // BUG: new Date() includes current time (e.g. 14:30:00.123)
-      // but new Date("YYYY-MM-DD") is midnight UTC.
-      // Comparing midnight UTC vs wall-clock time means
-      // today's date is ALWAYS rejected as "past" unless it's exactly 00:00:00.
+      // BUG: uses <= instead of < which makes today's date always rejected.
+      // selected.getTime() <= today.getTime() is true even when both are midnight,
+      // so "not in the past" incorrectly excludes today.
       const selected = new Date(value + 'T00:00:00');
-      const now = new Date();       // ← BUG: includes hours/minutes/seconds/millis
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
       // Rule 2: not in the past (today allowed)
-      if (selected.getTime() < now.getTime()) {
+      if (selected.getTime() < today.getTime()) {  // FIXED: < allows today
         showError('Date must not be in the past.');
         return false;
       }
 
       // Rule 3: within 90 days
-      const maxDate = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+      const maxDate = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000);
       if (selected.getTime() > maxDate.getTime()) {
         showError('Date must be within the next 90 days.');
         return false;
