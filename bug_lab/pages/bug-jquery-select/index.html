@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BUG: jQuery-Enhanced Select — select_option() Failure</title>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    .jq-select-wrapper { position: relative; display: inline-block; min-width: 200px; }
+    .jq-select-trigger {
+      padding: 8px 12px; border: 1px solid #888; border-radius: 4px;
+      cursor: pointer; background: #fff; user-select: none;
+    }
+    .jq-select-trigger::after {
+      content: ' ▼'; font-size: 10px; color: #666;
+    }
+    .jq-select-dropdown {
+      display: none; position: absolute; top: 100%; left: 0; right: 0;
+      border: 1px solid #888; border-top: none; border-radius: 0 0 4px 4px;
+      background: #fff; z-index: 10; list-style: none; margin: 0; padding: 0;
+    }
+    .jq-select-dropdown.open { display: block; }
+    .jq-select-dropdown li {
+      padding: 8px 12px; cursor: pointer;
+    }
+    .jq-select-dropdown li:hover { background: #e0e0e0; }
+    .jq-select-dropdown li.selected { background: #bbdefb; font-weight: bold; }
+    /* Hide native select but keep it functional for select_option() */
+    .jq-select-native { display: none; }
+    #result { margin-top: 1em; padding: 8px; background: #f0f0f0; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>jQuery-Enhanced Select — select_option() Bug</h1>
+  <p id="description">
+    Native <code>&lt;select&gt;</code> is hidden (display:none).
+    jQuery builds custom div-based dropdown.
+    Recording generates <code>select_option()</code> — may fail on hidden select.
+  </p>
+
+  <!-- Native select — hidden by jQuery enhancement -->
+  <select id="fruit-select" class="jq-select-native" aria-label="Choose a fruit">
+    <option value="">-- Select a fruit --</option>
+    <option value="apple">Apple</option>
+    <option value="banana">Banana</option>
+    <option value="cherry">Cherry</option>
+    <option value="dragonfruit">Dragonfruit</option>
+  </select>
+
+  <div id="result" role="status">No selection made</div>
+
+  <script>
+    $(function() {
+      var $select = $('#fruit-select');
+      var $wrapper = $('<div class="jq-select-wrapper"></div>');
+      var $trigger = $('<div class="jq-select-trigger">-- Select a fruit --</div>');
+      var $dropdown = $('<ul class="jq-select-dropdown"></ul>');
+
+      // Build dropdown from native options
+      $select.find('option').each(function() {
+        var $opt = $(this);
+        if ($opt.val() === '') return; // skip placeholder
+        var $li = $('<li></li>')
+          .attr('data-value', $opt.val())
+          .text($opt.text());
+        $dropdown.append($li);
+      });
+
+      // Wrap native select
+      $select.after($wrapper);
+      $wrapper.append($trigger).append($dropdown);
+
+      // Toggle dropdown
+      $trigger.on('click', function(e) {
+        e.stopPropagation();
+        $dropdown.toggleClass('open');
+      });
+
+      // Select option
+      $dropdown.on('click', 'li', function() {
+        var $li = $(this);
+        var value = $li.data('value');
+        var text = $li.text();
+
+        // Update hidden native select (this is what recording should detect)
+        $select.val(value).trigger('change');
+
+        // Update UI
+        $trigger.text(text);
+        $dropdown.find('li').removeClass('selected');
+        $li.addClass('selected');
+        $dropdown.removeClass('open');
+
+        // Report
+        $('#result').text('Selected: ' + text + ' (value: ' + value + ')');
+      });
+
+      // Close on outside click
+      $(document).on('click', function() {
+        $dropdown.removeClass('open');
+      });
+    });
+  </script>
+</body>
+</html>
