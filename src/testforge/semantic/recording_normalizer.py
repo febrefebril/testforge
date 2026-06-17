@@ -382,9 +382,10 @@ class RecordingNormalizer:
             if text:
                 # Penalize generic text like "OK", "Cancelar", "Selecione" — brittle locators
                 text_score = 0.10 if _is_generic_text(text) else 0.55
-                # For elements without role/id (e.g., datepicker spans), use tag context
+                # Always include tag when available — bare :has-text() clicks on child elements
+                # instead of the link/button itself, breaking SPA navigation.
                 tag = (target_data.get("tag") or "").lower()
-                if tag and not target_data.get("role") and not target_data.get("id"):
+                if tag:
                     candidates.append(LocatorCandidate("text", f"{tag}:has-text(\"{text}\")", text_score, f"text in {tag}"))
                 else:
                     candidates.append(LocatorCandidate("text", f":has-text(\"{text}\")", text_score, "visible text"))
