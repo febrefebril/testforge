@@ -169,10 +169,17 @@ class PlaywrightCompiler:
 
         step_idx = 0
         for action in tc.steps:
+            # Inject overlay wait before overlay steps
+            if action.context.get("overlay_step") and not action.context.get("overlay_trigger"):
+                lines.append("    # Wait for overlay (calendar, modal, dialog)")
+                lines.append("    try:")
+                lines.append("        page.wait_for_selector('.cdk-overlay-container', state='visible', timeout=5000)")
+                lines.append("        page.wait_for_timeout(300)")
+                lines.append("    except Exception:")
+                lines.append("        pass")
+
             if action.action == "navigation":
                 # Skip redundant navigation — page already loaded at BASE_URL.
-                # Subsequent navigations are caused by submit/form postbacks
-                # and are handled via expect_navigation on the triggering action.
                 continue
             elif action.action == "fill" and action.target and (action.target.tag or "").lower() == "select":
                 step_idx += 1

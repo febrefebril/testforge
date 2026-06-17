@@ -136,6 +136,7 @@ class RecordingNormalizer:
         self._deduplicate_steps(stc.steps)
         self._mark_non_actionable(stc.steps)
         self._detect_step_dependencies(stc.steps)
+        self._detect_overlay_steps(stc.steps)
 
         return stc
 
@@ -564,3 +565,21 @@ class RecordingNormalizer:
                         steps[k].depends_on = f"step_{step_num:04d}"
 
             i = chain_end
+
+    def _detect_overlay_steps(self, steps: list) -> None:
+        """Detect steps inside overlay containers (calendar, modal, dialog)."""
+        OVERLAY_PATTERNS = ['cdk-overlay', 'mat-calendar', 'mat-datepicker', 'modal', 'dialog']
+
+        for i, step in enumerate(steps):
+            if not step.target or not step.target.candidates:
+                continue
+            # Check if any candidate selector targets an overlay element
+            is_overlay = any(
+                any(p in c.selector for p in OVERLAY_PATTERNS)
+                for c in step.target.candidates
+            )
+            if is_overlay:
+                step.context["overlay_step"] = True
+                # Mark the step BEFORE as the overlay trigger
+                if i > 0 and steps[i-1].action == "click" and not steps[i-1].context.get("overlay_step"):
+                    steps[i-1].context["overlay_trigger"] = True
