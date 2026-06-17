@@ -45,6 +45,7 @@ _MATERIAL_ICONS = {
     "cloud_upload", "cloud_download", "print", "save", "send",
     "keyboard_arrow_down", "keyboard_arrow_up", "keyboard_arrow_right",
     "keyboard_arrow_left", "cancel", "done", "clear",
+    "fact_check", "paid", "receipt", "monetization_on",
 }
 
 
@@ -54,7 +55,22 @@ def _clean_text(text: str) -> str:
         return ""
     # Split by whitespace and filter out material icons
     parts = text.split()
-    cleaned = [p for p in parts if p.lower() not in _MATERIAL_ICONS]
+    cleaned = []
+    for p in parts:
+        pl = p.lower()
+        # Exact match: whole word is a material icon
+        if pl in _MATERIAL_ICONS:
+            continue
+        # Prefix match: material icon fused with next word (e.g., "attach_moneyValor")
+        stripped = p
+        for icon in sorted(_MATERIAL_ICONS, key=len, reverse=True):
+            if pl.startswith(icon) and len(pl) > len(icon):
+                # Check boundary: icon ends, next char is uppercase (camelCase) or space-equivalent
+                next_char = p[len(icon):len(icon)+1]
+                if next_char.isupper() or next_char in '_-':
+                    stripped = p[len(icon):]
+                    break
+        cleaned.append(stripped)
     result = " ".join(cleaned).strip()
     # Truncate long text for selector use (no "...": has-text() needs real substring)
     if len(result) > 60:

@@ -323,6 +323,7 @@ def cmd_run(args):
                 llm_used = True
     else:
         # Modo inline: executa passos com healing L0→L3
+        verbose = getattr(args, 'verbose', False)
         with sync_playwright() as pw:
             browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
             page = browser.new_page()
@@ -355,12 +356,9 @@ def cmd_run(args):
 
                 for ci, c in enumerate(candidates):
                     sel = c["selector"] if isinstance(c, dict) else c
+                    strategy = c.get("strategy", c.get("selector", "")) if isinstance(c, dict) else sel
                     try:
-                        if is_submit:
-                            with page.expect_navigation(wait_until="load"):
-                                page.click(sel, timeout=5000)
-                        else:
-                            page.click(sel, timeout=5000)
+                        page.click(sel, timeout=5000)
 
                         # Validate click outcome
                         valid, reason = _validate_click(page, url_before, step, step_num)
@@ -369,11 +367,14 @@ def cmd_run(args):
                             page.wait_for_timeout(wait_ms)
                             return True, sel
                         else:
-                            # Click succeeded but wrong effect — try next candidate
+                            if verbose:
+                                print(f"  ⚡ candidate [{ci}] {sel[:60]} — click ok but validation: {reason}")
                             continue
 
-                    except Exception:
-                        continue  # Click failed — try next candidate
+                    except Exception as e:
+                        if verbose:
+                            print(f"  ⚡ candidate [{ci}] {sel[:60]} — {str(e)[:60]}")
+                        continue
 
                 return False, ""
 
@@ -1088,6 +1089,7 @@ def main():
     run.add_argument("script", help="Caminho do script Python")
     run.add_argument("--headless", action="store_true", help="Modo headless")
     run.add_argument("--timeout", type=int, default=60, help="Timeout em segundos")
+    run.add_argument("--verbose", action="store_true", help="Mostra cada candidato tentado e resultado")
     run.add_argument("--browser", choices=["chromium", "chrome", "edge"], default="chromium",
                      help="Browser preferido (default: chromium)")
     run.set_defaults(func=cmd_run)
