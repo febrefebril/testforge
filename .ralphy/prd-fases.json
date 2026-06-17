@@ -7,7 +7,7 @@
       "title": "Organizar estrutura de pastas (bug_lab/, recordings/, semantic_tests/)",
       "description": "Create bug_lab/pages/, bug_lab/tests/, bug_lab/fixtures/ directories. Add README templates for bugs. Ensure recordings/, semantic_tests/ structure is clean.",
       "priority": "P0",
-      "status": "pending",
+      "status": "completed",
       "files": [
         "bug_lab/",
         "docs/"
@@ -16,10 +16,10 @@
     },
     {
       "id": "FASE-02",
-      "title": "Criar template de página de bug + template de teste",
-      "description": "Create bug_lab/pages/template/index.html with minimal structure. Create bug_lab/tests/template_test.py. Create bug_lab/README.md explaining the cycle: reproduce → verify → fix → validate.",
+      "title": "Criar template de p\u00e1gina de bug + template de teste",
+      "description": "Create bug_lab/pages/template/index.html with minimal structure. Create bug_lab/tests/template_test.py. Create bug_lab/README.md explaining the cycle: reproduce \u2192 verify \u2192 fix \u2192 validate.",
       "priority": "P0",
-      "status": "pending",
+      "status": "completed",
       "files": [
         "bug_lab/"
       ],
@@ -27,10 +27,10 @@
     },
     {
       "id": "FASE-03",
-      "title": "Bug Lab: seletor vazio/inválido",
+      "title": "Bug Lab: seletor vazio/inv\u00e1lido",
       "description": "Create bug_lab/pages/bug-empty-selector/index.html. Create test that fails when selector is empty. Document symptom, cause, reproduction steps.",
       "priority": "P1",
-      "status": "pending",
+      "status": "completed",
       "files": [
         "bug_lab/pages/",
         "bug_lab/tests/"
@@ -39,10 +39,10 @@
     },
     {
       "id": "FASE-04",
-      "title": "Bug Lab: seletor frágil (ID dinâmico)",
+      "title": "Bug Lab: seletor fr\u00e1gil (ID din\u00e2mico)",
       "description": "Create page with dynamically changing button ID. Test that selector healing works via text fallback. Already partially covered by curation tests.",
       "priority": "P1",
-      "status": "pending",
+      "status": "completed",
       "files": [
         "bug_lab/pages/",
         "bug_lab/tests/"
@@ -85,7 +85,7 @@
     },
     {
       "id": "FASE-08",
-      "title": "Bug Lab: múltiplos file inputs diferenciados",
+      "title": "Bug Lab: m\u00faltiplos file inputs diferenciados",
       "description": "Create page with 2+ file inputs. Test that generated selectors are distinct per input (by label, position, aria-label).",
       "priority": "P1",
       "status": "pending",
@@ -96,7 +96,7 @@
     },
     {
       "id": "FASE-09",
-      "title": "Bug Lab: select/options jQuery não capturados",
+      "title": "Bug Lab: select/options jQuery n\u00e3o capturados",
       "description": "Create page with jQuery-enhanced select. Test that recording correctly identifies select element and generates select_option(). Already partially fixed in BUG-001.",
       "priority": "P1",
       "status": "pending",
@@ -107,7 +107,7 @@
     },
     {
       "id": "FASE-10",
-      "title": "Bug Lab: datepicker sem validação",
+      "title": "Bug Lab: datepicker sem valida\u00e7\u00e3o",
       "description": "Create page with date input. Test that date selection generates proper fill/select_option and validation works.",
       "priority": "P2",
       "status": "pending",
@@ -129,7 +129,7 @@
     },
     {
       "id": "FASE-12",
-      "title": "Script de consolidação de artefatos para LLM",
+      "title": "Script de consolida\u00e7\u00e3o de artefatos para LLM",
       "description": "Create scripts/consolidate_artifacts.py that combines recordings/ and semantic_tests/ into single document for LLM analysis.",
       "priority": "P2",
       "status": "pending",
@@ -165,6 +165,16 @@
       "status": "pending",
       "files": [
         ".github/workflows/"
+      ]
+    },
+    {
+      "id": "REPORT",
+      "title": "Generate consolidated bug fix report",
+      "description": "Create bug_lab/REPORT.md listing every bug: did it exist? was it fixed? what was the fix? Include commit hashes.",
+      "priority": "P0",
+      "status": "pending",
+      "files": [
+        "bug_lab/REPORT.md"
       ]
     }
   ]

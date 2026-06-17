@@ -1,21 +1,26 @@
-# Ralphy Config — TestForge v0.3.1
-# Sway + OpenCode + GSD + Caveman
+# Ralphy Config — TestForge v0.4.0
+# Pipeline: Ralphy → BMAD → GSD → Caveman → Git
+
 project:
   name: "testforge-v1"
   language: "Python"
-  framework: "Playwright + GSD"
+  framework: "Playwright + BMAD + GSD"
 
 commands:
   test: "source activate.sh && python -m pytest tests/ --ignore=tests/test_pages --ignore=tests/test_healing_e2e.py -q"
   lint: "ruff check src/"
 
 rules:
-  - "Use GSD pipeline per bug: verify→fix→test"
-  - "Commit after every fix: fix: BUG-XXX — description"
+  - "Pipeline: Ralphy picks task → BMAD creates story (verify/fix/test) → GSD executes → Caveman compresses → Git commits"
+  - "For each bug: create test page in bug_lab/pages/bug_XXX_name/"
+  - "For each bug: create test in bug_lab/tests/test_bug_XXX_name.py"
+  - "For each bug: create README.md with symptom, cause, reproduction, validation"
+  - "Use BMAD skill to structure the verify→fix→test cycle"
+  - "Use GSD discuss-phase to verify, plan-phase to plan fix, execute-phase to implement"
+  - "Commit after each fix: fix: BUG-XXX — description"
   - "Run pytest after every change"
+  - "At end of each bug, update REPORT.md with: bug existed? fixed? how?"
   - "Caveman mode: keep responses terse"
-  - "Never commit API keys"
-  - "Python source: src/testforge/"
 
 boundaries:
   never_touch:
