@@ -71,7 +71,7 @@ _GENERIC_TEXT_SET = {
     "excluir", "edit", "editar", "add", "adicionar", "remove", "remover",
     "filter", "filtrar", "sort", "ordenar", "reset", "limpar",
     "página inicial", "pagina inicial", "home", "início", "inicio",
-    "calculate", "calcular", "download", "upload", "print", "imprimir",
+    "download", "upload", "print", "imprimir",
     "refresh", "atualizar", "help", "ajuda", "settings", "configurações",
     "yes", "sim", "no", "não", "nao", "confirm", "confirmar",
     "login", "logout", "sign in", "sign out", "register", "cadastrar",
@@ -215,10 +215,11 @@ class RecordingNormalizer:
                     stc.steps.append(self._convert_step(step))
 
         # Post-process: detect and mark skipped steps
+        # Detect overlays FIRST — deduplication excludes overlay steps
+        self._detect_overlay_steps(stc.steps)
         self._deduplicate_steps(stc.steps)
         self._mark_non_actionable(stc.steps)
         self._detect_step_dependencies(stc.steps)
-        self._detect_overlay_steps(stc.steps)
         self._detect_navigation_clicks(stc.steps)
 
         return stc
@@ -493,6 +494,47 @@ class RecordingNormalizer:
                     0.50, "Material datepicker toggle button"
                 ))
 
+            # Heuristic: Calendar overlay navigation buttons.
+            # Target is <span.mat-focus-indicator> inside <button.mat-calendar-*-button>.
+            if "mat-calendar-previous-button" in css_path:
+                candidates.append(LocatorCandidate(
+                    "material_nav", "button.mat-calendar-previous-button",
+                    0.50, "Material calendar previous month button"
+                ))
+            if "mat-calendar-next-button" in css_path:
+                candidates.append(LocatorCandidate(
+                    "material_nav", "button.mat-calendar-next-button",
+                    0.50, "Material calendar next month button"
+                ))
+            if "mat-calendar-period-button" in css_path:
+                candidates.append(LocatorCandidate(
+                    "material_nav", "button.mat-calendar-period-button",
+                    0.50, "Material calendar period button"
+                ))
+
+            # Heuristic: Calendar cell clicks — target is <span> inside <button.mat-calendar-body-cell>.
+            # Clicking the span doesn't trigger the button's handler. Generate button:has-text() instead.
+            if tag == "span" and "mat-calendar-body-cell" in css_path and target_data.get("text"):
+                cell_text = _clean_text(target_data["text"])
+                if cell_text:
+                    candidates.append(LocatorCandidate(
+                        "material_cell", f"button.mat-calendar-body-cell:has-text(\"{cell_text}\")",
+                        0.50, f"Material calendar cell: {cell_text}"
+                    ))
+
+            # Heuristic: Material button touch targets — <span.mat-mdc-button-touch-target>
+            # inside <button>. Click the button, not the transparent touch overlay.
+            if tag == "span" and "mat-mdc-button-touch-target" in css_path and "button" in css_path:
+                # Try to extract button text from CSS path context
+                parent_text = target_data.get("parent_text") or ""
+                if parent_text:
+                    clean_parent = _clean_text(parent_text)
+                    if clean_parent and not _is_generic_text(clean_parent):
+                        candidates.append(LocatorCandidate(
+                            "material_btn", f"button:has-text(\"{clean_parent}\")",
+                            0.50, f"Material button by text: {clean_parent}"
+                        ))
+
         # Fallback: XPath (lowest priority)
         xpath = target_data.get("xpath") or ""
         if xpath and not candidates:
@@ -567,12 +609,19 @@ class RecordingNormalizer:
         Consecutive steps with identical action, value, and target candidates
         are flagged as duplicates. Only the first occurrence is kept active;
         subsequent ones get skip_reason = 'Step N: skipped — duplicate'.
+
+        Does NOT deduplicate overlay steps (calendar, modal, dialog) where
+        repeated clicks are intentional incremental navigation (e.g., clicking
+        previous-month multiple times to reach a distant year).
         """
         for i in range(1, len(steps)):
             prev = steps[i - 1]
             curr = steps[i]
             if (not prev.skip_reason and not curr.skip_reason
                     and self._steps_identical(prev, curr)):
+                # Skip deduplication for overlay steps — repeated clicks are intentional
+                if curr.context.get("overlay_step") or prev.context.get("overlay_step"):
+                    continue
                 curr.skip_reason = f"Step {i + 1}: skipped — duplicate"
 
     def _mark_non_actionable(self, steps: list) -> None:
