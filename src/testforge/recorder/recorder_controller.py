@@ -292,8 +292,14 @@ class RecorderController:
             var rect = el.getBoundingClientRect ? el.getBoundingClientRect() : {};
             var labelEl = el.id ? document.querySelector('label[for="' + el.id + '"]') : null;
 
-            // Collect ALL attributes (via _tf_captureAttr)
-            var allAttrs = window._tf_captureAttr(el);
+            // Collect ALL attributes inline (don't depend on function order)
+            var allAttrs = {};
+            if (el && el.attributes) {
+                for (var ai = 0; ai < el.attributes.length; ai++) {
+                    var attr = el.attributes[ai];
+                    allAttrs[attr.name] = attr.value;
+                }
+            }
 
             // Collect aria-* attributes
             var ariaAttrs = {};
@@ -338,8 +344,9 @@ class RecorderController:
                 cssPath = parts.join(' > ') || '';
             } catch(_e) { cssPath = ''; }
 
-            // XPath
-            var xpath = window._tf_domPath(el);
+            // XPath (use built-in _tf_domPath if available, fallback to empty)
+            var xpath = '';
+            try { if (typeof window._tf_domPath === 'function') xpath = window._tf_domPath(el); } catch(_e2) { xpath = ''; }
 
             // nth-child position among same-tag siblings
             var nthChild = 0;

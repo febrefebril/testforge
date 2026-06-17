@@ -392,6 +392,9 @@ class RecordingNormalizer:
         tag = target_data.get("tag") or ""
         if nth > 0 and tag and not candidates:
             candidates.append(LocatorCandidate("nth_child", f"{tag}:nth-child({nth})", 0.15, f"nth-child position"))
+
+        # Fallback: CSS classes (stable, non-hash, non-generic)
+        class_list = target_data.get("class_list") or []
         # Exclude generic framework classes that match too broadly
         _generic_classes = {"mat-focus-indicator", "mat-ripple", "mat-button-focus-overlay",
                            "cdk-focused", "cdk-program-focused", "ng-star-inserted", "ng-untouched",
