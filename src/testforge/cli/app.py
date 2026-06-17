@@ -382,6 +382,14 @@ def cmd_run(args):
                     continue
 
                 try:
+                    # Wait for calendar overlay if this step targets it
+                    if sel and ('cdk-overlay' in sel or 'mat-calendar' in sel or 'mat-datepicker' in sel):
+                        try:
+                            page.wait_for_selector('.cdk-overlay-container', state='visible', timeout=5000)
+                            page.wait_for_timeout(500)
+                        except Exception:
+                            pass  # overlay might not be open yet, try anyway
+
                     if action == "navigation":
                         # Navigate only if step URL differs from current page URL.
                         # Initial page.goto covers first load; subsequent navigations
