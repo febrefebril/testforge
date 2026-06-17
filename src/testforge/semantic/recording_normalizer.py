@@ -98,6 +98,87 @@ def _is_generic_text(text: str) -> bool:
     return False
 
 
+# Transient CSS classes that change between recording and playback.
+# Angular/Material state classes: focus, form validity, animations.
+_TRANSIENT_CLASS_PATTERNS = [
+    # Angular CDK focus/blur states
+    r'cdk-(mouse-)?focused',
+    r'cdk-program-focused',
+    r'cdk-keyboard-focused',
+    # Angular form control states (ng-untouched/ng-touched, ng-pristine/ng-dirty, ng-valid/ng-invalid)
+    r'ng-(un)?touched',
+    r'ng-(pristine|dirty)',
+    r'ng-(valid|invalid|pending)',
+    r'ng-star-inserted',
+    # Angular Material animation state
+    r'mat-(mdc-)?form-field-animations-enabled',
+    r'mat-(mdc-)?form-field--empty',
+    r'mat-unthemed',
+    # Playwright/Material state attributes (transient identifiers)
+    r'mat-ripple-loader-(uninitialized|centered|disabled|class-name)',
+    r'mat-mdc-button-ripple',
+    r'mat-(mdc-)?form-field--standard',  # variant can change
+]
+
+
+def _strip_transient_classes(css_path: str) -> str:
+    """Remove Angular transient state classes from CSS path selector.
+
+    Classes like cdk-focused, ng-untouched, ng-valid change between
+    recording and playback. Stripping them makes CSS paths reusable.
+
+    Preserves original CSS selector syntax (space-separated classes,
+    special chars like Tailwind ':' in md:p-12).
+    """
+    if not css_path:
+        return css_path
+
+    import re
+    _transient_re = re.compile(
+        r'^(?:' + '|'.join(_TRANSIENT_CLASS_PATTERNS) + r')$'
+    )
+
+    # CSS path: "tag.class1 class2 > tag2.class3 class4 > ..."
+    segments = css_path.split(' > ')
+    cleaned_segments = []
+
+    for seg in segments:
+        # Split into tokens: "tag.class1", "class2", "class3"
+        tokens = seg.split()
+        if not tokens:
+            cleaned_segments.append(seg)
+            continue
+
+        # First token: "tag.class1" or just "tag"
+        first = tokens[0]
+        # Rest: standalone class names
+        rest = tokens[1:]
+
+        # Filter transient classes from rest
+        kept_rest = [c for c in rest if not _transient_re.match(c)]
+
+        # Also check if first token has transient classes after dot
+        if '.' in first:
+            dot_parts = first.split('.')
+            tag = dot_parts[0]
+            tag_classes = dot_parts[1:]
+            kept_tag_classes = [c for c in tag_classes if not _transient_re.match(c)]
+            if kept_tag_classes:
+                first_clean = tag + '.' + '.'.join(kept_tag_classes)
+            else:
+                first_clean = tag
+        else:
+            first_clean = first
+
+        # Reconstruct: "tag.class1 class2 class3"
+        if kept_rest:
+            cleaned_segments.append(first_clean + ' ' + ' '.join(kept_rest))
+        else:
+            cleaned_segments.append(first_clean)
+
+    return ' > '.join(cleaned_segments)
+
+
 class RecordingNormalizer:
     """Converte raw events em SemanticTestCase."""
 
@@ -400,7 +481,17 @@ class RecordingNormalizer:
         # Fallback: CSS path
         css_path = target_data.get("css_path") or ""
         if css_path and not candidates:
-            candidates.append(LocatorCandidate("css_path", css_path, 0.20, "CSS path fallback"))
+            css_clean = _strip_transient_classes(css_path)
+            candidates.append(LocatorCandidate("css_path", css_clean, 0.20, "CSS path fallback"))
+
+            # Heuristic: Angular Material datepicker toggle — target is often
+            # <span.mat-mdc-button-touch-target> inside <button> inside <mat-datepicker-toggle>.
+            # Generate a reliable fallback selector.
+            if "mat-datepicker-toggle" in css_path:
+                candidates.append(LocatorCandidate(
+                    "material_touch_target", "mat-datepicker-toggle button",
+                    0.50, "Material datepicker toggle button"
+                ))
 
         # Fallback: XPath (lowest priority)
         xpath = target_data.get("xpath") or ""
