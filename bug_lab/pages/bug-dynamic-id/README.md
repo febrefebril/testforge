@@ -14,8 +14,9 @@ strict mode violation: locator "#btn-dynamic-0" resolved to 0 elements
 
 ## Cause
 Button ID rotates from `btn-dynamic-0` → `btn-dynamic-1` → `btn-dynamic-2` → ...
-every 2 seconds. Selector `#btn-dynamic-0` is stale after the first rotation.
-Playwright strict mode requires exactly 1 element — finding 0 is a violation.
+every 2 seconds (or 500ms with `?error=1`). Selector `#btn-dynamic-0` is stale
+after the first rotation. Playwright strict mode requires exactly 1 element — finding
+0 is a violation.
 
 Root cause chain:
 1. Dynamic ID generation (common in React/Angular with hash-based IDs)
@@ -23,21 +24,33 @@ Root cause chain:
 3. Replay uses stale ID → locator resolves to 0 elements
 4. Strict mode violation → test fails
 
+## Page Variants
+
+| URL | Rotation Speed | Use Case |
+|-----|---------------|----------|
+| `index.html` | 2s (normal) | Matches real-world React/Angular |
+| `index.html?error=1` | 500ms (fast) | Guaranteed failure, CI testing |
+
+Two buttons: primary ("Clique Dinâmico") + secondary ("Ação Secundária").
+Each has independent ID rotation intervals and distinct text fallback.
+
 ## Reproduction
 ```bash
-# 1. Load the reproduction page
-# Page: bug_lab/pages/bug-dynamic-id/index.html
-
-# 2. Run the failure test
+# 1. Normal mode — stale after 3.5s wait
 pytest bug_lab/tests/test_bug_dynamic_id.py::test_stale_id_click_reproduces_failure -v
 
-# 3. Observe: Playwright TimeoutError — "#btn-dynamic-0" resolves to 0 elements
+# 2. Error mode — stale after 1.5s (fast rotation)
+pytest bug_lab/tests/test_bug_dynamic_id.py::test_error_mode_stale_id_faster_failure -v
+
+# 3. Run all dynamic ID tests (9 total)
+pytest bug_lab/tests/test_bug_dynamic_id.py -v
 ```
 
-**Steps:**
-1. Load page → button has id="btn-dynamic-0"
-2. Wait 3.5s → button now has id="btn-dynamic-2" (ID changed twice)
+**Manual reproduction:**
+1. Load `bug_lab/pages/bug-dynamic-id/index.html?error=1`
+2. Wait 1.5s → button ID has changed to `btn-dynamic-3` (or higher)
 3. Try `page.locator("#btn-dynamic-0").click()` → **FAILS** with TimeoutError
+4. Try `page.locator('text="Clique Dinâmico"').click()` → **SUCCEEDS**
 
 ## Fix
 SelectorAgent._try_text() (`src/testforge/healing/agents/selector_agent.py:122`) produces
@@ -54,17 +67,34 @@ page.locator('text="Clique Dinâmico"').click()
 **Healing pipeline:** L0 catalog check → L1 deterministic fallback → L2 SelectorAgent._try_text()
 → produces `text="Clique Dinâmico"` selector with confidence 0.70.
 
-**Commit:** `d9b8f24 feat: add dynamic button ID test page and text fallback healing tests`
-**Commit:** `ee795b5 fix: use exact text matching in SelectorAgent._try_text()`
+**Commits:**
+- `d9b8f24` feat: add bug_lab entry for dynamic button ID with text fallback healing
+- `ee795b5` fix: use exact text matching in SelectorAgent._try_text()
+- `a8864c8` feat: FASE-04 — enhance dynamic ID page with error mode and secondary button
+- `d95a018` test: FASE-04 — extend tests with error mode, multi-click, healing pipeline integration
 
 ## Validation
 ```bash
-# Run reproduction + fix tests
+# Bug lab tests (9 tests)
 pytest bug_lab/tests/test_bug_dynamic_id.py -v
 
-# Run full healing test suite
+# Curation tests (6 tests — healing pipeline integration)
 pytest tests/test_pages/test_dynamic_id_healing.py -v
 
-# Run full suite
+# Full suite
 pytest bug_lab/ tests/ -v
 ```
+
+## Test Coverage
+
+| Test | What It Validates |
+|------|-------------------|
+| `test_stale_id_click_reproduces_failure` | Stale ID fails (normal mode) |
+| `test_text_locator_clicks_succeeds` | Text fallback works (normal mode) |
+| `test_initial_id_click_succeeds_before_rotation` | Initial ID valid before rotation |
+| `test_error_mode_stale_id_faster_failure` | Stale ID fails (fast rotation) |
+| `test_error_mode_text_fallback_still_works` | Both buttons via text fallback |
+| `test_multi_click_tracking_via_text_fallback` | 3 clicks tracked via text |
+| `test_two_buttons_distinct_text_fallback` | Distinct buttons, distinct text |
+| `test_healing_pipeline_text_fallback_integration` | SelectorAgent._try_text() E2E |
+| `test_classify_stale_id_error` | FailureClassifier → FAM-01, SEL-* |
