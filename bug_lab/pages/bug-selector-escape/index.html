@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BUG: Selector Escape — Quotes in button text</title>
+</head>
+<body>
+  <h1>Selector Escape — Buttons with Quotes</h1>
+  <p role="status" id="result">No button clicked</p>
+
+  <!-- Button text with double quotes -->
+  <button id="btn-double" onclick="showResult('double')">Click "Me"</button>
+
+  <!-- Button text with single quotes (apostrophe) -->
+  <button id="btn-single" onclick="showResult('single')">Don't Click</button>
+
+  <!-- Button text with both quote types -->
+  <button id="btn-both" onclick="showResult('both')">He said "Don't go"</button>
+
+  <!-- Button with double quotes in aria-label -->
+  <button id="btn-aria-double" aria-label='Alert "Warning"' onclick="showResult('aria-double')">
+    ⚠ Alert
+  </button>
+
+  <!-- Button with single quote in aria-label -->
+  <button id="btn-aria-single" aria-label="Can't touch this" onclick="showResult('aria-single')">
+    🛑 Stop
+  </button>
+
+  <!-- Button with single quote in data-testid -->
+  <button data-testid="it's-a-test" id="btn-testid-quote" onclick="showResult('testid-quote')">
+    🧪 Test
+  </button>
+
+  <!-- Button with placeholder attribute containing double quotes -->
+  <input type="submit" id="btn-placeholder" placeholder='Type "hello"' onclick="showResult('placeholder'); return false;"
+         value="Submit" />
+
+  <script>
+    function showResult(name) {
+      document.getElementById('result').textContent = 'Clicked: ' + name;
+    }
+  </script>
+</body>
+</html>
