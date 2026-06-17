@@ -8,6 +8,7 @@ import os
 import re as _re
 from datetime import datetime
 from typing import Optional
+from urllib.parse import urlparse, urlunparse
 
 from .model import LocatorCandidate, SemanticAction, SemanticTarget, SemanticTestCase
 
@@ -137,6 +138,7 @@ class RecordingNormalizer:
         self._mark_non_actionable(stc.steps)
         self._detect_step_dependencies(stc.steps)
         self._detect_overlay_steps(stc.steps)
+        self._detect_navigation_clicks(stc.steps)
 
         return stc
 
@@ -583,3 +585,34 @@ class RecordingNormalizer:
                 # Mark the step BEFORE as the overlay trigger
                 if i > 0 and steps[i-1].action == "click" and not steps[i-1].context.get("overlay_step"):
                     steps[i-1].context["overlay_trigger"] = True
+
+    def _detect_navigation_clicks(self, steps: list) -> None:
+        """Detect clicks that cause URL changes (SPA navigation).
+
+        Compares consecutive non-navigation steps: if the URL changes between
+        step A and step B, marks step A with causes_navigation=True so the
+        compiler injects wait_for_load_state('networkidle') after the click.
+        """
+        # Build list of (index, step) for non-navigation steps
+        actionable = [(i, s) for i, s in enumerate(steps)
+                      if s.action != "navigation" and not s.skip_reason]
+
+        for ai in range(len(actionable) - 1):
+            i_prev, s_prev = actionable[ai]
+            i_next, s_next = actionable[ai + 1]
+
+            prev_url = self._normalize_url(s_prev.url or "")
+            next_url = self._normalize_url(s_next.url or "")
+
+            if prev_url and next_url and prev_url != next_url:
+                s_prev.context["causes_navigation"] = True
+
+    @staticmethod
+    def _normalize_url(url: str) -> str:
+        """Strip trailing slash and query params for URL comparison."""
+        if not url:
+            return ""
+        parsed = urlparse(url)
+        # Reconstruct without query, fragment, trailing slash
+        path = parsed.path.rstrip("/")
+        return urlunparse((parsed.scheme, parsed.netloc, path, "", "", ""))

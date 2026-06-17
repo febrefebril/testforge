@@ -310,6 +310,7 @@ class PlaywrightCompiler:
     def _gen_click(self, action: SemanticAction, idx: int, is_submit: bool = False) -> list[str]:
         candidates = action.target.candidates if action.target else []
         sorted_candidates = sorted(candidates, key=lambda c: c.score, reverse=True)
+        causes_navigation = action.context.get("causes_navigation", False) if action.context else False
 
         if not sorted_candidates:
             text = (action.target.text or "")[:30]
@@ -320,6 +321,9 @@ class PlaywrightCompiler:
             else:
                 lines.append(f"    page.click({self._esc(text)})")
                 lines.append(f"    page.wait_for_timeout(300)")
+                if causes_navigation:
+                    lines.append(f"    try: page.wait_for_load_state('networkidle', timeout=10000)")
+                    lines.append(f"    except Exception: pass  # SPA may still be loading")
             lines.append("")
             return lines
 
@@ -335,6 +339,9 @@ class PlaywrightCompiler:
         else:
             lines.append("            page.click(_sel)")
             lines.append("            page.wait_for_timeout(300)")
+            if causes_navigation:
+                lines.append("            try: page.wait_for_load_state('networkidle', timeout=10000)")
+                lines.append("            except Exception: pass  # SPA may still be loading")
         lines.append("            break")
         lines.append("        except Exception:")
         lines.append("            continue")
