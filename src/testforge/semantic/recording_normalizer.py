@@ -350,11 +350,12 @@ class RecordingNormalizer:
                     or _clean_text(target_data.get("text") or "")
                     or _clean_text((target_data.get("all_attributes") or {}).get("aria-label", "")))
             selector = f"role={role}"
-            if name and len(name) <= 40:
+            has_name = bool(name and len(name) <= 40)
+            if has_name:
                 selector += f"[name=\"{name}\"]"
-            # Bare role (no accessible name) is ambiguous — deprioritize below text-based selectors.
+            # Bare role (no accessible name in selector) is ambiguous — deprioritize below text-based selectors.
             # On pages with multiple role=button elements, bare role clicks wrong element.
-            candidates.append(LocatorCandidate("role", selector, 0.95 if name else 0.45, "role + accessible name"))
+            candidates.append(LocatorCandidate("role", selector, 0.95 if has_name else 0.45, "role + accessible name"))
 
         if target_data.get("label") and target_data.get("id"):
             label = target_data["label"]
