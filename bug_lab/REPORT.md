@@ -101,6 +101,18 @@ Summary of bugs reproduced, root-caused, and fixed in the TestForge bug lab.
 
 ---
 
+## BUG: UTF-8 Encoding — Special Characters Lost in Recording
+
+| Field | Value |
+|-------|-------|
+| **Bug existed?** | Yes — encoding not validated end-to-end |
+| **Fixed?** | **BUG CONFIRMED, NOT FIXED** — test page created, fix pending |
+| **How?** | None yet. Test page validates that Playwright DOM reads UTF-8 correctly (charset, text, buttons, JSON round-trip). Fix will need UTF-8 guarantees at all pipeline layers: HTTP Content-Type, Python file I/O, JSON ensure_ascii=False, CSS selector escaping, regex patterns. |
+| **Page** | `bug_lab/pages/bug-encoding/index.html` |
+| **Tests** | `bug_lab/tests/test_bug_encoding.py` — 21 tests (all slow/browser), all pass — validates Spanish/Portuguese/German/French chars, symbols (€, ©, —, …), mojibake detection, button interaction with accented text, JSON round-trip, charset meta, lang attribute |
+
+---
+
 ## Test Coverage Summary
 
 ```bash
@@ -112,4 +124,4 @@ pytest bug_lab/tests/ -v                  # 120+ tests
 pytest tests/ -v                          # 73+ tests
 ```
 
-**Last validated:** 2026-06-17 — all 193+ tests pass (73 semantic + 120 bug_lab), lint clean.
+**Last validated:** 2026-06-17 — all 214+ tests pass (73 semantic + 141 bug_lab including 21 encoding), lint clean.

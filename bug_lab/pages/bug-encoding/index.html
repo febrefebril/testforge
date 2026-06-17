@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Bug Encoding — Caracteres Especiais UTF-8</title>
+</head>
+<body>
+  <h1>Bug Encoding — UTF-8 Special Characters</h1>
+
+  <p id="description" data-testid="description">
+    Teste de codificação: ç, ñ, é, ü, ã, ô, ¿, ¡, €, ¥, — (em-dash), … (ellipsis)
+  </p>
+
+  <!-- Section: Spanish -->
+  <section>
+    <h2>Español</h2>
+    <p id="spanish-text" data-testid="spanish-text">
+      El niño bebió café con leche en una piñata. ¿Cómo estás? ¡Qué bueno!
+    </p>
+    <ul id="spanish-words" data-testid="spanish-words">
+      <li>año</li>
+      <li>mañana</li>
+      <li>señor</li>
+      <li>camión</li>
+      <li>baño</li>
+    </ul>
+  </section>
+
+  <!-- Section: Portuguese -->
+  <section>
+    <h2>Português</h2>
+    <p id="portuguese-text" data-testid="portuguese-text">
+      A rápida raposa marrom saltou sobre o cão preguiçoso. Não há compreensão sem ação.
+      Coração, atenção, promoção — palavras com ção.
+    </p>
+    <ul id="portuguese-words" data-testid="portuguese-words">
+      <li>açaí</li>
+      <li>coração</li>
+      <li>atenção</li>
+      <li>promoção</li>
+      <li>feijão</li>
+    </ul>
+  </section>
+
+  <!-- Section: German -->
+  <section>
+    <h2>Deutsch</h2>
+    <p id="german-text" data-testid="german-text">
+      Der Fußballspieler wünschte sich ein großes Bier. Öfter mal etwas Neues. Übermäßig viele Sonderzeichen.
+    </p>
+    <ul id="german-words" data-testid="german-words">
+      <li>schön</li>
+      <li>Füße</li>
+      <li>Österreich</li>
+      <li>über</li>
+      <li>größte</li>
+    </ul>
+  </section>
+
+  <!-- Section: French -->
+  <section>
+    <h2>Français</h2>
+    <p id="french-text" data-testid="french-text">
+      L'élève a réussi l'examen grâce à son étude approfondie. Cœur, sœur, œuvre — des mots français.
+    </p>
+    <ul id="french-words" data-testid="french-words">
+      <li>élève</li>
+      <li>grâce</li>
+      <li>cœur</li>
+      <li>sœur</li>
+      <li>œuvre</li>
+    </ul>
+  </section>
+
+  <!-- Section: Special Symbols -->
+  <section>
+    <h2>Symbols</h2>
+    <p id="symbols-text" data-testid="symbols-text">
+      Euro: €. Yen: ¥. Pound: £. Cent: ¢. Copyright: ©. Registered: ®. Trademark: ™.
+      Em-dash: —. En-dash: –. Ellipsis: ….
+    </p>
+  </section>
+
+  <!-- Button section -->
+  <button id="btn-español" data-testid="btn-español" onclick="showContent('spanish')">
+    Añadir información
+  </button>
+  <button id="btn-português" data-testid="btn-português" onclick="showContent('portuguese')">
+    Configuração avançada
+  </button>
+  <button id="btn-deutsch" data-testid="btn-deutsch" onclick="showContent('german')">
+    Öffnen
+  </button>
+
+  <div id="output" data-testid="output" role="status"></div>
+
+  <script>
+    const messages = {
+      spanish: 'Seleccionaste: Español — ¡Olé!',
+      portuguese: 'Selecionaste: Português — Obrigado!',
+      german: 'Ausgewählt: Deutsch — Wunderbar!'
+    };
+    function showContent(lang) {
+      document.getElementById('output').textContent = messages[lang];
+    }
+  </script>
+</body>
+</html>
