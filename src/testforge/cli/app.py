@@ -474,15 +474,16 @@ def cmd_run(args):
                                     with page.expect_navigation(wait_until="load"):
                                         page.click(sel, timeout=5000)
                                 else:
-                                    pre_url = page.url
                                     page.click(sel, timeout=5000)
-                                    page.wait_for_timeout(300)
-                                    # If URL changed (SPA navigation), wait for page to settle
-                                    if page.url != pre_url:
-                                        try:
-                                            page.wait_for_load_state('networkidle', timeout=5000)
-                                        except Exception:
-                                            page.wait_for_timeout(2000)
+                                    # Always wait for page to settle after click (SPA may load content without URL change)
+                                    try:
+                                        page.wait_for_load_state('domcontentloaded', timeout=3000)
+                                    except Exception:
+                                        pass
+                                    try:
+                                        page.wait_for_load_state('networkidle', timeout=5000)
+                                    except Exception:
+                                        page.wait_for_timeout(2000)
                                 print(f"  ✓ Step {step_num}: click")
                             except Exception:
                                 page.wait_for_timeout(1000)
@@ -492,12 +493,14 @@ def cmd_run(args):
                                             page.click(sel, timeout=5000)
                                     else:
                                         page.click(sel, timeout=5000)
-                                        page.wait_for_timeout(300)
-                                        if page.url != pre_url:
-                                            try:
-                                                page.wait_for_load_state('networkidle', timeout=5000)
-                                            except Exception:
-                                                page.wait_for_timeout(2000)
+                                        try:
+                                            page.wait_for_load_state('domcontentloaded', timeout=3000)
+                                        except Exception:
+                                            pass
+                                        try:
+                                            page.wait_for_load_state('networkidle', timeout=5000)
+                                        except Exception:
+                                            page.wait_for_timeout(2000)
                                     print(f"  ✓ Step {step_num}: click (after wait)")
                                 except Exception as e2:
                                     raise Exception(f"click step {step_num} falhou — selector '{sel[:80]}' not found") from e2
