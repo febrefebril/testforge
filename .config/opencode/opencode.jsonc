@@ -16,7 +16,7 @@
 
     "playwright": {
       "type": "local",
-      "command": ["npx", "-y", "@playwright/mcp"],
+      "command": ["npx", "-y", "@playwright/mcp", "--browser", "chromium"],
       "enabled": true,
       "timeout": 30000
     },
