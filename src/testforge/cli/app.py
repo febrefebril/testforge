@@ -480,11 +480,11 @@ def cmd_run(args):
                                         page.wait_for_load_state('domcontentloaded', timeout=3000)
                                     except Exception:
                                         pass
-                                    try:
-                                        page.wait_for_load_state('networkidle', timeout=5000)
-                                    except Exception:
-                                        page.wait_for_timeout(2000)
-                                print(f"  ✓ Step {step_num}: click")
+                                try:
+                                    page.wait_for_load_state('networkidle', timeout=5000)
+                                except Exception:
+                                    page.wait_for_timeout(2000)
+                                print(f"  ✓ Step {step_num}: click (url={page.url[:60]})")
                             except Exception:
                                 page.wait_for_timeout(1000)
                                 try:

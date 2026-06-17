@@ -132,12 +132,17 @@ class SelectorAgent:
         dom = payload.dom_snapshot
         label = self._extract_attr_value(dom, "aria-label")
         if label:
+            # Skip generic navigation labels — too broad for step-specific healing
+            _skip_labels = {'página inicial', 'pagina inicial', 'home', 'voltar', 'fechar',
+                          'close', 'menu', 'abrir menu', 'open menu'}
+            if label.strip().lower() in _skip_labels:
+                return None
             selector = self._build_css_attr_selector("aria-label", label)
             return LLMHealingProposal(
                 taxonomy_id="SEL-006", family="FAM-01",
                 strategy="aria_role_strategy",
                 new_locator=selector,
-                confidence=0.75,
+                confidence=0.45,  # Lower: aria-label alone is weak without role context
                 rationale=f"Found aria-label in DOM: {label}",
             )
         return None
