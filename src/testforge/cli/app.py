@@ -460,11 +460,20 @@ def cmd_run(args):
                                 ok = fallback.try_click(candidates)
                                 if ok:
                                     print(f"  ✓ Step {step_num}: click")
+                                    # Wait for page to settle after click (SPA may load content without URL change)
+                                    try:
+                                        page.wait_for_load_state('networkidle', timeout=5000)
+                                    except Exception:
+                                        page.wait_for_timeout(1000)
                                 else:
                                     page.wait_for_timeout(1000)
                                     ok = fallback.try_click(candidates)
                                     if ok:
                                         print(f"  ✓ Step {step_num}: click (after wait)")
+                                        try:
+                                            page.wait_for_load_state('networkidle', timeout=5000)
+                                        except Exception:
+                                            page.wait_for_timeout(500)
                                     else:
                                         tried = ', '.join([c['selector'][:40] for c in candidates[:3]])
                                         raise Exception(f"click step {step_num} falhou — candidates: [{tried}]")
