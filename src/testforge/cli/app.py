@@ -547,6 +547,9 @@ def cmd_run(args):
                                             el.click()
                                             page.wait_for_timeout(200)
                                             el.press_sequentially(cents, delay=50)
+                                            page.wait_for_timeout(100)
+                                            # Blur so Angular validates the field
+                                            page.keyboard.press("Tab")
                                             page.wait_for_timeout(300)
                                         else:
                                             page.fill(sel, str(fill_val), timeout=5000)
