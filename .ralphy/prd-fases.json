@@ -2,182 +2,26 @@
   "project": "TestForge",
   "version": "0.4.0",
   "tasks": [
-    {
-      "id": "FASE-01",
-      "title": "Organizar estrutura de pastas (bug_lab/, recordings/, semantic_tests/)",
-      "description": "Create bug_lab/pages/, bug_lab/tests/, bug_lab/fixtures/ directories. Add README templates for bugs. Ensure recordings/, semantic_tests/ structure is clean.",
-      "priority": "P0",
-      "status": "completed",
-      "files": [
-        "bug_lab/",
-        "docs/"
-      ],
-      "completed": true
-    },
-    {
-      "id": "FASE-02",
-      "title": "Criar template de página de bug + template de teste",
-      "description": "Create bug_lab/pages/template/index.html with minimal structure. Create bug_lab/tests/template_test.py. Create bug_lab/README.md explaining the cycle: reproduce → verify → fix → validate.",
-      "priority": "P0",
-      "status": "completed",
-      "files": [
-        "bug_lab/"
-      ],
-      "completed": true
-    },
-    {
-      "id": "FASE-03",
-      "title": "Bug Lab: seletor vazio/inválido",
-      "description": "Create bug_lab/pages/bug-empty-selector/index.html. Create test that fails when selector is empty. Document symptom, cause, reproduction steps.",
-      "priority": "P1",
-      "status": "completed",
-      "files": [
-        "bug_lab/pages/",
-        "bug_lab/tests/"
-      ],
-      "completed": true
-    },
-    {
-      "id": "FASE-04",
-      "title": "Bug Lab: seletor frágil (ID dinâmico)",
-      "description": "Create page with dynamically changing button ID. Test that selector healing works via text fallback. Already partially covered by curation tests.",
-      "priority": "P1",
-      "status": "completed",
-      "completed": true,
-      "files": [
-        "bug_lab/pages/",
-        "bug_lab/tests/"
-      ]
-    },
-    {
-      "id": "FASE-05",
-      "title": "Bug Lab: mat-icon contaminando accessible name",
-      "description": "Create page with Angular Material button containing mat-icon. Test that accessible name cleaning removes icon text. Already partially done in _clean_text().",
-      "priority": "P1",
-      "status": "pending",
-      "files": [
-        "bug_lab/pages/",
-        "bug_lab/tests/",
-        "src/testforge/semantic/"
-      ]
-    },
-    {
-      "id": "FASE-06",
-      "title": "Bug Lab: BADSTRING/texto com aspas em seletores",
-      "description": "Create page with button text containing quotes. Test that selector escaping works correctly.",
-      "priority": "P1",
-      "status": "pending",
-      "files": [
-        "bug_lab/pages/",
-        "bug_lab/tests/"
-      ]
-    },
-    {
-      "id": "FASE-07",
-      "title": "Bug Lab: upload de arquivos (set_input_files)",
-      "description": "Create page with file input. Test that recording uses set_input_files not fill(\"C:\\\\fakepath\\\\...\"). Create fixture files.",
-      "priority": "P1",
-      "status": "pending",
-      "files": [
-        "bug_lab/pages/",
-        "bug_lab/tests/",
-        "bug_lab/fixtures/"
-      ],
-      "completed": true
-    },
-    {
-      "id": "FASE-08",
-      "title": "Bug Lab: múltiplos file inputs diferenciados",
-      "description": "Create page with 2+ file inputs. Test that generated selectors are distinct per input (by label, position, aria-label).",
-      "priority": "P1",
-      "status": "pending",
-      "files": [
-        "bug_lab/pages/",
-        "bug_lab/tests/"
-      ]
-    },
-    {
-      "id": "FASE-09",
-      "title": "Bug Lab: select/options jQuery não capturados",
-      "description": "Create page with jQuery-enhanced select. Test that recording correctly identifies select element and generates select_option(). Already partially fixed in BUG-001.",
-      "priority": "P1",
-      "status": "pending",
-      "files": [
-        "bug_lab/pages/",
-        "bug_lab/tests/"
-      ]
-    },
-    {
-      "id": "FASE-10",
-      "title": "Bug Lab: datepicker sem validação",
-      "description": "Create page with date input. Test that date selection generates proper fill/select_option and validation works.",
-      "priority": "P2",
-      "status": "pending",
-      "files": [
-        "bug_lab/pages/",
-        "bug_lab/tests/"
-      ]
-    },
-    {
-      "id": "FASE-11",
-      "title": "Bug Lab: encoding inconsistente",
-      "description": "Create page with UTF-8 special characters. Test that recording preserves encoding correctly.",
-      "priority": "P2",
-      "status": "pending",
-      "files": [
-        "bug_lab/pages/",
-        "bug_lab/tests/"
-      ]
-    },
-    {
-      "id": "FASE-12",
-      "title": "Script de consolidação de artefatos para LLM",
-      "description": "Create scripts/consolidate_artifacts.py that combines recordings/ and semantic_tests/ into single document for LLM analysis.",
-      "priority": "P2",
-      "status": "pending",
-      "files": [
-        "scripts/"
-      ]
-    },
-    {
-      "id": "FASE-13",
-      "title": "Docs: criar visao.md + arquitetura-enxuta.md + mapa-estrategico.md",
-      "description": "Create three architecture docs: visao (project vision), arquitetura-enxuta (execution path), mapa-estrategico (strategic map). Follow consolidated plan decisions.",
-      "priority": "P1",
-      "status": "pending",
-      "files": [
-        "docs/"
-      ]
-    },
-    {
-      "id": "FASE-14",
-      "title": "Docs: criacao de ADRs sem SpecKit",
-      "description": "Create ADR-0001 (arquitetura enxuta como execucao) and ADR-0002 (SpecKit fora da pipeline). Document decisions explicitly.",
-      "priority": "P1",
-      "status": "pending",
-      "files": [
-        "docs/decisoes/"
-      ]
-    },
-    {
-      "id": "FASE-15",
-      "title": "Pipeline CI: GitHub Actions workflow",
-      "description": "Create .github/workflows/test.yml with matrix python 3.10-3.13. Run pytest on push/PR. Upload test artifacts.",
-      "priority": "P1",
-      "status": "pending",
-      "files": [
-        ".github/workflows/"
-      ]
-    },
-    {
-      "id": "REPORT",
-      "title": "Generate consolidated bug fix report",
-      "description": "Create bug_lab/REPORT.md listing every bug: did it exist? was it fixed? what was the fix? Include commit hashes.",
-      "priority": "P0",
-      "status": "pending",
-      "files": [
-        "bug_lab/REPORT.md"
-      ]
-    }
+    {"id": "FASE-08", "title": "Bug Lab: múltiplos file inputs diferenciados",
+     "description": "Create page with 2+ distinct file inputs. Test that generated selectors differ per input (label/position/aria). Create bug_lab/pages/bug-multi-file-input/index.html and tests.", "priority": "P1", "status": "pending"},
+    
+    {"id": "FASE-09", "title": "Bug Lab: select/options jQuery não capturados",
+     "description": "Create page with jQuery-enhanced select. Test recording generates select_option(). Create bug_lab/pages/bug-jquery-select/index.html.", "priority": "P1", "status": "pending"},
+    
+    {"id": "FASE-10", "title": "Bug Lab: datepicker sem validação",
+     "description": "Create page with date input. Test date selection and validation. bug_lab/pages/bug-datepicker/index.html.", "priority": "P2", "status": "pending"},
+    
+    {"id": "FASE-11", "title": "Bug Lab: encoding inconsistente",
+     "description": "Create page with UTF-8 special chars (ç, ñ, é). Test recording preserves encoding. bug_lab/pages/bug-encoding/index.html.", "priority": "P2", "status": "pending"},
+
+    {"id": "FASE-12", "title": "Script de consolidação de artefatos para LLM",
+     "description": "Create scripts/consolidate_artifacts.py that combines recordings/ + semantic_tests/ into single document for LLM analysis.", "priority": "P2", "status": "pending"},
+
+    {"id": "FASE-15", "title": "Pipeline CI: GitHub Actions workflow",
+     "description": "Create .github/workflows/test.yml with matrix python 3.10-3.13. Run pytest on push/PR.", "priority": "P1", "status": "pending"},
+
+    {"id": "REPORT", "title": "Generate consolidated bug fix report",
+     "description": "Create bug_lab/REPORT.md listing every bug: did it exist? was it fixed? what was the fix? Include commit hashes. Show before/after test results.",
+     "priority": "P0", "status": "pending"}
   ]
 }
