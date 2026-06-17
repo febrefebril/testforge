@@ -199,13 +199,14 @@ def output_markdown(artifacts: list[dict[str, Any]], output_path: Path) -> None:
         rec = art.get("recording")
         st = art.get("semantic_test")
 
-        lines.append(f"## {i}. ", end="")
+        heading = f"## {i}. "
         if rec:
-            lines[-1] += f"Recording `{rec['recording_id']}`"
+            heading += f"Recording `{rec['recording_id']}`"
         if rec and st:
-            lines[-1] += " + "
+            heading += " + "
         if st:
-            lines[-1] += f"Semantic Test `{st['test_id']}`"
+            heading += f"Semantic Test `{st['test_id']}`"
+        lines.append(heading)
         lines.append("")
 
         # Recording section
