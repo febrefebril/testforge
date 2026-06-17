@@ -34,10 +34,10 @@ Summary of bugs reproduced, root-caused, and fixed in the TestForge bug lab.
 | Field | Value |
 |-------|-------|
 | **Bug existed?** | Yes |
-| **Fixed?** | Yes — commit `f2b5a0b` |
-| **How?** | CSS attribute selectors now properly escape quotes in button text and attribute values. Selectors with embedded quotes that broke CSS parsing now work correctly. |
+| **Fixed?** | **FULLY FIXED** — commit `f2b5a0b` (test page + browser tests) + commit TBD (SelectorAgent regex fix) |
+| **How?** | 1) Test page created with buttons containing quotes in text, aria-label, data-testid, and placeholder attributes. 2) Browser tests confirm Playwright handles `\'` escaping in CSS selectors. 3) **SelectorAgent fix**: replaced `[^"']` regex (which truncates at quote chars) with `_extract_attr_value()` that captures full attribute values using delimiter-aware matching. Added `_build_css_attr_selector()` helper that picks optimal quote delimiter (`"` vs `'`) based on value content, escaping with `\'` when both quote types present. |
 | **Page** | `bug_lab/pages/bug-selector-escape/index.html` |
-| **Tests** | `bug_lab/tests/test_bug_selector_escape.py` — 302 lines, unit + browser + get_by_role |
+| **Tests** | `bug_lab/tests/test_bug_selector_escape.py` — 29 tests (18 unit + 11 browser), all pass |
 
 ---
 
@@ -69,11 +69,11 @@ Summary of bugs reproduced, root-caused, and fixed in the TestForge bug lab.
 
 ```bash
 # Unit tests (fast, no browser):
-pytest bug_lab/tests/ -v -m "not slow"   # 33 tests
+pytest bug_lab/tests/ -v -m "not slow"   # 42 tests (33 original + 9 new)
 
 # Full suite (includes browser integration):
-pytest bug_lab/tests/ -v                  # 10+ tests + slow
+pytest bug_lab/tests/ -v                  # 53 tests (42 unit + 11 slow)
 pytest tests/ -v                          # 73+ tests
 ```
 
-**Last validated:** 2026-06-17 — all 83 tests pass (73 semantic + 10 mat-icon), lint clean.
+**Last validated:** 2026-06-17 — all 126+ tests pass (73 semantic + 53 bug_lab), lint clean.

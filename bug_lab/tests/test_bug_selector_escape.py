@@ -110,25 +110,23 @@ class TestAttributeSelectorEscaping:
         # Uses single-quote delimiter — value contains " which is fine
         assert "[aria-label='" in proposal.new_locator
 
-    def test_aria_label_single_quote_truncated(self):
-        """aria-label with single quote — BUG: regex [^"'] stops at quote char.
+    def test_aria_label_single_quote_full_value(self):
+        """aria-label with single quote — FIXED: captures full value.
 
-        The regex pattern r'["\\']([^"\\']{2,80})["\\']' captures only
-        characters up to the first quote. Value "Can't touch this"
-        becomes "Can" — losing the rest of the label.
+        Value "Can't touch this" should be fully captured.
+        CSS selector uses double-quote delimiter since value contains '.
         """
         agent = SelectorAgent()
         dom = "<button aria-label=\"Can't touch this\">Click</button>"
         payload = _make_payload(dom_snapshot=dom)
         proposal = agent._try_aria(payload)
         assert proposal is not None, "Should detect aria-label"
-        # BUG: regex truncated at the quote, only "Can" captured
         locator = proposal.new_locator
-        expected_broken = "[aria-label='Can']"
-        assert locator == expected_broken, (
-            f"BUG: regex [^\"'] stops at quote. "
-            f"Expected broken selector '{expected_broken}', got '{locator}'"
+        # Full value captured; double-quote delimiter avoids conflict with '
+        assert "Can't touch this" in locator, (
+            f"Expected full aria-label value in locator, got: {locator}"
         )
+        assert "aria-label" in locator
 
     def test_placeholder_double_quotes(self):
         """placeholder with double quotes: using single-quote delimiter works."""
@@ -139,23 +137,85 @@ class TestAttributeSelectorEscaping:
         assert proposal is not None, "Should find placeholder"
         assert "[placeholder='" in proposal.new_locator
 
-    def test_testid_single_quote_truncated(self):
-        """data-testid with single quote — BUG: regex [^"'] stops at quote char.
+    def test_testid_single_quote_full_value(self):
+        """data-testid with single quote — FIXED: captures full value.
 
-        Value "it's-a-test" becomes just "it" — testid lookup fails silently.
+        Value "it's-a-test" should be fully captured.
+        CSS selector uses double-quote delimiter since value contains '.
         """
         agent = SelectorAgent()
         dom = "<button data-testid=\"it's-a-test\">Click</button>"
         payload = _make_payload(dom_snapshot=dom)
         proposal = agent._try_testid(payload)
         assert proposal is not None, "Should detect testid"
-        # BUG: regex truncated at the quote, only "it" captured
         locator = proposal.new_locator
-        expected_broken = "[data-testid='it']"
-        assert locator == expected_broken, (
-            f"BUG: regex [^\"'] stops at quote. "
-            f"Expected broken selector '{expected_broken}', got '{locator}'"
+        # Full value captured; double-quote delimiter avoids conflict with '
+        assert "it's-a-test" in locator, (
+            f"Expected full testid value in locator, got: {locator}"
         )
+        assert "data-testid" in locator
+
+
+# ── Unit tests: CSS attribute selector escaping helper ───────────────────────
+
+class TestCSSAttrSelectorEscaping:
+    """Verify _build_css_attr_selector produces valid, non-breaking selectors."""
+
+    def test_no_quotes_uses_single_quote_delimiter(self):
+        """Plain value uses single-quote delimiter (default)."""
+        result = SelectorAgent._build_css_attr_selector("data-testid", "hello-world")
+        assert result == "[data-testid='hello-world']"
+
+    def test_single_quote_in_value_switches_to_double(self):
+        """Value with ' uses double-quote delimiter to avoid conflict."""
+        result = SelectorAgent._build_css_attr_selector("aria-label", "Can't touch this")
+        assert result == '[aria-label="Can\'t touch this"]'
+
+    def test_double_quote_in_value_uses_single_delimiter(self):
+        """Value with \" uses single-quote delimiter (already default)."""
+        result = SelectorAgent._build_css_attr_selector("aria-label", 'Alert "Warning"')
+        assert result == '[aria-label=\'Alert "Warning"\']'
+
+    def test_both_quotes_escapes_single_quote(self):
+        """Value with both ' and \" escapes single quote with backslash."""
+        result = SelectorAgent._build_css_attr_selector(
+            "aria-label", "He said \"Don't go\""
+        )
+        # Single quotes get escaped, delimited by single quotes
+        assert "\\'" in result
+        assert result.startswith("[aria-label='")
+        assert "He said" in result
+        assert "Don\\'t go" in result.replace('"', '') or "Don't go" in result
+
+    def test_extract_attr_value_double_quoted(self):
+        """Extract value from double-quoted attribute."""
+        dom = '<button aria-label="Hello world">Click</button>'
+        result = SelectorAgent._extract_attr_value(dom, "aria-label")
+        assert result == "Hello world"
+
+    def test_extract_attr_value_single_quoted(self):
+        """Extract value from single-quoted attribute."""
+        dom = "<button aria-label='Hello world'>Click</button>"
+        result = SelectorAgent._extract_attr_value(dom, "aria-label")
+        assert result == "Hello world"
+
+    def test_extract_attr_value_with_embedded_quote(self):
+        """Extract value containing the opposite quote character."""
+        dom = '<button aria-label="Can\'t touch this">Click</button>'
+        result = SelectorAgent._extract_attr_value(dom, "aria-label")
+        assert result == "Can't touch this"
+
+    def test_extract_attr_value_missing_returns_none(self):
+        """Missing attribute returns None."""
+        dom = "<button>Click</button>"
+        result = SelectorAgent._extract_attr_value(dom, "aria-label")
+        assert result is None
+
+    def test_extract_attr_value_too_short_returns_none(self):
+        """Value shorter than 2 chars returns None."""
+        dom = '<button aria-label="X">Click</button>'
+        result = SelectorAgent._extract_attr_value(dom, "aria-label")
+        assert result is None
 
 
 # ── Integration tests: browser-based selector verification ─────────────────

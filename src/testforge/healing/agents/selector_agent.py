@@ -7,6 +7,7 @@ LLM fallback when deterministic confidence < 0.7.
 """
 from __future__ import annotations
 
+import re
 from typing import Optional
 
 from ..evidence_payload import EvidencePayload
@@ -18,6 +19,45 @@ class SelectorAgent:
 
     def __init__(self, llm_healer: Optional[LLMHealer] = None):
         self._llm = llm_healer or MockLLMHealer()
+
+    # ── CSS attribute selector escaping ───────────────────────────────────────
+
+    @staticmethod
+    def _build_css_attr_selector(attr_name: str, value: str) -> str:
+        """Build CSS attribute selector with proper quote escaping.
+
+        Strategy:
+        - If value has no single-quote, use single-quote delimiter
+        - If value has single-quote but no double-quote, use double-quote delimiter
+        - If value has both, use single-quote delimiter with backslash escaping
+        """
+        if "'" not in value:
+            return f"[{attr_name}='{value}']"
+        if '"' not in value:
+            return f'[{attr_name}="{value}"]'
+        # Both quote types: escape single quotes with backslash
+        escaped = value.replace("'", "\\'")
+        return f"[{attr_name}='{escaped}']"
+
+    # ── Attribute value extraction (handles quotes in values) ─────────────────
+
+    @staticmethod
+    def _extract_attr_value(dom: str, attr_name: str) -> Optional[str]:
+        """Extract full attribute value from DOM snapshot, including quoted content.
+
+        Tries double-quote delimiter first, then single-quote.
+        Unlike simple [^"'] regex, this captures the complete value
+        even when it contains the opposite quote character.
+        """
+        # Try double-quoted: attr="value with ' inside"
+        m = re.search(rf'{attr_name}\s*=\s*"([^"]{{2,80}})"', dom)
+        if m:
+            return m.group(1)
+        # Try single-quoted: attr='value with " inside'
+        m = re.search(rf"{attr_name}\s*=\s*'([^']{{2,80}})'", dom)
+        if m:
+            return m.group(1)
+        return None
 
     def heal(
         self,
@@ -59,14 +99,13 @@ class SelectorAgent:
 
     def _try_testid(self, payload: EvidencePayload) -> Optional[LLMHealingProposal]:
         dom = payload.dom_snapshot
-        import re
-        match = re.search(r'data-testid\s*=\s*["\']([^"\']+)["\']', dom)
-        if match:
-            testid = match.group(1)
+        testid = self._extract_attr_value(dom, "data-testid")
+        if testid:
+            selector = self._build_css_attr_selector("data-testid", testid)
             return LLMHealingProposal(
                 taxonomy_id="SEL-006", family="FAM-01",
                 strategy="semantic_locator_conversion",
-                new_locator=f"[data-testid='{testid}']",
+                new_locator=selector,
                 confidence=0.85,
                 rationale=f"Found data-testid attribute in DOM: {testid}",
             )
@@ -91,14 +130,13 @@ class SelectorAgent:
 
     def _try_aria(self, payload: EvidencePayload) -> Optional[LLMHealingProposal]:
         dom = payload.dom_snapshot
-        import re
-        match = re.search(r'aria-label\s*=\s*["\']([^"\']{2,80})["\']', dom)
-        if match:
-            label = match.group(1)
+        label = self._extract_attr_value(dom, "aria-label")
+        if label:
+            selector = self._build_css_attr_selector("aria-label", label)
             return LLMHealingProposal(
                 taxonomy_id="SEL-006", family="FAM-01",
                 strategy="aria_role_strategy",
-                new_locator=f"[aria-label='{label}']",
+                new_locator=selector,
                 confidence=0.75,
                 rationale=f"Found aria-label in DOM: {label}",
             )
@@ -106,14 +144,13 @@ class SelectorAgent:
 
     def _try_placeholder(self, payload: EvidencePayload) -> Optional[LLMHealingProposal]:
         dom = payload.dom_snapshot
-        import re
-        match = re.search(r'placeholder\s*=\s*["\']([^"\']{2,80})["\']', dom)
-        if match:
-            ph = match.group(1)
+        ph = self._extract_attr_value(dom, "placeholder")
+        if ph:
+            selector = self._build_css_attr_selector("placeholder", ph)
             return LLMHealingProposal(
                 taxonomy_id="SEL-006", family="FAM-01",
                 strategy="semantic_locator_conversion",
-                new_locator=f"[placeholder='{ph}']",
+                new_locator=selector,
                 confidence=0.80,
                 rationale=f"Found placeholder in DOM: {ph}",
             )
