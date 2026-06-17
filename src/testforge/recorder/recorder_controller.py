@@ -389,7 +389,7 @@ class RecorderController:
                 tag: (el.tagName||'').toLowerCase(),
                 text: elText,
                 role: el.getAttribute('role') || null,
-                accessible_name: el.getAttribute('aria-label') || el.getAttribute('title') || null,
+                accessible_name: el.getAttribute('aria-label') || el.getAttribute('title') || (allAttrs['aria-label'] || null),
                 id: el.id || null,
                 name: el.getAttribute('name') || null,
                 test_id: el.getAttribute('data-testid') || el.getAttribute('data-test-id') || null,

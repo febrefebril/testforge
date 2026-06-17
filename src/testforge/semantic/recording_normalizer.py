@@ -343,7 +343,9 @@ class RecordingNormalizer:
         # Prioridade de estrategias (score deterministico)
         if target_data.get("role"):
             role = target_data["role"]
-            name = _clean_text(target_data.get("accessible_name") or "") or _clean_text(target_data.get("text") or "")
+            name = (_clean_text(target_data.get("accessible_name") or "")
+                    or _clean_text(target_data.get("text") or "")
+                    or _clean_text((target_data.get("all_attributes") or {}).get("aria-label", "")))
             selector = f"role={role}"
             if name and len(name) <= 40:
                 selector += f"[name=\"{name}\"]"
@@ -372,10 +374,21 @@ class RecordingNormalizer:
         if target_data.get("text"):
             text = _clean_text(target_data["text"])
             if text:
-                # Use :has-text (substring match, more robust) instead of text= (exact match)
                 # Penalize generic text like "OK", "Cancelar", "Selecione" — brittle locators
                 text_score = 0.10 if _is_generic_text(text) else 0.55
-                candidates.append(LocatorCandidate("text", f":has-text(\"{text}\")", text_score, "visible text"))
+                # For elements without role/id (e.g., datepicker spans), use tag context
+                tag = (target_data.get("tag") or "").lower()
+                if tag and not target_data.get("role") and not target_data.get("id"):
+                    candidates.append(LocatorCandidate("text", f"{tag}:has-text(\"{text}\")", text_score, f"text in {tag}"))
+                else:
+                    candidates.append(LocatorCandidate("text", f":has-text(\"{text}\")", text_score, "visible text"))
+        elif target_data.get("inner_html"):
+            # Fallback: use inner HTML as text source (for elements like datepicker spans)
+            inner = _clean_text(target_data["inner_html"])
+            if inner:
+                tag = (target_data.get("tag") or "").lower()
+                sel = f"{tag}:has-text(\"{inner}\")" if tag else f":has-text(\"{inner}\")"
+                candidates.append(LocatorCandidate("inner_html", sel, 0.45, "inner HTML text"))
 
         # Fallback: CSS path
         css_path = target_data.get("css_path") or ""
