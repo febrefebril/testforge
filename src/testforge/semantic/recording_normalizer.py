@@ -33,11 +33,12 @@ _MATERIAL_ICONS = {
     "home", "search", "calculate", "calculate_outline", "attach_money",
     "trending_up", "schedule", "arrow_forward", "arrow_back", "check",
     "close", "menu", "settings", "person", "delete", "edit", "add",
-    "remove", "refresh", "download", "upload", "share", "favorite",
-    "star", "info", "warning", "error", "visibility", "visibility_off",
-    "calendar_today", "table_view", "list", "grid_view", "filter_list",
-    "more_vert", "more_horiz", "expand_more", "expand_less", "chevron_right",
-    "chevron_left", "open_in_new", "launch", "help", "support", "feedback",
+    "remove", "refresh", "download", "upload", "file_upload", "file_download",
+    "share", "favorite", "star", "info", "warning", "error",
+    "visibility", "visibility_off", "calendar_today", "table_view",
+    "list", "grid_view", "filter_list", "more_vert", "more_horiz",
+    "expand_more", "expand_less", "chevron_right", "chevron_left",
+    "open_in_new", "launch", "help", "support", "feedback",
     "account_balance", "payment", "shopping_cart", "credit_card",
     "location_on", "place", "phone", "email", "language", "lock",
     "cloud_upload", "cloud_download", "print", "save", "send",
@@ -52,7 +53,7 @@ def _clean_text(text: str) -> str:
         return ""
     # Split by whitespace and filter out material icons
     parts = text.split()
-    cleaned = [p for p in parts if p.lower().replace("_", "") not in _MATERIAL_ICONS]
+    cleaned = [p for p in parts if p.lower() not in _MATERIAL_ICONS]
     result = " ".join(cleaned).strip()
     # Truncate long text for selector use
     if len(result) > 60:
@@ -342,7 +343,7 @@ class RecordingNormalizer:
         # Prioridade de estrategias (score deterministico)
         if target_data.get("role"):
             role = target_data["role"]
-            name = target_data.get("accessible_name") or _clean_text(target_data.get("text") or "")
+            name = _clean_text(target_data.get("accessible_name") or "") or _clean_text(target_data.get("text") or "")
             selector = f"role={role}"
             if name and len(name) <= 40:
                 selector += f"[name=\"{name}\"]"
