@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BUG: Datepicker — Time-Mismatch Validation Bug</title>
+  <style>
+    body { font-family: sans-serif; max-width: 500px; margin: 2rem auto; }
+    label { display: block; margin: 1rem 0 0.25rem; font-weight: bold; }
+    input[type="date"] { padding: 0.5rem; font-size: 1rem; width: 100%; box-sizing: border-box; }
+    button { margin: 0.5rem 0.5rem 0 0; padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #error-msg { color: #d32f2f; min-height: 1.25rem; margin-top: 0.5rem; }
+    #status { color: #2e7d32; min-height: 1.25rem; }
+  </style>
+</head>
+<body>
+  <h1>Bug Lab — Datepicker Validation</h1>
+  <p>Booking form. Rules:</p>
+  <ul>
+    <li>Date must not be empty</li>
+    <li>Date must not be in the past (today is allowed)</li>
+    <li>Date must be within the next 90 days</li>
+  </ul>
+
+  <label for="booking-date">Booking Date:</label>
+  <input type="date" id="booking-date">
+
+  <div>
+    <button id="validate-btn" onclick="validateDate()">Validate</button>
+    <button id="submit-btn" onclick="submitForm()" disabled>Submit</button>
+  </div>
+
+  <div id="error-msg" role="alert"></div>
+  <div id="status" role="status"></div>
+
+  <script>
+    function validateDate() {
+      const input = document.getElementById('booking-date');
+      const value = input.value;
+
+      // Rule 1: not empty
+      if (!value) {
+        showError('Please select a date.');
+        return false;
+      }
+
+      // BUG: new Date() includes current time (e.g. 14:30:00.123)
+      // but new Date("YYYY-MM-DD") is midnight UTC.
+      // Comparing midnight UTC vs wall-clock time means
+      // today's date is ALWAYS rejected as "past" unless it's exactly 00:00:00.
+      const selected = new Date(value + 'T00:00:00');
+      const now = new Date();       // ← BUG: includes hours/minutes/seconds/millis
+
+      // Rule 2: not in the past (today allowed)
+      if (selected.getTime() < now.getTime()) {
+        showError('Date must not be in the past.');
+        return false;
+      }
+
+      // Rule 3: within 90 days
+      const maxDate = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+      if (selected.getTime() > maxDate.getTime()) {
+        showError('Date must be within the next 90 days.');
+        return false;
+      }
+
+      showSuccess('Date is valid!');
+      document.getElementById('submit-btn').disabled = false;
+      return true;
+    }
+
+    function submitForm() {
+      const date = document.getElementById('booking-date').value;
+      document.getElementById('status').textContent = 'Submitted: ' + date;
+      document.getElementById('submit-btn').disabled = true;
+    }
+
+    function showError(msg) {
+      document.getElementById('error-msg').textContent = msg;
+      document.getElementById('status').textContent = 'Invalid';
+      document.getElementById('submit-btn').disabled = true;
+    }
+
+    function showSuccess(msg) {
+      document.getElementById('error-msg').textContent = '';
+      document.getElementById('status').textContent = msg;
+    }
+  </script>
+</body>
+</html>
