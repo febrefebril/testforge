@@ -1,0 +1,25 @@
+<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>FAM-01: Dynamic ID</title></head>
+<body>
+<h1>FAM-01: Dynamic ID — Text Fallback (SEL-004)</h1>
+<p>Botão com ID que muda periodicamente. Texto "Clique Dinâmico" permanece estável.</p>
+<p>Modo sem ?error=1: ID troca a cada 2s.</p>
+<p>Modo com ?error=1: ID troca a cada 0.5s (cenário de falha).</p>
+<button id="btn-dynamic-0">Clique Dinâmico</button>
+<div id="result" role="status" style="margin-top:10px"></div>
+<script>
+var counter = 0;
+var btn = document.querySelector('button');
+var intervalMs = location.search.includes('error=1') ? 500 : 2000;
+
+// Periodically change the button ID to simulate dynamic IDs
+setInterval(function() {
+  counter++;
+  btn.id = 'btn-dynamic-' + counter;
+}, intervalMs);
+
+// Click handler — always works regardless of ID changes
+btn.addEventListener('click', function() {
+  document.getElementById('result').textContent = 'Botão dinâmico clicado com sucesso! ID atual: ' + btn.id;
+});
+</script>
+</body></html>
