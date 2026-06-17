@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>BUG: Dynamic Button ID — Reproduction</title>
+</head>
+<body>
+  <h1>Bug Lab — Dynamic Button ID</h1>
+  <p>Botão com ID que muda a cada 2s. Simula IDs dinâmicos de React/Angular.</p>
+  <p>Selector <code>#btn-dynamic-0</code> quebra após a primeira troca de ID.</p>
+  <button id="btn-dynamic-0">Clique Dinâmico</button>
+  <div id="result" role="status" style="margin-top:10px;font-weight:bold"></div>
+
+  <script>
+    var counter = 0;
+    var btn = document.querySelector('button');
+
+    // Change button ID every 2 seconds
+    setInterval(function() {
+      counter++;
+      btn.id = 'btn-dynamic-' + counter;
+    }, 2000);
+
+    // Click handler — always works regardless of ID changes
+    btn.addEventListener('click', function() {
+      document.getElementById('result').textContent =
+        'Clicado! ID atual: ' + btn.id;
+    });
+  </script>
+</body>
+</html>
