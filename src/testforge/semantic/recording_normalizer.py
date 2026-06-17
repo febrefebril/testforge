@@ -465,7 +465,15 @@ class RecordingNormalizer:
 
         if target_data.get("placeholder"):
             ph = target_data["placeholder"]
-            candidates.append(LocatorCandidate("placeholder", f"[placeholder=\"{ph}\"]", 0.85, f"placeholder={ph}"))
+            tag = (target_data.get("tag") or "").lower()
+            # Prefer input[placeholder] over bare [placeholder] — Angular wrappers
+            # (dsc-input-currency) share placeholders with native inputs, causing
+            # strict mode violations and fill() failures on non-input elements.
+            if tag in ("input", "textarea", "select"):
+                sel = f"{tag}[placeholder=\"{ph}\"]"
+            else:
+                sel = f"[placeholder=\"{ph}\"]"
+            candidates.append(LocatorCandidate("placeholder", sel, 0.85, f"placeholder={ph}"))
 
         if target_data.get("id") and target_data["id"] != "mat-input-0" and target_data["id"] != "mat-input-1":
             el_id = target_data["id"]
