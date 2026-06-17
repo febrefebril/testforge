@@ -324,6 +324,13 @@ def cmd_run(args):
     else:
         # Modo inline: executa passos com healing L0→L3
         verbose = getattr(args, 'verbose', False)
+        data_file = getattr(args, 'data', '') or ''
+        _data_values = {}
+        if data_file and os.path.exists(data_file):
+            with open(data_file) as f:
+                _data_values = json.loads(f.read())
+        if _data_values:
+            print(f"  Data: {len(_data_values)} valores carregados de {data_file}")
         with sync_playwright() as pw:
             browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
             page = browser.new_page()
@@ -482,6 +489,27 @@ def cmd_run(args):
                             print(f"  - Step {step_num}: fill skip (sem seletor)")
 
                     elif action == "click":
+                        # Data-driven fill: if clicking an input and we have a data value, fill it first
+                        if _data_values and step.target:
+                            tag = (step.target.tag or "").lower()
+                            if tag in ("input", "textarea"):
+                                label = (step.target.label or step.target.placeholder or "")
+                                # Try exact match first, then partial
+                                fill_val = _data_values.get(label, "")
+                                if not fill_val:
+                                    for key, val in _data_values.items():
+                                        if key in label or (label and label in key):
+                                            fill_val = val
+                                            break
+                                if fill_val:
+                                    sel = step.target.candidates[0].selector if step.target.candidates else ""
+                                    try:
+                                        page.fill(sel, str(fill_val), timeout=5000)
+                                        if verbose:
+                                            print(f"  ⚡ data-fill: {str(fill_val)[:20]} into {sel[:40]}")
+                                    except Exception:
+                                        pass  # fall through to normal click
+
                         is_submit = step.context.get("is_submit", False) if step.context else False
                         causes_navigation = step.context.get("causes_navigation", False) if step.context else False
 
@@ -1090,6 +1118,7 @@ def main():
     run.add_argument("--headless", action="store_true", help="Modo headless")
     run.add_argument("--timeout", type=int, default=60, help="Timeout em segundos")
     run.add_argument("--verbose", action="store_true", help="Mostra cada candidato tentado e resultado")
+    run.add_argument("--data", type=str, default="", help="JSON com valores para preencher campos (ex: {\"Renda mensal *\": \"5000\"})")
     run.add_argument("--browser", choices=["chromium", "chrome", "edge"], default="chromium",
                      help="Browser preferido (default: chromium)")
     run.set_defaults(func=cmd_run)
