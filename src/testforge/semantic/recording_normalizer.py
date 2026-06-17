@@ -352,7 +352,9 @@ class RecordingNormalizer:
             selector = f"role={role}"
             if name and len(name) <= 40:
                 selector += f"[name=\"{name}\"]"
-            candidates.append(LocatorCandidate("role", selector, 0.95 if name else 0.70, "role + accessible name"))
+            # Bare role (no accessible name) is ambiguous — deprioritize below text-based selectors.
+            # On pages with multiple role=button elements, bare role clicks wrong element.
+            candidates.append(LocatorCandidate("role", selector, 0.95 if name else 0.45, "role + accessible name"))
 
         if target_data.get("label") and target_data.get("id"):
             label = target_data["label"]
