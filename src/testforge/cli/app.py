@@ -1362,6 +1362,49 @@ def cmd_demo_heal(args):
         browser.close()
 
 
+def cmd_pilot_report(args):
+    """Generate consolidated pilot readiness report from all recordings."""
+    from testforge.metrics.pilot_metrics import collect_pilot_metrics, save_pilot_report
+
+    recordings_dir = args.recordings_dir
+    output_dir = args.output
+
+    print(f"[TestForge] Coletando metricas de: {recordings_dir}")
+    metrics = collect_pilot_metrics(recordings_dir)
+
+    if metrics.total_recordings == 0:
+        print(f"[TestForge] ⚠ Nenhuma gravacao com relatorio de readiness encontrada em:")
+        print(f"  {recordings_dir}")
+        print(f"[TestForge] Certifique-se de que as gravacoes foram validadas com --validate-before-ready")
+        return
+
+    json_path, md_path = save_pilot_report(metrics, output_dir)
+    print(f"[TestForge] ✅ Relatorio consolidado do piloto gerado:")
+    print(f"  JSON: {json_path}")
+    print(f"  MD:   {md_path}")
+    print()
+
+    # Print summary
+    s = metrics.to_dict()["summary"]
+    print(f"  Resumo:")
+    print(f"  Total gravacoes: {s['total_recordings']}")
+    print(f"  ✅ Prontas: {s['ready_for_team']}")
+    print(f"  ⚠ Incompletas: {s['incomplete_intent']}")
+    print(f"  🔍 Revisao: {s['needs_review']}")
+    print(f"  Taxa de completude: {s['completion_rate']:.1%}")
+
+    if metrics.failures and any(metrics.failures.values()):
+        top_failures = sorted(
+            metrics.failures.items(),
+            key=lambda x: x[1],
+            reverse=True,
+        )[:3]
+        print(f"\n  Top falhas:")
+        for cat, count in top_failures:
+            if count > 0:
+                print(f"    {cat.replace('_', ' ').title()}: {count}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="TestForge CLI — Gravacao inteligente de testes E2E")
     sub = parser.add_subparsers(dest="command")
@@ -1424,6 +1467,16 @@ def main():
     # run-incremental (Plano TestForge Autocontido 2026-06-17)
     from testforge.cli._run_incremental_patch import register as _register_run_incremental
     _register_run_incremental(sub)
+
+    # pilot-report (Sprint 8)
+    pr = sub.add_parser("pilot-report", help="Gerar relatorio consolidado do piloto (metricas agregadas)")
+    pr.add_argument("--recordings-dir",
+                    default=str(_PROJECT_ROOT / "recordings"),
+                    help="Diretorio com as gravacoes (default: recordings/)")
+    pr.add_argument("--output",
+                    default=str(_PROJECT_ROOT / "reports"),
+                    help="Diretorio de saida para o relatorio (default: reports/)")
+    pr.set_defaults(func=cmd_pilot_report)
 
     args = parser.parse_args()
     if args.command:
