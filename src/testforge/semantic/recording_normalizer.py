@@ -255,6 +255,7 @@ class RecordingNormalizer:
         self._detect_navigation_clicks(stc.steps)
         self._detect_missing_fills(stc.steps)
         self._audit_blind_spots(stc.steps)
+        self._build_field_value_map(stc)
 
         return stc
 
@@ -329,6 +330,198 @@ class RecordingNormalizer:
             print(f"[TestForge] ⚠ {len(blind_spots)} blind spot(s) detectado(s):", file=sys.stderr)
             for bs in blind_spots:
                 print(f"  Step {bs['step']}: {bs['pattern']} ({bs.get('label', bs.get('gap_seconds', ''))}) → {bs['resolution']}", file=sys.stderr)
+
+    def _build_field_value_map(self, stc) -> None:
+        """Build field_value_map linking field identifiers, values, and intentions.
+
+        Each step that involves a form field (input/textarea/select) contributes
+        to the map. Sources in priority:
+        1. form_values: captured at submit time (most reliable)
+        2. fill events: recorded values (polling or native input)
+        3. missing_fill: detected gap, value from form_values or empty (needs data_file)
+
+        The map is stored in stc.field_values: canonical_key → FieldValueMap.
+        """
+        from .model import FieldValueMap
+
+        # First pass: collect fill events with their identifiers
+        fill_registry = {}  # canonical_key -> {identifiers, value, step_index}
+        for i, step in enumerate(stc.steps):
+            if step.action not in ("fill", "click"):
+                continue
+            if step.action == "click":
+                tag = (step.target.tag or "").lower() if step.target else ""
+                if tag not in ("input", "textarea"):
+                    continue
+                # Check if this click has form_values (propagated from submit)
+                ctx = getattr(step, "context", {}) or {}
+                if ctx.get("form_values"):
+                    # Convert form_values into FieldValueMap entries
+                    for fname, fval in ctx["form_values"].items():
+                        canonical = self._canonical_field_key(fname)
+                        # Build identifiers from the step target
+                        ids = {}
+                        if step.target:
+                            if step.target.name: ids["name"] = step.target.name
+                            if step.target.accessible_name: ids["aria_label"] = step.target.accessible_name
+                            if step.target.placeholder: ids["placeholder"] = step.target.placeholder
+                            if step.target.element_id: ids["id"] = step.target.element_id
+                            if step.target.label: ids["label"] = step.target.label
+                        # Include the form_values key itself
+                        ids.setdefault("form_name", fname)
+                        intention = self._build_fill_intention(step, fname, fval, i)
+                        if canonical not in fill_registry:
+                            fill_registry[canonical] = {
+                                "value": fval,
+                                "intention": intention,
+                                "identifiers": ids,
+                                "source": "form_values",
+                                "step_index": i,
+                            }
+                        elif fill_registry[canonical]["source"] != "form_values":
+                            # Prefer form_values over other sources
+                            fill_registry[canonical] = {
+                                "value": fval,
+                                "intention": intention,
+                                "identifiers": ids,
+                                "source": "form_values",
+                                "step_index": i,
+                            }
+                    continue
+
+                # Check missing_fill
+                if ctx.get("missing_fill"):
+                    fill_label = ctx.get("fill_label", "") or ""
+                    canonical = self._canonical_field_key(fill_label)
+                    if canonical not in fill_registry:
+                        ids = {}
+                        if step.target:
+                            if step.target.name: ids["name"] = step.target.name
+                            if step.target.accessible_name: ids["aria_label"] = step.target.accessible_name
+                            if step.target.placeholder: ids["placeholder"] = step.target.placeholder
+                            if step.target.element_id: ids["id"] = step.target.element_id
+                            if step.target.label: ids["label"] = step.target.label
+                        fill_registry[canonical] = {
+                            "value": "",
+                            "intention": self._build_fill_intention(step, fill_label, "", i),
+                            "identifiers": ids,
+                            "source": "missing_fill",
+                            "step_index": i,
+                        }
+                    continue
+
+            # Recorded fill events
+            if step.action == "fill" and step.target:
+                val = step.value or ""
+                if not val:
+                    continue
+                # Build identifiers from target
+                ids = {}
+                if step.target.name: ids["name"] = step.target.name
+                if step.target.accessible_name: ids["aria_label"] = step.target.accessible_name
+                if step.target.placeholder: ids["placeholder"] = step.target.placeholder
+                if step.target.element_id: ids["id"] = step.target.element_id
+                if step.target.label: ids["label"] = step.target.label
+                if step.target.text: ids["text"] = step.target.text
+
+                # Determine canonical key from best identifier
+                canonical = (
+                    step.target.name
+                    or step.target.accessible_name
+                    or step.target.placeholder
+                    or step.target.element_id
+                    or step.target.label
+                    or f"step_{i+1}"
+                )
+                canonical = self._canonical_field_key(canonical)
+                intention = self._build_fill_intention(step, canonical, val, i)
+                if canonical not in fill_registry:
+                    fill_registry[canonical] = {
+                        "value": val,
+                        "intention": intention,
+                        "identifiers": ids,
+                        "source": "fill_event",
+                        "step_index": i,
+                    }
+                else:
+                    # Update value if we only had missing_fill placeholder
+                    existing = fill_registry[canonical]
+                    if existing["source"] == "missing_fill" or not existing["value"]:
+                        existing["value"] = val
+                        existing["source"] = "fill_event"
+                        existing["step_index"] = i
+
+        # Also check if form_values were captured outside input click context
+        # (some submit events carry form_values without preceding input clicks)
+        for i, step in enumerate(stc.steps):
+            ctx = getattr(step, "context", {}) or {}
+            form_vals = ctx.get("form_values") or {}
+            if not form_vals:
+                continue
+            for fname, fval in form_vals.items():
+                canonical = self._canonical_field_key(fname)
+                if canonical not in fill_registry:
+                    fill_registry[canonical] = {
+                        "value": fval,
+                        "intention": f"fill field '{fname}'",
+                        "identifiers": {"form_name": fname},
+                        "source": "form_values",
+                        "step_index": i,
+                    }
+
+        # Convert to FieldValueMap and store in stc
+        stc.field_values = {}
+        for key, entry in fill_registry.items():
+            if entry["value"] or entry["source"] == "missing_fill":
+                stc.field_values[key] = FieldValueMap(
+                    field_key=key,
+                    value=entry["value"],
+                    intention=entry["intention"],
+                    identifiers=entry["identifiers"],
+                    source=entry["source"],
+                    step_index=entry["step_index"],
+                )
+
+        # Report
+        if stc.field_values:
+            import sys
+            print(f"[TestForge] 📋 {len(stc.field_values)} campo(s) mapeado(s):", file=sys.stderr)
+            for key, fvm in stc.field_values.items():
+                source_icon = {"form_values": "✓", "fill_event": "○", "missing_fill": "⚠"}.get(fvm.source, "?")
+                val_display = fvm.value if fvm.value else "<pendente>"
+                print(f"  {source_icon} {key}: {val_display} ({fvm.intention})", file=sys.stderr)
+            missing = [k for k, v in stc.field_values.items() if not v.value]
+            if missing:
+                print(f"  💡 {len(missing)} campo(s) sem valor — usar --data data.json", file=sys.stderr)
+
+    @staticmethod
+    def _canonical_field_key(key: str) -> str:
+        """Normalize field identifier to canonical key for matching."""
+        if not key:
+            return "unknown"
+        k = key.strip().lower()
+        # Remove common prefixes/suffixes
+        k = _re.sub(r'^(input|field|txt|inp)[-_]?', '', k)
+        k = _re.sub(r'[-_\s]+', '_', k)
+        return k.strip('_')
+
+    @staticmethod
+    def _build_fill_intention(step, field_key: str, value: str, step_index: int) -> str:
+        """Build human-readable intention string for a field fill action."""
+        tag = (step.target.tag or "").lower() if step.target else ""
+        label = (
+            (step.target.accessible_name or "")
+            or (step.target.label or "")
+            or (step.target.placeholder or "")
+            or field_key
+        )
+        parts = [f"fill {label}"]
+        if value:
+            parts.append(f"with '{value}'")
+        if tag:
+            parts.append(f"on {tag}")
+        parts.append(f"step {step_index + 1}")
+        return " ".join(parts)
 
     def _compact_fill_events(self, raw_events: list) -> list:
         """Compact sequential fill events on same element within 500ms window.
