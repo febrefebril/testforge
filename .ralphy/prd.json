@@ -214,6 +214,20 @@
       ],
       "status": "completed",
       "completed": true
+    },
+    {
+      "id": "SPRINT-02",
+      "title": "Interactive Completion Prompt — CLI pergunta valores faltantes",
+      "description": "Sprint 2 do plano intent_readiness. prompt_missing_fields, field_value_map user_supplied_cli, test_data.json update, --no-interactive mode, 13 tests.",
+      "priority": "P0",
+      "test": "source activate.sh && python -m pytest tests/test_interactive_completion.py tests/test_intent_completeness.py tests/test_recorder_unit.py -q",
+      "files": [
+        "src/testforge/cli/_interactive_completion.py",
+        "src/testforge/cli/app.py",
+        "tests/test_interactive_completion.py"
+      ],
+      "status": "completed",
+      "completed": true
     }
   ]
 }
