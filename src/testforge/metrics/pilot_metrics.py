@@ -263,11 +263,11 @@ def save_pilot_report(
     os.makedirs(output_dir, exist_ok=True)
 
     json_path = os.path.join(output_dir, f"{filename_prefix}_report.json")
-    with open(json_path, "w") as f:
+    with open(json_path, "w", encoding="utf-8") as f:
         json.dump(metrics.to_dict(), f, indent=2, default=str)
 
     md_path = os.path.join(output_dir, f"{filename_prefix}_report.md")
-    with open(md_path, "w") as f:
+    with open(md_path, "w", encoding="utf-8") as f:
         f.write(metrics.to_markdown())
 
     return json_path, md_path

@@ -25,6 +25,7 @@ from testforge.validation.intent_completeness import (
     save_completeness_report,
 )
 from testforge.recorder.recording_status import RecordingStatus
+from testforge.cdp_launcher import ensure_cdp_ready, is_windows_caixa_mode
 from testforge.reporting import RunReport, StepReport
 
 import pathlib
@@ -78,7 +79,7 @@ def _update_recording_status(rec_dir: str, rec_id: str,
         })
         meta["recording_status"] = status.value
         meta["status"] = status.value
-        with open(meta_path, "w") as f:
+        with open(meta_path, "w", encoding="utf-8") as f:
             json.dump(meta, f, indent=2, default=str)
         return True
     except Exception:
@@ -237,6 +238,13 @@ def cmd_record(args):
     """Grava fluxo de teste com comandos de teclado."""
     no_interactive = getattr(args, 'no_interactive', False)
     auto_complete = getattr(args, 'complete', False) and not no_interactive
+
+    # Auto-mode CAIXA
+    if is_windows_caixa_mode(args):
+        from testforge.cdp_launcher import get_preferred_browser
+        ok, msg = ensure_cdp_ready(preferred_browser=get_preferred_browser(args), quiet=False)
+        if not ok:
+            print(f"[TestForge] X Falha CDP: {msg}", file=sys.stderr)
 
     if args.url:
         _validate_and_warn_url(args.url)
@@ -456,6 +464,13 @@ def cmd_compile(args):
 def cmd_run(args):
     """Executa script Playwright inline com healing L0→L3 via CuradorAutomatico."""
     script_path = args.script
+
+    # Auto-mode CAIXA
+    if is_windows_caixa_mode(args):
+        from testforge.cdp_launcher import get_preferred_browser
+        ok, msg = ensure_cdp_ready(preferred_browser=get_preferred_browser(args), quiet=False)
+        if not ok:
+            print(f"[TestForge] X Falha CDP: {msg}", file=sys.stderr)
     if not os.path.exists(script_path):
         print(f"[TestForge] ✗ Script nao encontrado: {script_path}")
         return
@@ -1106,6 +1121,13 @@ def _try_heal_inline(base_url: str, headless: bool, error_text: str,
 
 def cmd_pipeline(args):
     """Pipeline completa: record → compile → run."""
+
+    # Auto-mode CAIXA
+    if is_windows_caixa_mode(args):
+        from testforge.cdp_launcher import get_preferred_browser
+        ok, msg = ensure_cdp_ready(preferred_browser=get_preferred_browser(args), quiet=False)
+        if not ok:
+            print(f"[TestForge] X Falha CDP: {msg}", file=sys.stderr)
     if args.url:
         _validate_and_warn_url(args.url)
     print("=" * 50)
@@ -1242,6 +1264,13 @@ def cmd_pipeline(args):
 
 def cmd_demo_heal(args):
     """Demo de healing real: grava → quebra seletor → healing corrige."""
+
+    # Auto-mode CAIXA
+    if is_windows_caixa_mode(args):
+        from testforge.cdp_launcher import get_preferred_browser
+        ok, msg = ensure_cdp_ready(preferred_browser=get_preferred_browser(args), quiet=False)
+        if not ok:
+            print(f"[TestForge] X Falha CDP: {msg}", file=sys.stderr)
     print("=" * 60)
     print("  TestForge — Demo Healing Real")
     print("=" * 60)
@@ -1425,6 +1454,10 @@ def main():
                      help="Validar gravacao (completude + readiness gate) antes de marcar como pronta")
     rec.add_argument("--pilot-mode", action="store_true",
                      help="Modo piloto: habilita validacao automatica antes de READY (--validate-before-ready)")
+    rec.add_argument("--windows-caixa", action="store_true",
+                     help="Modo CAIXA: abre Edge/Chrome corporativo via CDP")
+    rec.add_argument("--cdp-browser", choices=["edge", "chrome", "auto"], default=None,
+                     help="Browser CDP: edge, chrome ou auto (default: auto)")
     rec.set_defaults(func=cmd_record)
 
     # compile
@@ -1447,6 +1480,10 @@ def main():
     run.add_argument("--data", type=str, default="", help="JSON com valores para preencher campos (ex: {\"Renda mensal *\": \"5000\"})")
     run.add_argument("--browser", choices=["chromium", "chrome", "edge"], default="chromium",
                      help="Browser preferido (default: chromium)")
+    run.add_argument("--windows-caixa", action="store_true",
+                     help="Modo CAIXA: abre Edge/Chrome corporativo via CDP")
+    run.add_argument("--cdp-browser", choices=["edge", "chrome", "auto"], default=None,
+                     help="Browser CDP: edge, chrome ou auto")
     run.set_defaults(func=cmd_run)
 
     # pipeline
@@ -1455,6 +1492,10 @@ def main():
     pipe.add_argument("--headless", action="store_true", help="Modo headless")
     pipe.add_argument("--browser", choices=["chromium", "chrome", "edge"], default="chromium",
                       help="Browser preferido (default: chromium)")
+    pipe.add_argument("--windows-caixa", action="store_true",
+                      help="Modo CAIXA: abre Edge/Chrome corporativo via CDP")
+    pipe.add_argument("--cdp-browser", choices=["edge", "chrome", "auto"], default=None,
+                      help="Browser CDP: edge, chrome ou auto")
     pipe.set_defaults(func=cmd_pipeline)
 
     # demo-heal
@@ -1462,6 +1503,10 @@ def main():
     dh.add_argument("--headless", action="store_true", help="Modo headless")
     dh.add_argument("--browser", choices=["chromium", "chrome", "edge"], default="chromium",
                     help="Browser preferido (default: chromium)")
+    dh.add_argument("--windows-caixa", action="store_true",
+                    help="Modo CAIXA: abre Edge/Chrome corporativo via CDP")
+    dh.add_argument("--cdp-browser", choices=["edge", "chrome", "auto"], default=None,
+                    help="Browser CDP: edge, chrome ou auto")
     dh.set_defaults(func=cmd_demo_heal)
 
     # run-incremental (Plano TestForge Autocontido 2026-06-17)

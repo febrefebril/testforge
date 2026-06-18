@@ -1,10 +1,19 @@
 """TestForge — CLI run-incremental command."""
 from __future__ import annotations
+import os
 import sys
 
 
 def cmd_run_incremental(args):
     from testforge.runner.incremental_runner import IncrementalRunner
+    try:
+        from testforge.cdp_launcher import ensure_cdp_ready, is_windows_caixa_mode, get_preferred_browser
+        if is_windows_caixa_mode(args):
+            ok, msg = ensure_cdp_ready(preferred_browser=get_preferred_browser(args), quiet=False)
+            if not ok:
+                print(f"[TestForge] X CDP falhou: {msg}", file=sys.stderr)
+    except ImportError:
+        pass
     runner = IncrementalRunner(
         script_path=args.script,
         headless=args.headless,
@@ -40,11 +49,15 @@ def register(sub):
     inc.add_argument("--timeout", type=int, default=60)
     inc.add_argument("--verbose", action="store_true")
     inc.add_argument("--data", type=str, default="")
-    inc.add_argument("--browser", choices=["chromium", "chrome", "edge"], default="chromium")
+    inc.add_argument("--browser", choices=["chromium", "chrome", "edge"], default=os.environ.get("TESTFORGE_DEFAULT_BROWSER", "chromium"))
     inc.add_argument("--stop-on-failure", dest="stop_on_failure", action="store_true", default=True)
     inc.add_argument("--no-stop-on-failure", dest="stop_on_failure", action="store_false")
     inc.add_argument("--interactive", action="store_true")
     inc.add_argument("--no-healing", dest="no_healing", action="store_true")
     inc.add_argument("--shadow", action="store_true")
+    inc.add_argument("--windows-caixa", action="store_true",
+                     help="Modo CAIXA: abre Edge/Chrome corporativo via CDP")
+    inc.add_argument("--cdp-browser", choices=["edge", "chrome", "auto"], default=None,
+                     help="Browser CDP: edge, chrome ou auto")
     inc.set_defaults(func=cmd_run_incremental)
     return inc

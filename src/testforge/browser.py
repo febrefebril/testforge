@@ -1,11 +1,8 @@
-"""Centralized browser launch with fallback chain for corporate environments.
-
-Fallback chain: chromium -> channel=msedge -> channel=chrome -> connect_over_cdp
-Use --browser edge|chrome|chromium to set preferred browser (reorders chain).
-"""
+"""Centralized browser launch with CDP-first fallback chain."""
 from __future__ import annotations
-
 import logging
+import os
+import platform
 from typing import Literal
 
 from playwright.sync_api import Browser, Playwright
@@ -14,84 +11,82 @@ logger = logging.getLogger(__name__)
 
 BrowserType = Literal["chromium", "chrome", "edge"]
 
-# Ordered fallback strategies: (name, launch_kwargs_builder)
-_FALLBACK_CHAIN: list[tuple[str, callable]] = [
-    ("chromium", lambda headless: {"headless": headless}),
-    ("msedge", lambda headless: {"channel": "msedge", "headless": headless}),
-    ("chrome", lambda headless: {"channel": "chrome", "headless": headless}),
+_WINDOWS_GPU_ARGS = [
+    "--use-angle=d3d11",
+    "--enable-features=Vulkan,UseSkiaRenderer",
+    "--ignore-gpu-blocklist",
+    "--disable-gpu-sandbox",
 ]
 
 
-def _reorder_chain(preferred: BrowserType, headless: bool) -> list[tuple[str, dict]]:
-    """Reorder fallback chain so preferred browser is tried first."""
-    strategies = [
-        (name, builder(headless)) for name, builder in _FALLBACK_CHAIN
-    ]
-    preferred_map = {
-        "chromium": "chromium",
-        "chrome": "chrome",
-        "edge": "msedge",
-    }
-    target_name = preferred_map.get(preferred, "chromium")
-
-    # Find preferred strategy and move it to front
-    for i, (name, _) in enumerate(strategies):
-        if name == target_name:
-            strategies.insert(0, strategies.pop(i))
-            break
-
-    return strategies
+def _is_windows():
+    return platform.system() == "Windows"
 
 
-def launch_browser(
-    pw: Playwright,
-    browser_type: BrowserType = "chromium",
-    headless: bool = False,
-    cdp_url: str = "http://localhost:9222",
-) -> Browser:
-    """Launch browser with fallback chain for corporate environments.
+def _gpu_args():
+    return _WINDOWS_GPU_ARGS if _is_windows() else []
 
-    Tries each strategy in order:
-    1. Preferred browser (from --browser flag)
-    2. Remaining browsers from fallback chain
-    3. connect_over_cdp as last resort
 
-    Args:
-        pw: Playwright instance
-        browser_type: Preferred browser ("chromium", "chrome", "edge")
-        headless: Run in headless mode
-        cdp_url: CDP endpoint for connect_over_cdp fallback
+def launch_browser(pw, browser_type="chromium", headless=False, cdp_url=""):
+    errors = []
 
-    Returns:
-        Launched Browser instance
+    # P1: CDP via env var
+    env_cdp = os.environ.get("TESTFORGE_USE_CDP", "").strip()
+    if env_cdp:
+        try:
+            browser = pw.chromium.connect_over_cdp(env_cdp, timeout=10000)
+            logger.info(f"OK Browser CDP env ({env_cdp})")
+            return browser
+        except Exception as e:
+            errors.append(f"cdp_env: {e}")
 
-    Raises:
-        RuntimeError: If all launch strategies fail
-    """
-    strategies = _reorder_chain(browser_type, headless)
-    errors: list[str] = []
+    # P2: CDP via param
+    if cdp_url:
+        try:
+            browser = pw.chromium.connect_over_cdp(cdp_url, timeout=10000)
+            return browser
+        except Exception as e:
+            errors.append(f"cdp_param: {e}")
+
+    gpu_args = _gpu_args()
+
+    if _is_windows() and browser_type in ("chromium", "edge"):
+        strategies = [
+            ("msedge", {"channel": "msedge", "headless": headless, "args": gpu_args}),
+            ("chrome", {"channel": "chrome", "headless": headless, "args": gpu_args}),
+            ("chromium", {"headless": headless, "args": gpu_args}),
+        ]
+    elif browser_type == "chrome":
+        strategies = [
+            ("chrome", {"channel": "chrome", "headless": headless, "args": gpu_args}),
+            ("msedge", {"channel": "msedge", "headless": headless, "args": gpu_args}),
+            ("chromium", {"headless": headless, "args": gpu_args}),
+        ]
+    elif browser_type == "edge":
+        strategies = [
+            ("msedge", {"channel": "msedge", "headless": headless, "args": gpu_args}),
+            ("chrome", {"channel": "chrome", "headless": headless, "args": gpu_args}),
+            ("chromium", {"headless": headless, "args": gpu_args}),
+        ]
+    else:
+        strategies = [
+            ("chromium", {"headless": headless}),
+            ("msedge", {"channel": "msedge", "headless": headless}),
+            ("chrome", {"channel": "chrome", "headless": headless}),
+        ]
 
     for name, kwargs in strategies:
         try:
-            logger.info(f"Launching browser: {name} kwargs={kwargs}")
             browser = pw.chromium.launch(**kwargs)
-            logger.info(f"Browser launched successfully via {name}")
+            logger.info(f"OK Browser via {name}")
             return browser
-        except Exception as exc:
-            err_msg = f"{name}: {exc}"
-            errors.append(err_msg)
-            logger.warning(f"Browser launch failed: {err_msg}")
+        except Exception as e:
+            errors.append(f"{name}: {e}")
 
-    # Last resort: connect to existing browser via CDP
+    default_cdp = cdp_url or "http://localhost:9222"
     try:
-        logger.info(f"Connecting via CDP: {cdp_url}")
-        browser = pw.chromium.connect_over_cdp(cdp_url)
-        logger.info("Browser connected via CDP")
-        return browser
-    except Exception as exc:
-        errors.append(f"cdp ({cdp_url}): {exc}")
-        logger.error(f"CDP connection failed: {exc}")
+        return pw.chromium.connect_over_cdp(default_cdp, timeout=5000)
+    except Exception as e:
+        errors.append(f"cdp_fallback: {e}")
 
-    raise RuntimeError(
-        "All browser launch strategies failed:\n  " + "\n  ".join(errors)
-    )
+    raise RuntimeError("All browser strategies failed:\n  " + "\n  ".join(errors))

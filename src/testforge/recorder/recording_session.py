@@ -98,7 +98,7 @@ class RecordingSessionManager:
 
         metadata = session.to_metadata_dict()
         metadata_path = os.path.join(session_dir, "recording_metadata.json")
-        with open(metadata_path, "w") as f:
+        with open(metadata_path, "w", encoding="utf-8") as f:
             json.dump(metadata, f, indent=2, default=str)
 
         session.metadata_path = metadata_path
@@ -173,7 +173,7 @@ class RecordingSessionManager:
         metadata["recording_status"] = status.value
         metadata["status"] = status.value
 
-        with open(meta_path, "w") as f:
+        with open(meta_path, "w", encoding="utf-8") as f:
             json.dump(metadata, f, indent=2, default=str)
         return True
 

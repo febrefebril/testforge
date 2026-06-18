@@ -157,7 +157,7 @@ def create_data_template(
             }
 
     template_path = os.path.join(rec_dir, "test_data.template.json")
-    with open(template_path, "w") as f:
+    with open(template_path, "w", encoding="utf-8") as f:
         json.dump(template, f, indent=2, ensure_ascii=False)
 
     return template_path
@@ -293,7 +293,7 @@ def _update_recording_metadata(rec_dir: str, status: RecordingStatus) -> bool:
         })
         meta["recording_status"] = status.value
         meta["status"] = status.value
-        with open(meta_path, "w") as f:
+        with open(meta_path, "w", encoding="utf-8") as f:
             json.dump(meta, f, indent=2, default=str)
         return True
     except Exception:
