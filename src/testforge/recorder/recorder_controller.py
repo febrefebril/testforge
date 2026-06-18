@@ -600,6 +600,16 @@ class RecorderController:
             }
         }, true);
 
+        window.addEventListener('keyup', function(e) {
+            if (window.__tfAssertWaiting) return;
+            var el = e.target;
+            // Currency-masked inputs prevent native 'input' events.
+            // 'keyup' fires after the mask formats the value.
+            if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+                _tf_pushEvent('fill', el);
+            }
+        }, true);
+
         // ---- Keyboard shortcuts ----
         window.addEventListener('keydown', function(e) {
             if (!e.shiftKey) return;
