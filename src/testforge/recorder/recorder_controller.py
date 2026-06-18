@@ -582,6 +582,23 @@ class RecorderController:
                 window.__tfPendingSubmit = _pending;
                 try { sessionStorage.setItem('__tfPendingSubmit', JSON.stringify(_pending)); } catch(_e) {}
                 _tf_pushEvent('submit', el);
+                // Capture form field values at submit time (currency-masked inputs
+                // prevent native input events, so this is the only point we can read them).
+                try {
+                    var _formInputs = (form || document).querySelectorAll('input, textarea, select');
+                    var _formValues = {};
+                    _formInputs.forEach(function(_inp) {
+                        var _name = _inp.name || _inp.getAttribute('aria-label') || _inp.placeholder || _inp.id || '';
+                        if (_name && _inp.value && _inp.value.trim()) {
+                            _formValues[_name] = _inp.value.trim().substring(0, 200);
+                        }
+                    });
+                    if (Object.keys(_formValues).length) {
+                        if (!window.__tfEventQueue.length) return;
+                        var _last = window.__tfEventQueue[window.__tfEventQueue.length - 1];
+                        if (_last && _last.type === 'submit') _last.form_values = _formValues;
+                    }
+                } catch(_ignore) {}
                 return;
             }
             _tf_pushEvent('click', el);

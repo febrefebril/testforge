@@ -369,13 +369,13 @@ class RecordingNormalizer:
             context["is_submit"] = True
             if raw.get("submit_method"):
                 context["submit_method"] = raw["submit_method"]
-            # If the submit event was restored from sessionStorage after navigation,
-            # it carries the postback URL (the page we landed on). Preserve it for
-            # the compiler to generate proper wait_for_load_state or URL assertion.
             if raw.get("postback_url"):
                 context["postback_url"] = raw["postback_url"]
             if raw.get("is_postback"):
                 context["is_postback"] = True
+            # Carry form field values captured at submit time
+            if raw.get("form_values"):
+                context["form_values"] = raw["form_values"]
         return SemanticAction(
             action=action,
             target=target,
@@ -812,8 +812,66 @@ class RecordingNormalizer:
 
         When user clicks input, types (not captured by recorder), then clicks
         another element with >2s gap, mark for data-driven fill resolution.
+        Also propagates form_values from submit events to preceding input clicks.
         """
         from datetime import datetime
+
+        # First: propagate form_values from submit events to preceding input clicks
+        for i, step in enumerate(steps):
+            ctx = getattr(step, "context", {}) or {}
+            form_vals = ctx.get("form_values") or {}
+            if form_vals:
+                # Find input/textarea clicks before this submit
+                for j in range(i - 1, -1, -1):
+                    prev = steps[j]
+                    prev_tag = (prev.target.tag or "").lower() if prev.target else ""
+                    if prev_tag in ("input", "textarea") and prev.action == "click":
+                        prev_ctx = getattr(prev, "context", {})
+                        prev_ctx["form_values"] = form_vals
+                        prev.context = prev_ctx
+
+        # Second: detect missing fills by time gap
+
+        actionable = [(i, s) for i, s in enumerate(steps)
+                      if s.action != "navigation" and not s.skip_reason]
+
+        for ai in range(len(actionable) - 1):
+            i_curr, s_curr = actionable[ai]
+            i_next, s_next = actionable[ai + 1]
+
+            if s_curr.action != "click":
+                continue
+            tag = (s_curr.target.tag or "").lower() if s_curr.target else ""
+            if tag not in ("input", "textarea"):
+                continue
+            if s_next.action == "fill":
+                continue
+
+            # Check if THIS step has form_values from a previous submit
+            # (submit captures all form field values at click time)
+            if s_curr.context.get("form_values"):
+                continue  # already has form values
+
+            t1_str = s_curr.context.get("timestamp", "")
+            t2_str = s_next.context.get("timestamp", "")
+            if not t1_str or not t2_str:
+                continue
+            try:
+                t1 = datetime.fromisoformat(t1_str.replace("Z", "+00:00"))
+                t2 = datetime.fromisoformat(t2_str.replace("Z", "+00:00"))
+                gap_s = (t2 - t1).total_seconds()
+            except ValueError:
+                continue
+
+            if gap_s > 2.0:
+                s_curr.context["missing_fill"] = True
+                if s_curr.target:
+                    s_curr.context["fill_label"] = (
+                        s_curr.target.accessible_name
+                        or s_curr.target.label
+                        or s_curr.target.placeholder
+                        or ""
+                    )
 
         actionable = [(i, s) for i, s in enumerate(steps)
                       if s.action != "navigation" and not s.skip_reason]

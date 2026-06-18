@@ -37,17 +37,24 @@ class StepExecutor:
         if action == "click":
             tag = (step.target.tag or "").lower() if step.target else ""
             if tag in ("input", "textarea"):
-                # Check if normalizer detected a missing fill (currency-masked inputs)
                 ctx = getattr(step, "context", {}) or {}
+                
+                # Check if THIS step has form_values injected from submit
+                form_vals = ctx.get("form_values") or {}
+                if form_vals:
+                    for name, val in form_vals.items():
+                        if self._fill_input(self.page, label=name, value=val):
+                            return f"submit_form:{name}"
+                
+                # Check if normalizer detected a missing fill
                 if ctx.get("missing_fill"):
                     fill_label = ctx.get("fill_label", "")
                     if fill_label and data_values:
-                        # Search by fill_label (aria-label/placeholder) from recording
                         for k, v in data_values.items():
                             if fill_label and (k in fill_label or fill_label in k):
                                 self._fill_input(page=self.page, label=k, value=str(v))
                                 return selector
-                # Fallback: try existing data-driven fill mechanisms
+                # Fallback
                 if selector.startswith("[aria-"):
                     return self._fill_by_aria_label(step, data_values) or selector
                 if data_values:
