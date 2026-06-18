@@ -203,9 +203,16 @@ class RecorderController:
             pass
 
     def _on_request(self, request: Request):
+        post_data = None
+        try:
+            if request.method in ("POST", "PUT", "PATCH"):
+                post_data = request.post_data
+        except Exception:
+            pass
         self._network_entries.append({
             "type": "request", "method": request.method,
             "url": request.url, "resource_type": request.resource_type,
+            "post_data": post_data,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 

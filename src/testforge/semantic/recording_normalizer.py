@@ -255,6 +255,8 @@ class RecordingNormalizer:
         self._detect_navigation_clicks(stc.steps)
         self._detect_missing_fills(stc.steps)
         self._audit_blind_spots(stc.steps)
+        # Sprint 4: reconstruct missing intents from evidence sources
+        self._reconstruct_intents(stc, recording_dir)
         self._build_field_value_map(stc)
 
         return stc
@@ -330,6 +332,63 @@ class RecordingNormalizer:
             print(f"[TestForge] ⚠ {len(blind_spots)} blind spot(s) detectado(s):", file=sys.stderr)
             for bs in blind_spots:
                 print(f"  Step {bs['step']}: {bs['pattern']} ({bs.get('label', bs.get('gap_seconds', ''))}) → {bs['resolution']}", file=sys.stderr)
+
+    def _reconstruct_intents(self, stc, recording_dir: str) -> None:
+        """Run IntentReconstructor to synthesize fill steps and field values.
+
+        Sprint 4, Épico 5: reconstructs missing intents from:
+        - snapshot_diff (field_snapshots.jsonl value changes)
+        - form_values (submit-time field captures)
+        - network_payload (POST/PUT request bodies)
+
+        Synthesized steps are inserted into stc.steps. Reconstructed field
+        values are staged for _build_field_value_map via context.
+        """
+        from .intent_reconstructor import IntentReconstructor
+
+        reconstructor = IntentReconstructor()
+        entries = reconstructor.reconstruct_all(recording_dir, stc.steps)
+
+        for entry in entries:
+            source = entry.get("source", "")
+            value = entry.get("value", "")
+            field_key = entry.get("field_key", "")
+            step_idx = entry.get("step_index", 0)
+            intention = entry.get("intention", "")
+            identifiers = entry.get("identifiers", {})
+
+            # Inject evidence into the nearest step's context
+            if 0 <= step_idx < len(stc.steps):
+                step = stc.steps[step_idx]
+                ctx = getattr(step, "context", {}) or {}
+                if "_reconstructed_values" not in ctx:
+                    ctx["_reconstructed_values"] = []
+                ctx["_reconstructed_values"].append({
+                    "field_key": field_key,
+                    "value": value,
+                    "source": source,
+                    "intention": intention,
+                    "identifiers": identifiers,
+                })
+                ctx["_has_reconstructed_values"] = True
+                step.context = ctx
+
+                # Also set value on the step if it's a click on a matching field
+                if step.action in ("click",) and step.target:
+                    tag = (step.target.tag or "").lower() if step.target else ""
+                    if tag in ("input", "textarea", "select"):
+                        step.value = value
+                        step.context["reconstructed_source"] = source
+
+        # Report
+        if entries:
+            import sys
+            sources = {}
+            for e in entries:
+                src = e.get("source", "unknown")
+                sources[src] = sources.get(src, 0) + 1
+            src_desc = ", ".join(f"{k}={v}" for k, v in sources.items())
+            print(f"[TestForge] 🔄 IntentReconstructor: {len(entries)} campo(s) reconstituido(s) ({src_desc})", file=sys.stderr)
 
     def _build_field_value_map(self, stc) -> None:
         """Build field_value_map linking field identifiers, values, and intentions.
@@ -469,6 +528,41 @@ class RecordingNormalizer:
                         "step_index": i,
                     }
 
+        # Sprint 4: incorporate reconstructed values (snapshot_diff, network_payload)
+        # These come from _reconstruct_intents() stored in step.context["_reconstructed_values"]
+        for i, step in enumerate(stc.steps):
+            ctx = getattr(step, "context", {}) or {}
+            rec_vals = ctx.get("_reconstructed_values") or []
+            if not rec_vals:
+                continue
+            for rv in rec_vals:
+                canonical = self._canonical_field_key(rv.get("field_key", ""))
+                source = rv.get("source", "unknown")
+                value = rv.get("value", "")
+                intention = rv.get("intention", "")
+                identifiers = rv.get("identifiers", {})
+                if canonical and value:
+                    if canonical not in fill_registry:
+                        fill_registry[canonical] = {
+                            "value": value,
+                            "intention": intention,
+                            "identifiers": identifiers,
+                            "source": source,
+                            "step_index": i,
+                        }
+                    else:
+                        existing = fill_registry[canonical]
+                        # Only replace if existing is lower priority or empty
+                        _source_priority = {"form_values": 100, "fill_event": 80, "snapshot_diff": 70, "network_payload": 60, "polling": 50, "missing_fill": 10}
+                        existing_priority = _source_priority.get(existing["source"], 0)
+                        new_priority = _source_priority.get(source, 0)
+                        if new_priority > existing_priority or not existing["value"]:
+                            existing["value"] = value
+                            existing["intention"] = intention
+                            existing["identifiers"] = identifiers
+                            existing["source"] = source
+                            existing["step_index"] = i
+
         # Convert to FieldValueMap and store in stc
         stc.field_values = {}
         for key, entry in fill_registry.items():
@@ -485,11 +579,15 @@ class RecordingNormalizer:
         # Report
         if stc.field_values:
             import sys
+            source_icons = {
+                "form_values": "✓", "fill_event": "○", "missing_fill": "⚠",
+                "snapshot_diff": "◉", "network_payload": "◎",
+            }
             print(f"[TestForge] 📋 {len(stc.field_values)} campo(s) mapeado(s):", file=sys.stderr)
             for key, fvm in stc.field_values.items():
-                source_icon = {"form_values": "✓", "fill_event": "○", "missing_fill": "⚠"}.get(fvm.source, "?")
+                icon = source_icons.get(fvm.source, "?")
                 val_display = fvm.value if fvm.value else "<pendente>"
-                print(f"  {source_icon} {key}: {val_display} ({fvm.intention})", file=sys.stderr)
+                print(f"  {icon} {key}: {val_display} ({fvm.source})", file=sys.stderr)
             missing = [k for k, v in stc.field_values.items() if not v.value]
             if missing:
                 print(f"  💡 {len(missing)} campo(s) sem valor — usar --data data.json", file=sys.stderr)

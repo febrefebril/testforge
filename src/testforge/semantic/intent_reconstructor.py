@@ -1,0 +1,396 @@
+"""TestForge — Intent Reconstructor (Sprint 4, Épico 5).
+
+Reconstructs missing field values and synthesizes fill steps from
+three evidence sources:
+1. snapshot_diff — field_snapshots.jsonl value changes between polls
+2. form_values — values captured at submit time
+3. network_payload — POST/PUT request body parsing
+
+Each source produces FieldValueMap entries or semantic step context
+consumed by RecordingNormalizer during normalize().
+"""
+
+import json
+import os
+import re
+from typing import Optional
+from urllib.parse import parse_qs, urlparse
+
+from .model import FieldValueMap, SemanticAction, SemanticTarget
+
+
+class IntentReconstructor:
+    """Combines multiple evidence sources to reconstruct missing intents."""
+
+    # Default weights for source preference ordering
+    SOURCE_PRIORITY = {
+        "form_values": 100,
+        "fill_event": 80,
+        "snapshot_diff": 70,
+        "network_payload": 60,
+        "polling": 50,
+        "missing_fill": 10,
+    }
+
+    def reconstruct_all(self, recording_dir: str, steps: list) -> list[dict]:
+        """Run all reconstruction strategies, return FieldValueMap entries.
+
+        Each entry dict: {field_key, value, intention, identifiers, source, step_index}
+        """
+        entries = []
+
+        # 1. Reconstruct from snapshot diffs
+        entries.extend(self._reconstruct_from_snapshots(recording_dir, steps))
+
+        # 2. Reconstruct from form values (already propagated by normalizer)
+        entries.extend(self._reconstruct_from_form_values(steps))
+
+        # 3. Reconstruct from network payloads
+        entries.extend(self._reconstruct_from_network(recording_dir, steps))
+
+        return entries
+
+    # ── Story 5.1: Snapshot diff reconstruction ────────────────────────────────
+
+    def _reconstruct_from_snapshots(self, recording_dir: str, steps: list) -> list[dict]:
+        """Detect value changes between field snapshots, synthesize fill steps.
+
+        Reads field_snapshots.jsonl, groups by fingerprint, finds value transitions.
+        Associates each change with the nearest preceding click/focus event.
+        Returns FieldValueMap-like entries with source='snapshot_diff'.
+        """
+        snapshots_path = os.path.join(recording_dir, "field_snapshots.jsonl")
+        if not os.path.exists(snapshots_path):
+            return []
+
+        # Load all snapshots
+        snapshots = []
+        with open(snapshots_path) as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try:
+                        snapshots.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue
+
+        if not snapshots:
+            return []
+
+        # Flatten batch snapshots into individual field snapshots
+        all_individual = []
+        for entry in snapshots:
+            if "snapshots" in entry and isinstance(entry["snapshots"], list):
+                for s in entry["snapshots"]:
+                    s["_batch_ts"] = entry.get("timestamp", "")
+                    all_individual.append(s)
+            else:
+                all_individual.append(entry)
+
+        if len(all_individual) < 2:
+            return []
+
+        # Sort by timestamp
+        all_individual.sort(key=lambda s: s.get("timestamp") or s.get("_batch_ts", ""))
+
+        # Group by fingerprint
+        groups: dict[str, list[dict]] = {}
+        for s in all_individual:
+            fp = s.get("fingerprint") or s.get("identifiers", {}).get("css_path", "unknown")
+            if fp not in groups:
+                groups[fp] = []
+            groups[fp].append(s)
+
+        entries = []
+        for fp, items in groups.items():
+            # Find value transitions
+            prev_val = ""
+            has_prev = False
+            for item in items:
+                curr_val = item.get("value", "") or ""
+                curr_ts = item.get("timestamp") or item.get("_batch_ts", "")
+                if has_prev and curr_val and curr_val != prev_val:
+                    ids = item.get("identifiers", {})
+                    tag = item.get("tag", "")
+                    field_type = item.get("type", "")
+                    name = ids.get("name") or ""
+                    label = ids.get("label") or ids.get("aria-label") or ""
+                    placeholder = ids.get("placeholder") or ""
+                    element_id = ids.get("id") or ""
+
+                    # Find nearest step index by timestamp proximity
+                    step_idx = self._find_nearest_step_index(steps, curr_ts)
+
+                    canonical = self._canonical_key(name or label or placeholder or fp)
+                    intention = f"fill {label or name or placeholder or fp} with '{curr_val}' (reconstructed from snapshot)"
+                    entries.append({
+                        "field_key": canonical,
+                        "value": curr_val,
+                        "intention": intention,
+                        "identifiers": {
+                            "name": name,
+                            "id": element_id,
+                            "label": label,
+                            "placeholder": placeholder,
+                            "aria_label": ids.get("aria-label") or "",
+                            "fingerprint": fp,
+                        },
+                        "source": "snapshot_diff",
+                        "step_index": step_idx,
+                        "fingerprint": fp,
+                    })
+
+                # Always update prev for next iteration
+                has_prev = True
+                if curr_val:
+                    prev_val = curr_val
+
+        # Deduplicate by field_key — keep first occurrence only
+        seen_keys = set()
+        deduped = []
+        for e in entries:
+            if e["field_key"] not in seen_keys:
+                seen_keys.add(e["field_key"])
+                deduped.append(e)
+
+        return deduped
+
+    # ── Story 5.2: Form values reconstruction ──────────────────────────────────
+
+    def _reconstruct_from_form_values(self, steps: list) -> list[dict]:
+        """Extract form_values from submit step contexts.
+
+        Form values are already captured at submit time and propagated
+        by the normalizer. This method extracts any that were missed or
+        not yet in field_value_map.
+        """
+        entries = []
+        for i, step in enumerate(steps):
+            ctx = getattr(step, "context", {}) or {}
+            form_vals = ctx.get("form_values") or {}
+            if not form_vals:
+                continue
+
+            for fname, fval in form_vals.items():
+                if not fval:
+                    continue
+                canonical = self._canonical_key(fname)
+                entries.append({
+                    "field_key": canonical,
+                    "value": fval,
+                    "intention": f"fill {fname} with '{fval}' (from submit payload)",
+                    "identifiers": {"form_name": fname},
+                    "source": "form_values",
+                    "step_index": i,
+                })
+
+        return entries
+
+    # ── Story 5.3: Network payload reconstruction ──────────────────────────────
+
+    def _reconstruct_from_network(self, recording_dir: str, steps: list) -> list[dict]:
+        """Parse POST/PUT request payloads for form field values.
+
+        Reads network_log.json, extracts form-urlencoded and JSON bodies,
+        correlates payload keys to field keys by name/id/label.
+        """
+        network_path = os.path.join(recording_dir, "network_log.json")
+        if not os.path.exists(network_path):
+            return []
+
+        with open(network_path) as f:
+            try:
+                network_entries = json.load(f)
+            except (json.JSONDecodeError, ValueError):
+                return []
+
+        # Collect all form-like payloads
+        payloads = []
+        for entry in network_entries:
+            if entry.get("type") != "request":
+                continue
+            method = entry.get("method", "").upper()
+            if method not in ("POST", "PUT", "PATCH"):
+                continue
+            url = entry.get("url", "")
+            post_data = entry.get("post_data")
+            if not post_data:
+                continue
+
+            parsed = self._parse_payload(post_data, url)
+            if parsed:
+                payloads.append({
+                    "url": url,
+                    "method": method,
+                    "timestamp": entry.get("timestamp", ""),
+                    "fields": parsed,
+                })
+
+        if not payloads:
+            return []
+
+        # Build all field identifiers from steps for correlation
+        field_identifiers = self._build_field_identifiers(steps)
+
+        entries = []
+        for payload in payloads:
+            for key, value in payload["fields"].items():
+                if not value:
+                    continue
+                # Try to correlate payload key to a field in our steps
+                step_idx = self._correlate_payload_key(key, value, payload, steps, field_identifiers)
+                canonical = self._canonical_key(key)
+                entries.append({
+                    "field_key": canonical,
+                    "value": str(value),
+                    "intention": f"fill '{key}' with '{value}' (from network payload)",
+                    "identifiers": {
+                        "network_key": key,
+                        "payload_url": payload["url"],
+                        "payload_method": payload["method"],
+                    },
+                    "source": "network_payload",
+                    "step_index": step_idx,
+                    "evidence": {
+                        "url": payload["url"],
+                        "method": payload["method"],
+                        "payload_key": key,
+                    },
+                })
+
+        # Deduplicate by field_key
+        seen_keys = set()
+        deduped = []
+        for e in entries:
+            if e["field_key"] not in seen_keys:
+                seen_keys.add(e["field_key"])
+                deduped.append(e)
+
+        return deduped
+
+    # ── Helpers ────────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _find_nearest_step_index(steps: list, timestamp: str) -> int:
+        """Find the step index closest to the given timestamp."""
+        if not timestamp or not steps:
+            return 0
+
+        try:
+            from datetime import datetime
+            target = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+
+            best_idx = 0
+            best_diff = float("inf")
+
+            for i, step in enumerate(steps):
+                ctx = getattr(step, "context", {}) or {}
+                ts = ctx.get("timestamp", "")
+                if ts:
+                    try:
+                        step_ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                        diff = abs((step_ts - target).total_seconds())
+                        if diff < best_diff:
+                            best_diff = diff
+                            best_idx = i
+                    except (ValueError, TypeError):
+                        continue
+
+            return best_idx
+        except (ValueError, TypeError):
+            return 0
+
+    @staticmethod
+    def _parse_payload(post_data: str, url: str) -> dict:
+        """Parse POST body as form-urlencoded or JSON, return field dict."""
+        if not post_data:
+            return {}
+
+        # Try JSON first
+        post_data = post_data.strip()
+        if post_data.startswith("{") or post_data.startswith("["):
+            try:
+                data = json.loads(post_data)
+                if isinstance(data, dict):
+                    return {k: str(v) for k, v in data.items() if not isinstance(v, (dict, list))}
+                return {}
+            except json.JSONDecodeError:
+                pass
+
+        # Try form-urlencoded
+        try:
+            parsed = parse_qs(post_data)
+            return {k: v[0] if v else "" for k, v in parsed.items()}
+        except Exception:
+            pass
+
+        return {}
+
+    @staticmethod
+    def _build_field_identifiers(steps: list) -> dict:
+        """Build a map of all field identifiers from steps for key correlation."""
+        ids = {}
+        for step in steps:
+            if not step.target:
+                continue
+            name = step.target.name
+            el_id = step.target.element_id
+            label = step.target.label
+            placeholder = step.target.placeholder
+            text = step.target.text
+
+            for key in [name, el_id, label, placeholder, text]:
+                if key:
+                    canonical = key.strip().lower().replace(" ", "_").replace("-", "_")
+                    ids[canonical] = {
+                        "name": name,
+                        "id": el_id,
+                        "label": label,
+                        "placeholder": placeholder,
+                    }
+        return ids
+
+    @staticmethod
+    def _correlate_payload_key(key: str, value: str, payload: dict,
+                                steps: list, field_identifiers: dict) -> int:
+        """Find the step index most likely associated with a payload field.
+
+        Matches payload key to field identifiers by:
+        1. Exact key match
+        2. Name/id match
+        3. Label similarity
+        """
+        canonical_key = key.strip().lower().replace(" ", "_").replace("-", "_")
+
+        # Direct match in field identifiers
+        if canonical_key in field_identifiers:
+            # Find step with matching name/id
+            ids = field_identifiers[canonical_key]
+            name = ids.get("name", "").lower()
+            el_id = ids.get("id", "").lower()
+            for i, step in enumerate(steps):
+                if not step.target:
+                    continue
+                if step.target.name and step.target.name.lower() == canonical_key:
+                    return i
+                if step.target.element_id and step.target.element_id.lower() == canonical_key:
+                    return i
+
+        # Fall back to URL-based matching
+        for i, step in enumerate(steps):
+            step_url = getattr(step, "url", "") or ""
+            if step_url and payload.get("url", ""):
+                if step_url == payload["url"] or step_url.rstrip("/") == payload["url"].rstrip("/"):
+                    return i
+
+        return 0
+
+    @staticmethod
+    def _canonical_key(key: str) -> str:
+        """Normalize a field key to canonical form."""
+        if not key:
+            return "unknown"
+        k = key.strip().lower()
+        k = re.sub(r'^(input|field|txt|inp)[-_]?', '', k)
+        k = re.sub(r'[-_\s]+', '_', k)
+        return k.strip('_')
