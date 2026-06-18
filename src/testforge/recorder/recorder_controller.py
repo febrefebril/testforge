@@ -617,6 +617,30 @@ class RecorderController:
             }
         }, true);
 
+        // ---- Polling safety net ----
+        // Frameworks (Angular currencymask, React controlled inputs) can
+        // prevent native 'input' events. Polling catches ALL value changes
+        // regardless of mechanism: keyboard, paste, autofill, setAttribute.
+        window.__tfLastValues = {};
+        window.__tfPollInterval = setInterval(function() {
+            if (window.__tfAssertWaiting) return;
+            try {
+                document.querySelectorAll('input, textarea, select').forEach(function(el) {
+                    var key = el.name || el.getAttribute('aria-label') || el.placeholder || el.id;
+                    if (!key) return;
+                    var val = (el.value || '').trim();
+                    if (val && val !== window.__tfLastValues[key]) {
+                        window.__tfLastValues[key] = val;
+                        _tf_pushEvent('fill', el);
+                    }
+                });
+            } catch(_e) {}
+        }, 300);
+
+        window.addEventListener('beforeunload', function() {
+            clearInterval(window.__tfPollInterval);
+        });
+
         // ---- Keyboard shortcuts ----
         window.addEventListener('keydown', function(e) {
             if (!e.shiftKey) return;
