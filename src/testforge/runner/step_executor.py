@@ -38,7 +38,10 @@ class StepExecutor:
             # Data-driven fill: if clicking an input and we have data, fill it first
             tag = (step.target.tag or "").lower() if step.target else ""
             if tag in ("input", "textarea") and data_values:
-                self._try_data_fill(step, selector, data_values)
+                filled = self._try_data_fill(step, selector, data_values)
+                if filled:
+                    # Value was filled — don't click again (would clear/refocus)
+                    return selector
             return self._execute_click(step, selector)
         if action == "fill":
             return self._execute_fill(step, selector, data_values)
@@ -56,8 +59,9 @@ class StepExecutor:
 
         raise NotImplementedError(f"acao desconhecida: {action}")
 
-    def _try_data_fill(self, step, selector, data_values):
-        """Attempt to fill an input/textarea from data values before clicking."""
+    def _try_data_fill(self, step, selector, data_values) -> bool:
+        """Attempt to fill an input/textarea from data values before clicking.
+        Returns True if fill was attempted (even if it may have failed silently)."""
         label = ""
         if step.target:
             label = getattr(step.target, "label", "") or getattr(step.target, "placeholder", "")
@@ -68,7 +72,7 @@ class StepExecutor:
                     fill_val = str(v)
                     break
         if not fill_val:
-            return
+            return False
 
         try:
             el = self.page.locator(selector).first
@@ -87,8 +91,9 @@ class StepExecutor:
             else:
                 self.page.fill(selector, str(fill_val), timeout=self.DEFAULT_TIMEOUT)
                 self.page.wait_for_timeout(150)
+            return True
         except Exception:
-            pass
+            return False
 
     def _execute_click(self, step, selector):
         if not selector:
