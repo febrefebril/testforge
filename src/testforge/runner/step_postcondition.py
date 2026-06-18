@@ -162,6 +162,8 @@ class StepPostconditionValidator:
                             message=f"proximo step visivel: {next_sel}",
                         )
                     except Exception:
+                        import sys
+                        print(f"  ⚡ postcondition: {next_sel[:60]} not found", file=sys.stderr)
                         continue
 
                 return PostconditionResult(
