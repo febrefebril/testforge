@@ -61,34 +61,50 @@ class StepExecutor:
 
     def _try_data_fill(self, step, selector, data_values) -> bool:
         """Attempt to fill an input/textarea from data values before clicking."""
+        if not data_values:
+            return False
+
+        # Build list of (label_key, value) candidates from data file
+        candidates = []
         label = ""
         if step.target:
             label = getattr(step.target, "label", "") or getattr(step.target, "placeholder", "")
-        fill_val = data_values.get(label, "")
-        if not fill_val:
-            for k, v in data_values.items():
-                if k in label or (label and label in k):
-                    fill_val = str(v)
-                    break
 
-        # Determine which element to fill
+        # Exact match on step's label/placeholder
+        if label and label in data_values:
+            candidates.append((label, str(data_values[label])))
+
+        # Partial match
+        for k, v in data_values.items():
+            if k not in dict(candidates) and k in label:
+                candidates.append((k, str(v)))
+
+        # Remaining data keys (for aria-label fallback)
+        for k, v in data_values.items():
+            if k not in dict(candidates):
+                candidates.append((k, str(v)))
+
         el = None
-        if fill_val:
-            try:
-                el = self.page.locator(selector).first
-                if el.count() == 0:
-                    el = None
-            except Exception:
-                el = None
-
-        # Fallback: search by aria-label from data keys
-        if not el and data_values:
-            for k, v in data_values.items():
+        fill_val = ""
+        # Try each key: first by step's selector, then by aria-label search
+        for key, val in candidates:
+            # Try step's selector
+            if not el:
                 try:
-                    cand = self.page.locator(f'input[aria-label="{k}"], textarea[aria-label="{k}"]')
+                    cand = self.page.locator(selector)
                     if cand.count() > 0:
                         el = cand.first
-                        fill_val = str(v)
+                        fill_val = val
+                        break
+                except Exception:
+                    pass
+            # Try aria-label fallback
+            if not el:
+                try:
+                    cand = self.page.locator(f'input[aria-label="{key}"], textarea[aria-label="{key}"]')
+                    if cand.count() > 0:
+                        el = cand.first
+                        fill_val = val
                         break
                 except Exception:
                     continue
