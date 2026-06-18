@@ -117,7 +117,7 @@ def _run_post_recording_completion(rec_dir: str, rid: str, args,
         if report.is_complete:
             print(f"[TestForge] ✓ Intencao COMPLETA ({report.resolved_count} campos)")
             _update_recording_status(rec_dir, rid, RecordingStatus.intent_complete)
-            return
+            return stc, report
 
         print(f"[TestForge] ⚠ Intencao INCOMPLETA — {report.missing_count} pendente(s)")
 
@@ -128,7 +128,7 @@ def _run_post_recording_completion(rec_dir: str, rid: str, args,
             _update_recording_status(rec_dir, rid, RecordingStatus.incomplete_intent)
             print(f"[TestForge] 💡 Use: testforge compile --check {rid}")
             print(f"[TestForge] 💡 Ou forneca valores via --data arquivo.json")
-            return
+            return stc, report
 
         if auto_complete:
             # Interactive mode: prompt user for values
@@ -140,16 +140,84 @@ def _run_post_recording_completion(rec_dir: str, rid: str, args,
             else:
                 print(f"[TestForge] ⚠ Campos pendentes — compile bloqueado ate completar")
                 print(f"  Use: testforge compile --check {rid}")
-            return
+            return stc, report
 
         # Default: no --complete mode, just inform
         print(f"[TestForge] 💡 Use --complete para informar valores pendentes")
         print(f"  Ou: testforge compile --check {rid}")
+        return stc, report
 
     except FileNotFoundError as e:
         print(f"[TestForge] ⚠ Normalizacao nao disponivel: {e}")
     except Exception as e:
         print(f"[TestForge] ⚠ Erro na verificacao de completude: {e}")
+    return None, None
+
+
+def _run_post_recording_validation(rec_dir: str, rid: str, args,
+                                    stc, completeness_report):
+    """Run full validation pipeline: completeness check + readiness gate.
+
+    This is the core of the --validate-before-ready feature.
+    Evaluates completeness, runs incremental validation, and saves
+    a QA-friendly readiness report.
+    """
+    from testforge.validation.readiness_gate import (
+        RecordingReadinessGate,
+        save_readiness_report,
+    )
+    from testforge.recorder.recording_status import RecordingStatus
+
+    print(f"\n[TestForge] 🔍 Validando gravacao antes de marcar como pronta...")
+
+    if completeness_report is None:
+        print(f"[TestForge] ⚠ Relatorio de completude nao disponivel")
+        return
+
+    # Build field_values dict from the stc
+    field_values = {}
+    if stc and stc.field_values:
+        field_values = stc.field_values
+
+    # Evaluate readiness gate
+    gate = RecordingReadinessGate()
+    readiness_report = gate.evaluate(
+        recording_id=rid,
+        application=args.app or "web",
+        base_url=args.url or "http://localhost",
+        completeness_report=completeness_report,
+        step_results=[],  # No incremental execution in post-recording (CLI only)
+        field_values=field_values,
+    )
+
+    # Save readiness report
+    report_dir = os.path.join(rec_dir, "readiness")
+    json_path, md_path = save_readiness_report(readiness_report, report_dir)
+    print(f"[TestForge] ✓ Relatorio de readiness: {md_path}")
+
+    # Update recording status based on verdict
+    if readiness_report.verdict.value == "pass":
+        print(f"[TestForge] ✅ Validacao PASSOU — gravacao pronta para o time!")
+        _update_recording_status(rec_dir, rid, RecordingStatus.ready_for_team)
+    elif readiness_report.verdict.value == "needs_review":
+        print(f"[TestForge] 🔍 Validacao com RESSALVAS — revise o relatorio")
+        _update_recording_status(rec_dir, rid, RecordingStatus.needs_review)
+    else:
+        print(f"[TestForge] ❌ Validacao FALHOU — corrija os problemas e tente novamente")
+        _update_recording_status(rec_dir, rid, RecordingStatus.incomplete_intent)
+
+    # Print summary
+    r = readiness_report
+    print(f"\n  Resumo da validacao:")
+    print(f"  Verdicto: {r.verdict.value.upper()}")
+    print(f"  Completude: {'✅' if r.completeness_passed else '❌'}")
+    print(f"  Steps: {r.passed_steps} ok, {r.failed_steps} falha(s), {r.healed_steps} curado(s)")
+    print(f"  Total campos: {r.total_steps} ({len(r.missing_fields)} pendentes)")
+    if r.warnings:
+        print(f"  Avisos: {len(r.warnings)}")
+        for w in r.warnings:
+            print(f"    ⚠ {w}")
+    print(f"\n  Relatorio completo: {md_path}")
 
 
 def _check_python_keyboard(page, recorder):
@@ -230,9 +298,21 @@ def cmd_record(args):
         print(f"[TestForge] Sessao salva: recordings/{rid}/")
         browser.close()
 
-    # Post-recording: intent completeness check
-    if auto_complete or no_interactive:
-        _run_post_recording_completion(rec_dir, rid, args, auto_complete, no_interactive)
+    # Post-recording: intent completeness check + validation
+    validate_before_ready = getattr(args, 'validate_before_ready', False)
+    pilot_mode = getattr(args, 'pilot_mode', False)
+    run_validation = validate_before_ready or pilot_mode
+
+    stc = None
+    completeness_report = None
+
+    if auto_complete or no_interactive or run_validation:
+        result = _run_post_recording_completion(rec_dir, rid, args, auto_complete, no_interactive)
+        if result:
+            stc, completeness_report = result
+
+    if run_validation and completeness_report is not None:
+        _run_post_recording_validation(rec_dir, rid, args, stc, completeness_report)
 
 
 def _auto_learn(error_msg: str, solution: str, framework: str = "generic"):
@@ -1298,6 +1378,10 @@ def main():
                      help="Verificar completude e perguntar valores pendentes")
     rec.add_argument("--no-interactive", action="store_true",
                      help="Nao perguntar valores — criar template")
+    rec.add_argument("--validate-before-ready", action="store_true",
+                     help="Validar gravacao (completude + readiness gate) antes de marcar como pronta")
+    rec.add_argument("--pilot-mode", action="store_true",
+                     help="Modo piloto: habilita validacao automatica antes de READY (--validate-before-ready)")
     rec.set_defaults(func=cmd_record)
 
     # compile
