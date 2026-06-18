@@ -31,3 +31,12 @@
 - [✓] 2026-06-17 01:18 - Script de consolidação de artefatos para LLM
 - [✓] 2026-06-17 01:21 - Pipeline CI: GitHub Actions workflow
 - [✓] 2026-06-17 01:28 - Generate consolidated bug fix report
+- [✓] 2026-06-18 — SPRINT-01 Intent Completeness Contract
+  - RecordingStatus enum (9 estados formais + status history)
+  - IntentCompletenessChecker (4 classificações: resolved/warning/review/missing)
+  - CompletenessReport (JSON + Markdown)
+  - CT-AUTO-1.1 (6 testes): gravação sem campos pendentes
+  - CT-AUTO-1.2 (4 testes): input com gap sem fill
+  - CT-AUTO-1.3 (3 testes): select sem change event
+  - CLI --check flag + bloqueio compile para incomplete_intent/needs_review
+  - 20 testes automatizados, 0 regressões (469 pass, 2 pre-existing fail)

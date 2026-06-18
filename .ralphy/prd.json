@@ -1,6 +1,6 @@
 {
   "project": "TestForge",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "tasks": [
     {
       "id": "BUG-004",
@@ -194,6 +194,26 @@
         "src/testforge/cli/app.py"
       ],
       "status": "pending"
+    },
+    {
+      "id": "SPRINT-01",
+      "title": "Intent Completeness Contract — estados, checker, relatório",
+      "description": "Sprint 1 do plano intent_readiness. RecordingStatus enum, IntentCompletenessChecker, relatório JSON+MD, 20 testes, CLI blocking para gravações incompletas.",
+      "priority": "P0",
+      "test": "source activate.sh && python -m pytest tests/test_intent_completeness.py tests/test_recorder_unit.py -q",
+      "files": [
+        "src/testforge/recorder/recording_status.py",
+        "src/testforge/recorder/recording_session.py",
+        "src/testforge/validation/intent_completeness.py",
+        "src/testforge/validation/__init__.py",
+        "src/testforge/cli/app.py",
+        "tests/test_intent_completeness.py",
+        "tests/intent_lab/pages/intent-complete-basic/index.html",
+        "tests/intent_lab/pages/missing-fill-gap/index.html",
+        "tests/intent_lab/pages/select-not-captured/index.html"
+      ],
+      "status": "completed",
+      "completed": true
     }
   ]
 }
