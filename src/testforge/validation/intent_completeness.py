@@ -421,7 +421,8 @@ def save_completeness_report(report: CompletenessReport,
         Tuple of (json_path, md_path).
     """
     os.makedirs(output_dir, exist_ok=True)
-    rid = recording_id or "unknown"
+    if recording_id:
+        report.recording_id = recording_id
 
     json_path = os.path.join(output_dir, f"intent_completeness_report.json")
     with open(json_path, "w") as f:
