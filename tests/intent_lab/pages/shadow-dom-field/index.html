@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Shadow DOM Field — Campo em Shadow DOM</title>
+  <style>
+    body { font-family: sans-serif; max-width: 500px; margin: 2em auto; }
+    .result { margin-top: 1em; padding: 1em; background: #e8f5e9; border-radius: 4px; }
+    custom-input { display: block; margin: 1em 0; }
+    button { margin-top: 1em; padding: 0.5em 2em; }
+  </style>
+</head>
+<body>
+  <h1>Campo em Shadow DOM</h1>
+  <p>Input encapsulado dentro de Shadow DOM — o recorder precisa acessar o shadow root.</p>
+
+  <label>Campo normal (fora do shadow DOM)</label>
+  <input id="campo-normal" name="campo_normal" placeholder="Campo normal" />
+
+  <custom-input id="meu-shadow"></custom-input>
+
+  <button id="btn-enviar">Enviar</button>
+  <div class="result" id="resultado" style="display:none"></div>
+
+  <script>
+    class CustomInput extends HTMLElement {
+      constructor() {
+        super();
+        const shadow = this.attachShadow({ mode: 'open' });
+        shadow.innerHTML = `
+          <style>
+            label { display: block; margin-top: 0.5em; }
+            input { width: 100%; padding: 0.5em; box-sizing: border-box; }
+          </style>
+          <label for="shadow-field">Campo Shadow</label>
+          <input id="shadow-field" name="shadow_field" placeholder="Digite no shadow DOM" />
+          <p id="shadow-result"></p>
+        `;
+      }
+    }
+    customElements.define('custom-input', CustomInput);
+
+    document.getElementById('btn-enviar').addEventListener('click', function() {
+      const shadow = document.getElementById('meu-shadow').shadowRoot;
+      const val = shadow.getElementById('shadow-field').value;
+      document.getElementById('resultado').textContent = '✅ Shadow field: ' + val;
+      document.getElementById('resultado').style.display = 'block';
+    });
+  </script>
+</body>
+</html>
