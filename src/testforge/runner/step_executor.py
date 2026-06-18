@@ -88,6 +88,11 @@ class StepExecutor:
                 el.press_sequentially(cents, delay=50)
                 self.page.keyboard.press("Tab")
                 self.page.wait_for_timeout(200)
+                # Debug: verify value was set
+                import sys
+                actual = el.input_value()
+                dirty = el.evaluate("el => el.className.includes('ng-dirty')")
+                print(f"  ⚡ data-fill debug: value='{actual}' ng-dirty={dirty}", file=sys.stderr)
             else:
                 self.page.fill(selector, str(fill_val), timeout=self.DEFAULT_TIMEOUT)
                 self.page.wait_for_timeout(150)
