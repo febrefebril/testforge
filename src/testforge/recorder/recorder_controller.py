@@ -74,6 +74,8 @@ class RecorderController:
                 self._persist_step(step_data)
         except Exception:
             pass
+        self._flush_field_snapshots()
+        self._flush_value_mutations()
 
     def handle_commands(self) -> str:
         """Process pending commands. Returns 'stop' if recording should end."""
@@ -86,6 +88,7 @@ class RecorderController:
         return "continue" if not self._paused else "paused"
 
     def stop(self) -> RecordingSession:
+        self._capture_final_state_snapshot("recording_stopped")
         self.flush_events()
         try:
             self._page.remove_listener("request", self._on_request)
@@ -102,6 +105,7 @@ class RecorderController:
         return session
 
     def finalize(self) -> RecordingSession:
+        self._capture_final_state_snapshot("recording_finalized")
         self.flush_events()
         return self._session_manager.finalize()
 
@@ -212,11 +216,68 @@ class RecorderController:
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
+    # ---- Sprint 3: Field snapshot & value mutation persistence ----
+
+    def _save_field_snapshot(self, snapshot_data: dict):
+        """Append a single field snapshot to field_snapshots.jsonl."""
+        path = os.path.join(self._store._session_dir, "field_snapshots.jsonl")
+        with open(path, "a") as f:
+            f.write(json.dumps(snapshot_data, default=str) + "\n")
+
+    def _save_value_mutation(self, mutation_data: dict):
+        """Append a value mutation to value_mutations.jsonl."""
+        path = os.path.join(self._store._session_dir, "value_mutations.jsonl")
+        with open(path, "a") as f:
+            f.write(json.dumps(mutation_data, default=str) + "\n")
+
+    def _flush_field_snapshots(self):
+        """Read pending field snapshot batches from JS and persist."""
+        try:
+            batches = self._page.evaluate("""() => {
+                const q = window.__tfFieldSnapshotQueue || [];
+                window.__tfFieldSnapshotQueue = [];
+                return q;
+            }""")
+            for batch in (batches or []):
+                self._save_field_snapshot(batch)
+        except Exception:
+            pass
+
+    def _flush_value_mutations(self):
+        """Read pending value mutations from JS and persist."""
+        try:
+            mutations = self._page.evaluate("""() => {
+                const q = window.__tfValueMutationQueue || [];
+                window.__tfValueMutationQueue = [];
+                return q;
+            }""")
+            for mut in (mutations or []):
+                self._save_value_mutation(mut)
+        except Exception:
+            pass
+
+    def _capture_final_state_snapshot(self, reason: str = "unknown"):
+        """Read final state from JS sessionStorage and save to final_state_snapshot.json."""
+        try:
+            final_state = self._page.evaluate("""() => {
+                const raw = sessionStorage.getItem('__tfFinalState');
+                sessionStorage.removeItem('__tfFinalState');
+                return raw ? JSON.parse(raw) : null;
+            }""")
+            if final_state:
+                path = os.path.join(self._store._session_dir, "final_state_snapshot.json")
+                with open(path, "w") as f:
+                    json.dump(final_state, f, indent=2, default=str)
+        except Exception:
+            pass
+
     # --- Overlay JS (injected into page) ---
     _OVERLAY_JS = r"""
         window.__tfEventQueue = [];
         window.__tfStepQueue = [];
         window.__tfCommandQueue = [];
+        window.__tfFieldSnapshotQueue = [];
+        window.__tfValueMutationQueue = [];
         window.__tfEventCounter = window.__tfEventCounter || 0;
         window.__tfAssertWaiting = false;
         window.__tfPendingSubmit = null;  // { url, method, timestamp } or null — restored from sessionStorage
@@ -464,6 +525,182 @@ class RecorderController:
             });
         }
 
+        // ---- Field snapshot (Sprint 3) ----
+        window._tf_snapshotFields = function() {
+            var snapshots = [];
+            // Input, textarea, select
+            document.querySelectorAll('input, textarea, select').forEach(function(el) {
+                var tag = el.tagName.toLowerCase();
+                var rect = el.getBoundingClientRect();
+                var key = el.name || el.getAttribute('aria-label') || el.placeholder || el.id;
+                if (!key) key = tag + '_' + (el.className || '').substring(0,20);
+                snapshots.push({
+                    timestamp: new Date().toISOString(),
+                    fingerprint: tag + '#' + (el.id||'') + '[name=' + (el.name||'') + ']',
+                    identifiers: {
+                        id: el.id || null,
+                        name: el.name || null,
+                        label: el.labels && el.labels[0] ? el.labels[0].textContent.trim() : null,
+                        placeholder: el.placeholder || null,
+                        'aria-label': el.getAttribute('aria-label') || null,
+                        css_path: window._tf_getSelector ? window._tf_getSelector(el) : null
+                    },
+                    tag: tag,
+                    type: el.getAttribute('type') || null,
+                    value: (el.value || '').substring(0, 200),
+                    checked: (el.type === 'checkbox' || el.type === 'radio') ? el.checked : null,
+                    visibility: (rect.width > 0 && rect.height > 0) ? 'visible' : 'hidden',
+                    enabled: !el.disabled,
+                    focused: el === document.activeElement,
+                    bounding_box: {x: Math.round(rect.x||0), y: Math.round(rect.y||0), width: Math.round(rect.width||0), height: Math.round(rect.height||0)}
+                });
+            });
+            // contenteditable
+            document.querySelectorAll('[contenteditable="true"], [contenteditable=""]').forEach(function(el) {
+                var rect = el.getBoundingClientRect();
+                snapshots.push({
+                    timestamp: new Date().toISOString(),
+                    fingerprint: 'contenteditable#' + (el.id||'') + (el.className ? '.' + el.className.substring(0,20) : ''),
+                    identifiers: {
+                        id: el.id || null,
+                        role: el.getAttribute('role') || null,
+                        'aria-label': el.getAttribute('aria-label') || null,
+                        css_path: window._tf_getSelector ? window._tf_getSelector(el) : null
+                    },
+                    tag: el.tagName.toLowerCase(),
+                    type: 'contenteditable',
+                    value: (el.textContent || '').substring(0, 200),
+                    checked: null,
+                    visibility: (rect.width > 0 && rect.height > 0) ? 'visible' : 'hidden',
+                    enabled: !el.disabled,
+                    focused: el === document.activeElement,
+                    bounding_box: {x: Math.round(rect.x||0), y: Math.round(rect.y||0), width: Math.round(rect.width||0), height: Math.round(rect.height||0)}
+                });
+            });
+            // ARIA widgets: combobox, listbox, slider, spinbutton, searchbox, textbox
+            document.querySelectorAll('[role="combobox"], [role="listbox"], [role="slider"], [role="spinbutton"], [role="searchbox"], [role="textbox"]').forEach(function(el) {
+                if (el.isContentEditable) return;
+                if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT') return;
+                var rect = el.getBoundingClientRect();
+                var ariaVal = el.getAttribute('aria-valuenow') || el.getAttribute('aria-valuetext') || null;
+                snapshots.push({
+                    timestamp: new Date().toISOString(),
+                    fingerprint: 'aria-' + (el.getAttribute('role')||'widget') + '#' + (el.id||''),
+                    identifiers: {
+                        id: el.id || null,
+                        role: el.getAttribute('role') || null,
+                        'aria-label': el.getAttribute('aria-label') || null,
+                        'aria-labelledby': el.getAttribute('aria-labelledby') || null,
+                        css_path: window._tf_getSelector ? window._tf_getSelector(el) : null
+                    },
+                    tag: el.tagName.toLowerCase(),
+                    type: 'aria-' + (el.getAttribute('role') || 'widget'),
+                    value: ariaVal || (el.textContent || '').substring(0, 200),
+                    checked: null,
+                    visibility: (rect.width > 0 && rect.height > 0) ? 'visible' : 'hidden',
+                    enabled: !el.disabled && el.getAttribute('aria-disabled') !== 'true',
+                    focused: el === document.activeElement || el.contains(document.activeElement),
+                    bounding_box: {x: Math.round(rect.x||0), y: Math.round(rect.y||0), width: Math.round(rect.width||0), height: Math.round(rect.height||0)}
+                });
+            });
+            return snapshots;
+        };
+
+        window._tf_captureFinalState = function(reason) {
+            var snapshots = window._tf_snapshotFields();
+            try {
+                sessionStorage.setItem('__tfFinalState', JSON.stringify({
+                    reason: reason || 'unknown',
+                    timestamp: new Date().toISOString(),
+                    url: window.location.href,
+                    page_title: document.title,
+                    fields: snapshots
+                }));
+            } catch(_e) { /* ignore oversized */ }
+            return snapshots;
+        };
+
+        // ---- Setter hooks for programmatic value changes (Sprint 3) ----
+        (function() {
+            var _hookValue = function(proto, tag) {
+                var desc = Object.getOwnPropertyDescriptor(proto, 'value');
+                if (!desc || !desc.set) return;
+                Object.defineProperty(proto, 'value', {
+                    configurable: true,
+                    enumerable: desc.enumerable,
+                    get: function() { return desc.get.call(this); },
+                    set: function(val) {
+                        var oldVal = desc.get.call(this);
+                        desc.set.call(this, val);
+                        if (oldVal !== val) {
+                            window.__tfValueMutationQueue.push({
+                                type: 'value_mutation',
+                                timestamp: new Date().toISOString(),
+                                tag: tag,
+                                name: this.name || null,
+                                id: this.id || null,
+                                old_value: (oldVal||'').substring(0,200),
+                                new_value: (val||'').substring(0,200),
+                                fingerprint: tag + '#' + (this.id||'') + '[name=' + (this.name||'') + ']'
+                            });
+                        }
+                    }
+                });
+            };
+            try { _hookValue(HTMLInputElement.prototype, 'input'); } catch(_e) {}
+            try { _hookValue(HTMLTextAreaElement.prototype, 'textarea'); } catch(_e) {}
+            try { _hookValue(HTMLSelectElement.prototype, 'select'); } catch(_e) {}
+        })();
+
+        // ---- MutationObserver for contenteditable and ARIA widgets (Sprint 3) ----
+        window.__tfMutationObserver = null;
+        (function() {
+            try {
+                var _observer = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mut) {
+                        var el = mut.target;
+                        if (!el || el === document.body || el === document.documentElement) return;
+                        // contenteditable changes
+                        if (el.isContentEditable) {
+                            window.__tfFieldSnapshotQueue.push({
+                                type: 'content_edit',
+                                timestamp: new Date().toISOString(),
+                                fingerprint: 'contenteditable#' + (el.id||'') + (el.className ? '.' + el.className.substring(0,20) : ''),
+                                value: (el.textContent || '').substring(0, 200),
+                                tag: el.tagName.toLowerCase()
+                            });
+                            return;
+                        }
+                        // ARIA attribute changes
+                        if (mut.type === 'attributes' && mut.attributeName) {
+                            var attrRole = mut.target.getAttribute && mut.target.getAttribute('role');
+                            if (attrRole && ['combobox', 'listbox', 'slider', 'spinbutton', 'searchbox', 'textbox'].indexOf(attrRole) !== -1) {
+                                if (mut.attributeName === 'aria-valuenow' || mut.attributeName === 'aria-valuetext' || mut.attributeName === 'aria-label') {
+                                    window.__tfFieldSnapshotQueue.push({
+                                        type: 'aria_mutation',
+                                        timestamp: new Date().toISOString(),
+                                        fingerprint: 'aria-' + attrRole + '#' + (mut.target.id||''),
+                                        value: mut.target.getAttribute('aria-valuenow') || mut.target.getAttribute('aria-valuetext') || (mut.target.textContent || '').substring(0,200),
+                                        tag: mut.target.tagName.toLowerCase(),
+                                        role: attrRole,
+                                        attribute: mut.attributeName
+                                    });
+                                }
+                            }
+                        }
+                    });
+                });
+                _observer.observe(document.documentElement, {
+                    childList: true,
+                    subtree: true,
+                    characterData: true,
+                    attributes: true,
+                    attributeFilter: ['aria-valuenow', 'aria-valuetext', 'aria-label', 'contenteditable']
+                });
+                window.__tfMutationObserver = _observer;
+            } catch(_e) { /* MutationObserver not available */ }
+        })();
+
         window._tf_detectState = function(el) {
             var tag = (el.tagName||'').toLowerCase();
             if ((tag === 'input' && (el.type === 'checkbox' || el.type === 'radio')) || tag === 'option') {
@@ -581,6 +818,7 @@ class RecorderController:
                 };
                 window.__tfPendingSubmit = _pending;
                 try { sessionStorage.setItem('__tfPendingSubmit', JSON.stringify(_pending)); } catch(_e) {}
+                window._tf_captureFinalState('form_submit');
                 _tf_pushEvent('submit', el);
                 // Capture form field values at submit time (currency-masked inputs
                 // prevent native input events, so this is the only point we can read them).
@@ -637,8 +875,36 @@ class RecorderController:
             } catch(_e) {}
         }, 300);
 
+        // ---- Field snapshot polling (Sprint 3) ----
+        window.__tfLastSnapshotKey = {};
+        window.__tfFieldSnapshotInterval = setInterval(function() {
+            if (window.__tfAssertWaiting) return;
+            try {
+                var snaps = window._tf_snapshotFields();
+                var changed = [];
+                snaps.forEach(function(s) {
+                    var key = s.fingerprint;
+                    var prev = window.__tfLastSnapshotKey[key] || '';
+                    var curr = s.value || '';
+                    if (curr !== prev) {
+                        window.__tfLastSnapshotKey[key] = curr;
+                        changed.push(s);
+                    }
+                });
+                if (changed.length > 0) {
+                    window.__tfFieldSnapshotQueue.push({
+                        timestamp: new Date().toISOString(),
+                        snapshots: changed,
+                        count: changed.length
+                    });
+                }
+            } catch(_e) {}
+        }, 1000);
+
         window.addEventListener('beforeunload', function() {
             clearInterval(window.__tfPollInterval);
+            clearInterval(window.__tfFieldSnapshotInterval);
+            window._tf_captureFinalState('beforeunload');
         });
 
         // ---- Keyboard shortcuts ----
@@ -650,6 +916,7 @@ class RecorderController:
                     console.log('[TestForge] Shift+P: toggle pause');
                     break;
                 case 'S':
+                    window._tf_captureFinalState('user_stop');
                     window.__tfCommandQueue.push('STOP');
                     console.log('[TestForge] Shift+S: stop');
                     break;
