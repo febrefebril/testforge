@@ -86,28 +86,37 @@ class StepExecutor:
 
         el = None
         fill_val = ""
+        import sys
+        print(f"  ⚡ _try_data_fill: candidates={[(k,v) for k,v in candidates]} selector={selector}", file=sys.stderr)
         # Try each key: first by step's selector, then by aria-label search
         for key, val in candidates:
             # Try step's selector
             if not el:
                 try:
                     cand = self.page.locator(selector)
-                    if cand.count() > 0:
+                    cnt = cand.count()
+                    print(f"  ⚡   selector '{selector[:40]}' count={cnt}", file=sys.stderr)
+                    if cnt > 0:
                         el = cand.first
                         fill_val = val
                         break
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f"  ⚡   selector error: {e}", file=sys.stderr)
             # Try aria-label fallback
             if not el:
                 try:
-                    cand = self.page.locator(f'input[aria-label="{key}"], textarea[aria-label="{key}"]')
-                    if cand.count() > 0:
+                    sel2 = f'input[aria-label="{key}"], textarea[aria-label="{key}"]'
+                    cand = self.page.locator(sel2)
+                    cnt = cand.count()
+                    print(f"  ⚡   aria-search '{key[:30]}' count={cnt}", file=sys.stderr)
+                    if cnt > 0:
                         el = cand.first
                         fill_val = val
                         break
-                except Exception:
-                    continue
+                except Exception as e:
+                    print(f"  ⚡   aria-search error: {e}", file=sys.stderr)
+
+        print(f"  ⚡ _try_data_fill result: el={el is not None} fill_val='{fill_val}'", file=sys.stderr)
 
         if not el or not fill_val:
             return False
