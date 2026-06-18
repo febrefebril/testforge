@@ -42,14 +42,15 @@ class StepExecutor:
 
         Returns (value, intention) — both empty strings if no match.
         """
-        # Collect identifiers from step target
+        # Collect identifiers from step target (use getattr for test fakes)
         ids = {}
         if step.target:
-            if step.target.name: ids["name"] = step.target.name
-            if step.target.accessible_name: ids["aria_label"] = step.target.accessible_name
-            if step.target.placeholder: ids["placeholder"] = step.target.placeholder
-            if step.target.element_id: ids["id"] = step.target.element_id
-            if step.target.label: ids["label"] = step.target.label
+            for attr, key in [('name', 'name'), ('accessible_name', 'aria_label'),
+                              ('placeholder', 'placeholder'), ('element_id', 'id'),
+                              ('label', 'label')]:
+                val = getattr(step.target, attr, None) or ''
+                if val:
+                    ids[key] = val
 
         if not ids and not data_values and not field_value_map:
             return ("", "")
