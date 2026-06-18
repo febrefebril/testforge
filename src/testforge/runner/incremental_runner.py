@@ -71,6 +71,7 @@ class IncrementalRunner:
         self.step_results = []
         self.failed_step_indices = set()
         self._data_values = {}
+        self._field_value_map = {}
 
         self.precondition_validator = None
         self.step_executor = None
@@ -108,25 +109,22 @@ class IncrementalRunner:
         stc = normalizer.normalize(rec_dir, f"ST-{self.recording_id}", "web", self.base_url)
         self.steps = stc.steps
         self.app_name = stc.application or "web"
+        self._field_value_map = stc.field_values or {}
 
-        # Detect missing fills and suggest data file
-        missing = []
-        for s in self.steps:
-            ctx = getattr(s, "context", {}) or {}
-            if ctx.get("missing_fill"):
-                label = ctx.get("fill_label", "") or (
-                    getattr(s.target, "accessible_name", "")
-                    or getattr(s.target, "label", "")
-                    or getattr(s.target, "placeholder", "")
-                    or f"step_{self.steps.index(s)+1}"
-                )
-                missing.append(label)
-        if missing:
-            template = {k: "<valor>" for k in missing}
-            import json as _json
-            print(f"  ⚠ {len(missing)} campo(s) sem valor na gravação (currencymask)")
-            print(f"  💡 Crie um data file: --data dados.json")
-            print(f"  📋 Template: {_json.dumps(template, indent=2, ensure_ascii=False)}")
+        # Report field-value map and suggest data file for missing values
+        if self._field_value_map:
+            missing = []
+            print(f"  📋 {len(self._field_value_map)} campo(s) mapeado(s) com intenção")
+            for key, fvm in sorted(self._field_value_map.items()):
+                val_display = fvm.value if fvm.value else "<pendente>"
+                if not fvm.value:
+                    missing.append(key)
+                print(f"    {key}: {val_display} ({fvm.intention})")
+            if missing:
+                template = {k: "<valor>" for k in missing}
+                print(f"  ⚠ {len(missing)} campo(s) sem valor na gravação (currencymask)")
+                print(f"  💡 Crie um data file: --data dados.json")
+                print(f"  📋 Template: {json.dumps(template, indent=2, ensure_ascii=False)}")
 
     def _find_recording_dir(self, rec_id):
         candidates = [
@@ -151,6 +149,27 @@ class IncrementalRunner:
             self._data_values = raw["scenarios"].get("default", {})
         else:
             self._data_values = raw
+
+        # Cross-reference data_values with field_value_map: populate missing
+        # field_value_map entries with matching data_values keys.
+        if self._data_values and self._field_value_map:
+            import re as _re
+            def _norm(s):
+                if not s: return ""
+                return _re.sub(r'[-_\s]+', '_', s.strip().lower())
+            updates = 0
+            for key, val in self._data_values.items():
+                ck = _norm(key)
+                for fk, fvm in self._field_value_map.items():
+                    if hasattr(fvm, 'value') and not fvm.value and _norm(fk) == ck:
+                        fvm.value = str(val)
+                        updates += 1
+                    elif isinstance(fvm, dict) and not fvm.get('value'):
+                        if _norm(fk) == ck:
+                            fvm['value'] = str(val)
+                            updates += 1
+            if updates:
+                print(f"  🔗 {updates} campo(s) populados do data file para field_value_map")
 
     def _init_components(self):
         self.precondition_validator = StepPreconditionValidator(self.page)
@@ -216,7 +235,15 @@ class IncrementalRunner:
                 or getattr(step.target, "accessible_name", "")
                 or ""
             )
-        return f"{step.action} step {step_num}" + (f" on '{target_text}'" if target_text else "")
+        intention = f"{step.action} step {step_num}" + (f" on '{target_text}'" if target_text else "")
+
+        # Enrich with field_value_map intention when available
+        ctx = getattr(step, "context", {}) or {}
+        if ctx.get("resolved_intention"):
+            intention += f" [intent: {ctx['resolved_intention']}]"
+        if ctx.get("resolved_value"):
+            intention += f" [value: {ctx['resolved_value']}]"
+        return intention
 
     def _build_healing_payload(self, step, step_num, original_error, failure_phase):
         if not self.evidence_collector:
@@ -242,6 +269,12 @@ class IncrementalRunner:
             "failure_phase": failure_phase,
             "original_error": original_error,
         }
+        # Include resolved value + intention from field_value_map for healing context
+        ctx = getattr(step, "context", {}) or {}
+        if ctx.get("resolved_value"):
+            step_context["field_value"] = ctx["resolved_value"]
+        if ctx.get("resolved_intention"):
+            step_context["field_intention"] = ctx["resolved_intention"]
         return self.evidence_collector.build_llm_payload(
             step_context=step_context,
             include_screenshot=False,
@@ -590,6 +623,7 @@ class IncrementalRunner:
         try:
             sel_used = self.step_executor.execute(
                 step, base_url=self.base_url, data_values=self._data_values,
+                field_value_map=self._field_value_map,
             )
             result.selected_locator = sel_used or result.original_locator
         except Exception as exc:
