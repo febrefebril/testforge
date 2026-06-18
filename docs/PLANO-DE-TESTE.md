@@ -575,4 +575,170 @@ testforge run semantic_tests/ST-TC-01/test_st_tc_01.py
 | TC-09.04 | Timeout | [ ] |
 | TC-10.01 | LLM real | [ ] |
 
-**Total:** 27 casos de teste
+---
+
+## TC-11: Validação de Intenção (Sprints 3-7)
+
+### TC-11.01: Field Snapshots + Setter Hooks
+
+| Campo | Valor |
+|-------|-------|
+| **Objetivo** | Verificar que o recorder captura valor mesmo com preventDefault |
+| **Pré-condição** | Página prevent-default-input rodando |
+
+**Passos:**
+1. Sirva `tests/intent_lab/pages/`: `cd tests/intent_lab && python -m http.server 8080 &`
+2. Execute: `testforge record http://localhost:8080/pages/prevent-default-input/index.html --name "TC-11.01"`
+3. Digite no campo (evento input é prevenido)
+4. Clique em OK
+5. Shift+S para parar
+
+**Resultado esperado:**
+- [ ] `field_snapshots.jsonl` contém snapshots do campo
+- [ ] `value_mutations.jsonl` contém setter hook do value
+- [ ] Após normalizar, campo aparece como resolvido (snapshot_diff)
+
+**Status:** [ ] PASS  [ ] FAIL
+
+### TC-11.02: Completeness Check + Interactive Prompt
+
+| Campo | Valor |
+|-------|-------|
+| **Objetivo** | Verificar que CLI pergunta valores perdidos |
+
+**Passos:**
+1. Execute: `testforge record http://localhost:8080/pages/missing-fill-gap/index.html --name "TC-11.02" --complete`
+2. Digite rapidamente no campo (simule gap)
+3. Clique no botão
+4. Shift+S
+5. Quando o CLI perguntar, informe um valor
+
+**Resultado esperado:**
+- [ ] Console mostra "Intenção INCOMPLETA — 1 pendente(s)"
+- [ ] CLI pergunta "Valor para 'Valor':"
+- [ ] Após informar, mostra "✓ Todos os campos resolvidos"
+- [ ] `field_value_map.json` contém source = "user_supplied_cli"
+
+**Status:** [ ] PASS  [ ] FAIL
+
+### TC-11.03: RecordingReadinessGate — Fluxo Feliz
+
+| Campo | Valor |
+|-------|-------|
+| **Objetivo** | Verificar que gravação completa passa no readiness gate |
+
+**Passos:**
+1. Sirva página ready-flow
+2. Execute: `testforge record http://localhost:8080/pages/ready-flow/index.html --name "TC-11.03" --validate-before-ready`
+3. Preencha nome, cidade, aceite termos
+4. Clique em Enviar
+5. Shift+S
+
+**Resultado esperado:**
+- [ ] "Validando gravação antes de marcar como pronta..."
+- [ ] "Validacao PASSOU — gravacao pronta para o time!"
+- [ ] `recordings/TC-11.03/readiness/readiness_report.json` existe
+- [ ] `readiness_report.md` mostra verdict PASS
+
+**Status:** [ ] PASS  [ ] FAIL
+
+### TC-11.04: RecordingReadinessGate — Falha Bloqueante
+
+| Campo | Valor |
+|-------|-------|
+| **Objetivo** | Verificar que gravação com falha bloqueante NÃO passa |
+
+**Passos:**
+1. Sirva página blocking-step-failure
+2. Execute: `testforge record http://localhost:8080/pages/blocking-step-failure/index.html --name "TC-11.04" --validate-before-ready`
+3. Pule UF, tente selecionar cidade (deve estar desabilitada)
+4. Clique em Enviar (deve mostrar erro)
+5. Shift+S
+
+**Resultado esperado:**
+- [ ] "Validacao FALHOU" ou "com RESSALVAS"
+- [ ] Status final NÃO é ready_for_team
+- [ ] Relatório mostra blocking step falhou
+
+**Status:** [ ] PASS  [ ] FAIL
+
+### TC-11.05: --no-interactive Cria Template
+
+| Campo | Valor |
+|-------|-------|
+| **Objetivo** | Verificar que modo não-interativo gera template sem bloquear |
+
+**Passos:**
+1. Execute: `testforge record http://localhost:8080/pages/missing-fill-gap/index.html --name "TC-11.05" --no-interactive`
+2. Faça uma interação simples
+3. Shift+S
+
+**Resultado esperado:**
+- [ ] Console mostra "Template criado: test_data.template.json"
+- [ ] Não pergunta valores
+- [ ] `test_data.template.json` contém campos com type "pending"
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+## TC-12: Relatório Consolidado do Piloto (Sprint 8)
+
+### TC-12.01: Pilot Report
+
+| Campo | Valor |
+|-------|-------|
+| **Objetivo** | Verificar que o dashboard agrega múltiplas gravações |
+
+**Pré-condição:** Ter pelo menos 2 gravações com readiness report (TC-11.03 e TC-11.04)
+
+**Passos:**
+1. Execute: `testforge pilot-report`
+
+**Resultado esperado:**
+- [ ] Console mostra resumo com total, prontas, incompletas
+- [ ] `reports/pilot_readiness_report.json` contém summary
+- [ ] `reports/pilot_readiness_report.md` contém dashboard legível
+
+**Status:** [ ] PASS  [ ] FAIL
+
+---
+
+## Resumo de Resultados
+
+| TC | Descrição | Status |
+|----|-----------|--------|
+| TC-01.01 | Gravar fluxo simples | [ ] |
+| TC-01.02 | Gravar com nome especial | [ ] |
+| TC-01.03 | Modo Assert | [ ] |
+| TC-02.01 | Compilar gravação | [ ] |
+| TC-02.02 | Compilar com --data | [ ] |
+| TC-02.03 | Compilar com prefixo | [ ] |
+| TC-03.01 | Executar sem falhas | [ ] |
+| TC-03.02 | Executar data-driven | [ ] |
+| TC-04.01 | L1 healing (demo-heal) | [ ] |
+| TC-04.02 | L3 MockLLMHealer | [ ] |
+| TC-04.03 | Auto-learn | [ ] |
+| TC-05.01 | FAM-01 healing | [ ] |
+| TC-05.02 | FAM-02 healing | [ ] |
+| TC-05.03 | FAM-04 healing | [ ] |
+| TC-05.04 | FAM-05 healing | [ ] |
+| TC-05.05 | FAM-06 healing | [ ] |
+| TC-06.01 | Classification (11/11) | [ ] |
+| TC-06.02 | Classification manual | [ ] |
+| TC-07.01 | Evidence collection | [ ] |
+| TC-08.01 | Data-driven cycle | [ ] |
+| TC-08.02 | Múltiplos cenários | [ ] |
+| TC-09.01 | Gravação inexistente | [ ] |
+| TC-09.02 | Script inexistente | [ ] |
+| TC-09.03 | Recording sem fills | [ ] |
+| TC-09.04 | Timeout | [ ] |
+| TC-10.01 | LLM real | [ ] |
+| TC-11.01 | Field snapshots + setter hooks | [ ] |
+| TC-11.02 | Completeness + interactive prompt | [ ] |
+| TC-11.03 | Readiness gate — fluxo feliz | [ ] |
+| TC-11.04 | Readiness gate — falha bloqueante | [ ] |
+| TC-11.05 | --no-interactive template | [ ] |
+| TC-12.01 | Pilot report consolidado | [ ] |
+
+**Total:** 33 casos de teste

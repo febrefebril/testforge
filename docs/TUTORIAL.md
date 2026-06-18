@@ -296,14 +296,142 @@ Secoes para testar manualmente:
 
 ---
 
-## 7. Relatorio de Sessao de Teste
+## 7. Validação de Intenção (Sprints 3-7)
 
-Apos testar, gere um resumo:
+### 7.1 Field Snapshots + Setter Hooks
+
+O recorder agora captura snapshots periódicos de todos os campos da página
+a cada 1s, além de interceptar setters de `value` via JS.
 
 ```bash
-python scripts/review.py --pending
+# Após gravar, verifique:
+ls recordings/REC-*/field_snapshots.jsonl   # snapshots periódicos
+ls recordings/REC-*/value_mutations.jsonl   # setters interceptados
+```
+
+- [ ] `field_snapshots.jsonl` tem linhas com `fingerprint`, `tag`, `value`, `checked`, `focused`?
+- [ ] `value_mutations.jsonl` tem mutations de `HTMLInputElement.value`?
+- [ ] Final state salvo em sessionStorage ao parar?
+
+### 7.2 Intent Reconstructor
+
+Reconstroi intenção do usuário a partir de 3 estratégias:
+
+1. **snapshot_diff**: diff entre snapshots consecutivos
+2. **form_values**: valores do form no submit
+3. **network_payload**: payload de POST capturado
+
+```bash
+python -c "
+from testforge.semantic import RecordingNormalizer
+stc = RecordingNormalizer().normalize('recordings/REC-XXXX', 'ST-TEST', 'web', 'http://localhost')
+for k, v in stc.field_values.items():
+    src = getattr(v, 'source', '?')
+    val = getattr(v, 'value', '?')
+    print(f'  {k}: {val} (source={src})')
+"
+```
+
+- [ ] Campos com source = snapshot_diff / form_values / network_payload?
+- [ ] Nenhum campo missing após reconstructor?
+
+### 7.3 RecordingReadinessGate
+
+Avalia 5 critérios antes de marcar gravação como pronta:
+
+```bash
+testforge record http://localhost:8765 --name "meu-teste" --validate-before-ready
+```
+
+- [ ] Completude: todos campos resolvidos?
+- [ ] Steps: todos passaram?
+- [ ] Blocking: steps bloqueantes resolvidos?
+- [ ] User-supplied: valores informados validados?
+- [ ] Healing oracles: passaram?
+
+Verifique o relatório:
+```bash
+cat recordings/meu-teste/readiness/readiness_report.md
+```
+
+### 7.4 Modo Piloto
+
+```bash
+testforge record http://localhost:8765 --name "meu-teste" --pilot-mode
+```
+
+- [ ] Valida automaticamente após gravar?
+- [ ] Se campo faltando, CLI pergunta valor?
+- [ ] Status final é ready_for_team se tudo OK?
+
+### 7.5 Intent Lab — Páginas de Teste
+
+Sirva as páginas e teste cada fluxo:
+
+```bash
+cd tests/intent_lab && python -m http.server 8080 &
+```
+
+| Página | URL | O que testar |
+|--------|-----|-------------|
+| ready-flow | `/pages/ready-flow/` | Fluxo feliz completo |
+| missing-fill-gap | `/pages/missing-fill-gap/` | Gap de digitação |
+| prevent-default-input | `/pages/prevent-default-input/` | preventDefault |
+| currency-mask | `/pages/currency-mask/` | Máscara monetária |
+| native-select | `/pages/native-select/` | Select nativo |
+| custom-combobox | `/pages/custom-combobox/` | role=combobox |
+| contenteditable | `/pages/contenteditable/` | Editor rico |
+| network-payload-only | `/pages/network-payload-only/` | POST via form |
+| iframe-field | `/pages/iframe-field/` | Iframe same-origin |
+| shadow-dom-field | `/pages/shadow-dom-field/` | Shadow DOM |
+| upload-file | `/pages/upload-file/` | Input type=file |
+| two-similar-fields | `/pages/two-similar-fields/` | Campos parecidos |
+| dynamic-result | `/pages/dynamic-result/` | Resultado dinâmico |
+| blocking-step-failure | `/pages/blocking-step-failure/` | Falha em cascata |
+
+Para cada página:
+- [ ] Gravação finaliza sem crash?
+- [ ] Status é compatível com o fluxo (READY / REVIEW / FAIL)?
+- [ ] Relatório de readiness é compreensível?
+
+## 8. Relatório Consolidado do Piloto (Sprint 8)
+
+```bash
+# Após ter várias gravações com --validate-before-ready:
+testforge pilot-report
+```
+
+- [ ] `reports/pilot_readiness_report.md` gerado?
+- [ ] Mostra total de gravações, prontas, incompletas?
+- [ ] Lista falhas por categoria?
+- [ ] Ajuda a priorizar correções?
+
+## 9. Execução Incremental (Sprint 5+)
+
+```bash
+testforge run-incremental semantic_tests/ST-meu-teste/test_st_meu_teste.py
+```
+
+- [ ] Passos executam um a um?
+- [ ] Pré-condições e pós-condições são avaliadas?
+- [ ] Healing é tentado por step?
+- [ ] Relatório final mostra resumo por step?
+
+## 10. Testes Automatizados
+
+```bash
+# Todos os testes (194)
+python -m pytest tests/ -v
+
+# Apenas Sprints 3-8
+python -m pytest tests/test_sprint3_field_snapshots.py \
+                 tests/test_sprint4_intent_reconstructor.py \
+                 tests/test_sprint5_readiness_gate.py \
+                 tests/intent_lab/ \
+                 tests/test_sprint7_cli_integration.py \
+                 tests/test_sprint8_pilot_metrics.py -v
 ```
 
 ---
 
-*Tutorial criado em 2026-06-13. Execute `python scripts/test_all.py` para validacao rapida.*
+*Tutorial criado em 2026-06-13. Atualizado em 2026-06-18 (Sprints 3-8). Execute `python -m pytest tests/ -v` para validacao.*
