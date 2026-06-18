@@ -35,6 +35,10 @@ class StepExecutor:
             return ""
 
         if action == "click":
+            # Data-driven fill: if clicking an input and we have data, fill it first
+            tag = (step.target.tag or "").lower() if step.target else ""
+            if tag in ("input", "textarea") and data_values:
+                self._try_data_fill(step, selector, data_values)
             return self._execute_click(step, selector)
         if action == "fill":
             return self._execute_fill(step, selector, data_values)
@@ -51,6 +55,40 @@ class StepExecutor:
             return selector
 
         raise NotImplementedError(f"acao desconhecida: {action}")
+
+    def _try_data_fill(self, step, selector, data_values):
+        """Attempt to fill an input/textarea from data values before clicking."""
+        label = ""
+        if step.target:
+            label = getattr(step.target, "label", "") or getattr(step.target, "placeholder", "")
+        fill_val = data_values.get(label, "")
+        if not fill_val:
+            for k, v in data_values.items():
+                if k in label or (label and label in k):
+                    fill_val = str(v)
+                    break
+        if not fill_val:
+            return
+
+        try:
+            el = self.page.locator(selector).first
+            mask = el.get_attribute("currencymask") or el.get_attribute("data-mask")
+            if mask is not None:
+                el.click()
+                self.page.wait_for_timeout(150)
+                raw = str(fill_val).replace(".", "").replace(",", "").replace(" ", "")
+                try:
+                    cents = str(int(float(raw) * 100))
+                except ValueError:
+                    cents = raw
+                el.press_sequentially(cents, delay=50)
+                self.page.keyboard.press("Tab")
+                self.page.wait_for_timeout(200)
+            else:
+                self.page.fill(selector, str(fill_val), timeout=self.DEFAULT_TIMEOUT)
+                self.page.wait_for_timeout(150)
+        except Exception:
+            pass
 
     def _execute_click(self, step, selector):
         if not selector:
