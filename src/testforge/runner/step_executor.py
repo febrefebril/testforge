@@ -76,8 +76,8 @@ class StepExecutor:
 
         try:
             el = self.page.locator(selector).first
-            mask = el.get_attribute("currencymask") or el.get_attribute("data-mask")
-            if mask is not None:
+            has_mask = el.get_attribute("currencymask") is not None
+            if has_mask:
                 el.click()
                 self.page.wait_for_timeout(150)
                 raw = str(fill_val).replace(".", "").replace(",", "").replace(" ", "")
@@ -119,8 +119,8 @@ class StepExecutor:
                     break
         try:
             el = self.page.locator(selector).first
-            mask = el.get_attribute("currencymask") or el.get_attribute("data-mask")
-            if mask is not None:
+            has_mask = el.get_attribute("currencymask") is not None
+            if has_mask:
                 el.click()
                 self.page.wait_for_timeout(150)
                 el.press_sequentially(str(value), delay=50)
