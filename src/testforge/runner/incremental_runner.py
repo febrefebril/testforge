@@ -109,6 +109,25 @@ class IncrementalRunner:
         self.steps = stc.steps
         self.app_name = stc.application or "web"
 
+        # Detect missing fills and suggest data file
+        missing = []
+        for s in self.steps:
+            ctx = getattr(s, "context", {}) or {}
+            if ctx.get("missing_fill"):
+                label = ctx.get("fill_label", "") or (
+                    getattr(s.target, "accessible_name", "")
+                    or getattr(s.target, "label", "")
+                    or getattr(s.target, "placeholder", "")
+                    or f"step_{self.steps.index(s)+1}"
+                )
+                missing.append(label)
+        if missing:
+            template = {k: "<valor>" for k in missing}
+            import json as _json
+            print(f"  ⚠ {len(missing)} campo(s) sem valor na gravação (currencymask)")
+            print(f"  💡 Crie um data file: --data dados.json")
+            print(f"  📋 Template: {_json.dumps(template, indent=2, ensure_ascii=False)}")
+
     def _find_recording_dir(self, rec_id):
         candidates = [
             Path.cwd() / "recordings" / rec_id,
