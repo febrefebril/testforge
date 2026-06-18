@@ -1,0 +1,492 @@
+{
+  "run_id": "quarta-feira_20260618-015613",
+  "recording_id": "quarta-feira",
+  "script_path": "semantic_tests/ST-quarta-feira/test_st-quarta-feira.py",
+  "base_url": "https://www8.caixa.gov.br/siopiinternet-web/",
+  "mode": "incremental",
+  "summary": {
+    "total": 11,
+    "passed": 10,
+    "healed_validated": 0,
+    "healing_rejected": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0,
+    "shadow_healed": 0
+  },
+  "steps": [
+    {
+      "step_num": 1,
+      "action": "navigation",
+      "status": "passed",
+      "original_locator": "",
+      "selected_locator": "",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "navigation_ok": true
+        },
+        "failures": [],
+        "message": ""
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url atual: https://simuladorhabitacao.caixa.gov.br/home"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/before_step_0001.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/before_step_0001.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/after_step_0001.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/after_step_0001.html"
+      },
+      "duration_ms": 496,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 2,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "a:has-text(\"Calculadora poder de compra Veja estimativas a partir da pre\")",
+      "selected_locator": "a:has-text(\"Calculadora poder de compra Veja estimativas a partir da pre\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_changed": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url before='https://simuladorhabitacao.caixa.gov.br/home' after='https://simuladorhabitacao.caixa.gov.br/calculadora'"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/before_step_0002.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/before_step_0002.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/after_step_0002.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/after_step_0002.html"
+      },
+      "duration_ms": 712,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 3,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "div:has-text(\"Pela renda Sei quanto ganho por mês Saiba quanto você conseg\")",
+      "selected_locator": "div:has-text(\"Pela renda Sei quanto ganho por mês Saiba quanto você conseg\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: mat-datepicker-toggle button"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/before_step_0003.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/before_step_0003.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/after_step_0003.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/after_step_0003.html"
+      },
+      "duration_ms": 649,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 4,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "mat-datepicker-toggle button",
+      "selected_locator": "mat-datepicker-toggle button",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: button.mat-calendar-period-button"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/before_step_0004.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/before_step_0004.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/after_step_0004.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/after_step_0004.html"
+      },
+      "duration_ms": 834,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 5,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "button.mat-calendar-period-button",
+      "selected_locator": "button.mat-calendar-period-button",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: button.mat-calendar-previous-button"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/before_step_0005.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/before_step_0005.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/after_step_0005.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/after_step_0005.html"
+      },
+      "duration_ms": 519,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 6,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "button.mat-calendar-previous-button",
+      "selected_locator": "button.mat-calendar-previous-button",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: span:has-text(\"1994\")"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/before_step_0006.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/before_step_0006.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/after_step_0006.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/after_step_0006.html"
+      },
+      "duration_ms": 576,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 7,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "span:has-text(\"1994\")",
+      "selected_locator": "span:has-text(\"1994\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: span:has-text(\"MAR\")"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/before_step_0007.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/before_step_0007.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/after_step_0007.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/after_step_0007.html"
+      },
+      "duration_ms": 589,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 8,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "span:has-text(\"MAR\")",
+      "selected_locator": "span:has-text(\"MAR\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: span:has-text(\"3\")"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/before_step_0008.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/before_step_0008.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/after_step_0008.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/after_step_0008.html"
+      },
+      "duration_ms": 521,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 9,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "span:has-text(\"3\")",
+      "selected_locator": "span:has-text(\"3\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: input[placeholder=\"R$0,00\"]"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/before_step_0009.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/before_step_0009.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/after_step_0009.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/after_step_0009.html"
+      },
+      "duration_ms": 609,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 10,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "input[placeholder=\"R$0,00\"]",
+      "selected_locator": "input[placeholder=\"R$0,00\"]",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: button:has-text(\"Calcular\")"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/before_step_0010.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/before_step_0010.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/after_step_0010.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/after_step_0010.html"
+      },
+      "duration_ms": 693,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 11,
+      "action": "click",
+      "status": "healing_rejected",
+      "original_locator": "button:has-text(\"Calcular\")",
+      "selected_locator": "button:has-text(\"Calcular\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": false,
+        "checks": {
+          "next_step_visible": false
+        },
+        "oracle_results": [],
+        "failures": [
+          "next_step_not_visible"
+        ],
+        "message": "proximo step nao apareceu: role=listitem[name=\"Valor mínimo de entrada R$ 13.514,64\"]"
+      },
+      "healing": {
+        "attempted": true,
+        "status": "PASSED_STEP",
+        "layer": "L3",
+        "family": "FAM-10",
+        "taxonomy_id": "OBS-001",
+        "strategy": "visibility_wait",
+        "original_locator": "button:has-text(\"Calcular\")",
+        "proposed_locator": "text=calculate_outline  Calcular",
+        "confidence": 0.85,
+        "validated": false,
+        "oracle_passed": false,
+        "rejection_reason": [
+          "postcondition_failed",
+          "next_step_not_visible"
+        ],
+        "rationale": "Mock: deterministic fallback using visibility_wait for click",
+        "raw_response": "",
+        "failure_phase": "postcondition",
+        "original_error": "proximo step nao apareceu: role=listitem[name=\"Valor mínimo de entrada R$ 13.514,64\"]",
+        "entry_id": "38d2a80061d2",
+        "promotion_state": "",
+        "promotion_allowed": false,
+        "promotion_blocks": []
+      },
+      "error_message": "Healing executou, mas pos-condicao/oracle falhou: proximo step nao apareceu: role=listitem[name=\"Valor mínimo de entrada R$ 13.514,64\"]",
+      "evidence_before": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/before_step_0011.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/before_step_0011.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/quarta-feira_20260618-015550/screenshots/after_step_0011.png",
+        "dom": "evidence/quarta-feira_20260618-015550/dom/after_step_0011.html"
+      },
+      "duration_ms": 16872,
+      "skip_reason": ""
+    }
+  ]
+}

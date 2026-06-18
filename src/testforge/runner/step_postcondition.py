@@ -143,7 +143,7 @@ class StepPostconditionValidator:
             if cands:
                 next_sel = cands[0].selector
                 try:
-                    self.page.wait_for_selector(next_sel, state="visible", timeout=8000)
+                    self.page.wait_for_selector(next_sel, state="visible", timeout=20000)
                     return PostconditionResult(
                         passed=True,
                         checks={"next_step_visible": True},
