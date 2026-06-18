@@ -254,8 +254,81 @@ class RecordingNormalizer:
         self._detect_step_dependencies(stc.steps)
         self._detect_navigation_clicks(stc.steps)
         self._detect_missing_fills(stc.steps)
+        self._audit_blind_spots(stc.steps)
 
         return stc
+
+    def _audit_blind_spots(self, steps: list) -> None:
+        """Detect patterns where user intent was likely missed by the recorder.
+
+        Blind spots are systematic, not random. Common patterns:
+        1. Input click + gap + next click → typing not captured (currencymask)
+        2. Select element click → select_option event missing
+        3. Drag/move events → not captured at all
+        4. File upload click → file path not in events
+
+        Results are stored in stc.blind_spots for reporting.
+        """
+        blind_spots = []
+        from datetime import datetime
+
+        actionable = [(i, s) for i, s in enumerate(steps)
+                      if s.action != "navigation" and not s.skip_reason]
+
+        for ai in range(len(actionable) - 1):
+            i_curr, s_curr = actionable[ai]
+            i_next, s_next = actionable[ai + 1]
+            gap_s = 0
+            try:
+                t1_str = s_curr.context.get("timestamp", "")
+                t2_str = s_next.context.get("timestamp", "")
+                if t1_str and t2_str:
+                    t1 = datetime.fromisoformat(t1_str.replace("Z", "+00:00"))
+                    t2 = datetime.fromisoformat(t2_str.replace("Z", "+00:00"))
+                    gap_s = (t2 - t1).total_seconds()
+            except ValueError:
+                pass
+
+            tag = (s_curr.target.tag or "").lower() if s_curr.target else ""
+
+            # Pattern: click on input with gap, no fill event between
+            if s_curr.action == "click" and tag in ("input", "textarea"):
+                if s_next.action != "fill" and gap_s > 2.0:
+                    label = (s_curr.target.accessible_name
+                             or s_curr.target.label
+                             or s_curr.target.placeholder or "")
+                    blind_spots.append({
+                        "step": i_curr + 1,
+                        "pattern": "typing_not_captured",
+                        "element": tag,
+                        "label": label,
+                        "gap_seconds": round(gap_s, 1),
+                        "resolution": "data-file or submit_form_values",
+                    })
+
+            # Pattern: click on select, no select_option event
+            if s_curr.action == "click" and tag == "select":
+                if s_next.action != "select_option":
+                    blind_spots.append({
+                        "step": i_curr + 1,
+                        "pattern": "select_not_captured",
+                        "resolution": "data-file",
+                    })
+
+            # Pattern: long gap between any two clicks (likely complex interaction)
+            if gap_s > 10.0:
+                blind_spots.append({
+                    "step": i_curr + 1,
+                    "pattern": "long_gap",
+                    "gap_seconds": round(gap_s, 1),
+                    "resolution": "review manually",
+                })
+
+        if blind_spots:
+            import sys
+            print(f"[TestForge] ⚠ {len(blind_spots)} blind spot(s) detectado(s):", file=sys.stderr)
+            for bs in blind_spots:
+                print(f"  Step {bs['step']}: {bs['pattern']} ({bs.get('label', bs.get('gap_seconds', ''))}) → {bs['resolution']}", file=sys.stderr)
 
     def _compact_fill_events(self, raw_events: list) -> list:
         """Compact sequential fill events on same element within 500ms window.

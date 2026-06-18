@@ -46,6 +46,7 @@ class SemanticTestCase:
     base_url: str = ""
     preconditions: list = field(default_factory=list)
     steps: list = field(default_factory=list)
+    blind_spots: list = field(default_factory=list)
 
     def to_dict(self) -> dict:
         result = {
