@@ -37,10 +37,12 @@ class StepExecutor:
         if action == "click":
             # Data-driven fill: if clicking an input and we have data, fill it first
             tag = (step.target.tag or "").lower() if step.target else ""
+            import sys
+            print(f"  ⚡ execute click: tag='{tag}' has_data={bool(data_values)} data_keys={list(data_values.keys()) if data_values else 'none'}", file=sys.stderr)
             if tag in ("input", "textarea") and data_values:
                 filled = self._try_data_fill(step, selector, data_values)
+                print(f"  ⚡ _try_data_fill returned: {filled}", file=sys.stderr)
                 if filled:
-                    # Value was filled — don't click again (would clear/refocus)
                     return selector
             return self._execute_click(step, selector)
         if action == "fill":
