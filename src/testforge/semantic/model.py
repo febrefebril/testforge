@@ -39,6 +39,22 @@ class SemanticAction:
 
 
 @dataclass
+class FieldValueMap:
+    """Maps a form field to its captured/provided value with intention.
+
+    Built during normalization by cross-referencing form_values (submit),
+    polling data, and fill events. Used during execution to match data
+    file keys to fields and to provide intention context for fallback.
+    """
+    field_key: str
+    value: str = ""
+    intention: str = ""
+    identifiers: dict = field(default_factory=dict)
+    source: str = ""  # "form_values" | "polling" | "fill_event" | "missing_fill"
+    step_index: int = -1
+
+
+@dataclass
 class SemanticTestCase:
     test_id: str
     source_recording_id: str
@@ -47,6 +63,7 @@ class SemanticTestCase:
     preconditions: list = field(default_factory=list)
     steps: list = field(default_factory=list)
     blind_spots: list = field(default_factory=list)
+    field_values: dict = field(default_factory=dict)  # key -> FieldValueMap
 
     def to_dict(self) -> dict:
         result = {
@@ -61,6 +78,18 @@ class SemanticTestCase:
                 "steps": [],
             }
         }
+        if self.field_values:
+            result["semantic_test_case"]["field_values"] = {
+                k: {
+                    "field_key": v.field_key,
+                    "value": v.value,
+                    "intention": v.intention,
+                    "identifiers": v.identifiers,
+                    "source": v.source,
+                    "step_index": v.step_index,
+                }
+                for k, v in self.field_values.items()
+            }
         for step in self.steps:
             s = {"action": step.action}
             if step.target:
