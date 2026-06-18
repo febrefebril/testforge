@@ -20,6 +20,11 @@ from testforge.healing import HealingCatalog, HealingRecipe, EvidencePayload
 from testforge.healing import CuradorAutomatico, CurationOutcome, ProgressResult
 from testforge.evidence import EvidenceCollector
 from testforge.validation import validate_url
+from testforge.validation.intent_completeness import (
+    IntentCompletenessChecker,
+    save_completeness_report,
+)
+from testforge.recorder.recording_status import RecordingStatus
 from testforge.reporting import RunReport, StepReport
 
 import pathlib
@@ -51,6 +56,33 @@ def _validate_and_warn_url(url: str) -> bool:
         print("[TestForge] 💡 Tip: wrap URL in quotes when using shell, e.g.:\n"
               "    tf record \"http://example.com/page?arg=1&other=2\"", file=sys.stderr)
     return has_critical
+
+
+def _update_recording_status(rec_dir: str, rec_id: str,
+                              status: RecordingStatus) -> bool:
+    """Update recording_metadata.json with new recording status."""
+    meta_path = os.path.join(rec_dir, "recording_metadata.json")
+    if not os.path.exists(meta_path):
+        return False
+    try:
+        with open(meta_path) as f:
+            meta = json.load(f)
+        if "status_history" not in meta:
+            meta["status_history"] = []
+        from datetime import datetime, timezone
+        meta["status_history"].append({
+            "status": status.value,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "reason": f"compile --check: {status.value}",
+            "metadata": {},
+        })
+        meta["recording_status"] = status.value
+        meta["status"] = status.value
+        with open(meta_path, "w") as f:
+            json.dump(meta, f, indent=2, default=str)
+        return True
+    except Exception:
+        return False
 
 
 def _check_python_keyboard(page, recorder):
@@ -177,6 +209,7 @@ def cmd_compile(args):
     meta_path = f"{rec_dir}/recording_metadata.json"
     app = args.app
     base_url = args.base_url
+    recording_status = None
     if os.path.exists(meta_path):
         import json as _json
         with open(meta_path) as f:
@@ -184,12 +217,48 @@ def cmd_compile(args):
         app = app or meta.get("application", "")
         base_url = base_url or meta.get("base_url", "")
 
+        # Check recording status — block compilation if incomplete
+        status_str = meta.get("recording_status") or meta.get("status", "")
+        try:
+            recording_status = RecordingStatus(status_str)
+        except ValueError:
+            recording_status = None
+
+        if recording_status in RecordingStatus.blocked_compile_states():
+            print(f"[TestForge] ✗ Gravacao {rec_id} esta em estado {recording_status.value}")
+            print(f"  Compilacao bloqueada — complete os valores pendentes primeiro.")
+            print(f"  Use: testforge record --complete {rec_id}")
+            print(f"  Ou:  testforge compile --check {rec_id}  (gera relatorio de completude)")
+            return
+
     normalizer = RecordingNormalizer()
     stc = normalizer.normalize(rec_dir, f"ST-{rec_id}", app or "app", base_url or "http://localhost")
 
     # Output directory (sanitized)
     safe_rec_id = _sanitize_name(rec_id)
     out_dir = args.output or str(_PROJECT_ROOT / f"semantic_tests/ST-{safe_rec_id}")
+
+    # --check: run IntentCompletenessChecker and save report
+    if getattr(args, 'check', False):
+        checker = IntentCompletenessChecker()
+        report = checker.check_steps(stc.steps, stc.field_values)
+        report_dir = os.path.join(rec_dir, "completeness")
+        json_path, md_path = save_completeness_report(report, report_dir, rec_id)
+
+        if report.is_complete:
+            print(f"[TestForge] ✓ Intent Completeness: COMPLETE ({report.resolved_count} campos)")
+            # Update metadata status
+            _update_recording_status(rec_dir, rec_id,
+                                      RecordingStatus.intent_complete)
+        else:
+            print(f"[TestForge] ⚠ Intent Completeness: INCOMPLETE")
+            print(f"  Resolvidos: {report.resolved_count} | Warning: {report.resolved_with_warning_count}")
+            print(f"  Revisao: {report.review_required_count} | Pendentes: {report.missing_count}")
+            print(f"  Relatorio: {md_path}")
+            _update_recording_status(rec_dir, rec_id,
+                                      RecordingStatus.incomplete_intent)
+        print(f"  Relatorio JSON: {json_path}")
+        print(f"  Relatorio MD:  {md_path}")
 
     # Data-driven: extrai massa de dados externa
     data_file = ""
@@ -1160,6 +1229,7 @@ def main():
     comp.add_argument("--output", help="Diretorio de saida")
     comp.add_argument("--data", action="store_true", help="Extrair massa de dados para JSON externo")
     comp.add_argument("--scenarios", action="store_true", help="Gerar JSON com suporte a multiplos cenarios")
+    comp.add_argument("--check", action="store_true", help="Verificar completude da intencao antes de compilar")
     comp.set_defaults(func=cmd_compile)
 
     # run

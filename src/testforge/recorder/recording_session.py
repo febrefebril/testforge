@@ -132,8 +132,6 @@ class RecordingSessionManager:
         )
         session.status_history.lock()
 
-        # Update recording_status field in metadata
-        session.recording_status = final_status
         self._update_metadata(session)
         self._active_session = None
         return session
