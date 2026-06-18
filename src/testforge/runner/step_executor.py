@@ -37,7 +37,17 @@ class StepExecutor:
         if action == "click":
             tag = (step.target.tag or "").lower() if step.target else ""
             if tag in ("input", "textarea"):
-                # Check if selector is usable (not a generic aria attr)
+                # Check if normalizer detected a missing fill (currency-masked inputs)
+                ctx = getattr(step, "context", {}) or {}
+                if ctx.get("missing_fill"):
+                    fill_label = ctx.get("fill_label", "")
+                    if fill_label and data_values:
+                        # Search by fill_label (aria-label/placeholder) from recording
+                        for k, v in data_values.items():
+                            if fill_label and (k in fill_label or fill_label in k):
+                                self._fill_input(page=self.page, label=k, value=str(v))
+                                return selector
+                # Fallback: try existing data-driven fill mechanisms
                 if selector.startswith("[aria-"):
                     return self._fill_by_aria_label(step, data_values) or selector
                 if data_values:
@@ -57,6 +67,33 @@ class StepExecutor:
             return selector
 
         raise NotImplementedError(f"acao desconhecida: {action}")
+
+    def _fill_input(self, page, label: str, value: str) -> bool:
+        """Find and fill an input by aria-label or placeholder."""
+        for sel_pattern in [f'input[aria-label="{label}"]', f'textarea[aria-label="{label}"]',
+                            f'input[placeholder="{label}"]', f'textarea[placeholder="{label}"]']:
+            try:
+                el = page.locator(sel_pattern)
+                if el.count() == 1:
+                    has_mask = el.get_attribute("currencymask") is not None
+                    if has_mask:
+                        el.click()
+                        page.wait_for_timeout(150)
+                        raw = value.replace(".", "").replace(",", "").replace(" ", "")
+                        try:
+                            cents = str(int(float(raw) * 100))
+                        except ValueError:
+                            cents = raw
+                        el.press_sequentially(cents, delay=50)
+                        page.keyboard.press("Tab")
+                        page.wait_for_timeout(200)
+                    else:
+                        el.fill(value, timeout=self.DEFAULT_TIMEOUT)
+                        page.wait_for_timeout(150)
+                    return True
+            except Exception:
+                continue
+        return False
 
     def _fill_by_aria_label(self, step, data_values) -> Optional[str]:
         """Try to find and fill an input by aria-label from data_values keys."""

@@ -253,6 +253,7 @@ class RecordingNormalizer:
         self._mark_non_actionable(stc.steps)
         self._detect_step_dependencies(stc.steps)
         self._detect_navigation_clicks(stc.steps)
+        self._detect_missing_fills(stc.steps)
 
         return stc
 
@@ -362,6 +363,8 @@ class RecordingNormalizer:
 
         is_submit = event_type == "submit"
         context = {}
+        if raw.get("timestamp"):
+            context["timestamp"] = raw["timestamp"]
         if is_submit:
             context["is_submit"] = True
             if raw.get("submit_method"):
@@ -803,3 +806,47 @@ class RecordingNormalizer:
         # Reconstruct without query, fragment, trailing slash
         path = parsed.path.rstrip("/")
         return urlunparse((parsed.scheme, parsed.netloc, path, "", "", ""))
+
+    def _detect_missing_fills(self, steps: list) -> None:
+        """Detect clicks on inputs lacking fill events (currency-masked fields).
+
+        When user clicks input, types (not captured by recorder), then clicks
+        another element with >2s gap, mark for data-driven fill resolution.
+        """
+        from datetime import datetime
+
+        actionable = [(i, s) for i, s in enumerate(steps)
+                      if s.action != "navigation" and not s.skip_reason]
+
+        for ai in range(len(actionable) - 1):
+            i_curr, s_curr = actionable[ai]
+            i_next, s_next = actionable[ai + 1]
+
+            if s_curr.action != "click":
+                continue
+            tag = (s_curr.target.tag or "").lower() if s_curr.target else ""
+            if tag not in ("input", "textarea"):
+                continue
+            if s_next.action == "fill":
+                continue
+
+            t1_str = s_curr.context.get("timestamp", "")
+            t2_str = s_next.context.get("timestamp", "")
+            if not t1_str or not t2_str:
+                continue
+            try:
+                t1 = datetime.fromisoformat(t1_str.replace("Z", "+00:00"))
+                t2 = datetime.fromisoformat(t2_str.replace("Z", "+00:00"))
+                gap_s = (t2 - t1).total_seconds()
+            except ValueError:
+                continue
+
+            if gap_s > 2.0:
+                s_curr.context["missing_fill"] = True
+                if s_curr.target:
+                    s_curr.context["fill_label"] = (
+                        s_curr.target.accessible_name
+                        or s_curr.target.label
+                        or s_curr.target.placeholder
+                        or ""
+                    )
