@@ -1,0 +1,2370 @@
+# TestForge - Run-Incremental Consolidated Patch
+# Plano Autocontido 2026-06-17
+#
+# Aplicar com:  git apply testforge_run_incremental.diff
+# Verificar:    git apply --check testforge_run_incremental.diff
+#
+# Apos aplicar, adicionar manualmente em src/testforge/cli/app.py
+# (dentro de def main(), antes de 'args = parser.parse_args()'):
+#
+#     from testforge.cli._run_incremental_patch import register as _register_run_incremental
+#     _register_run_incremental(sub)
+#
+
+diff --git a/src/testforge/cli/app.py b/src/testforge/cli/app.py
+--- a/src/testforge/cli/app.py
++++ b/src/testforge/cli/app.py
+@@ -- def main():
+     dh.set_defaults(func=cmd_demo_heal)
+ 
++    # run-incremental (Plano TestForge Autocontido 2026-06-17)
++    from testforge.cli._run_incremental_patch import register as _register_run_incremental
++    _register_run_incremental(sub)
++
+     args = parser.parse_args()
+diff --git a/INSTALL.md b/INSTALL.md
+new file mode 100644
+--- /dev/null
++++ b/INSTALL.md
+@@ -0,0 +1,30 @@
++# Instalacao do patch run-incremental
++
++## 1. Aplicar diff
++
++```bash
++cd <raiz do TestForge>
++git apply testforge_run_incremental.diff
++```
++
++## 2. Patch no CLI
++
++No `src/testforge/cli/app.py`, dentro de `def main()`, ANTES de
++`args = parser.parse_args()`, adicione:
++
++```python
++from testforge.cli._run_incremental_patch import register as _register_run_incremental
++_register_run_incremental(sub)
++```
++
++## 3. Rodar testes
++
++```bash
++python -m pytest tests/test_incremental_* tests/test_step_* tests/test_run_incremental_cli.py -v
++```
++
++## 4. Verificacao manual
++
++```bash
++testforge run-incremental semantic_tests/ST-demo/test_st_demo.py --headless --verbose
++```
+diff --git a/docs/run-incremental.md b/docs/run-incremental.md
+new file mode 100644
+--- /dev/null
++++ b/docs/run-incremental.md
+@@ -0,0 +1,56 @@
++# TestForge - run-incremental
++
++Executor incremental que orquestra pre-condicao -> execucao -> pos-condicao -> evidencia -> healing -> oracle -> metricas -> relatorio por step.
++
++## Arquitetura
++
++```
++IncrementalRunner
++├── StepPreconditionValidator
++├── StepExecutor
++├── StepPostconditionValidator
++├── EvidenceCollector
++├── CuradorAutomatico (L0->L3)
++├── SmartStepRunner
++├── OracleRunner
++├── PromotionGate
++└── MetricsRepository
++```
++
++## Estados de step
++
++- `passed` - passou sem healing
++- `healed_validated` - healing aplicado + oracle aprovou
++- `healing_rejected` - healing executou mas pos-condicao falhou
++- `failed` - curador nao conseguiu (ou healing desativado)
++- `blocked` - dependencia anterior falhou
++- `skipped` - step ignorado por regra
++- `shadow_healed` - em shadow-mode, proposta funcionaria
++
++## Contrato Curador x Oracle
++
++```
++PASSED_STEP + oracle aprovado = healed_validated
++PASSED_STEP + oracle falho    = healing_rejected
++```
++
++## CLI
++
++```
++testforge run-incremental <script> [--headless] [--verbose] [--data <json>]
++                          [--browser chromium|chrome|edge]
++                          [--no-stop-on-failure] [--no-healing] [--shadow]
++```
++
++## Saida
++
++```
++runs/<recording_id>/<timestamp>/
++├── execution_report.json
++├── healing_report.md
++└── metrics.json
++```
++
++## Escopo
++
++Este plano cobre **apenas o TestForge**. MCP RTC/RQM/RDNG, MCP mestre e SpecKit estao fora.
+diff --git a/src/testforge/cli/_run_incremental_patch.py b/src/testforge/cli/_run_incremental_patch.py
+new file mode 100644
+--- /dev/null
++++ b/src/testforge/cli/_run_incremental_patch.py
+@@ -0,0 +1,50 @@
++"""TestForge — CLI run-incremental command."""
++from __future__ import annotations
++import sys
++
++
++def cmd_run_incremental(args):
++    from testforge.runner.incremental_runner import IncrementalRunner
++    runner = IncrementalRunner(
++        script_path=args.script,
++        headless=args.headless,
++        timeout=args.timeout,
++        verbose=args.verbose,
++        data=args.data,
++        browser=args.browser,
++        stop_on_failure=args.stop_on_failure,
++        interactive=args.interactive,
++        no_healing=args.no_healing,
++        shadow=args.shadow,
++    )
++    try:
++        report = runner.run()
++        summary = report.get("summary", {})
++        failed = summary.get("failed", 0) + summary.get("healing_rejected", 0)
++        sys.exit(0 if failed == 0 else 1)
++    except FileNotFoundError as exc:
++        print(f"[TestForge] X {exc}", file=sys.stderr)
++        sys.exit(2)
++    except Exception as exc:
++        print(f"[TestForge] X Erro inesperado: {exc}", file=sys.stderr)
++        sys.exit(3)
++
++
++def register(sub):
++    inc = sub.add_parser(
++        "run-incremental",
++        help="Executar teste passo a passo com pre/pos-condicoes e healing validado",
++    )
++    inc.add_argument("script", help="Caminho do script Python gerado")
++    inc.add_argument("--headless", action="store_true")
++    inc.add_argument("--timeout", type=int, default=60)
++    inc.add_argument("--verbose", action="store_true")
++    inc.add_argument("--data", type=str, default="")
++    inc.add_argument("--browser", choices=["chromium", "chrome", "edge"], default="chromium")
++    inc.add_argument("--stop-on-failure", dest="stop_on_failure", action="store_true", default=True)
++    inc.add_argument("--no-stop-on-failure", dest="stop_on_failure", action="store_false")
++    inc.add_argument("--interactive", action="store_true")
++    inc.add_argument("--no-healing", dest="no_healing", action="store_true")
++    inc.add_argument("--shadow", action="store_true")
++    inc.set_defaults(func=cmd_run_incremental)
++    return inc
+diff --git a/src/testforge/runner/__init__.py b/src/testforge/runner/__init__.py
+--- a/src/testforge/runner/__init__.py
++++ b/src/testforge/runner/__init__.py
+@@ -1,4 +1,21 @@
+-"""TestForge — Runner module."""
+-from .fallback_runner import FallbackRunner, ShadowValidator, HealingSuggestion
+-
+-__all__ = ["FallbackRunner", "ShadowValidator", "HealingSuggestion"]
++"""TestForge — Runner module."""
++from .fallback_runner import FallbackRunner, ShadowValidator, HealingSuggestion, SmartStepRunner
++from .incremental_runner import IncrementalRunner
++from .step_executor import StepExecutor
++from .step_precondition import StepPreconditionValidator
++from .step_postcondition import StepPostconditionValidator
++from .step_result import (
++    IncrementalStepResult,
++    PreconditionResult,
++    PostconditionResult,
++    HealingAttempt,
++)
++from .incremental_ui import IncrementalUI
++
++__all__ = [
++    "FallbackRunner", "ShadowValidator", "HealingSuggestion", "SmartStepRunner",
++    "IncrementalRunner", "StepExecutor",
++    "StepPreconditionValidator", "StepPostconditionValidator",
++    "IncrementalStepResult", "PreconditionResult", "PostconditionResult", "HealingAttempt",
++    "IncrementalUI",
++]
+diff --git a/src/testforge/runner/incremental_runner.py b/src/testforge/runner/incremental_runner.py
+new file mode 100644
+--- /dev/null
++++ b/src/testforge/runner/incremental_runner.py
+@@ -0,0 +1,739 @@
++"""TestForge — IncrementalRunner.
++
++Executor incremental que orquestra pré-condição, execução, pós-condição,
++evidência, healing com CuradorAutomatico e oracle pós-healing.
++
++Regra central:
++  CuradorAutomatico responde: "consegui executar uma alternativa?"
++  IncrementalRunner responde: "essa alternativa resolveu o step?"
++  Oracle responde:            "o efeito esperado apareceu?"
++  PromotionGate responde:     "essa cura pode virar aprendizado?"
++"""
++from __future__ import annotations
++import json
++import os
++import time
++from datetime import datetime, timezone
++from pathlib import Path
++from typing import Optional
++
++from .step_result import (
++    IncrementalStepResult,
++    PreconditionResult,
++    PostconditionResult,
++    HealingAttempt,
++)
++from .step_precondition import StepPreconditionValidator
++from .step_executor import StepExecutor
++from .step_postcondition import StepPostconditionValidator
++from .incremental_ui import IncrementalUI
++
++
++_DANGEROUS_LOCATORS = {
++    "body", "html", "button", "input", "select", "a", "div", "span",
++    "text=selecione", "text=ok", "text=cancelar", "text=sim",
++    "text=nao",
++}
++
++
++class IncrementalRunner:
++    def __init__(
++        self,
++        script_path: str,
++        headless: bool = True,
++        timeout: int = 60,
++        verbose: bool = False,
++        data: str = "",
++        browser: str = "chromium",
++        stop_on_failure: bool = True,
++        interactive: bool = False,
++        no_healing: bool = False,
++        shadow: bool = False,
++        output_root: str = "runs",
++    ):
++        self.script_path = script_path
++        self.headless = headless
++        self.timeout = timeout
++        self.verbose = verbose
++        self.data_path = data
++        self.browser_type = browser
++        self.stop_on_failure = stop_on_failure
++        self.interactive = interactive
++        self.no_healing = no_healing
++        self.shadow_mode = shadow
++        self.output_root = output_root
++
++        self.page = None
++        self.base_url = ""
++        self.recording_id = ""
++        self.app_name = "web"
++        self.steps = []
++        self.step_results = []
++        self.failed_step_indices = set()
++        self._data_values = {}
++
++        self.precondition_validator = None
++        self.step_executor = None
++        self.postcondition_validator = None
++        self.evidence_collector = None
++        self.metrics = None
++        self.promotion_gate = None
++
++        self.ui = IncrementalUI(verbose=verbose)
++
++    def _load_script_metadata(self):
++        if not os.path.exists(self.script_path):
++            raise FileNotFoundError(f"Script nao encontrado: {self.script_path}")
++        with open(self.script_path) as f:
++            code = f.read()
++        for line in code.split("\n"):
++            line = line.strip()
++            if line.startswith("BASE_URL"):
++                try:
++                    self.base_url = line.split('"')[1]
++                except Exception:
++                    pass
++            if "source:" in line and not self.recording_id:
++                tok = line.split("source:")[-1].strip().rstrip(chr(34) + chr(39) + ".")
++                self.recording_id = tok
++
++    def _load_semantic_steps(self):
++        if not self.recording_id:
++            return
++        from testforge.semantic import RecordingNormalizer
++        rec_dir = self._find_recording_dir(self.recording_id)
++        if not rec_dir:
++            return
++        normalizer = RecordingNormalizer()
++        stc = normalizer.normalize(rec_dir, f"ST-{self.recording_id}", "web", self.base_url)
++        self.steps = stc.steps
++        self.app_name = stc.application or "web"
++
++    def _find_recording_dir(self, rec_id):
++        candidates = [
++            Path.cwd() / "recordings" / rec_id,
++            Path(self.script_path).parent.parent / "recordings" / rec_id,
++        ]
++        for c in candidates:
++            if c.is_dir():
++                return str(c)
++        return None
++
++    def _load_data_file(self):
++        if not self.data_path:
++            return
++        if not os.path.exists(self.data_path):
++            return
++        with open(self.data_path) as f:
++            raw = json.load(f)
++        if "fields" in raw:
++            self._data_values = raw["fields"]
++        elif "scenarios" in raw:
++            self._data_values = raw["scenarios"].get("default", {})
++        else:
++            self._data_values = raw
++
++    def _init_components(self):
++        self.precondition_validator = StepPreconditionValidator(self.page)
++        self.step_executor = StepExecutor(self.page)
++        self.postcondition_validator = StepPostconditionValidator(self.page)
++
++        try:
++            from testforge.evidence import EvidenceCollector
++            self.evidence_collector = EvidenceCollector(self.page)
++            self.evidence_collector.start(self._run_id())
++        except Exception:
++            self.evidence_collector = None
++
++        try:
++            from testforge.metrics import MetricsRepository
++            self.metrics = MetricsRepository()
++        except Exception:
++            self.metrics = None
++
++        try:
++            from testforge.promotion import PromotionGate
++            self.promotion_gate = PromotionGate()
++        except Exception:
++            self.promotion_gate = None
++
++    def _make_curator(self, catalog=None, step_runner=None):
++        from testforge.healing import CuradorAutomatico, HealingCatalog
++        from testforge.runner.fallback_runner import SmartStepRunner
++
++        if step_runner is None:
++            smart_runner = SmartStepRunner(self.page)
++            def step_runner(step_data):
++                strategy = step_data.get("strategy", "")
++                return smart_runner.execute(step_data, strategy)
++
++        return CuradorAutomatico(
++            catalog=catalog or HealingCatalog(),
++            step_runner=step_runner,
++        )
++
++    def _primary_selector(self, step):
++        if step.target and getattr(step.target, "candidates", None):
++            cands = step.target.candidates
++            if cands:
++                return cands[0].selector or ""
++        return ""
++
++    def _next_executable_step(self, step_num):
++        idx = step_num
++        while idx < len(self.steps):
++            s = self.steps[idx]
++            if not getattr(s, "skip_reason", ""):
++                return s
++            idx += 1
++        return None
++
++    def _describe_intention(self, step, step_num):
++        target_text = ""
++        if step.target:
++            target_text = (
++                getattr(step.target, "text", "")
++                or getattr(step.target, "label", "")
++                or getattr(step.target, "accessible_name", "")
++                or ""
++            )
++        return f"{step.action} step {step_num}" + (f" on '{target_text}'" if target_text else "")
++
++    def _build_healing_payload(self, step, step_num, original_error, failure_phase):
++        if not self.evidence_collector:
++            return None
++        selector = self._primary_selector(step)
++        text_value = ""
++        if step.target:
++            text_value = (
++                getattr(step.target, "text", "")
++                or getattr(step.target, "label", "")
++                or getattr(step.target, "accessible_name", "")
++                or ""
++            )
++        step_context = {
++            "action": step.action,
++            "selector": selector or "(empty)",
++            "value": step.value or "",
++            "text": text_value,
++            "intention": self._describe_intention(step, step_num),
++            "url": self.page.url,
++            "framework": self.app_name or "generic",
++            "step_number": step_num,
++            "failure_phase": failure_phase,
++            "original_error": original_error,
++        }
++        return self.evidence_collector.build_llm_payload(
++            step_context=step_context,
++            include_screenshot=False,
++        )
++
++    @staticmethod
++    def _is_dangerously_generic(locator):
++        if not locator:
++            return True
++        n = locator.strip().lower()
++        if n in _DANGEROUS_LOCATORS:
++            return True
++        if n.startswith("/html/") or n.startswith("xpath=/html/"):
++            return True
++        if "nth-child" in n and len(n) < 30:
++            return True
++        return False
++
++    @staticmethod
++    def _is_incompatible_strategy(step, strategy):
++        action = step.action
++        allowed = {
++            "fill": {
++                "press_sequentially", "masked_input_detection",
++                "semantic_locator_conversion", "label_click",
++                "synthetic_click", "visibility_wait",
++            },
++            "click": {
++                "semantic_locator_conversion", "has_text_fallback",
++                "visibility_wait", "overlay_dismiss", "dialog_handler",
++                "iframe_switch", "label_click", "synthetic_click",
++                "xpath_fallback",
++            },
++            "select_option": {
++                "semantic_locator_conversion", "visibility_wait", "xpath_fallback",
++            },
++            "assert": {
++                "semantic_locator_conversion", "has_text_fallback", "visibility_wait",
++            },
++        }.get(action, set())
++        if not allowed:
++            return False
++        return strategy not in allowed
++
++    def _validate_curator_proposal(self, outcome, step, original_selector):
++        failures = []
++        if outcome is None:
++            return False, ["missing_outcome"]
++        if not outcome.layer_used:
++            failures.append("missing_layer_used")
++        proposal = outcome.proposal
++        if proposal:
++            if not proposal.new_locator:
++                failures.append("missing_new_locator")
++            if proposal.confidence < 0.5:
++                failures.append("low_confidence")
++            if not proposal.family:
++                failures.append("missing_family")
++            if not proposal.taxonomy_id:
++                failures.append("missing_taxonomy_id")
++            if not proposal.strategy:
++                failures.append("missing_strategy")
++            if self._is_dangerously_generic(proposal.new_locator):
++                failures.append("generic_or_dangerous_locator")
++            if self._is_incompatible_strategy(step, proposal.strategy):
++                failures.append("incompatible_action_strategy")
++            if (
++                proposal.new_locator == original_selector
++                and outcome.layer_used != "L0"
++            ):
++                failures.append("same_locator_as_failed_original")
++        return len(failures) == 0, failures
++
++    def _map_curation_outcome(self, outcome, original_selector, failure_phase, original_error):
++        healing = HealingAttempt(
++            attempted=True,
++            status=outcome.status,
++            layer=outcome.layer_used or "",
++            family=outcome.family or "",
++            taxonomy_id=outcome.taxonomy_id or "",
++            failure_phase=failure_phase,
++            original_error=original_error,
++            original_locator=original_selector,
++            entry_id=getattr(outcome, "entry_id", "") or "",
++        )
++        if outcome.proposal:
++            healing.strategy = outcome.proposal.strategy or ""
++            healing.proposed_locator = outcome.proposal.new_locator or ""
++            healing.confidence = outcome.proposal.confidence or 0.0
++            healing.rationale = (outcome.proposal.rationale or "")[:300]
++            healing.raw_response = outcome.proposal.raw_response or ""
++        return healing
++
++    def _validate_healing_with_oracle(self, step, step_num, result, url_before=""):
++        post = self.postcondition_validator.validate(
++            step=step, page=self.page,
++            next_step=self._next_executable_step(step_num),
++            url_before=url_before,
++        )
++        result.postcondition = post
++        return post.passed
++
++    def _heal_failed_step(self, step, step_num, original_error,
++                          failure_phase, result, url_before=""):
++        from testforge.healing import ProgressResult
++        from testforge.metrics import StepOutcome
++
++        original_selector = self._primary_selector(step)
++
++        if self.metrics:
++            self.metrics.record_step(
++                StepOutcome.FAILURE_DETECTED,
++                step_num=step_num, action=step.action,
++                selector=original_selector or "",
++            )
++
++        if self.no_healing:
++            result.status = "failed"
++            result.error_message = f"Healing desativado. Erro: {original_error}"
++            return result
++
++        payload = self._build_healing_payload(
++            step=step, step_num=step_num,
++            original_error=original_error, failure_phase=failure_phase,
++        )
++        if payload is None or not payload.is_sufficient:
++            result.status = "failed"
++            result.error_message = (
++                "Healing nao tentado: evidencia insuficiente — "
++                f"{getattr(payload, 'insufficiency_reason', 'sem evidencia')}"
++            )
++            result.healing = HealingAttempt(
++                attempted=False,
++                rejection_reason=["insufficient_evidence"],
++                failure_phase=failure_phase,
++                original_error=original_error,
++            )
++            return result
++
++        curator = self._make_curator()
++        step_data = {
++            "selector": original_selector or "",
++            "action": step.action,
++            "value": step.value or "",
++            "base_url": self.base_url,
++        }
++
++        if self.metrics:
++            self.metrics.record_step(
++                StepOutcome.HEALING_ATTEMPTED,
++                step_num=step_num, action=step.action,
++                selector=original_selector or "",
++            )
++
++        outcome = curator.cure(
++            step_data=step_data,
++            error_message=original_error,
++            evidence=payload,
++        )
++        result.healing = self._map_curation_outcome(
++            outcome=outcome,
++            original_selector=original_selector,
++            failure_phase=failure_phase,
++            original_error=original_error,
++        )
++
++        proposal_ok, proposal_failures = self._validate_curator_proposal(
++            outcome=outcome, step=step, original_selector=original_selector,
++        )
++        if not proposal_ok:
++            if self.metrics:
++                self.metrics.record_step(
++                    StepOutcome.HEALING_REJECTED,
++                    step_num=step_num, action=step.action,
++                    family_code=result.healing.family,
++                    healing_layer=result.healing.layer,
++                    selector=original_selector or "",
++                )
++            result.status = "healing_rejected"
++            result.healing.validated = False
++            result.healing.rejection_reason = list(proposal_failures)
++            result.error_message = "Proposta do curador rejeitada: " + ", ".join(proposal_failures)
++            return result
++
++        if outcome.status != ProgressResult.PASSED_STEP:
++            if self.metrics:
++                self.metrics.record_step(
++                    StepOutcome.HEALING_REJECTED,
++                    step_num=step_num, action=step.action,
++                    family_code=outcome.family or "",
++                    healing_layer=outcome.layer_used or "",
++                    selector=original_selector or "",
++                )
++            result.status = "failed"
++            result.healing.validated = False
++            result.healing.rejection_reason = [
++                "curator_did_not_pass_step", outcome.status
++            ]
++            result.error_message = (
++                f"Healing nao resolveu: {outcome.status}. "
++                f"{outcome.error_message or ''}"
++            )
++            return result
++
++        proposed_selector = result.healing.proposed_locator or original_selector
++        if self.metrics:
++            self.metrics.record_step(
++                StepOutcome.HEALING_APPLIED,
++                step_num=step_num, action=step.action,
++                family_code=outcome.family or "",
++                healing_layer=outcome.layer_used or "",
++                selector=proposed_selector,
++            )
++
++        if self.shadow_mode:
++            result.status = "shadow_healed"
++            result.healing.validated = False
++            return result
++
++        oracle_ok = self._validate_healing_with_oracle(
++            step=step, step_num=step_num, result=result, url_before=url_before,
++        )
++        if oracle_ok:
++            if self.metrics:
++                self.metrics.record_step(
++                    StepOutcome.ORACLE_VALIDATED,
++                    step_num=step_num, action=step.action,
++                    family_code=outcome.family or "",
++                    healing_layer=outcome.layer_used or "",
++                    selector=proposed_selector,
++                )
++            result.status = "healed_validated"
++            result.selected_locator = proposed_selector
++            result.healing.validated = True
++            result.healing.oracle_passed = True
++            result.healing.rejection_reason = []
++            self._evaluate_healing_promotion(result)
++            return result
++
++        if self.metrics:
++            self.metrics.record_step(
++                StepOutcome.HEALING_REJECTED,
++                step_num=step_num, action=step.action,
++                family_code=outcome.family or "",
++                healing_layer=outcome.layer_used or "",
++                selector=proposed_selector,
++            )
++        result.status = "healing_rejected"
++        result.healing.validated = False
++        result.healing.oracle_passed = False
++        post_failures = []
++        if result.postcondition:
++            post_failures = list(result.postcondition.failures or [])
++        result.healing.rejection_reason = ["postcondition_failed"] + post_failures
++        result.error_message = (
++            "Healing executou, mas pos-condicao/oracle falhou: "
++            f"{result.postcondition.message if result.postcondition else ''}"
++        )
++        return result
++
++    def _evaluate_healing_promotion(self, result):
++        if not self.promotion_gate or not result.healing:
++            return
++        oracle_results = []
++        if result.postcondition:
++            oracle_results = list(result.postcondition.oracle_results or [])
++        evidence = {
++            "screenshots": [
++                result.evidence_before.get("screenshot"),
++                result.evidence_after.get("screenshot"),
++            ],
++        }
++        try:
++            decision = self.promotion_gate.evaluate(
++                oracle_results=oracle_results,
++                evidence=evidence,
++                uniqueness_score=1.0,
++            )
++            result.healing.promotion_state = decision.state.value
++            result.healing.promotion_allowed = decision.allowed
++            result.healing.promotion_blocks = list(decision.blocks or [])
++        except Exception:
++            pass
++
++    def _capture_evidence(self, step_num, phase):
++        if not self.evidence_collector:
++            return {}
++        step_id = f"step_{step_num:04d}"
++        evidence = {}
++        try:
++            evidence["screenshot"] = self.evidence_collector.capture_screenshot(step_id, phase)
++        except Exception:
++            evidence["screenshot"] = ""
++        try:
++            evidence["dom"] = self.evidence_collector.capture_dom(step_id, phase)
++        except Exception:
++            evidence["dom"] = ""
++        return evidence
++
++    def _run_one_step(self, index, step):
++        step_num = index + 1
++        started = time.time()
++        result = IncrementalStepResult(
++            step_num=step_num,
++            action=step.action,
++            original_locator=self._primary_selector(step),
++            value=step.value or "",
++        )
++
++        pre = self.precondition_validator.validate(
++            step=step,
++            failed_step_indices=self.failed_step_indices,
++            all_steps=self.steps,
++        )
++        result.precondition = pre
++
++        if not pre.passed:
++            if "blocked_by_previous_failure" in pre.failures:
++                result.status = "blocked"
++                result.skip_reason = pre.message
++                result.error_message = pre.message
++                result.duration_ms = int((time.time() - started) * 1000)
++                return result
++            result.evidence_before = self._capture_evidence(step_num, "before")
++            url_before = self.page.url
++            result = self._heal_failed_step(
++                step=step, step_num=step_num,
++                original_error=pre.message,
++                failure_phase="precondition",
++                result=result,
++                url_before=url_before,
++            )
++            result.evidence_after = self._capture_evidence(step_num, "after")
++            result.duration_ms = int((time.time() - started) * 1000)
++            return result
++
++        if pre.checks.get("skipped"):
++            result.status = "skipped"
++            result.skip_reason = pre.message
++            result.duration_ms = int((time.time() - started) * 1000)
++            return result
++
++        result.evidence_before = self._capture_evidence(step_num, "before")
++        url_before = self.page.url
++
++        try:
++            sel_used = self.step_executor.execute(
++                step, base_url=self.base_url, data_values=self._data_values,
++            )
++            result.selected_locator = sel_used or result.original_locator
++        except Exception as exc:
++            result = self._heal_failed_step(
++                step=step, step_num=step_num,
++                original_error=str(exc),
++                failure_phase="execution",
++                result=result,
++                url_before=url_before,
++            )
++            result.evidence_after = self._capture_evidence(step_num, "after")
++            result.duration_ms = int((time.time() - started) * 1000)
++            return result
++
++        post = self.postcondition_validator.validate(
++            step=step,
++            page=self.page,
++            next_step=self._next_executable_step(step_num),
++            url_before=url_before,
++        )
++        result.postcondition = post
++
++        if post.passed:
++            result.status = "passed"
++        else:
++            result = self._heal_failed_step(
++                step=step, step_num=step_num,
++                original_error=post.message or "postcondition_failed",
++                failure_phase="postcondition",
++                result=result,
++                url_before=url_before,
++            )
++
++        result.evidence_after = self._capture_evidence(step_num, "after")
++        result.duration_ms = int((time.time() - started) * 1000)
++        return result
++
++    def _run_id(self):
++        ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
++        return f"{self.recording_id or 'run'}_{ts}"
++
++    def run(self):
++        from playwright.sync_api import sync_playwright
++        from testforge.browser import launch_browser
++        from testforge.healing.llm_client import is_available
++
++        self._load_script_metadata()
++        self._load_data_file()
++
++        healer = "LLM real (Azure/OpenAI)" if is_available() else "MockLLMHealer"
++        mode = "shadow" if self.shadow_mode else ("no-healing" if self.no_healing else "incremental")
++        self.ui.header(
++            script_path=self.script_path,
++            recording_id=self.recording_id or "(desconhecido)",
++            base_url=self.base_url,
++            healer=healer,
++            mode=mode,
++        )
++
++        with sync_playwright() as pw:
++            browser = launch_browser(pw, self.browser_type, headless=self.headless)
++            self.page = browser.new_page()
++            self.page.set_viewport_size({"width": 1280, "height": 720})
++
++            try:
++                self._load_semantic_steps()
++            except Exception as exc:
++                print(f"[TestForge] Falha ao carregar steps semanticos: {exc}")
++
++            if not self.steps:
++                print("[TestForge] Nenhum step encontrado — encerrando.")
++                browser.close()
++                return self._finalize_report({})
++
++            if self.base_url:
++                try:
++                    self.page.goto(self.base_url)
++                    self.page.wait_for_timeout(400)
++                except Exception:
++                    pass
++
++            self._init_components()
++
++            for i, step in enumerate(self.steps):
++                result = self._run_one_step(i, step)
++                self.step_results.append(result)
++                self.ui.step(i + 1, len(self.steps), result)
++
++                if result.status in ("failed", "healing_rejected"):
++                    if getattr(step, "blocking", False):
++                        self.failed_step_indices.add(i)
++                    if self.stop_on_failure:
++                        break
++
++            browser.close()
++
++        totals = self._compute_totals()
++        return self._finalize_report(totals)
++
++    def _compute_totals(self):
++        t = {"total": len(self.step_results)}
++        for k in ("passed", "healed_validated", "healing_rejected",
++                  "failed", "blocked", "skipped", "shadow_healed"):
++            t[k] = sum(1 for r in self.step_results if r.status == k)
++        return t
++
++    def _finalize_report(self, totals):
++        report = {
++            "run_id": self._run_id(),
++            "recording_id": self.recording_id,
++            "script_path": self.script_path,
++            "base_url": self.base_url,
++            "mode": "shadow" if self.shadow_mode else ("no-healing" if self.no_healing else "incremental"),
++            "summary": totals,
++            "steps": [r.to_dict() for r in self.step_results],
++        }
++        try:
++            out_dir = Path(self.output_root) / (self.recording_id or "run") / self._run_id().split("_")[-1]
++            out_dir.mkdir(parents=True, exist_ok=True)
++            (out_dir / "execution_report.json").write_text(
++                json.dumps(report, indent=2, ensure_ascii=False, default=str), encoding="utf-8"
++            )
++            self._write_healing_report(out_dir)
++            self._write_metrics(out_dir)
++        except Exception as exc:
++            print(f"[TestForge] Falha ao escrever relatorio: {exc}")
++        self.ui.summary(totals)
++        return report
++
++    def _write_healing_report(self, out_dir):
++        lines = ["# TestForge Healing Report", ""]
++        validated = [r for r in self.step_results if r.status == "healed_validated"]
++        rejected = [r for r in self.step_results if r.status == "healing_rejected"]
++        lines.append(f"- Validados: {len(validated)}")
++        lines.append(f"- Rejeitados: {len(rejected)}")
++        lines.append("")
++        if validated:
++            lines.append("## Healings validados")
++            for r in validated:
++                h = r.healing or HealingAttempt()
++                lines.append(f"### Step {r.step_num} — {r.action}")
++                lines.append(f"- Locator original: `{h.original_locator}`")
++                lines.append(f"- Locator proposto: `{h.proposed_locator}`")
++                lines.append(f"- Layer: {h.layer} | Family: {h.family} | Strategy: {h.strategy}")
++                lines.append(f"- Confidence: {h.confidence:.2f}")
++                lines.append("")
++        if rejected:
++            lines.append("## Healings rejeitados")
++            for r in rejected:
++                h = r.healing or HealingAttempt()
++                lines.append(f"### Step {r.step_num} — {r.action}")
++                lines.append(f"- Motivo: {','.join(h.rejection_reason) or 'n/a'}")
++                lines.append(f"- Locator proposto: `{h.proposed_locator}`")
++                lines.append("")
++        (out_dir / "healing_report.md").write_text("\n".join(lines), encoding="utf-8")
++
++    def _write_metrics(self, out_dir):
++        if not self.metrics:
++            return
++        try:
++            snap = self.metrics.snapshot.to_dict()
++            (out_dir / "metrics.json").write_text(
++                json.dumps(snap, indent=2, ensure_ascii=False), encoding="utf-8"
++            )
++        except Exception:
++            pass
+diff --git a/src/testforge/runner/incremental_ui.py b/src/testforge/runner/incremental_ui.py
+new file mode 100644
+--- /dev/null
++++ b/src/testforge/runner/incremental_ui.py
+@@ -0,0 +1,64 @@
++"""TestForge — IncrementalUI.
++
++Renderiza saída de terminal por step (verbose ou compacta).
++"""
++from __future__ import annotations
++import sys
++
++
++class IncrementalUI:
++    def __init__(self, verbose: bool = False, stream=None):
++        self.verbose = verbose
++        self.stream = stream or sys.stdout
++
++    def _w(self, msg: str = ""):
++        print(msg, file=self.stream)
++
++    def header(self, script_path, recording_id, base_url, healer, mode):
++        self._w("[TestForge] run-incremental")
++        self._w(f"  Script: {script_path}")
++        self._w(f"  Recording: {recording_id}")
++        self._w(f"  URL base: {base_url}")
++        self._w(f"  Healer: {healer}")
++        self._w(f"  Modo: {mode}")
++        self._w("")
++
++    def step(self, idx, total, result):
++        status = result.status
++        icon = {
++            "passed": "OK",
++            "healed_validated": "HEAL",
++            "healing_rejected": "REJ",
++            "failed": "FAIL",
++            "blocked": "BLK",
++            "skipped": "SKIP",
++        }.get(status, "?")
++        action = result.action
++        loc = result.selected_locator or result.original_locator
++        msg = f"Step {idx}/{total} {action} [{icon}] {status}"
++        if loc:
++            msg += f"  [{loc[:50]}]"
++        self._w(msg)
++        if self.verbose:
++            if result.precondition:
++                pre = result.precondition
++                self._w(f"  PRE  {'OK' if pre.passed else 'X'} {pre.message}")
++            if result.postcondition:
++                post = result.postcondition
++                self._w(f"  POST {'OK' if post.passed else 'X'} {post.message}")
++            if result.healing and result.healing.attempted:
++                h = result.healing
++                self._w(f"  HEAL layer={h.layer} family={h.family} strategy={h.strategy}")
++                self._w(f"       proposta={h.proposed_locator[:60]} conf={h.confidence:.2f}")
++                if h.rejection_reason:
++                    self._w(f"       rejection={','.join(h.rejection_reason)}")
++            if result.error_message:
++                self._w(f"  ERR  {result.error_message[:120]}")
++
++    def summary(self, totals):
++        self._w("")
++        self._w("[TestForge] Sumario:")
++        for k in ("total", "passed", "healed_validated", "healing_rejected",
++                  "failed", "blocked", "skipped"):
++            v = totals.get(k, 0)
++            self._w(f"  {k:>20}: {v}")
+diff --git a/src/testforge/runner/step_executor.py b/src/testforge/runner/step_executor.py
+new file mode 100644
+--- /dev/null
++++ b/src/testforge/runner/step_executor.py
+@@ -0,0 +1,97 @@
++"""TestForge — StepExecutor.
++
++Executa um step com a estratégia apropriada por ação.
++Não decide se o step passou semanticamente — isso é papel da pós-condição.
++"""
++from __future__ import annotations
++from typing import Optional
++
++
++class StepExecutor:
++    """Executa uma única ação no browser via Playwright."""
++
++    DEFAULT_TIMEOUT = 5000
++
++    def __init__(self, page):
++        self.page = page
++
++    def _primary_selector(self, step) -> str:
++        if step.target and getattr(step.target, "candidates", None):
++            cands = step.target.candidates
++            if cands:
++                return cands[0].selector or ""
++        return ""
++
++    def execute(self, step, base_url: str = "", data_values: Optional[dict] = None) -> str:
++        data_values = data_values or {}
++        action = step.action
++        selector = self._primary_selector(step)
++
++        if action == "navigation":
++            url = step.url or base_url
++            if url and url != self.page.url:
++                self.page.goto(url)
++                self.page.wait_for_timeout(400)
++            return ""
++
++        if action == "click":
++            return self._execute_click(step, selector)
++        if action == "fill":
++            return self._execute_fill(step, selector, data_values)
++        if action == "select_option":
++            return self._execute_select(step, selector)
++        if action == "assert":
++            if selector:
++                try:
++                    self.page.locator(selector).first.wait_for(
++                        state="visible", timeout=self.DEFAULT_TIMEOUT
++                    )
++                except Exception:
++                    pass
++            return selector
++
++        raise NotImplementedError(f"acao desconhecida: {action}")
++
++    def _execute_click(self, step, selector):
++        if not selector:
++            raise ValueError(f"click sem selector (step {step.action})")
++        self.page.click(selector, timeout=self.DEFAULT_TIMEOUT)
++        self.page.wait_for_timeout(200)
++        return selector
++
++    def _execute_fill(self, step, selector, data_values):
++        if not selector:
++            raise ValueError("fill sem selector")
++        value = step.value or ""
++        if data_values and step.target:
++            label = getattr(step.target, "label", "") or getattr(step.target, "placeholder", "")
++            for k, v in data_values.items():
++                if k == label or (label and (k in label or label in k)):
++                    value = str(v)
++                    break
++        try:
++            el = self.page.locator(selector).first
++            mask = el.get_attribute("currencymask") or el.get_attribute("data-mask")
++            if mask is not None:
++                el.click()
++                self.page.wait_for_timeout(150)
++                el.press_sequentially(str(value), delay=50)
++                self.page.keyboard.press("Tab")
++                self.page.wait_for_timeout(200)
++                return selector
++        except Exception:
++            pass
++        self.page.fill(selector, value, timeout=self.DEFAULT_TIMEOUT)
++        self.page.wait_for_timeout(150)
++        return selector
++
++    def _execute_select(self, step, selector):
++        if not selector:
++            raise ValueError("select_option sem selector")
++        value = step.value or ""
++        try:
++            self.page.select_option(selector, value=value, timeout=self.DEFAULT_TIMEOUT)
++        except Exception:
++            self.page.select_option(selector, label=value, timeout=self.DEFAULT_TIMEOUT)
++        self.page.wait_for_timeout(200)
++        return selector
+diff --git a/src/testforge/runner/step_postcondition.py b/src/testforge/runner/step_postcondition.py
+new file mode 100644
+--- /dev/null
++++ b/src/testforge/runner/step_postcondition.py
+@@ -0,0 +1,203 @@
++"""TestForge — StepPostconditionValidator.
++
++Valida o efeito de cada ação. Impede falso positivo e falso healing:
++"step executou sem exception" NÃO é sinônimo de "fluxo funcionou".
++"""
++from __future__ import annotations
++import re
++from typing import Optional
++
++from .step_result import PostconditionResult
++
++
++class StepPostconditionValidator:
++    """Valida pós-condições por step após a execução."""
++
++    def __init__(self, page, oracle_runner=None):
++        self.page = page
++        self._oracle = oracle_runner
++        if self._oracle is None:
++            try:
++                from ..oracle import OracleRunner
++                self._oracle = OracleRunner(page)
++            except Exception:
++                self._oracle = None
++
++    def _primary_selector(self, step):
++        if step.target and getattr(step.target, "candidates", None):
++            cands = step.target.candidates
++            if cands:
++                return cands[0].selector or ""
++        return ""
++
++    @staticmethod
++    def _normalize(s):
++        if s is None:
++            return ""
++        return re.sub(r"\s+", "", str(s)).strip().lower()
++
++    def validate(self, step, page=None, next_step=None, url_before=""):
++        page = page or self.page
++        action = step.action
++
++        if action == "navigation":
++            return self._validate_navigation(step)
++        if action == "click":
++            return self._validate_click(step, next_step, url_before)
++        if action == "fill":
++            return self._validate_fill(step)
++        if action == "select_option":
++            return self._validate_select(step)
++        if action == "assert":
++            return self._validate_assert(step)
++
++        return PostconditionResult(
++            passed=True,
++            checks={"no_specific_postcondition": True},
++            message=f"sem pos-condicao especifica para {action}",
++        )
++
++    def _validate_navigation(self, step):
++        url = self.page.url or ""
++        passed = bool(url)
++        return PostconditionResult(
++            passed=passed,
++            checks={"url_present": passed},
++            message=f"url atual: {url}",
++        )
++
++    def _validate_fill(self, step):
++        selector = self._primary_selector(step)
++        expected = step.value or ""
++        try:
++            actual = self.page.locator(selector).first.input_value(timeout=3000)
++        except Exception as exc:
++            return PostconditionResult(
++                passed=False,
++                failures=["cannot_read_input_value"],
++                message=str(exc),
++            )
++        en = self._normalize(expected)
++        an = self._normalize(actual)
++        matched = bool(en) and (en == an or en in an or an in en)
++        return PostconditionResult(
++            passed=matched,
++            checks={"input_value_matches": matched, "actual_value_present": bool(actual)},
++            failures=[] if matched else ["value_mismatch"],
++            message="" if matched else f"esperado='{expected}' obtido='{actual}'",
++        )
++
++    def _validate_select(self, step):
++        selector = self._primary_selector(step)
++        expected = step.value or ""
++        try:
++            selected = self.page.locator(selector).first.evaluate(
++                "el => { const opt = el.options[el.selectedIndex]; return {value: el.value, text: opt ? (opt.textContent || \'\').trim() : \'\'}; }"
++            )
++        except Exception as exc:
++            return PostconditionResult(
++                passed=False,
++                failures=["cannot_read_selected_option"],
++                message=str(exc),
++            )
++        en = self._normalize(expected)
++        matched = (
++            self._normalize(selected.get("value", "")) == en
++            or self._normalize(selected.get("text", "")) == en
++        )
++        return PostconditionResult(
++            passed=matched,
++            checks={"selected_option_matches": matched},
++            failures=[] if matched else ["selected_option_mismatch"],
++            message="" if matched else f"esperado='{expected}' selecionado={selected}",
++        )
++
++    def _validate_click(self, step, next_step, url_before):
++        ctx = getattr(step, "context", {}) or {}
++        causes_navigation = ctx.get("causes_navigation", False)
++
++        explicit = ctx.get("oracles") or []
++        if explicit and self._oracle:
++            results = self._oracle.run_all(explicit)
++            passed = all(getattr(r, "status", "") == "passed" for r in results)
++            return PostconditionResult(
++                passed=passed,
++                checks={"explicit_oracles_passed": passed},
++                oracle_results=results,
++                failures=[] if passed else ["explicit_oracle_failed"],
++                message="oracles explicitos executados",
++            )
++
++        if causes_navigation:
++            url_now = self.page.url
++            changed = bool(url_before) and url_now != url_before
++            return PostconditionResult(
++                passed=changed,
++                checks={"url_changed": changed},
++                failures=[] if changed else ["url_not_changed"],
++                message=f"url before='{url_before}' after='{url_now}'",
++            )
++
++        if next_step and getattr(next_step, "target", None):
++            cands = next_step.target.candidates
++            if cands:
++                next_sel = cands[0].selector
++                try:
++                    self.page.wait_for_selector(next_sel, state="visible", timeout=8000)
++                    return PostconditionResult(
++                        passed=True,
++                        checks={"next_step_visible": True},
++                        message=f"proximo step visivel: {next_sel}",
++                    )
++                except Exception:
++                    return PostconditionResult(
++                        passed=False,
++                        checks={"next_step_visible": False},
++                        failures=["next_step_not_visible"],
++                        message=f"proximo step nao apareceu: {next_sel}",
++                    )
++
++        return PostconditionResult(
++            passed=True,
++            checks={"click_no_exception": True},
++            message="click executou sem oracle especifico",
++        )
++
++    def _validate_assert(self, step):
++        selector = self._primary_selector(step) or "body"
++        expected = step.value or ""
++        ctx = getattr(step, "context", {}) or {}
++        assert_type = ctx.get("assert_type", "textual")
++
++        if not self._oracle:
++            try:
++                text = self.page.locator(selector).first.text_content(timeout=3000)
++                matched = expected.lower() in (text or "").lower()
++                return PostconditionResult(
++                    passed=matched,
++                    checks={"text_contains_expected": matched},
++                    failures=[] if matched else ["assert_text_mismatch"],
++                    message=f"esperado='{expected}' obtido='{(text or '')[:80]}'",
++                )
++            except Exception as exc:
++                return PostconditionResult(
++                    passed=False,
++                    failures=["assert_error"],
++                    message=str(exc),
++                )
++
++        if assert_type in ("textual", "automatico"):
++            r = self._oracle.run_visual_dom(selector, expected)
++        elif assert_type == "visivel":
++            r = self._oracle.run_visual_dom(selector, "")
++        else:
++            r = self._oracle.run_business_state(selector, expected)
++
++        passed = getattr(r, "status", "") == "passed"
++        return PostconditionResult(
++            passed=passed,
++            checks={"oracle_status": passed},
++            oracle_results=[r],
++            failures=[] if passed else ["oracle_failed"],
++            message=getattr(r, "message", ""),
++        )
+diff --git a/src/testforge/runner/step_precondition.py b/src/testforge/runner/step_precondition.py
+new file mode 100644
+--- /dev/null
++++ b/src/testforge/runner/step_precondition.py
+@@ -0,0 +1,187 @@
++"""TestForge — StepPreconditionValidator.
++
++Valida se um step pode ser executado: actionability, dependências,
++selector ausente, candidato primário, e regras específicas por ação.
++"""
++from __future__ import annotations
++from typing import Optional
++
++from .step_result import PreconditionResult
++
++
++class StepPreconditionValidator:
++    """Valida pré-condições por step antes da execução."""
++
++    def __init__(self, page, actionability_validator=None):
++        self.page = page
++        self._actionability = actionability_validator
++        if self._actionability is None:
++            try:
++                from ..actionability import ActionabilityValidator
++                self._actionability = ActionabilityValidator(page)
++            except Exception:
++                self._actionability = None
++
++    def _primary_selector(self, step) -> str:
++        if step.target and getattr(step.target, "candidates", None):
++            cands = step.target.candidates
++            if cands:
++                return cands[0].selector or ""
++        return ""
++
++    def _check_dependency(self, step, failed_step_indices: set, all_steps: list) -> Optional[str]:
++        if not getattr(step, "depends_on", ""):
++            return None
++        import re
++        m = re.match(r"step_(\d+)", step.depends_on)
++        if not m:
++            return None
++        idx = int(m.group(1)) - 1
++        if idx in failed_step_indices:
++            return f"blocked_by_previous_failure (depends on {step.depends_on})"
++        return None
++
++    def validate(self, step, failed_step_indices: Optional[set] = None,
++                 all_steps: Optional[list] = None) -> PreconditionResult:
++        failed_step_indices = failed_step_indices or set()
++        all_steps = all_steps or []
++        result = PreconditionResult(passed=False)
++
++        if getattr(step, "skip_reason", ""):
++            result.passed = True
++            result.message = f"skipped: {step.skip_reason}"
++            result.checks["skipped"] = True
++            return result
++
++        dep_block = self._check_dependency(step, failed_step_indices, all_steps)
++        if dep_block:
++            result.failures.append("blocked_by_previous_failure")
++            result.message = dep_block
++            return result
++
++        action = step.action
++        if action == "navigation":
++            result.passed = True
++            result.checks["navigation_ok"] = True
++            return result
++
++        selector = self._primary_selector(step)
++
++        if action == "click":
++            return self._validate_click(step, selector, result)
++        if action == "fill":
++            return self._validate_fill(step, selector, result)
++        if action == "select_option":
++            return self._validate_select(step, selector, result)
++        if action == "assert":
++            return self._validate_assert(step, selector, result)
++
++        result.passed = True
++        result.message = f"no specific precondition for action={action}"
++        return result
++
++    def _validate_click(self, step, selector, result):
++        result.checks["selector_present"] = bool(selector)
++        if not selector:
++            result.failures.append("missing_selector")
++            result.message = "click sem selector"
++            return result
++        if self._actionability:
++            try:
++                ar = self._actionability.validate(selector, timeout=3000)
++                result.checks["actionable"] = ar.actionable
++                result.checks["visible"] = ar.visible
++                result.checks["enabled"] = ar.enabled
++                result.checks["area_positive"] = ar.area_positive
++                if not ar.actionable:
++                    result.failures.extend(ar.failures)
++                    result.message = ar.message
++                    return result
++            except Exception as exc:
++                result.failures.append(f"actionability_error: {exc}")
++                result.message = str(exc)
++                return result
++        result.passed = True
++        result.message = "click precondition ok"
++        return result
++
++    def _validate_fill(self, step, selector, result):
++        result.checks["selector_present"] = bool(selector)
++        if not selector:
++            result.failures.append("missing_selector")
++            result.message = "fill sem selector"
++            return result
++        value = step.value or ""
++        result.checks["value_present"] = bool(value)
++        if not value:
++            result.failures.append("missing_value")
++            result.message = "fill sem valor"
++            return result
++        try:
++            el = self.page.locator(selector).first
++            el.wait_for(state="visible", timeout=3000)
++            result.checks["visible"] = True
++            readonly = el.get_attribute("readonly")
++            disabled = el.get_attribute("disabled")
++            result.checks["editable"] = not (readonly or disabled)
++            if readonly or disabled:
++                result.failures.append("not_editable")
++                result.message = "campo readonly/disabled"
++                return result
++        except Exception as exc:
++            result.failures.append(f"locator_error: {exc}")
++            result.message = str(exc)
++            return result
++        result.passed = True
++        result.message = "fill precondition ok"
++        return result
++
++    def _validate_select(self, step, selector, result):
++        result.checks["selector_present"] = bool(selector)
++        if not selector:
++            result.failures.append("missing_selector")
++            return result
++        try:
++            el = self.page.locator(selector).first
++            el.wait_for(state="attached", timeout=3000)
++            tag = el.evaluate("e => e.tagName.toLowerCase()")
++            result.checks["target_is_select"] = (tag == "select")
++            if tag != "select":
++                result.failures.append("target_not_select")
++                result.message = f"alvo nao e <select>, e <{tag}>"
++                return result
++            expected = step.value or ""
++            if expected:
++                options = el.evaluate(
++                    "e => Array.from(e.options).map(o => ({value: o.value, text: (o.textContent||'').trim()}))"
++                )
++                exists = any(
++                    o["value"] == expected or o["text"] == expected
++                    for o in options
++                )
++                result.checks["option_exists"] = exists
++                if not exists:
++                    result.failures.append("option_not_found")
++                    result.message = f"opcao '{expected}' nao existe"
++                    return result
++        except Exception as exc:
++            result.failures.append(f"select_error: {exc}")
++            result.message = str(exc)
++            return result
++        result.passed = True
++        result.message = "select precondition ok"
++        return result
++
++    def _validate_assert(self, step, selector, result):
++        if not selector:
++            selector = "body"
++        result.checks["selector_present"] = True
++        expected = step.value or ""
++        result.checks["expected_present"] = bool(expected)
++        if not expected:
++            result.failures.append("missing_expected")
++            result.message = "assert sem valor esperado"
++            return result
++        result.passed = True
++        result.message = "assert precondition ok"
++        return result
+diff --git a/src/testforge/runner/step_result.py b/src/testforge/runner/step_result.py
+new file mode 100644
+--- /dev/null
++++ b/src/testforge/runner/step_result.py
+@@ -0,0 +1,100 @@
++"""TestForge — Incremental step result models.
++
++Dataclasses serializáveis para o IncrementalRunner. Cada step carrega:
++pré-condição, execução, pós-condição, healing, evidências, métricas.
++"""
++from __future__ import annotations
++from dataclasses import dataclass, field, asdict
++from typing import Any, Optional
++
++
++@dataclass
++class PreconditionResult:
++    passed: bool = False
++    checks: dict = field(default_factory=dict)
++    failures: list = field(default_factory=list)
++    message: str = ""
++
++    def to_dict(self) -> dict:
++        return asdict(self)
++
++
++@dataclass
++class PostconditionResult:
++    passed: bool = False
++    checks: dict = field(default_factory=dict)
++    oracle_results: list = field(default_factory=list)
++    failures: list = field(default_factory=list)
++    message: str = ""
++
++    def to_dict(self) -> dict:
++        return {
++            "passed": self.passed,
++            "checks": dict(self.checks),
++            "oracle_results": [str(o) for o in self.oracle_results],
++            "failures": list(self.failures),
++            "message": self.message,
++        }
++
++
++@dataclass
++class HealingAttempt:
++    attempted: bool = False
++    status: str = ""
++    layer: str = ""
++    family: str = ""
++    taxonomy_id: str = ""
++    strategy: str = ""
++    original_locator: str = ""
++    proposed_locator: str = ""
++    confidence: float = 0.0
++    validated: bool = False
++    oracle_passed: bool = False
++    rejection_reason: list = field(default_factory=list)
++    rationale: str = ""
++    raw_response: str = ""
++    failure_phase: str = ""
++    original_error: str = ""
++    entry_id: str = ""
++    promotion_state: str = ""
++    promotion_allowed: bool = False
++    promotion_blocks: list = field(default_factory=list)
++
++    def to_dict(self) -> dict:
++        return asdict(self)
++
++
++@dataclass
++class IncrementalStepResult:
++    step_num: int
++    action: str
++    status: str = "unknown"
++    original_locator: str = ""
++    selected_locator: str = ""
++    value: str = ""
++    precondition: Optional[PreconditionResult] = None
++    postcondition: Optional[PostconditionResult] = None
++    healing: Optional[HealingAttempt] = None
++    error_message: str = ""
++    evidence_before: dict = field(default_factory=dict)
++    evidence_after: dict = field(default_factory=dict)
++    duration_ms: int = 0
++    skip_reason: str = ""
++
++    def to_dict(self) -> dict:
++        return {
++            "step_num": self.step_num,
++            "action": self.action,
++            "status": self.status,
++            "original_locator": self.original_locator,
++            "selected_locator": self.selected_locator,
++            "value": self.value,
++            "precondition": self.precondition.to_dict() if self.precondition else None,
++            "postcondition": self.postcondition.to_dict() if self.postcondition else None,
++            "healing": self.healing.to_dict() if self.healing else None,
++            "error_message": self.error_message,
++            "evidence_before": self.evidence_before,
++            "evidence_after": self.evidence_after,
++            "duration_ms": self.duration_ms,
++            "skip_reason": self.skip_reason,
++        }
+diff --git a/tests/helpers/__init__.py b/tests/helpers/__init__.py
+new file mode 100644
+--- /dev/null
++++ b/tests/helpers/__init__.py
+@@ -0,0 +1,1 @@
++
+\ No newline at end of file
+diff --git a/tests/helpers/incremental_fakes.py b/tests/helpers/incremental_fakes.py
+new file mode 100644
+--- /dev/null
++++ b/tests/helpers/incremental_fakes.py
+@@ -0,0 +1,101 @@
++"""TestForge — Fakes para testes do IncrementalRunner."""
++from __future__ import annotations
++from dataclasses import dataclass, field
++from typing import Optional
++
++
++@dataclass
++class FakeCandidate:
++    selector: str
++    score: float = 1.0
++
++
++@dataclass
++class FakeTarget:
++    candidates: list = field(default_factory=list)
++    text: str = ""
++    label: str = ""
++    accessible_name: str = ""
++    tag: str = ""
++    name: str = ""
++    placeholder: str = ""
++
++
++@dataclass
++class FakeStep:
++    action: str
++    value: str = ""
++    target: Optional[FakeTarget] = None
++    context: dict = field(default_factory=dict)
++    depends_on: str = ""
++    blocking: bool = False
++    skip_reason: str = ""
++    url: str = ""
++
++
++def make_fake_step(action="click", selector="#btn", text="", value="",
++                   tag="", context=None, blocking=False, depends_on=""):
++    cands = [FakeCandidate(selector=selector)] if selector else []
++    target = FakeTarget(candidates=cands, text=text, label=text, tag=tag)
++    return FakeStep(
++        action=action, value=value, target=target,
++        context=context or {}, blocking=blocking, depends_on=depends_on,
++    )
++
++
++@dataclass
++class FakePostconditionResult:
++    passed: bool
++    message: str = ""
++    failures: list = field(default_factory=list)
++    oracle_results: list = field(default_factory=list)
++    checks: dict = field(default_factory=dict)
++
++
++class FakePostconditionValidator:
++    def __init__(self, passed: bool, message: str = "", failures=None):
++        self._passed = passed
++        self._message = message
++        self._failures = failures or []
++
++    def validate(self, step, page=None, next_step=None, url_before=""):
++        return FakePostconditionResult(
++            passed=self._passed,
++            message=self._message,
++            failures=list(self._failures),
++        )
++
++
++@dataclass
++class FakeProposal:
++    new_locator: str = ""
++    strategy: str = ""
++    confidence: float = 0.0
++    family: str = ""
++    taxonomy_id: str = ""
++    rationale: str = ""
++    raw_response: str = ""
++
++
++@dataclass
++class FakeOutcome:
++    status: str = ""
++    layer_used: str = ""
++    family: str = ""
++    taxonomy_id: str = ""
++    error_message: str = ""
++    proposal: Optional[FakeProposal] = None
++    entry_id: str = ""
++
++
++def make_fake_outcome(status="PASSED_STEP", layer_used="L2", strategy="has_text_fallback",
++                     new_locator="text=Pesquisar", confidence=0.85,
++                     family="FAM-01", taxonomy_id="SEL-004"):
++    proposal = FakeProposal(
++        new_locator=new_locator, strategy=strategy, confidence=confidence,
++        family=family, taxonomy_id=taxonomy_id,
++    )
++    return FakeOutcome(
++        status=status, layer_used=layer_used, family=family,
++        taxonomy_id=taxonomy_id, proposal=proposal,
++    )
+diff --git a/tests/test_incremental_curator.py b/tests/test_incremental_curator.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_incremental_curator.py
+@@ -0,0 +1,27 @@
++"""TestForge — IncrementalRunner._make_curator tests."""
++from testforge.runner.incremental_runner import IncrementalRunner
++from testforge.healing import CuradorAutomatico, HealingCatalog
++
++
++def test_make_curator_returns_curador_automatico(tmp_path):
++    script = tmp_path / "t.py"
++    script.write_text('BASE_URL = "http://localhost"\n# source: REC-test\n')
++    runner = IncrementalRunner(script_path=str(script))
++    def fake_runner(step_data):
++        return True
++    curator = runner._make_curator(catalog=HealingCatalog(), step_runner=fake_runner)
++    assert isinstance(curator, CuradorAutomatico)
++
++
++def test_make_curator_uses_injected_step_runner(tmp_path):
++    script = tmp_path / "t.py"
++    script.write_text("")
++    runner = IncrementalRunner(script_path=str(script))
++    called = {"n": 0}
++    def fake_runner(step_data):
++        called["n"] += 1
++        return True
++    curator = runner._make_curator(step_runner=fake_runner)
++    result = curator._step_runner({"selector": "#x", "action": "click", "value": ""})
++    assert result is True
++    assert called["n"] == 1
+diff --git a/tests/test_incremental_curator_proposal.py b/tests/test_incremental_curator_proposal.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_incremental_curator_proposal.py
+@@ -0,0 +1,65 @@
++"""TestForge — _validate_curator_proposal tests."""
++from testforge.runner.incremental_runner import IncrementalRunner
++from tests.helpers.incremental_fakes import make_fake_step, make_fake_outcome
++
++
++def _runner(tmp_path):
++    script = tmp_path / "t.py"
++    script.write_text("")
++    return IncrementalRunner(script_path=str(script))
++
++
++def test_rejects_missing_locator(tmp_path):
++    runner = _runner(tmp_path)
++    outcome = make_fake_outcome(new_locator="")
++    step = make_fake_step("click", "#btn", text="Pesquisar")
++    ok, fails = runner._validate_curator_proposal(outcome, step, "#btn")
++    assert not ok
++    assert "missing_new_locator" in fails
++
++
++def test_rejects_low_confidence(tmp_path):
++    runner = _runner(tmp_path)
++    outcome = make_fake_outcome(confidence=0.3)
++    step = make_fake_step("click", "#btn", text="Pesquisar")
++    ok, fails = runner._validate_curator_proposal(outcome, step, "#btn")
++    assert not ok
++    assert "low_confidence" in fails
++
++
++def test_rejects_generic_locator(tmp_path):
++    runner = _runner(tmp_path)
++    outcome = make_fake_outcome(new_locator="button", confidence=0.9)
++    step = make_fake_step("click", "#btn", text="Pesquisar")
++    ok, fails = runner._validate_curator_proposal(outcome, step, "#btn")
++    assert not ok
++    assert "generic_or_dangerous_locator" in fails
++
++
++def test_rejects_incompatible_strategy(tmp_path):
++    runner = _runner(tmp_path)
++    outcome = make_fake_outcome(strategy="press_sequentially", new_locator="#new", confidence=0.9)
++    step = make_fake_step("click", "#btn", text="Pesquisar")
++    ok, fails = runner._validate_curator_proposal(outcome, step, "#btn")
++    assert not ok
++    assert "incompatible_action_strategy" in fails
++
++
++def test_accepts_valid_proposal(tmp_path):
++    runner = _runner(tmp_path)
++    outcome = make_fake_outcome(
++        strategy="has_text_fallback", new_locator="text=Pesquisar",
++        confidence=0.85, layer_used="L2",
++    )
++    step = make_fake_step("click", "#btn-old", text="Pesquisar")
++    ok, fails = runner._validate_curator_proposal(outcome, step, "#btn-old")
++    assert ok, f"esperava aceitar, falhou: {fails}"
++
++
++def test_rejects_same_locator_as_failed(tmp_path):
++    runner = _runner(tmp_path)
++    outcome = make_fake_outcome(new_locator="#btn-old", layer_used="L2", confidence=0.9)
++    step = make_fake_step("click", "#btn-old", text="Pesquisar")
++    ok, fails = runner._validate_curator_proposal(outcome, step, "#btn-old")
++    assert not ok
++    assert "same_locator_as_failed_original" in fails
+diff --git a/tests/test_incremental_heal_failed_step.py b/tests/test_incremental_heal_failed_step.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_incremental_heal_failed_step.py
+@@ -0,0 +1,106 @@
++"""TestForge — IncrementalRunner._heal_failed_step tests."""
++import pytest
++from unittest.mock import MagicMock
++from testforge.runner.incremental_runner import IncrementalRunner
++from testforge.runner.step_result import IncrementalStepResult
++from tests.helpers.incremental_fakes import (
++    make_fake_step, make_fake_outcome, FakePostconditionValidator,
++)
++
++
++class _StubMetrics:
++    def __init__(self):
++        self.events = []
++    def record_step(self, outcome, **kwargs):
++        self.events.append((str(outcome), kwargs))
++    @property
++    def snapshot(self):
++        s = MagicMock()
++        s.to_dict.return_value = {"events": len(self.events)}
++        return s
++
++
++def _make_runner_with_stubs(tmp_path, post_passed=True, post_failures=None):
++    script = tmp_path / "t.py"
++    script.write_text("")
++    runner = IncrementalRunner(script_path=str(script))
++    runner.page = MagicMock()
++    runner.page.url = "http://localhost"
++    runner.steps = []
++    runner.metrics = _StubMetrics()
++    runner.postcondition_validator = FakePostconditionValidator(
++        passed=post_passed, message="oracle", failures=post_failures or [],
++    )
++    runner.evidence_collector = MagicMock()
++    payload = MagicMock()
++    payload.is_sufficient = True
++    runner.evidence_collector.build_llm_payload = MagicMock(return_value=payload)
++    return runner
++
++
++def _patch_make_curator(runner, outcome):
++    curator = MagicMock()
++    curator.cure = MagicMock(return_value=outcome)
++    runner._make_curator = MagicMock(return_value=curator)
++
++
++def test_heal_failed_step_validates_true_healing(tmp_path):
++    runner = _make_runner_with_stubs(tmp_path, post_passed=True)
++    outcome = make_fake_outcome()
++    _patch_make_curator(runner, outcome)
++    step = make_fake_step("click", "#old", text="Pesquisar")
++    result = IncrementalStepResult(step_num=1, action="click", original_locator="#old")
++    healed = runner._heal_failed_step(
++        step=step, step_num=1, original_error="element not found",
++        failure_phase="execution", result=result,
++    )
++    assert healed.status == "healed_validated"
++    assert healed.healing.validated is True
++    assert healed.healing.oracle_passed is True
++
++
++def test_heal_failed_step_rejects_false_healing(tmp_path):
++    runner = _make_runner_with_stubs(
++        tmp_path, post_passed=False, post_failures=["oracle_failed"],
++    )
++    outcome = make_fake_outcome()
++    _patch_make_curator(runner, outcome)
++    step = make_fake_step("click", "#old", text="Pesquisar")
++    result = IncrementalStepResult(step_num=1, action="click", original_locator="#old")
++    healed = runner._heal_failed_step(
++        step=step, step_num=1, original_error="element not found",
++        failure_phase="execution", result=result,
++    )
++    assert healed.status == "healing_rejected"
++    assert healed.healing.validated is False
++    assert "postcondition_failed" in healed.healing.rejection_reason
++
++
++def test_heal_failed_step_blocks_insufficient_evidence(tmp_path):
++    runner = _make_runner_with_stubs(tmp_path)
++    payload = MagicMock()
++    payload.is_sufficient = False
++    payload.insufficiency_reason = "DOM vazio"
++    runner.evidence_collector.build_llm_payload = MagicMock(return_value=payload)
++    step = make_fake_step("click", "#old")
++    result = IncrementalStepResult(step_num=1, action="click")
++    healed = runner._heal_failed_step(
++        step=step, step_num=1, original_error="err",
++        failure_phase="execution", result=result,
++    )
++    assert healed.status == "failed"
++    assert "insufficient_evidence" in healed.healing.rejection_reason
++
++
++def test_heal_failed_step_rejects_invalid_proposal(tmp_path):
++    runner = _make_runner_with_stubs(tmp_path)
++    outcome = make_fake_outcome(new_locator="button", confidence=0.9)
++    _patch_make_curator(runner, outcome)
++    step = make_fake_step("click", "#old", text="Pesquisar")
++    result = IncrementalStepResult(step_num=1, action="click", original_locator="#old")
++    healed = runner._heal_failed_step(
++        step=step, step_num=1, original_error="err",
++        failure_phase="execution", result=result,
++    )
++    assert healed.status == "healing_rejected"
++    assert "generic_or_dangerous_locator" in healed.healing.rejection_reason
+diff --git a/tests/test_incremental_metrics.py b/tests/test_incremental_metrics.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_incremental_metrics.py
+@@ -0,0 +1,62 @@
++"""TestForge — métricas registradas pelo IncrementalRunner."""
++from unittest.mock import MagicMock
++from testforge.runner.incremental_runner import IncrementalRunner
++from testforge.runner.step_result import IncrementalStepResult
++from tests.helpers.incremental_fakes import (
++    make_fake_step, make_fake_outcome, FakePostconditionValidator,
++)
++
++
++class _CountingMetrics:
++    def __init__(self):
++        self.events = []
++    def record_step(self, outcome, **kwargs):
++        self.events.append(str(outcome))
++
++
++def _build_runner(tmp_path, post_passed=True):
++    script = tmp_path / "t.py"
++    script.write_text("")
++    runner = IncrementalRunner(script_path=str(script))
++    runner.page = MagicMock()
++    runner.page.url = "http://localhost"
++    runner.steps = []
++    runner.metrics = _CountingMetrics()
++    runner.postcondition_validator = FakePostconditionValidator(passed=post_passed)
++    runner.evidence_collector = MagicMock()
++    payload = MagicMock()
++    payload.is_sufficient = True
++    runner.evidence_collector.build_llm_payload = MagicMock(return_value=payload)
++    curator = MagicMock()
++    curator.cure = MagicMock(return_value=make_fake_outcome())
++    runner._make_curator = MagicMock(return_value=curator)
++    return runner
++
++
++def test_metrics_for_validated_healing(tmp_path):
++    runner = _build_runner(tmp_path, post_passed=True)
++    step = make_fake_step("click", "#old", text="Pesquisar")
++    result = IncrementalStepResult(step_num=1, action="click")
++    runner._heal_failed_step(
++        step=step, step_num=1, original_error="err",
++        failure_phase="execution", result=result,
++    )
++    evs = " ".join(runner.metrics.events)
++    assert "FAILURE_DETECTED" in evs
++    assert "HEALING_ATTEMPTED" in evs
++    assert "HEALING_APPLIED" in evs
++    assert "ORACLE_VALIDATED" in evs
++
++
++def test_metrics_for_rejected_healing(tmp_path):
++    runner = _build_runner(tmp_path, post_passed=False)
++    step = make_fake_step("click", "#old", text="Pesquisar")
++    result = IncrementalStepResult(step_num=1, action="click")
++    runner._heal_failed_step(
++        step=step, step_num=1, original_error="err",
++        failure_phase="execution", result=result,
++    )
++    evs = " ".join(runner.metrics.events)
++    assert "FAILURE_DETECTED" in evs
++    assert "HEALING_REJECTED" in evs
++    assert "ORACLE_VALIDATED" not in evs
+diff --git a/tests/test_incremental_report.py b/tests/test_incremental_report.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_incremental_report.py
+@@ -0,0 +1,26 @@
++"""TestForge — execution_report.json e healing_report.md."""
++import json
++from pathlib import Path
++from testforge.runner.incremental_runner import IncrementalRunner
++from testforge.runner.step_result import IncrementalStepResult, HealingAttempt
++
++
++def test_execution_report_contains_summary(tmp_path):
++    script = tmp_path / "t.py"
++    script.write_text("")
++    runner = IncrementalRunner(script_path=str(script), output_root=str(tmp_path / "runs"))
++    runner.step_results = [
++        IncrementalStepResult(step_num=1, action="click", status="passed"),
++        IncrementalStepResult(step_num=2, action="click", status="healing_rejected",
++                              healing=HealingAttempt(attempted=True, rejection_reason=["x"])),
++    ]
++    runner.recording_id = "REC-x"
++    totals = runner._compute_totals()
++    report = runner._finalize_report(totals)
++    assert report["summary"]["passed"] == 1
++    assert report["summary"]["healing_rejected"] == 1
++    out_dir = Path(tmp_path / "runs" / "REC-x")
++    files = list(out_dir.rglob("execution_report.json"))
++    assert len(files) >= 1
++    data = json.loads(files[0].read_text())
++    assert data["summary"]["total"] == 2
+diff --git a/tests/test_incremental_sequence.py b/tests/test_incremental_sequence.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_incremental_sequence.py
+@@ -0,0 +1,32 @@
++"""TestForge — execução sequencial de steps + bloqueio de dependentes."""
++from unittest.mock import MagicMock
++from testforge.runner.incremental_runner import IncrementalRunner
++from tests.helpers.incremental_fakes import make_fake_step
++
++
++def _build_runner(tmp_path):
++    script = tmp_path / "t.py"
++    script.write_text("")
++    runner = IncrementalRunner(script_path=str(script))
++    runner.page = MagicMock()
++    runner.page.url = "http://localhost"
++    runner.evidence_collector = None
++    runner.metrics = None
++    return runner
++
++
++def test_blocked_step_when_dependency_failed(tmp_path):
++    runner = _build_runner(tmp_path)
++    step1 = make_fake_step("click", "#x", text="X", blocking=True)
++    step2 = make_fake_step("click", "#y", text="Y", depends_on="step_0001")
++    runner.steps = [step1, step2]
++    runner.failed_step_indices = {0}
++    from testforge.runner.step_precondition import StepPreconditionValidator
++    runner.precondition_validator = StepPreconditionValidator(runner.page, actionability_validator=None)
++    pre = runner.precondition_validator.validate(
++        step=step2,
++        failed_step_indices=runner.failed_step_indices,
++        all_steps=runner.steps,
++    )
++    assert pre.passed is False
++    assert "blocked_by_previous_failure" in pre.failures
+diff --git a/tests/test_incremental_step_result.py b/tests/test_incremental_step_result.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_incremental_step_result.py
+@@ -0,0 +1,40 @@
++"""TestForge — IncrementalStepResult serialization tests."""
++import json
++from testforge.runner.step_result import (
++    PreconditionResult, PostconditionResult, HealingAttempt, IncrementalStepResult,
++)
++
++
++def test_step_result_serializes_to_json():
++    pre = PreconditionResult(passed=True, checks={"ok": True}, message="ok")
++    post = PostconditionResult(passed=True, checks={"a": True}, message="ok")
++    healing = HealingAttempt(
++        attempted=True, layer="L2", family="FAM-01", taxonomy_id="SEL-004",
++        strategy="has_text_fallback", original_locator="#old",
++        proposed_locator="text=Pesquisar", confidence=0.9,
++        validated=True, oracle_passed=True,
++    )
++    result = IncrementalStepResult(
++        step_num=1, action="click", status="healed_validated",
++        original_locator="#old", selected_locator="text=Pesquisar",
++        precondition=pre, postcondition=post, healing=healing, duration_ms=123,
++    )
++    d = result.to_dict()
++    s = json.dumps(d, default=str)
++    assert "healed_validated" in s
++    assert "text=Pesquisar" in s
++    assert d["healing"]["validated"] is True
++
++
++def test_healing_attempt_has_required_fields():
++    h = HealingAttempt(attempted=True, layer="L0", family="FAM-01")
++    assert h.attempted is True
++    assert h.rejection_reason == []
++    assert h.confidence == 0.0
++
++
++def test_step_result_without_post_or_pre():
++    result = IncrementalStepResult(step_num=2, action="navigation", status="passed")
++    d = result.to_dict()
++    assert d["precondition"] is None
++    assert d["postcondition"] is None
+diff --git a/tests/test_run_incremental_cli.py b/tests/test_run_incremental_cli.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_run_incremental_cli.py
+@@ -0,0 +1,25 @@
++"""TestForge — CLI run-incremental registration & dispatch."""
++import argparse
++import pytest
++from testforge.cli._run_incremental_patch import register, cmd_run_incremental
++
++
++def test_cli_has_run_incremental_command():
++    parser = argparse.ArgumentParser()
++    sub = parser.add_subparsers(dest="command")
++    register(sub)
++    args = parser.parse_args(["run-incremental", "fake.py", "--headless", "--verbose"])
++    assert args.command == "run-incremental"
++    assert args.script == "fake.py"
++    assert args.headless is True
++    assert args.verbose is True
++
++
++def test_run_incremental_fails_with_missing_script(tmp_path):
++    parser = argparse.ArgumentParser()
++    sub = parser.add_subparsers(dest="command")
++    register(sub)
++    args = parser.parse_args(["run-incremental", str(tmp_path / "nao_existe.py")])
++    with pytest.raises(SystemExit) as exc:
++        cmd_run_incremental(args)
++    assert exc.value.code in (2, 3)
+diff --git a/tests/test_step_executor.py b/tests/test_step_executor.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_step_executor.py
+@@ -0,0 +1,62 @@
++"""TestForge — StepExecutor tests."""
++import pytest
++from unittest.mock import MagicMock
++from testforge.runner.step_executor import StepExecutor
++from tests.helpers.incremental_fakes import make_fake_step
++
++
++def _mock_page():
++    page = MagicMock()
++    page.url = "http://localhost"
++    locator = MagicMock()
++    locator.first = MagicMock()
++    locator.first.get_attribute = MagicMock(return_value=None)
++    page.locator = MagicMock(return_value=locator)
++    return page
++
++
++def test_execute_click_success():
++    page = _mock_page()
++    ex = StepExecutor(page)
++    step = make_fake_step("click", "#btn")
++    sel = ex.execute(step)
++    assert sel == "#btn"
++    page.click.assert_called_once()
++
++
++def test_execute_click_raises_for_missing_selector():
++    page = _mock_page()
++    ex = StepExecutor(page)
++    step = make_fake_step("click", selector="")
++    with pytest.raises(ValueError):
++        ex.execute(step)
++
++
++def test_execute_fill_success():
++    page = _mock_page()
++    ex = StepExecutor(page)
++    step = make_fake_step("fill", "#name", value="Joao")
++    sel = ex.execute(step)
++    assert sel == "#name"
++    page.fill.assert_called_once()
++
++
++def test_execute_select_option_uses_select_option_not_fill():
++    page = _mock_page()
++    ex = StepExecutor(page)
++    step = make_fake_step("select_option", selector="select[name=uf]", value="MT")
++    sel = ex.execute(step)
++    assert sel == "select[name=uf]"
++    page.select_option.assert_called_once()
++    page.fill.assert_not_called()
++    page.click.assert_not_called()
++
++
++def test_execute_navigation_only_when_url_differs():
++    page = _mock_page()
++    page.url = "http://localhost"
++    ex = StepExecutor(page)
++    step = make_fake_step("navigation", selector="")
++    step.url = "http://localhost"
++    ex.execute(step, base_url="http://localhost")
++    page.goto.assert_not_called()
+diff --git a/tests/test_step_postcondition.py b/tests/test_step_postcondition.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_step_postcondition.py
+@@ -0,0 +1,68 @@
++"""TestForge — StepPostconditionValidator tests."""
++from unittest.mock import MagicMock
++from testforge.runner.step_postcondition import StepPostconditionValidator
++from tests.helpers.incremental_fakes import make_fake_step
++
++
++def _mock_page(url="http://localhost"):
++    page = MagicMock()
++    page.url = url
++    return page
++
++
++def test_fill_postcondition_validates_value():
++    page = _mock_page()
++    page.locator.return_value.first.input_value = MagicMock(return_value="12345")
++    val = StepPostconditionValidator(page, oracle_runner=None)
++    step = make_fake_step("fill", "#cpf", value="12345")
++    r = val.validate(step)
++    assert r.passed is True
++
++
++def test_fill_postcondition_value_mismatch():
++    page = _mock_page()
++    page.locator.return_value.first.input_value = MagicMock(return_value="99999")
++    val = StepPostconditionValidator(page, oracle_runner=None)
++    step = make_fake_step("fill", "#cpf", value="12345")
++    r = val.validate(step)
++    assert r.passed is False
++    assert "value_mismatch" in r.failures
++
++
++def test_select_postcondition_validates_selected_value():
++    page = _mock_page()
++    page.locator.return_value.first.evaluate = MagicMock(
++        return_value={"value": "MT", "text": "MT"}
++    )
++    val = StepPostconditionValidator(page, oracle_runner=None)
++    step = make_fake_step("select_option", "select[name=uf]", value="MT")
++    r = val.validate(step)
++    assert r.passed is True
++
++
++def test_select_postcondition_selected_value_mismatch():
++    page = _mock_page()
++    page.locator.return_value.first.evaluate = MagicMock(
++        return_value={"value": "DF", "text": "DF"}
++    )
++    val = StepPostconditionValidator(page, oracle_runner=None)
++    step = make_fake_step("select_option", "select[name=uf]", value="MT")
++    r = val.validate(step)
++    assert r.passed is False
++
++
++def test_click_with_causes_navigation_requires_url_change():
++    page = _mock_page(url="http://localhost/result")
++    val = StepPostconditionValidator(page, oracle_runner=None)
++    step = make_fake_step("click", "#btn", context={"causes_navigation": True})
++    r = val.validate(step, url_before="http://localhost/form")
++    assert r.passed is True
++
++
++def test_click_navigation_fails_when_url_unchanged():
++    page = _mock_page(url="http://localhost/same")
++    val = StepPostconditionValidator(page, oracle_runner=None)
++    step = make_fake_step("click", "#btn", context={"causes_navigation": True})
++    r = val.validate(step, url_before="http://localhost/same")
++    assert r.passed is False
++    assert "url_not_changed" in r.failures
+diff --git a/tests/test_step_precondition.py b/tests/test_step_precondition.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_step_precondition.py
+@@ -0,0 +1,65 @@
++"""TestForge — StepPreconditionValidator tests (sem browser real)."""
++import pytest
++from testforge.runner.step_precondition import StepPreconditionValidator
++from tests.helpers.incremental_fakes import make_fake_step
++
++
++class _PageStub:
++    def __init__(self, **kwargs):
++        self.url = "http://localhost"
++        self._behavior = kwargs
++
++
++def test_skip_reason_passes_precondition():
++    page = _PageStub()
++    val = StepPreconditionValidator(page, actionability_validator=None)
++    step = make_fake_step("click", "#btn")
++    step.skip_reason = "duplicate"
++    result = val.validate(step)
++    assert result.passed is True
++    assert result.checks.get("skipped") is True
++
++
++def test_dependency_blocks_step():
++    page = _PageStub()
++    val = StepPreconditionValidator(page, actionability_validator=None)
++    step = make_fake_step("click", "#btn")
++    step.depends_on = "step_0001"
++    result = val.validate(step, failed_step_indices={0})
++    assert result.passed is False
++    assert "blocked_by_previous_failure" in result.failures
++
++
++def test_navigation_passes_without_selector():
++    page = _PageStub()
++    val = StepPreconditionValidator(page, actionability_validator=None)
++    step = make_fake_step("navigation", selector="")
++    result = val.validate(step)
++    assert result.passed is True
++
++
++def test_click_requires_selector():
++    page = _PageStub()
++    val = StepPreconditionValidator(page, actionability_validator=None)
++    step = make_fake_step("click", selector="", text="x")
++    result = val.validate(step)
++    assert result.passed is False
++    assert "missing_selector" in result.failures
++
++
++def test_fill_requires_value():
++    page = _PageStub()
++    val = StepPreconditionValidator(page, actionability_validator=None)
++    step = make_fake_step("fill", selector="#x", value="")
++    result = val.validate(step)
++    assert result.passed is False
++    assert "missing_value" in result.failures
++
++
++def test_assert_requires_expected_text():
++    page = _PageStub()
++    val = StepPreconditionValidator(page, actionability_validator=None)
++    step = make_fake_step("assert", selector="body", value="")
++    result = val.validate(step)
++    assert result.passed is False
++    assert "missing_expected" in result.failures

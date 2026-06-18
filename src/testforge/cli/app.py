@@ -1188,6 +1188,10 @@ def main():
                     help="Browser preferido (default: chromium)")
     dh.set_defaults(func=cmd_demo_heal)
 
+    # run-incremental (Plano TestForge Autocontido 2026-06-17)
+    from testforge.cli._run_incremental_patch import register as _register_run_incremental
+    _register_run_incremental(sub)
+
     args = parser.parse_args()
     if args.command:
         args.func(args)
