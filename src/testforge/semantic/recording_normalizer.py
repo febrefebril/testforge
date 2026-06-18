@@ -195,6 +195,22 @@ def _strip_transient_classes(css_path: str) -> str:
     return ' > '.join(cleaned_segments)
 
 
+def _is_dynamic_aria_attr(attr_name: str, attr_value: str) -> bool:
+    """Check if an aria attribute value contains dynamic/Angular-generated IDs.
+
+    Angular Material generates IDs like 'mat-mdc-hint-1', 'numeric-field-desc-abc123'
+    that change on every page load. These are useless as selectors.
+    """
+    if attr_name == "aria-describedby":
+        # Angular Material hint IDs: mat-mdc-hint-N
+        if "mat-mdc-hint-" in attr_value:
+            return True
+        # Random-suffix field descriptions: numeric-field-desc-<random>
+        if "field-desc-" in attr_value and len(attr_value) > 25:
+            return True
+    return False
+
+
 class RecordingNormalizer:
     """Converte raw events em SemanticTestCase."""
 
@@ -592,6 +608,9 @@ class RecordingNormalizer:
         aria_attrs = target_data.get("aria_attrs") or {}
         for attr_name, attr_value in aria_attrs.items():
             if attr_value and len(attr_value) < 80 and attr_name != "aria-label":
+                # Skip dynamic Angular Material IDs that change every page load
+                if _is_dynamic_aria_attr(attr_name, attr_value):
+                    continue
                 sel = f"[{attr_name}='{attr_value}']"
                 candidates.append(LocatorCandidate("aria_attr", sel, 0.30, f"{attr_name}={attr_value}"))
 

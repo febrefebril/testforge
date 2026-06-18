@@ -60,8 +60,7 @@ class StepExecutor:
         raise NotImplementedError(f"acao desconhecida: {action}")
 
     def _try_data_fill(self, step, selector, data_values) -> bool:
-        """Attempt to fill an input/textarea from data values before clicking.
-        Returns True if fill was attempted (even if it may have failed silently)."""
+        """Attempt to fill an input/textarea from data values before clicking."""
         label = ""
         if step.target:
             label = getattr(step.target, "label", "") or getattr(step.target, "placeholder", "")
@@ -71,11 +70,33 @@ class StepExecutor:
                 if k in label or (label and label in k):
                     fill_val = str(v)
                     break
-        if not fill_val:
+
+        # Determine which element to fill
+        el = None
+        if fill_val:
+            try:
+                el = self.page.locator(selector).first
+                if el.count() == 0:
+                    el = None
+            except Exception:
+                el = None
+
+        # Fallback: search by aria-label from data keys
+        if not el and data_values:
+            for k, v in data_values.items():
+                try:
+                    cand = self.page.locator(f'input[aria-label="{k}"], textarea[aria-label="{k}"]')
+                    if cand.count() > 0:
+                        el = cand.first
+                        fill_val = str(v)
+                        break
+                except Exception:
+                    continue
+
+        if not el or not fill_val:
             return False
 
         try:
-            el = self.page.locator(selector).first
             has_mask = el.get_attribute("currencymask") is not None
             if has_mask:
                 el.click()
