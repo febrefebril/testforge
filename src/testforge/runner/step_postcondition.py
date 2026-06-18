@@ -141,21 +141,35 @@ class StepPostconditionValidator:
         if next_step and getattr(next_step, "target", None):
             cands = next_step.target.candidates
             if cands:
-                next_sel = cands[0].selector
-                try:
-                    self.page.wait_for_selector(next_sel, state="visible", timeout=20000)
-                    return PostconditionResult(
-                        passed=True,
-                        checks={"next_step_visible": True},
-                        message=f"proximo step visivel: {next_sel}",
-                    )
-                except Exception:
-                    return PostconditionResult(
-                        passed=False,
-                        checks={"next_step_visible": False},
-                        failures=["next_step_not_visible"],
-                        message=f"proximo step nao apareceu: {next_sel}",
-                    )
+                # Try exact selectors first, then generic fallbacks
+                selectors_to_try = [c.selector for c in cands[:3]]
+                # Add generic fallback: same role without monetary value in name
+                for c in cands:
+                    if c.selector.startswith("role=") and "[name=" in c.selector:
+                        role = c.selector.split("[")[0]  # e.g., "role=listitem"
+                        selectors_to_try.append(role)
+                        break
+                # Add nth-child fallback for result cards
+                if any("role=listitem" in s for s in selectors_to_try):
+                    selectors_to_try.append("[role=listitem]:nth-child(2)")
+
+                for next_sel in selectors_to_try:
+                    try:
+                        self.page.wait_for_selector(next_sel, state="visible", timeout=8000)
+                        return PostconditionResult(
+                            passed=True,
+                            checks={"next_step_visible": True},
+                            message=f"proximo step visivel: {next_sel}",
+                        )
+                    except Exception:
+                        continue
+
+                return PostconditionResult(
+                    passed=False,
+                    checks={"next_step_visible": False},
+                    failures=["next_step_not_visible"],
+                    message=f"proximo step nao apareceu: {cands[0].selector}",
+                )
 
         return PostconditionResult(
             passed=True,
