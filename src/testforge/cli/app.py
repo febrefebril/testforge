@@ -85,6 +85,73 @@ def _update_recording_status(rec_dir: str, rec_id: str,
         return False
 
 
+def _run_post_recording_completion(rec_dir: str, rid: str, args,
+                                    auto_complete: bool, no_interactive: bool):
+    """Run intent completeness check + optional interactive prompt after recording."""
+    from testforge.semantic import RecordingNormalizer
+    from testforge.validation.intent_completeness import (
+        IntentCompletenessChecker,
+        save_completeness_report,
+    )
+    from testforge.cli._interactive_completion import (
+        prompt_missing_fields,
+        create_data_template,
+    )
+    from testforge.recorder.recording_status import RecordingStatus
+
+    print(f"\n[TestForge] 🔍 Verificando completude da intencao...")
+
+    try:
+        normalizer = RecordingNormalizer()
+        app = args.app or "web"
+        base_url = args.url or "http://localhost"
+        stc = normalizer.normalize(rec_dir, f"ST-{rid}", app, base_url)
+
+        checker = IntentCompletenessChecker()
+        report = checker.check_steps(stc.steps, stc.field_values)
+
+        report_dir = os.path.join(rec_dir, "completeness")
+        json_path, md_path = save_completeness_report(report, report_dir, rid)
+        print(f"[TestForge] ✓ Relatorio: {md_path}")
+
+        if report.is_complete:
+            print(f"[TestForge] ✓ Intencao COMPLETA ({report.resolved_count} campos)")
+            _update_recording_status(rec_dir, rid, RecordingStatus.intent_complete)
+            return
+
+        print(f"[TestForge] ⚠ Intencao INCOMPLETA — {report.missing_count} pendente(s)")
+
+        if no_interactive:
+            # Non-interactive mode: create template
+            template_path = create_data_template(rec_dir, rid, report)
+            print(f"[TestForge] ✓ Template criado: {template_path}")
+            _update_recording_status(rec_dir, rid, RecordingStatus.incomplete_intent)
+            print(f"[TestForge] 💡 Use: testforge compile --check {rid}")
+            print(f"[TestForge] 💡 Ou forneca valores via --data arquivo.json")
+            return
+
+        if auto_complete:
+            # Interactive mode: prompt user for values
+            all_resolved = prompt_missing_fields(rec_dir, rid, report,
+                                                  normalizer, stc)
+            if all_resolved:
+                print(f"[TestForge] ✅ Gravacao pronta para compilacao!")
+                print(f"  Use: testforge compile {rid}")
+            else:
+                print(f"[TestForge] ⚠ Campos pendentes — compile bloqueado ate completar")
+                print(f"  Use: testforge compile --check {rid}")
+            return
+
+        # Default: no --complete mode, just inform
+        print(f"[TestForge] 💡 Use --complete para informar valores pendentes")
+        print(f"  Ou: testforge compile --check {rid}")
+
+    except FileNotFoundError as e:
+        print(f"[TestForge] ⚠ Normalizacao nao disponivel: {e}")
+    except Exception as e:
+        print(f"[TestForge] ⚠ Erro na verificacao de completude: {e}")
+
+
 def _check_python_keyboard(page, recorder):
     """Monitora estado do assert e ativa via Python se necessario."""
     try:
@@ -100,6 +167,9 @@ def _check_python_keyboard(page, recorder):
 
 def cmd_record(args):
     """Grava fluxo de teste com comandos de teclado."""
+    no_interactive = getattr(args, 'no_interactive', False)
+    auto_complete = getattr(args, 'complete', False) and not no_interactive
+
     if args.url:
         _validate_and_warn_url(args.url)
     with sync_playwright() as pw:
@@ -151,13 +221,18 @@ def cmd_record(args):
         recorder.finalize()
         # Count raw events and display breakdown
         raw_count = 0
-        steps_jsonl = str(_PROJECT_ROOT / "recordings" / rid / "steps.jsonl")
+        rec_dir = str(_PROJECT_ROOT / "recordings" / rid)
+        steps_jsonl = os.path.join(rec_dir, "steps.jsonl")
         if os.path.exists(steps_jsonl):
             with open(steps_jsonl) as f:
                 raw_count = sum(1 for _ in f)
         print(f"[TestForge] Eventos brutos: {raw_count}")
         print(f"[TestForge] Sessao salva: recordings/{rid}/")
         browser.close()
+
+    # Post-recording: intent completeness check
+    if auto_complete or no_interactive:
+        _run_post_recording_completion(rec_dir, rid, args, auto_complete, no_interactive)
 
 
 def _auto_learn(error_msg: str, solution: str, framework: str = "generic"):
@@ -1219,6 +1294,10 @@ def main():
     rec.add_argument("--headless", action="store_true", help="Modo headless")
     rec.add_argument("--browser", choices=["chromium", "chrome", "edge"], default="chromium",
                      help="Browser preferido (default: chromium)")
+    rec.add_argument("--complete", action="store_true",
+                     help="Verificar completude e perguntar valores pendentes")
+    rec.add_argument("--no-interactive", action="store_true",
+                     help="Nao perguntar valores — criar template")
     rec.set_defaults(func=cmd_record)
 
     # compile
