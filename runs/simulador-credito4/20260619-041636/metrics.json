@@ -1,0 +1,18 @@
+{
+  "total_runs": 1,
+  "total_healings": 1,
+  "false_heals": 0,
+  "true_heals": 1,
+  "llm_escalations": 0,
+  "oracle_passed": 0,
+  "oracle_failed": 0,
+  "false_heal_rate": 0.0,
+  "precision": 1.0,
+  "llm_rate": 0.0,
+  "falhas_detectadas": 3,
+  "healings_tentados": 3,
+  "aplicados": 3,
+  "validados": 2,
+  "rejeitados": 1,
+  "healing_success_rate": 0.8333
+}

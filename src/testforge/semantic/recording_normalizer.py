@@ -223,6 +223,10 @@ class RecordingNormalizer:
         with open(events_path) as f:
             raw_events = [json.loads(line) for line in f if line.strip()]
 
+        # Run dedup BEFORE compaction: removes periodic DOM snapshot cycles
+        # (e.g. radio button spam) so consecutive fills on the same field
+        # become adjacent and get properly collapsed.
+        raw_events = self._remove_snapshot_duplicates(raw_events)
         raw_events = self._compact_fill_events(raw_events)
 
         recording_id = os.path.basename(recording_dir)
@@ -622,12 +626,17 @@ class RecordingNormalizer:
         return " ".join(parts)
 
     def _compact_fill_events(self, raw_events: list) -> list:
-        """Compact sequential fill events on same element within 500ms window.
+        """Compact sequential fill events on same element.
 
         When user types into a field, the recorder captures each keystroke as a
         separate fill/keypress event. Consecutive events on the same target
-        within 500ms of each other are collapsed — only the final event (which
-        holds the complete value) is kept.
+        are collapsed — only the final event (which holds the complete typed
+        value) is kept.
+
+        Note: time-based grouping (500ms window) was REMOVED because slow
+        typists produce keystroke gaps exceeding 500ms. Using the same-target
+        heuristic is safer: if the next event targets the same element, it's
+        part of the same typing sequence, regardless of time gap.
         """
         if not raw_events:
             return raw_events
@@ -646,13 +655,6 @@ class RecordingNormalizer:
                 target.get("placeholder", ""),
             )
 
-        def _parse_ts(ts: str) -> float:
-            try:
-                dt = datetime.fromisoformat(ts)
-                return dt.timestamp()
-            except (ValueError, TypeError):
-                return 0.0
-
         compacted: list = []
         i = 0
         while i < len(raw_events):
@@ -666,7 +668,6 @@ class RecordingNormalizer:
 
             # Start of a potential fill group on the same target
             current_key = _target_key(event.get("target"))
-            current_ts = _parse_ts(event.get("timestamp", ""))
             group_end = i
 
             j = i + 1
@@ -678,16 +679,11 @@ class RecordingNormalizer:
                     break
 
                 next_key = _target_key(next_event.get("target"))
-                next_ts = _parse_ts(next_event.get("timestamp", ""))
 
                 if next_key != current_key:
                     break
 
-                if (next_ts - current_ts) > 0.5:  # 500ms sliding window
-                    break
-
                 group_end = j
-                current_ts = next_ts
                 j += 1
 
             # Keep only the final event (holds the complete typed value)
@@ -696,9 +692,61 @@ class RecordingNormalizer:
 
         return compacted
 
+    def _remove_snapshot_duplicates(self, raw_events: list) -> list:
+        """Remove periodic DOM snapshot fill events (duplicate cycles).
+
+        The recorder captures periodic snapshots of ALL visible form fields.
+        These produce duplicate fill events for the same element with the
+        same value, cycling through fields in a predictable pattern.
+        Keep only the first occurrence of each (element, value) pair.
+
+        Field re-fills with different values (e.g. currency: 10000 → 100000)
+        are preserved because the value differs. Only true duplicates
+        (same element, same value) are removed.
+        """
+        if not raw_events:
+            return raw_events
+
+        FILL_TYPES = {"fill", "keypress"}
+        seen: set = set()
+        result: list = []
+
+        for event in raw_events:
+            event_type = event.get("type", "")
+            target = event.get("target") or {}
+
+            if event_type in FILL_TYPES:
+                key = (
+                    target.get("id", ""),
+                    target.get("name", ""),
+                    event.get("value", "") or "",
+                )
+                if key in seen:
+                    continue
+                seen.add(key)
+
+            result.append(event)
+
+        return result
+
     def _convert_event(self, raw: dict) -> Optional[SemanticAction]:
         event_type = raw.get("type", "")
         target_data = raw.get("target") or {}
+
+        # Normalize target_data field names from recorder format to
+        # _build_target() expected format.
+        # Recorder stores element_id + attributes dict; _build_target
+        # expects flat fields: id, name, placeholder, label, etc.
+        if target_data:
+            if "element_id" in target_data and "id" not in target_data:
+                target_data["id"] = target_data["element_id"]
+            attrs = target_data.get("attributes") or {}
+            all_attrs = target_data.get("all_attributes") or {}
+            for flat_key in ("name", "placeholder", "type"):
+                if flat_key not in target_data:
+                    val = attrs.get(flat_key) or all_attrs.get(flat_key) or ""
+                    if val:
+                        target_data[flat_key] = val
 
         if event_type == "navigation":
             return SemanticAction(
@@ -719,6 +767,14 @@ class RecordingNormalizer:
         # (clicks outside any recognizable element, e.g. background/whitespace).
         if event_type == "click" and not target.candidates:
             return None
+
+        # Radio and checkbox inputs: Playwright fill() does not support
+        # these element types. Convert to click action — the target
+        # selector (label:has-text or name-based) will find the element
+        # and clicking the label propagates to the native radio/checkbox.
+        attrs = target_data.get("attributes") or {}
+        if event_type == "fill" and attrs.get("type") in ("radio", "checkbox"):
+            event_type = "click"
 
         action_map = {
             "click": "click",
@@ -849,7 +905,13 @@ class RecordingNormalizer:
             candidates.append(LocatorCandidate("label", f"label[for=\"{el_id}\"]", 0.90, f"label for={el_id}"))
         elif target_data.get("label"):
             label = target_data["label"]
+            # Adjacent sibling: <label>Text</label> + <input> (most HTML forms)
             candidates.append(LocatorCandidate("label", f"label:has-text(\"{label}\") + input", 0.85, f"label adjacent={label}"))
+            # JUST the label element itself — clicking label fires native input events.
+            # Catches Material Design where input is nested INSIDE the label:
+            #   <label>Text <input type="radio"></label>
+            # Also catches cases where label click propagates correctly.
+            candidates.append(LocatorCandidate("label", f"label:has-text(\"{label}\")", 0.80, f"label click={label}"))
 
         if target_data.get("placeholder"):
             ph = target_data["placeholder"]

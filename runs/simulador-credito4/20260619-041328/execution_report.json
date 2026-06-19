@@ -1,0 +1,161 @@
+{
+  "run_id": "simulador-credito4_20260619-041328",
+  "recording_id": "simulador-credito4",
+  "script_path": "semantic_tests/ST-simulador-credito4/test_st-simulador-credito4.py",
+  "base_url": "https://simuladorhabitacao.caixa.gov.br/home",
+  "mode": "incremental",
+  "summary": {
+    "total": 3,
+    "passed": 2,
+    "healed_validated": 0,
+    "healing_rejected": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0,
+    "shadow_healed": 0
+  },
+  "steps": [
+    {
+      "step_num": 1,
+      "action": "navigation",
+      "status": "passed",
+      "original_locator": "",
+      "selected_locator": "",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "navigation_ok": true
+        },
+        "failures": [],
+        "message": ""
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url atual: https://simuladorhabitacao.caixa.gov.br/home"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito4_20260619-041320/screenshots/before_step_0001.png",
+        "dom": "evidence/simulador-credito4_20260619-041320/dom/before_step_0001.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito4_20260619-041320/screenshots/after_step_0001.png",
+        "dom": "evidence/simulador-credito4_20260619-041320/dom/after_step_0001.html"
+      },
+      "duration_ms": 453,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 2,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "a:has-text(\"Simulação Completa Confira o valor do seu financiamento de a\")",
+      "selected_locator": "a:has-text(\"Simulação Completa Confira o valor do seu financiamento de a\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_changed": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url before='https://simuladorhabitacao.caixa.gov.br/home' after='https://simuladorhabitacao.caixa.gov.br/simulacao'"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito4_20260619-041320/screenshots/before_step_0002.png",
+        "dom": "evidence/simulador-credito4_20260619-041320/dom/before_step_0002.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito4_20260619-041320/screenshots/after_step_0002.png",
+        "dom": "evidence/simulador-credito4_20260619-041320/dom/after_step_0002.html"
+      },
+      "duration_ms": 728,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 3,
+      "action": "fill",
+      "status": "healing_rejected",
+      "original_locator": "label:has-text(\"Não, tenho menos de 3 anos\") + input",
+      "selected_locator": "",
+      "value": "N",
+      "precondition": {
+        "passed": false,
+        "checks": {
+          "selector_present": true,
+          "value_present": true
+        },
+        "failures": [
+          "locator_error: Locator.wait_for: Timeout 3000ms exceeded.\nCall log:\n  - waiting for locator(\"label:has-text(\\\"Não, tenho menos de 3 anos\\\") + input\").first to be visible\n"
+        ],
+        "message": "Locator.wait_for: Timeout 3000ms exceeded.\nCall log:\n  - waiting for locator(\"label:has-text(\\\"Não, tenho menos de 3 anos\\\") + input\").first to be visible\n"
+      },
+      "postcondition": {
+        "passed": false,
+        "checks": {},
+        "oracle_results": [],
+        "failures": [
+          "cannot_read_input_value"
+        ],
+        "message": "Locator.input_value: Timeout 3000ms exceeded.\nCall log:\n  - waiting for locator(\"label:has-text(\\\"Não, tenho menos de 3 anos\\\") + input\").first\n"
+      },
+      "healing": {
+        "attempted": true,
+        "status": "PASSED_STEP",
+        "layer": "L0",
+        "family": "FAM-02",
+        "taxonomy_id": "",
+        "strategy": "",
+        "original_locator": "label:has-text(\"Não, tenho menos de 3 anos\") + input",
+        "proposed_locator": "",
+        "confidence": 0.0,
+        "validated": false,
+        "oracle_passed": false,
+        "rejection_reason": [
+          "postcondition_failed",
+          "cannot_read_input_value"
+        ],
+        "rationale": "",
+        "raw_response": "",
+        "failure_phase": "precondition",
+        "original_error": "Locator.wait_for: Timeout 3000ms exceeded.\nCall log:\n  - waiting for locator(\"label:has-text(\\\"Não, tenho menos de 3 anos\\\") + input\").first to be visible\n",
+        "entry_id": "3a99ac4c1e6a",
+        "promotion_state": "",
+        "promotion_allowed": false,
+        "promotion_blocks": []
+      },
+      "error_message": "Healing executou, mas pos-condicao/oracle falhou: Locator.input_value: Timeout 3000ms exceeded.\nCall log:\n  - waiting for locator(\"label:has-text(\\\"Não, tenho menos de 3 anos\\\") + input\").first\n",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito4_20260619-041320/screenshots/before_step_0003.png",
+        "dom": "evidence/simulador-credito4_20260619-041320/dom/before_step_0003.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito4_20260619-041320/screenshots/after_step_0003.png",
+        "dom": "evidence/simulador-credito4_20260619-041320/dom/after_step_0003.html"
+      },
+      "duration_ms": 6373,
+      "skip_reason": ""
+    }
+  ]
+}
