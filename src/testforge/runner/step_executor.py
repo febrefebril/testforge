@@ -311,7 +311,7 @@ class StepExecutor:
 
         # Resolve value from field_value_map first, then data_values
         resolved_val, intention = self._resolve_field_value(step, data_values, field_value_map)
-        value = resolved_val or step.value or ""
+        value = (resolved_val or step.value or "").strip()
 
         if not value:
             raise ValueError(f"fill sem valor: step='{step.action}' selector='{selector}'")

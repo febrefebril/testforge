@@ -471,7 +471,7 @@ class RecordingNormalizer:
 
             # Recorded fill events
             if step.action == "fill" and step.target:
-                val = step.value or ""
+                val = (step.value or "").strip()
                 if not val:
                     continue
                 # Build identifiers from target
