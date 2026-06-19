@@ -871,6 +871,12 @@ class RecordingNormalizer:
             if text:
                 # Penalize generic text like "OK", "Cancelar", "Selecione" — brittle locators
                 text_score = 0.10 if _is_generic_text(text) else 0.55
+                # Length penalty: long has-text() is fragile (truncated text, partial matches)
+                # 0-20 chars: 0, 20-40: -0.05, 40-60: -0.10
+                if len(text) > 40:
+                    text_score -= 0.10
+                elif len(text) > 20:
+                    text_score -= 0.05
                 # Always include tag when available — bare :has-text() clicks on child elements
                 # instead of the link/button itself, breaking SPA navigation.
                 tag = (target_data.get("tag") or "").lower()
