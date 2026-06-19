@@ -298,7 +298,7 @@ def cmd_record(args):
         viewport = {"width": 1280, "height": 720} if args.headless else None
         context = browser.new_context(viewport=viewport)
         page = context.new_page()
-        recorder = RecorderController(page)
+        recorder = RecorderController(page, recordings_root=str(_PROJECT_ROOT / "recordings"))
 
         ts = time.strftime("%Y%m%d-%H%M%S")
         rid = _sanitize_name(args.name) if args.name else f"REC-{ts}"
@@ -317,6 +317,9 @@ def cmd_record(args):
         try:
             while True:
                 time.sleep(0.3)
+                if page.is_closed():
+                    print("\n[TestForge] Navegador fechado — encerrando gravacao")
+                    break
                 recorder.flush_events()
                 result = recorder.handle_commands()
 
@@ -625,7 +628,8 @@ def cmd_run(args):
         with sync_playwright() as pw:
             browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
             page = browser.new_page()
-            page.set_viewport_size({"width": 1280, "height": 720})
+            if args.headless:
+                page.set_viewport_size({"width": 1280, "height": 720})
 
             # Navegar
             page.goto(base_url)
@@ -1195,7 +1199,7 @@ def cmd_pipeline(args):
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
         page = browser.new_page()
         page.set_viewport_size({"width": 1280, "height": 720})
-        recorder = RecorderController(page)
+        recorder = RecorderController(page, recordings_root=str(_PROJECT_ROOT / "recordings"))
 
         recorder.start(recording_id=rid, application="pipeline", base_url=args.url)
         page.goto(args.url)
@@ -1334,7 +1338,7 @@ def cmd_demo_heal(args):
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
         page = browser.new_page()
         page.set_viewport_size({"width": 1280, "height": 720})
-        recorder = RecorderController(page)
+        recorder = RecorderController(page, recordings_root=str(_PROJECT_ROOT / "recordings"))
 
         # Fase 1: Gravar fluxo normal
         print("📼 Fase 1: Gravando fluxo normal...")
