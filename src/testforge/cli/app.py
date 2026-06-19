@@ -402,7 +402,7 @@ def cmd_compile(args):
         except ValueError:
             recording_status = None
 
-        if recording_status in RecordingStatus.blocked_compile_states():
+        if not getattr(args, 'check', False) and recording_status in RecordingStatus.blocked_compile_states():
             print(f"[TestForge] ✗ Gravacao {rec_id} esta em estado {recording_status.value}")
             print(f"  Compilacao bloqueada — complete os valores pendentes primeiro.")
             print(f"  Use: testforge record --complete {rec_id}")
