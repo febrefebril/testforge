@@ -347,6 +347,13 @@ class IncrementalRunner:
             if (
                 proposal.new_locator == original_selector
                 and outcome.layer_used != "L0"
+                # Allow same locator when strategy changes execution approach
+                # (e.g. fill → press_sequentially for masked inputs).
+                # Only reject when it's a true retry of the same failed approach.
+                and proposal.strategy not in (
+                    "press_sequentially", "masked_input_detection",
+                    "dialog_handler", "overlay_dismiss", "iframe_switch",
+                )
             ):
                 failures.append("same_locator_as_failed_original")
         return len(failures) == 0, failures
