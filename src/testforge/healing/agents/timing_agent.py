@@ -1,7 +1,7 @@
 """TestForge — TimingAgent (FAM-02).
 
-Handles synchronization failures: timeout, stale element, network errors.
-Strategies: visibility_wait, network_idle_wait, response_intercept.
+Manipula falhas de sincronização: timeout, elemento obsoleto, erros de rede.
+Estratégias: visibility_wait, network_idle_wait, response_intercept.
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from ..llm_healer import LLMHealer, LLMHealingProposal, MockLLMHealer
 
 
 class TimingAgent:
-    """Specialist for timing/synchronization failures (FAM-02)."""
+    """Especialista em falhas de timing/sincronização (FAM-02)."""
 
     def __init__(self, llm_healer: Optional[LLMHealer] = None):
         self._llm = llm_healer or MockLLMHealer()

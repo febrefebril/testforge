@@ -1,9 +1,9 @@
-"""TestForge Run Report — Captures full step execution details for audit.
+"""TestForge Relatório de Execução — Captura detalhes completos de execução de passo para auditoria.
 
-BUG-016: Terminal shows summary (truncated candidates, errors, LLM responses).
-Full report saved to JSON file with untruncated data.
+BUG-016: Terminal mostra resumo (candidatos truncados, erros, respostas LLM).
+Relatório completo salvo em arquivo JSON com dados não truncados.
 
-Usage:
+Uso:
     report = RunReport(recording_id="REC-001", base_url="http://localhost")
     report.add_step(StepReport(...))
     report_path = report.save(output_dir="recordings/REC-001/")
@@ -17,7 +17,7 @@ from typing import Optional
 
 @dataclass
 class StepReport:
-    """Full details for a single step execution — no truncation."""
+    """Detalhes completos para execução de passo único — sem truncagem."""
     step_num: int
     action: str
     success: bool = False

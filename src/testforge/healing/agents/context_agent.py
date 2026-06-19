@@ -1,7 +1,7 @@
 """TestForge — ContextAgent (FAM-03).
 
-Handles scope/context failures: iframe, shadow DOM, popup, cross-origin.
-Strategies: iframe_switch, shadow_pierce, capture_popup.
+Manipula falhas de escopo/contexto: iframe, shadow DOM, popup, cross-origin.
+Estratégias: iframe_switch, shadow_pierce, capture_popup.
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from ..llm_healer import LLMHealer, LLMHealingProposal, MockLLMHealer
 
 
 class ContextAgent:
-    """Specialist for context/scope failures (FAM-03)."""
+    """Especialista em falhas de contexto/escopo (FAM-03)."""
 
     def __init__(self, llm_healer: Optional[LLMHealer] = None):
         self._llm = llm_healer or MockLLMHealer()

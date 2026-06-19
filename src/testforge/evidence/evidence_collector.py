@@ -1,4 +1,4 @@
-"""TestForge — Evidence Collector."""
+"""TestForge — Coletor de Evidências."""
 import json
 import os
 import time

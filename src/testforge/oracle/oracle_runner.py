@@ -1,4 +1,4 @@
-"""TestForge — Oracle Runner."""
+"""TestForge — Executor Oracle."""
 from dataclasses import dataclass, field
 from typing import Optional
 

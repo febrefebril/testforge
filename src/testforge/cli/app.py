@@ -34,14 +34,14 @@ import re as _re
 
 
 def _sanitize_name(name: str) -> str:
-    """Sanitize test/recording name: remove special chars, keep alnum, underscore, hyphen."""
+    """Sanitiza nome de teste/gravação: remove caracteres especiais, mantém alfanuméricos, underscore, hífen."""
     sanitized = _re.sub(r'[^a-zA-Z0-9_-]', '_', name)
     sanitized = _re.sub(r'_+', '_', sanitized).strip('_')
     return sanitized or "unnamed"
 
 
 def _validate_and_warn_url(url: str) -> bool:
-    """Validate URL and print warnings. Returns True if there are critical warnings."""
+    """Valida URL e imprime avisos. Retorna True se houver avisos críticos."""
     if not url:
         return False
     warnings = validate_url(url)
@@ -61,7 +61,7 @@ def _validate_and_warn_url(url: str) -> bool:
 
 def _update_recording_status(rec_dir: str, rec_id: str,
                               status: RecordingStatus) -> bool:
-    """Update recording_metadata.json with new recording status."""
+    """Atualiza recording_metadata.json com novo status de gravação."""
     meta_path = os.path.join(rec_dir, "recording_metadata.json")
     if not os.path.exists(meta_path):
         return False
@@ -88,7 +88,7 @@ def _update_recording_status(rec_dir: str, rec_id: str,
 
 def _run_post_recording_completion(rec_dir: str, rid: str, args,
                                     auto_complete: bool, no_interactive: bool):
-    """Run intent completeness check + optional interactive prompt after recording."""
+    """Executa verificação de completude de intenção + prompt interativo opcional após gravação."""
     from testforge.semantic import RecordingNormalizer
     from testforge.validation.intent_completeness import (
         IntentCompletenessChecker,
@@ -298,7 +298,7 @@ def cmd_record(args):
         viewport = {"width": 1280, "height": 720} if args.headless else None
         context = browser.new_context(viewport=viewport)
         page = context.new_page()
-        recorder = RecorderController(page, recordings_root=str(_PROJECT_ROOT / "recordings"))
+        recorder = RecorderController(page)
 
         ts = time.strftime("%Y%m%d-%H%M%S")
         rid = _sanitize_name(args.name) if args.name else f"REC-{ts}"
@@ -317,9 +317,6 @@ def cmd_record(args):
         try:
             while True:
                 time.sleep(0.3)
-                if page.is_closed():
-                    print("\n[TestForge] Navegador fechado — encerrando gravacao")
-                    break
                 recorder.flush_events()
                 result = recorder.handle_commands()
 
@@ -628,8 +625,7 @@ def cmd_run(args):
         with sync_playwright() as pw:
             browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
             page = browser.new_page()
-            if args.headless:
-                page.set_viewport_size({"width": 1280, "height": 720})
+            page.set_viewport_size({"width": 1280, "height": 720})
 
             # Navegar
             page.goto(base_url)
@@ -1199,7 +1195,7 @@ def cmd_pipeline(args):
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
         page = browser.new_page()
         page.set_viewport_size({"width": 1280, "height": 720})
-        recorder = RecorderController(page, recordings_root=str(_PROJECT_ROOT / "recordings"))
+        recorder = RecorderController(page)
 
         recorder.start(recording_id=rid, application="pipeline", base_url=args.url)
         page.goto(args.url)
@@ -1338,7 +1334,7 @@ def cmd_demo_heal(args):
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
         page = browser.new_page()
         page.set_viewport_size({"width": 1280, "height": 720})
-        recorder = RecorderController(page, recordings_root=str(_PROJECT_ROOT / "recordings"))
+        recorder = RecorderController(page)
 
         # Fase 1: Gravar fluxo normal
         print("📼 Fase 1: Gravando fluxo normal...")

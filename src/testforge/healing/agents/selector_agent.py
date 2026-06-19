@@ -1,9 +1,9 @@
 """TestForge — SelectorAgent (FAM-01).
 
-Deterministic selector fallback chain:
+Cadeia de fallback de seletor determinístico:
   data-testid > id > name > aria-label > placeholder > has-text > href > alt > class > xpath
 
-LLM fallback when deterministic confidence < 0.7.
+Fallback LLM quando confiança determinística < 0.7.
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from ..llm_healer import LLMHealer, LLMHealingProposal, MockLLMHealer
 
 
 class SelectorAgent:
-    """Specialist for selector resolution failures (FAM-01)."""
+    """Especialista em falhas de resolução de seletor (FAM-01)."""
 
     def __init__(self, llm_healer: Optional[LLMHealer] = None):
         self._llm = llm_healer or MockLLMHealer()
@@ -24,12 +24,12 @@ class SelectorAgent:
 
     @staticmethod
     def _build_css_attr_selector(attr_name: str, value: str) -> str:
-        """Build CSS attribute selector with proper quote escaping.
+        """Constrói seletor de atributo CSS com escape de aspas adequado.
 
-        Strategy:
-        - If value has no single-quote, use single-quote delimiter
-        - If value has single-quote but no double-quote, use double-quote delimiter
-        - If value has both, use single-quote delimiter with backslash escaping
+        Estratégia:
+        - Se valor sem aspas simples, usa delimitador de aspas simples
+        - Se valor com aspas simples mas sem duplas, usa delimitador de aspas duplas
+        - Se ambas, usa delimitador de aspas simples com escape de barra invertida
         """
         if "'" not in value:
             return f"[{attr_name}='{value}']"
@@ -43,11 +43,11 @@ class SelectorAgent:
 
     @staticmethod
     def _extract_attr_value(dom: str, attr_name: str) -> Optional[str]:
-        """Extract full attribute value from DOM snapshot, including quoted content.
+        """Extrai valor de atributo completo do snapshot DOM, incluindo conteúdo citado.
 
-        Tries double-quote delimiter first, then single-quote.
-        Unlike simple [^"'] regex, this captures the complete value
-        even when it contains the opposite quote character.
+        Tenta delimitador de aspas duplas primeiro, depois aspas simples.
+        Diferente de regex simples [^"'], captura o valor completo
+        mesmo quando contém o caractere de aspa oposta.
         """
         # Try double-quoted: attr="value with ' inside"
         m = re.search(rf'{attr_name}\s*=\s*"([^"]{{2,80}})"', dom)

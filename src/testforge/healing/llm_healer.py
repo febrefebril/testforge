@@ -1,8 +1,8 @@
 """TestForge — LLM Healer (L3).
 
-LLMHealer: calls Azure OpenAI / OpenAI with family-specific prompts.
-MockLLMHealer: deterministic fallback when no API key configured.
-LLMHealingProposal: structured output from LLM.
+LLMHealer: chama Azure OpenAI / OpenAI com prompts específicos de família.
+MockLLMHealer: fallback determinístico quando nenhuma chave API configurada.
+LLMHealingProposal: saída estruturada do LLM.
 """
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ ALLOWED_STRATEGIES = {
 
 @dataclass
 class LLMHealingProposal:
-    """Structured healing proposal from LLM (or MockLLMHealer)."""
+    """Proposta de healing estruturada do LLM (ou MockLLMHealer)."""
     taxonomy_id: str = ""
     family: str = ""
     strategy: str = ""
@@ -49,7 +49,7 @@ class LLMHealingProposal:
 # ── Prompt Builder ──────────────────────────────────────────────────────────
 
 def _build_taxonomy_hint() -> str:
-    """Build condensed taxonomy reference for LLM prompt context."""
+    """Constrói referência de taxonomia condensada para contexto de prompt LLM."""
     lines: list[str] = []
     for fam_code, fam_name in FAMILIES.items():
         tax_list = TAXONOMIES.get(fam_code, [])

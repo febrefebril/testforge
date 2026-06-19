@@ -1,4 +1,4 @@
-"""TestForge — Shadow Validator + Fallback Runner."""
+"""TestForge — Validador Shadow + Executor Fallback."""
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -9,10 +9,10 @@ from playwright.sync_api import Page, TimeoutError as PlaywrightTimeout
 
 
 class SmartStepRunner:
-    """Strategy-aware step executor for healing pipeline.
+    """Executor de passo consciente da estratégia para pipeline de healing.
 
-    Supports all 10 healing strategies with proper Playwright implementation.
-    Used by CuradorAutomatico step_runner in cmd_run and healing tests.
+    Suporta todas as 10 estratégias de healing com implementação adequada do Playwright.
+    Usado por CuradorAutomatico step_runner em cmd_run e testes de healing.
     """
 
     FILL_TIMEOUT = 5000
@@ -23,13 +23,13 @@ class SmartStepRunner:
         self._page = page
 
     def execute(self, step_data: dict, strategy: str = "") -> bool:
-        """Execute a step using the specified healing strategy.
+        """Executa um passo usando a estratégia de healing especificada.
 
         Args:
-            step_data: dict with 'selector', 'action', 'value', 'strategy'
-            strategy: healing strategy name (overrides step_data['strategy'])
+            step_data: dict com 'selector', 'action', 'value', 'strategy'
+            strategy: nome da estratégia de healing (sobrescreve step_data['strategy'])
 
-        Returns True if step succeeded, False otherwise.
+        Returns True se passo sucesso, False caso contrário.
         """
         sel = step_data.get("selector", "")
         action = step_data.get("action", "click")

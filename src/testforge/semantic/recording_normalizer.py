@@ -1,7 +1,7 @@
-"""TestForge — Recording Normalizer.
+"""TestForge — Normalizador de Gravação.
 
 Converte RawRecordedSession (JSONL) em SemanticTestCase (YAML).
-Gera multiplos candidatos de locator ordenados por score deterministico.
+Gera múltiplos candidatos de localizador ordenados por score determinístico.
 """
 import json
 import os
@@ -14,7 +14,7 @@ from .model import LocatorCandidate, SemanticAction, SemanticTarget, SemanticTes
 
 
 def _is_hash_class(cls: str) -> bool:
-    """Detect CSS classes that look like auto-generated hashes (e.g., 'css-1a2b3c4')."""
+    """Detecta classes CSS que parecem hashes gerados automaticamente (ex: 'css-1a2b3c4')."""
     if not cls:
         return True
     # Hashes usually have numbers mixed with letters and hyphens

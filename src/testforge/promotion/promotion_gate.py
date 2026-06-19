@@ -1,4 +1,4 @@
-"""TestForge — Promotion Gate."""
+"""TestForge — Portão de Promoção."""
 from dataclasses import dataclass, field
 from enum import Enum
 

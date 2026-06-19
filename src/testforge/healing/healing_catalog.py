@@ -1,7 +1,7 @@
-"""TestForge — Healing Recipe + Catalog.
+"""TestForge — Receita Healing + Catálogo.
 
-Sistema de aprendizado: quando um bug e encontrado e corrigido,
-a receita e armazenada para aplicacao automatica futura.
+Sistema de aprendizado: quando um bug é encontrado e corrigido,
+a receita é armazenada para aplicação automática futura.
 """
 import json
 import os

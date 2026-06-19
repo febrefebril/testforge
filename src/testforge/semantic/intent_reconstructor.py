@@ -1,15 +1,15 @@
-"""TestForge — Intent Reconstructor (Sprint 4 + Phase B).
+"""TestForge — Reconstrutor de Intenção (Sprint 4 + Phase B).
 
-Reconstructs missing field values and synthesizes fill steps from
-evidence sources captured by the recorder:
-1. form_values — values captured at submit time
-2. setter_hook — value_mutations.jsonl (programmatic .value assignments)
+Reconstrói valores de campo ausentes e sintetiza passos de preenchimento a partir
+de fontes de evidência capturadas pelo gravador:
+1. form_values — valores capturados no tempo de submit
+2. setter_hook — value_mutations.jsonl (atribuições .value programáticas)
 3. snapshot_diff / checked_transition — field_snapshots.jsonl
-4. network_payload — POST/PUT request body parsing
-5. final_state — final_state_snapshot.json end-of-session dump
+4. network_payload — análise de corpo de requisição POST/PUT
+5. final_state — final_state_snapshot.json dump do final da sessão
 
-Each source produces FieldValueMap entries or semantic step context
-consumed by RecordingNormalizer during normalize().
+Cada fonte produz entradas FieldValueMap ou contexto de passo semântico
+consumido por RecordingNormalizer durante normalize().
 """
 
 import json
@@ -21,7 +21,7 @@ from urllib.parse import parse_qs, urlparse
 
 
 class IntentReconstructor:
-    """Combines multiple evidence sources to reconstruct missing intents."""
+    """Combina múltiplas fontes de evidência para reconstruir intenções ausentes."""
 
     # Default weights for source preference ordering
     SOURCE_PRIORITY = {
@@ -37,7 +37,7 @@ class IntentReconstructor:
     }
 
     def reconstruct_all(self, recording_dir: str, steps: list) -> list[dict]:
-        """Run all reconstruction strategies, return FieldValueMap entries.
+        """Executa todas as estratégias de reconstrução, retorna entradas FieldValueMap.
 
         Each entry dict: {field_key, value, intention, identifiers, source, step_index}
         """

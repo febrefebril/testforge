@@ -1,7 +1,7 @@
 """TestForge — InputAgent (FAM-06 + FAM-07).
 
-Handles input/interaction failures: masked fields, file upload/download.
-Strategies: press_sequentially, masked_input_detection, label_click, file_fixture.
+Manipula falhas de entrada/interação: campos mascarados, upload/download de arquivo.
+Estratégias: press_sequentially, masked_input_detection, label_click, file_fixture.
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from ..llm_healer import LLMHealer, LLMHealingProposal, MockLLMHealer
 
 
 class InputAgent:
-    """Specialist for input/interaction failures (FAM-06, FAM-07)."""
+    """Especialista em falhas de entrada/interação (FAM-06, FAM-07)."""
 
     def __init__(self, llm_healer: Optional[LLMHealer] = None):
         self._llm = llm_healer or MockLLMHealer()

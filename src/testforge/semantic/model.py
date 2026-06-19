@@ -40,11 +40,11 @@ class SemanticAction:
 
 @dataclass
 class FieldValueMap:
-    """Maps a form field to its captured/provided value with intention.
+    """Mapeia um campo de formulário para seu valor capturado/fornecido com intenção.
 
-    Built during normalization by cross-referencing form_values (submit),
-    polling data, and fill events. Used during execution to match data
-    file keys to fields and to provide intention context for fallback.
+    Construído durante normalização por referência cruzada de form_values (submit),
+    dados de polling, e eventos de fill. Usado durante execução para corresponder
+    chaves do arquivo de dados a campos e fornecer contexto de intenção para fallback.
     """
     field_key: str
     value: str = ""

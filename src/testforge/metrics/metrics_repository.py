@@ -1,4 +1,4 @@
-"""TestForge — Metrics Repository."""
+"""TestForge — Repositório de Métricas."""
 from dataclasses import dataclass, field
 from enum import Enum
 

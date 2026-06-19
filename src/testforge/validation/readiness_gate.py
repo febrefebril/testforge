@@ -1,13 +1,13 @@
-"""TestForge — RecordingReadinessGate.
+"""TestForge — Portão de Prontidão de Gravação.
 
-Decides if a recording is ready for team use based on objective criteria:
-1. Completeness: all fields resolved (no missing/review_required)
-2. Step execution: all executable steps passed or healed_validated
-3. Blocking steps: resolved (passed or healed_validated)
-4. User-supplied values: validated by incremental execution
-5. Healing: rejected without oracle positive
+Decide se uma gravação está pronta para uso do time baseado em critérios objetivos:
+1. Completude: todos campos resolvidos (sem missing/review_required)
+2. Execução de passo: todos passos executáveis passaram ou healed_validated
+3. Passos bloqueantes: resolvidos (passaram ou healed_validated)
+4. Valores fornecidos pelo usuário: validados por execução incremental
+5. Healing: rejeitado sem oracle positivo
 
-Produces readiness_report.json and readiness_report.md.
+Produz readiness_report.json e readiness_report.md.
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from testforge.recorder.recording_status import RecordingStatus
 
 
 class ReadinessVerdict(str, Enum):
-    """Final verdict for recording readiness."""
+    """Veredicto final para prontidão de gravação."""
     PASS = "pass"
     FAIL = "fail"
     NEEDS_REVIEW = "needs_review"
@@ -30,7 +30,7 @@ class ReadinessVerdict(str, Enum):
 
 @dataclass
 class ReadinessReport:
-    """Comprehensive readiness assessment for a single recording."""
+    """Avaliação compreensiva de prontidão para uma gravação única."""
 
     recording_id: str = ""
     application: str = ""

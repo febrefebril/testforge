@@ -1,4 +1,4 @@
-"""TestForge — CLI run-incremental command."""
+"""TestForge — Comando CLI run-incremental."""
 from __future__ import annotations
 import os
 import sys

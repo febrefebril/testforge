@@ -1,33 +1,33 @@
-"""TestForge — Pipeline stages, manifest, and inspector.
+"""TestForge — Estágios de pipeline, manifesto, e inspetor.
 
-Documents and introspects the four-stage data transformation pipeline:
+Documenta e introspecta o pipeline de transformação de dados de quatro estágios:
 
-Stage 1: raw_events (capture)
-    Source: Browser event listeners injected by RecorderController.
-    Format: raw_events.jsonl — one JSON object per line.
-    Content: RawRecordedEvent (click, fill, navigation, submit, postback).
-    Purpose: Lossless capture of every browser interaction.
+Estágio 1: raw_events (captura)
+    Fonte: Listeners de eventos do navegador injetados por RecorderController.
+    Formato: raw_events.jsonl — um objeto JSON por linha.
+    Conteúdo: RawRecordedEvent (click, fill, navegação, submit, postback).
+    Propósito: Captura sem perdas de toda interação do navegador.
 
-Stage 2: steps (curated)
-    Source: User-initiated actions (clicks, asserts via Shift+A).
-    Format: steps.jsonl — one JSON object per curated step.
-    Content: User-intended actions with explicit target selectors.
-    Purpose: Human-curated test steps with assertion decisions.
+Estágio 2: steps (curado)
+    Fonte: Ações iniciadas pelo usuário (clicks, asserts via Shift+A).
+    Formato: steps.jsonl — um objeto JSON por passo curado.
+    Conteúdo: Ações pretendidas pelo usuário com seletores de alvo explícitos.
+    Propósito: Passos de teste curados por humano com decisões de assertion.
 
-Stage 3: semantic_steps (compiled)
-    Source: RecordingNormalizer transforms raw_events + steps into SemanticTestCase.
-    Format: semantic_steps.jsonl — metadata header + one step per line.
-    Content: SemanticAction with locator candidates, skip_reason, context.
-    Purpose: Machine-readable audit trail of every compiled step.
+Estágio 3: semantic_steps (compilado)
+    Fonte: RecordingNormalizer transforma raw_events + steps em SemanticTestCase.
+    Formato: semantic_steps.jsonl — cabeçalho de metadados + um passo por linha.
+    Conteúdo: SemanticAction com candidatos de localizador, skip_reason, contexto.
+    Propósito: Trilha de auditoria legível por máquina de cada passo compilado.
 
-Stage 4: script (executable)
-    Source: PlaywrightCompiler generates from SemanticTestCase.
-    Format: test_<id>.py — Python file using playwright.sync_api.
-    Content: Runnable Playwright test with fallback selector loops.
-    Purpose: Executable test that replays the recorded user flow.
+Estágio 4: script (executável)
+    Fonte: PlaywrightCompiler gera a partir de SemanticTestCase.
+    Formato: test_<id>.py — arquivo Python usando playwright.sync_api.
+    Conteúdo: Teste Playwright executável com loops de seletor fallback.
+    Propósito: Teste executável que reproduz o fluxo de usuário gravado.
 
-Data Flow:
-    Browser → raw_events.jsonl + steps.jsonl → RecordingNormalizer
+Fluxo de Dados:
+    Navegador → raw_events.jsonl + steps.jsonl → RecordingNormalizer
     → SemanticTestCase → PlaywrightCompiler → test_*.py + semantic_steps.jsonl
 """
 
@@ -39,9 +39,9 @@ from typing import Optional
 
 
 class PipelineStage(Enum):
-    """The four stages of the TestForge data transformation pipeline.
+    """Os quatro estágios do pipeline de transformação de dados TestForge.
 
-    Each stage represents a distinct artifact in the recording→execution flow.
+    Cada estágio representa um artefato distinto no fluxo gravação→execução.
     """
 
     RAW_EVENTS = "raw_events"
@@ -51,18 +51,18 @@ class PipelineStage(Enum):
 
     @property
     def label(self) -> str:
-        """Human-readable stage name."""
+        """Nome legível por humano do estágio."""
         labels = {
-            PipelineStage.RAW_EVENTS: "Raw Events",
-            PipelineStage.STEPS: "Curated Steps",
-            PipelineStage.SEMANTIC_STEPS: "Semantic Steps",
-            PipelineStage.SCRIPT: "Executable Script",
+            PipelineStage.RAW_EVENTS: "Eventos Brutos",
+            PipelineStage.STEPS: "Passos Curados",
+            PipelineStage.SEMANTIC_STEPS: "Passos Semânticos",
+            PipelineStage.SCRIPT: "Script Executável",
         }
         return labels[self]
 
     @property
     def stage_type(self) -> str:
-        """Stage classification: capture, curated, compiled, or executable."""
+        """Classificação de estágio: captura, curado, compilado, ou executável."""
         types = {
             PipelineStage.RAW_EVENTS: "capture",
             PipelineStage.STEPS: "curated",
@@ -73,7 +73,7 @@ class PipelineStage(Enum):
 
     @property
     def file_name(self) -> str:
-        """Default file name for this stage's artifact."""
+        """Nome de arquivo padrão para artefato deste estágio."""
         names = {
             PipelineStage.RAW_EVENTS: "raw_events.jsonl",
             PipelineStage.STEPS: "steps.jsonl",

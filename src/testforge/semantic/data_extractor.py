@@ -1,7 +1,7 @@
-"""TestForge — Test Data Extractor.
+"""TestForge — Extrator de Dados de Teste.
 
-Extracts fill values from recording raw_events.jsonl into external JSON fixtures.
-Generates test_data.json with named fields, sensitive data detection, and multi-scenario support.
+Extrai valores de preenchimento de raw_events.jsonl de gravação em fixtures JSON externas.
+Gera test_data.json com campos nomeados, detecção de dados sensíveis, e suporte multi-cenário.
 """
 import json
 import os
@@ -24,7 +24,7 @@ SENSITIVE_PATTERNS = [
 
 
 def _is_sensitive(name: str) -> bool:
-    """Check if a field name matches sensitive data patterns."""
+    """Verifica se um nome de campo corresponde a padrões de dados sensíveis."""
     for pattern in SENSITIVE_PATTERNS:
         if re.search(pattern, name):
             return True
@@ -32,9 +32,9 @@ def _is_sensitive(name: str) -> bool:
 
 
 def _best_field_name(event: dict, idx: int) -> str:
-    """Generate the best field name from event target attributes.
+    """Gera o melhor nome de campo a partir de atributos de alvo de evento.
 
-    Priority: label > placeholder > element_id > generic 'field_N'.
+    Prioridade: label > placeholder > element_id > genérico 'field_N'.
     """
     target = event.get("target", {}) or {}
 

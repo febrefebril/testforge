@@ -1,7 +1,7 @@
-"""TestForge — Interactive Completion Prompt.
+"""TestForge — Prompt de Completude Interativa.
 
-Sprint 2: Prompts user for missing field values after recording,
-saves responses to field_value_map and test_data.
+Sprint 2: Solicita ao usuário valores de campo ausentes após gravação,
+salva respostas em field_value_map e test_data.
 """
 
 import json
@@ -26,17 +26,17 @@ def prompt_missing_fields(
     normalizer=None,
     stc=None,
 ) -> bool:
-    """Prompt user for each pending field value interactively.
+    """Solicita ao usuário cada valor de campo pendente interativamente.
 
     Args:
-        rec_dir: Recording directory path.
-        recording_id: Recording ID.
-        report: CompletenessReport with pending fields.
-        normalizer: Optional RecordingNormalizer instance (for re-check).
-        stc: Optional SemanticTestCase (for re-check).
+        rec_dir: Caminho do diretório de gravação.
+        recording_id: ID da gravação.
+        report: CompletenessReport com campos pendentes.
+        normalizer: Instância opcional de RecordingNormalizer (para re-verificação).
+        stc: Opcional SemanticTestCase (para re-verificação).
 
     Returns:
-        True if all fields resolved, False if any remain pending.
+        True se todos os campos resolvidos, False se algum permanecer pendente.
     """
     if not report.pending_fields:
         print("[TestForge] ✓ Nenhum campo pendente — intencao completa")

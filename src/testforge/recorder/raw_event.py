@@ -1,4 +1,4 @@
-"""TestForge — Raw Recorded Event model."""
+"""TestForge — Modelo de Evento Gravado Bruto."""
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional

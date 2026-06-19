@@ -1,10 +1,10 @@
-"""TestForge — Pilot Readiness Metrics.
+"""TestForge — Métricas de Prontidão Piloto.
 
-Tracks recording-level readiness metrics across all pilot recordings.
-Used to generate the aggregated pilot readiness dashboard.
+Rastreia métricas de prontidão em nível de gravação em todas as gravações piloto.
+Usado para gerar o painel agregado de prontidão piloto.
 
-History 9.1 — Recording completion metrics
-History 9.2 — Failure reason categories
+Histórico 9.1 — Métricas de conclusão de gravação
+Histórico 9.2 — Categorias de motivo de falha
 """
 from __future__ import annotations
 
@@ -17,18 +17,18 @@ from typing import Optional
 
 @dataclass
 class PilotMetrics:
-    """Aggregated readiness metrics across all pilot recordings.
+    """Métricas de prontidão agregadas em todas as gravações piloto.
 
-    Metrics:
-        total_recordings: Total number of recordings evaluated.
-        ready_for_team: Recordings that passed all readiness criteria.
-        incomplete_intent: Recordings with unresolved/missing fields.
-        needs_review: Recordings that require human review.
-        fields_auto_resolved: Fields resolved automatically (fill_event, snapshot_diff, etc.).
-        fields_user_supplied: Fields resolved via user input (CLI prompt).
-        fields_missing: Fields still missing after user input.
-        incremental_validation_passed: Recordings where incremental validation passed.
-        incremental_validation_failed: Recordings where incremental validation failed.
+    Métricas:
+        total_recordings: Número total de gravações avaliadas.
+        ready_for_team: Gravações que passaram todos os critérios de prontidão.
+        incomplete_intent: Gravações com campos não resolvidos/ausentes.
+        needs_review: Gravações que requerem revisão humana.
+        fields_auto_resolved: Campos resolvidos automaticamente (fill_event, snapshot_diff, etc.).
+        fields_user_supplied: Campos resolvidos via entrada do usuário (CLI prompt).
+        fields_missing: Campos ainda ausentes após entrada do usuário.
+        incremental_validation_passed: Gravações onde validação incremental passou.
+        incremental_validation_failed: Gravações onde validação incremental falhou.
     """
     total_recordings: int = 0
     ready_for_team: int = 0

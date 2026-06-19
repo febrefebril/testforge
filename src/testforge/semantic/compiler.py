@@ -21,13 +21,13 @@ class PlaywrightCompiler:
         output_dir: str,
         data_file: str = "",
     ) -> str:
-        """Compile test case to Playwright Python script.
+        """Compila caso de teste para script Python Playwright.
 
         Args:
-            test_case: SemanticTestCase to compile.
-            output_dir: Output directory for the generated script.
-            data_file: Optional path to JSON test data file.
-                       If provided, script reads values from JSON instead of hardcoding.
+            test_case: SemanticTestCase para compilar.
+            output_dir: Diretório de saída para o script gerado.
+            data_file: Caminho opcional para arquivo JSON de dados de teste.
+                       Se fornecido, script lê valores do JSON em vez de hardcoding.
         """
         os.makedirs(output_dir, exist_ok=True)
         safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', test_case.test_id)
@@ -47,13 +47,13 @@ class PlaywrightCompiler:
         test_case: SemanticTestCase,
         output_dir: str,
     ) -> str:
-        """Generate semantic_steps.jsonl alongside compiled script.
+        """Gera semantic_steps.jsonl junto com script compilado.
 
-        Each line is a self-contained JSON object representing one
-        semantic step — includes action, value, target, candidates,
-        url, context, and skip_reason for full audit trail.
+        Cada linha é um objeto JSON independente representando um
+        passo semântico — inclui ação, valor, alvo, candidatos,
+        url, contexto, e skip_reason para trilha de auditoria completa.
 
-        Returns path to generated file.
+        Retorna caminho do arquivo gerado.
         """
         os.makedirs(output_dir, exist_ok=True)
         path = os.path.join(output_dir, "semantic_steps.jsonl")

@@ -1,10 +1,10 @@
-"""TestForge — LLM Healing Prompts.
+"""TestForge — Prompts de Healing LLM.
 
-11 family-specific prompts + generic CURATION_PROMPT_TEMPLATE.
-All prompts in English for maximum LLM accuracy.
-Each prompt ≤1500 chars, includes valid strategies and JSON format.
+11 prompts específicos de família + CURATION_PROMPT_TEMPLATE genérico.
+Todos os prompts em inglês para máxima precisão do LLM.
+Cada prompt ≤1500 chars, inclui estratégias válidas e formato JSON.
 
-Reference: conhecimento_ancestral/projeto-anterior/llm/prompts.py
+Referência: conhecimento_ancestral/projeto-anterior/llm/prompts.py
 """
 from __future__ import annotations
 

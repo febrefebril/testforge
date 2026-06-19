@@ -1,7 +1,7 @@
 """TestForge — StateAgent (FAM-04).
 
-Handles application state failures: overlay, dialog, disabled, session expired.
-Strategies: overlay_dismiss, dialog_handler, re_auth_hook.
+Manipula falhas de estado da aplicação: sobreposição, diálogo, desabilitado, sessão expirada.
+Estratégias: overlay_dismiss, dialog_handler, re_auth_hook.
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from ..llm_healer import LLMHealer, LLMHealingProposal, MockLLMHealer
 
 
 class StateAgent:
-    """Specialist for application state failures (FAM-04)."""
+    """Especialista em falhas de estado da aplicação (FAM-04)."""
 
     def __init__(self, llm_healer: Optional[LLMHealer] = None):
         self._llm = llm_healer or MockLLMHealer()

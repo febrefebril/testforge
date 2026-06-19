@@ -22,29 +22,29 @@ class StepExecutor:
         return cands[0] if cands else ""
 
     def _all_selectors(self, step) -> list:
-        """Return ALL candidate selectors from step target, best-first."""
+        """Retorna TODOS os seletores candidatos do alvo do passo, melhor primeiro."""
         if step.target and getattr(step.target, "candidates", None):
             return [c.selector for c in step.target.candidates if c.selector]
         return []
 
     def _canonical(self, s: str) -> str:
-        """Normalize string for matching — lowercase, strip, collapse whitespace."""
+        """Normaliza string para comparação — minúscula, remove espaços, colapsa whitespace."""
         if not s:
             return ""
         import re
         return re.sub(r'[-_\s]+', '_', s.strip().lower())
 
     def _resolve_field_value(self, step, data_values: dict, field_value_map: dict) -> tuple:
-        """Resolve value and intention for a step's field using field_value_map + data_values.
+        """Resolve valor e intenção para campo do passo usando field_value_map + data_values.
 
-        Priority:
-        1. Exact match in field_value_map by target identifiers (name, aria_label, placeholder, id)
-        2. Exact match in data_values by same identifiers
-        3. Canonical key match in field_value_map
-        4. Canonical key match in data_values
-        5. Substring match in data_values (legacy fallback)
+        Prioridade:
+        1. Correspondência exata em field_value_map por identificadores de alvo (name, aria_label, placeholder, id)
+        2. Correspondência exata em data_values pelos mesmos identificadores
+        3. Correspondência de chave canônica em field_value_map
+        4. Correspondência de chave canônica em data_values
+        5. Correspondência de substring em data_values (fallback legado)
 
-        Returns (value, intention) — both empty strings if no match.
+        Retorna (value, intention) — ambas strings vazias se sem correspondência.
         """
         # Collect identifiers from step target (use getattr for test fakes)
         ids = {}
@@ -59,9 +59,9 @@ class StepExecutor:
         if not ids and not data_values and not field_value_map:
             return ("", "")
 
-        # Helper: try to match against a dict (field_value_map or data_values)
+        # Auxiliar: tenta correspondência contra um dict (field_value_map ou data_values)
         def _match(identifiers: dict, target_dict: dict) -> tuple:
-            # Try each identifier in priority order
+            # Tenta cada identificador em ordem de prioridade
             for id_type in ("name", "aria_label", "label", "placeholder", "id"):
                 id_val = identifiers.get(id_type, "")
                 if not id_val:

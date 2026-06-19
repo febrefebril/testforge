@@ -55,13 +55,13 @@ def find_corporate_browser(preferred="auto"):
     if pref == "edge":
         p = _find_edge()
         if p: return ("edge", p)
-        print("[TestForge] AVISO: Edge nao encontrado, tentando Chrome", file=sys.stderr)
+        print("[TestForge] AVISO: Edge não encontrado, tentando Chrome", file=sys.stderr)
         p = _find_chrome()
         return ("chrome", p) if p else None
     if pref == "chrome":
         p = _find_chrome()
         if p: return ("chrome", p)
-        print("[TestForge] AVISO: Chrome nao encontrado, tentando Edge", file=sys.stderr)
+        print("[TestForge] AVISO: Chrome não encontrado, tentando Edge", file=sys.stderr)
         p = _find_edge()
         return ("edge", p) if p else None
     # auto
@@ -97,12 +97,12 @@ def get_profile_dir(browser_name):
 def launch_browser_cdp_background(port=DEFAULT_CDP_PORT, start_url="about:blank",
                                    preferred_browser="auto", quiet=False):
     if not is_windows():
-        return (False, "Modo --windows-caixa so funciona em Windows")
+        return (False, "Modo --windows-caixa só funciona em Windows")
     if is_cdp_alive(port):
-        return (True, f"CDP ja rodando porta {port}")
+        return (True, f"CDP já rodando porta {port}")
     browser = find_corporate_browser(preferred=preferred_browser)
     if browser is None:
-        return (False, "Edge/Chrome nao encontrado em Program Files")
+        return (False, "Edge/Chrome não encontrado em Program Files")
     name, path = browser
     profile = get_profile_dir(name)
     args = [path, f"--remote-debugging-port={port}", f"--user-data-dir={profile}",
@@ -110,8 +110,8 @@ def launch_browser_cdp_background(port=DEFAULT_CDP_PORT, start_url="about:blank"
             "--disable-features=msEdgeSignIn", start_url]
     if not quiet:
         print(f"[TestForge] Abrindo {name.upper()} corporativo (porta CDP {port})")
-        print(f"[TestForge]   Executavel: {path}")
-        print(f"[TestForge]   Profile: {profile}")
+        print(f"[TestForge]   Executável: {path}")
+        print(f"[TestForge]   Perfil: {profile}")
     try:
         if is_windows():
             DETACHED = 0x00000008
@@ -129,7 +129,7 @@ def launch_browser_cdp_background(port=DEFAULT_CDP_PORT, start_url="about:blank"
         print("[TestForge]   Aguardando CDP...")
     if wait_for_cdp(port, max_wait=15.0):
         return (True, f"{name.upper()} CDP ativo porta {port}")
-    return (False, f"{name} iniciado mas CDP nao respondeu em 15s")
+    return (False, f"{name} iniciado mas CDP não respondeu em 15s")
 
 
 def ensure_cdp_ready(port=DEFAULT_CDP_PORT, preferred_browser="auto", quiet=False):
@@ -137,7 +137,7 @@ def ensure_cdp_ready(port=DEFAULT_CDP_PORT, preferred_browser="auto", quiet=Fals
     if is_cdp_alive(port):
         os.environ["TESTFORGE_USE_CDP"] = cdp_url
         if not quiet:
-            print(f"[TestForge] CDP ja rodando em {cdp_url}")
+            print(f"[TestForge] CDP já rodando em {cdp_url}")
         return (True, cdp_url)
     ok, msg = launch_browser_cdp_background(port=port, preferred_browser=preferred_browser, quiet=quiet)
     if ok:

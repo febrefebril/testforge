@@ -1,7 +1,7 @@
 """TestForge — DynamicDOMAgent (FAM-05).
 
-Handles dynamic DOM failures: stale element, reorder, lazy loading.
-Strategies: dom_stabilization, reacquire, scroll_controlled.
+Manipula falhas de DOM dinâmico: elemento obsoleto, reordenação, carregamento lento.
+Estratégias: dom_stabilization, reacquire, scroll_controlled.
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from ..llm_healer import LLMHealer, LLMHealingProposal, MockLLMHealer
 
 
 class DynamicDOMAgent:
-    """Specialist for dynamic DOM failures (FAM-05)."""
+    """Especialista em falhas de DOM dinâmico (FAM-05)."""
 
     def __init__(self, llm_healer: Optional[LLMHealer] = None):
         self._llm = llm_healer or MockLLMHealer()

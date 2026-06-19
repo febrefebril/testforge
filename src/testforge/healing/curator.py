@@ -1,12 +1,12 @@
-"""TestForge — CuradorAutomatico (L0→L1→L2→L3 pipeline).
+"""TestForge — CuradorAutomático (pipeline L0→L1→L2→L3).
 
-Orchestrates the 4-layer healing pipeline:
-  L0 — HealingCatalog (recipe match, <50ms, zero LLM)
-  L1 — FallbackRunner (MIS candidates, deterministic)
+Orquestra o pipeline de healing de 4 camadas:
+  L0 — HealingCatalog (correspondência de receita, <50ms, zero LLM)
+  L1 — FallbackRunner (candidatos MIS, determinístico)
   L2 — EvidenceCollector → EvidencePayload
-  L3 — LLMHealer (or MockLLMHealer fallback)
+  L3 — LLMHealer (ou fallback MockLLMHealer)
 
-Reference: projeto-anterior/curator.py (validated implementation)
+Referência: projeto-anterior/curator.py (implementação validada)
 """
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ REVIEW_THRESHOLD = int(os.environ.get("TF_REVIEW_THRESHOLD", "5"))
 # ── ProgressResult ──────────────────────────────────────────────────────────
 
 class ProgressResult:
-    """Outcome of executing a healed step."""
+    """Resultado da execução de um passo curado."""
     PASSED_STEP = "PASSED_STEP"
     ERROR_CHANGED = "ERROR_CHANGED"
     REGRESSED = "REGRESSED"
@@ -42,7 +42,7 @@ class ProgressResult:
 
 
 def classify_step_result(original_error: str, new_error: str, passed: bool) -> str:
-    """Classify healing attempt result by comparing errors."""
+    """Classifica resultado da tentativa de healing comparando erros."""
     if passed:
         return ProgressResult.PASSED_STEP
     if not new_error:
@@ -56,7 +56,7 @@ def classify_step_result(original_error: str, new_error: str, passed: bool) -> s
 
 @dataclass
 class CurationOutcome:
-    """Result of a healing curation cycle."""
+    """Resultado de um ciclo de curation de healing."""
     status: str = ProgressResult.UNRESOLVED
     proposal: Optional[LLMHealingProposal] = None
     evidence: Optional[EvidencePayload] = None
@@ -71,7 +71,7 @@ class CurationOutcome:
 # ── Failure Count Tracker ───────────────────────────────────────────────────
 
 class FailureTracker:
-    """Tracks consecutive failures per taxonomy_id for review threshold."""
+    """Rastreia falhas consecutivas por taxonomy_id para limiar de review."""
 
     def __init__(self, path: str = ".planning/failure-counts.json"):
         self._path = path

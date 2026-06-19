@@ -1,6 +1,6 @@
-"""TestForge — Incremental step result models.
+"""TestForge — Modelos de resultado de passo incremental.
 
-Dataclasses serializáveis para o IncrementalRunner. Cada step carrega:
+Dataclasses serializáveis para o IncrementalRunner. Cada passo carrega:
 pré-condição, execução, pós-condição, healing, evidências, métricas.
 """
 from __future__ import annotations

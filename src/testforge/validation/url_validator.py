@@ -1,10 +1,10 @@
-"""URL validation — warn about unquoted ampersands and truncated URLs.
+"""Validação de URL — avisa sobre e comerciais sem aspas e URLs truncadas.
 
-Problem: shell interprets & as background operator. User runs:
+Problema: shell interpreta & como operador de background. Usuário executa:
   tf record http://example.com/page?arg=1&other=2
-Shell splits at &, CLI receives only http://example.com/page?arg=1
+Shell divide em &, CLI recebe apenas http://example.com/page?arg=1
 
-This validator detects the common symptoms of an unquoted URL.
+Este validador detecta os sintomas comuns de uma URL sem aspas.
 """
 
 from dataclasses import dataclass
@@ -14,7 +14,7 @@ import re
 
 @dataclass
 class UrlWarning:
-    """A validation warning for a URL that may be malformed due to shell processing."""
+    """Um aviso de validação para uma URL que pode estar malformada devido ao processamento do shell."""
 
     message: str
     is_critical: bool = False
@@ -22,19 +22,19 @@ class UrlWarning:
 
 
 class UrlValidator:
-    """Validates URLs for common shell-truncation issues."""
+    """Valida URLs para problemas comuns de truncagem de shell."""
 
     # URL must match this to be considered a valid http/https URL
     _URL_RE = re.compile(r"^https?://", re.IGNORECASE)
 
     def validate(self, url: str) -> list[UrlWarning]:
-        """Validate a URL and return list of warnings.
+        """Valida uma URL e retorna lista de avisos.
 
         Args:
-            url: The URL string to validate.
+            url: String de URL para validar.
 
         Returns:
-            List of UrlWarning objects. Empty list means no warnings.
+            Lista de objetos UrlWarning. Lista vazia significa sem avisos.
         """
         warnings: list[UrlWarning] = []
 

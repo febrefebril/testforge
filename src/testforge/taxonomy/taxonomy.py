@@ -1,7 +1,7 @@
-"""TestForge — Failure Taxonomy (11 families, 80+ codes).
+"""TestForge — Taxonomia de Falha (11 famílias, 80+ códigos).
 
-Keyword matching + regex group fallback + word-boundary verification.
-LLM fallback placeholder for future L3 integration.
+Correspondência de palavra-chave + fallback de grupo regex + verificação de limites de palavra.
+Placeholder fallback LLM para integração futura L3.
 """
 import re
 from dataclasses import dataclass, field

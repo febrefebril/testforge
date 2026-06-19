@@ -1,13 +1,13 @@
 """TestForge — ReplayRecorder.
 
-Captures execution telemetry in the same format as the original recording
+Captura telemetria de execução no mesmo formato da gravação original
 (raw_events.jsonl, field_snapshots.jsonl, network_log.json, screenshots,
-dom_snapshots) so the execution can be diffed against the original recording.
+dom_snapshots) para que a execução possa ser diferenciada da gravação original.
 
-Usage:
+Uso:
     recorder = ReplayRecorder(page, recording_id, output_root="recordings")
     recorder.start()
-    # ... execute test steps ...
+    # ... executar passos de teste ...
     recorder.capture_step(i, step, page)
     recorder.finish()
 """
@@ -24,7 +24,7 @@ from playwright.sync_api import Page, Request, Response
 
 
 class ReplayRecorder:
-    """Captures execution telemetry in recording-compatible format."""
+    """Captura telemetria de execução em formato compatível com gravação."""
 
     def __init__(
         self,
@@ -46,7 +46,7 @@ class ReplayRecorder:
         return self._session_dir
 
     def start(self) -> Path:
-        """Create capture session directory, start network listeners."""
+        """Cria diretório de sessão de captura, inicia listeners de rede."""
         self._started_at = datetime.now(timezone.utc).isoformat()
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         self._session_dir = (

@@ -1,7 +1,7 @@
-"""TestForge — Actionability Validator.
+"""TestForge — Validador de Acionabilidade.
 
-Validates element is actionable before performing page actions.
-Checks: visible, enabled, area > 0 (rejects bb width=height=0).
+Valida se elemento é acionável antes de executar ações na página.
+Verifica: visível, habilitado, área > 0 (rejeita bb width=height=0).
 """
 from dataclasses import dataclass, field
 from typing import Optional
@@ -11,7 +11,7 @@ from playwright.sync_api import Page, TimeoutError as PlaywrightTimeout
 
 @dataclass
 class ActionabilityResult:
-    """Result of an actionability check."""
+    """Resultado de uma verificação de acionabilidade."""
 
     selector: str
     actionable: bool
@@ -28,27 +28,27 @@ class ActionabilityResult:
 
 
 class ActionabilityValidator:
-    """Validates element is actionable before performing page actions.
+    """Valida se elemento é acionável antes de executar ações na página.
 
-    Checks:
-      - visible (is_visible)
-      - enabled (is_enabled)
-      - area > 0 (bounding box width > 0 and height > 0)
-      - rejects bb width=height=0
+    Verifica:
+      - visível (is_visible)
+      - habilitado (is_enabled)
+      - área > 0 (largura e altura da caixa delimitadora > 0)
+      - rejeita bb width=height=0
     """
 
     def __init__(self, page: Page):
         self._page = page
 
     def validate(self, selector: str, timeout: int = 5000) -> ActionabilityResult:
-        """Check if element at selector is actionable.
+        """Verifica se elemento no seletor é acionável.
 
         Args:
-            selector: CSS or text selector.
-            timeout: Max wait time in ms.
+            selector: Seletor CSS ou de texto.
+            timeout: Tempo máximo de espera em ms.
 
         Returns:
-            ActionabilityResult with actionable flag and per-check details.
+            ActionabilityResult com flag acionável e detalhes de cada verificação.
         """
         result = ActionabilityResult(selector=selector, actionable=False)
 
@@ -59,7 +59,7 @@ class ActionabilityValidator:
             result.message = f"Invalid selector '{selector}': {e}"
             return result
 
-        # Presence: element must exist in DOM
+        # Presença: elemento deve existir no DOM
         try:
             locator.first.wait_for(state="attached", timeout=timeout)
         except (PlaywrightTimeout, Exception):
@@ -69,7 +69,7 @@ class ActionabilityValidator:
 
         el = locator.first
 
-        # Visibility check
+        # Verificação de visibilidade
         try:
             el.wait_for(state="visible", timeout=timeout)
             result.visible = True
@@ -77,7 +77,7 @@ class ActionabilityValidator:
             result.failures.append("not_visible")
             result.visible = False
 
-        # Enabled check
+        # Verificação de habilitação
         try:
             if el.is_enabled(timeout=timeout):
                 result.enabled = True
@@ -86,7 +86,7 @@ class ActionabilityValidator:
         except Exception:
             result.failures.append("not_enabled")
 
-        # Area check: bounding box must have positive width and height
+        # Verificação de área: caixa delimitadora deve ter largura e altura positivas
         try:
             bb = el.bounding_box(timeout=timeout)
             result.bounding_box = bb
@@ -109,5 +109,5 @@ class ActionabilityValidator:
         return result
 
     def check(self, selector: str, timeout: int = 5000) -> bool:
-        """Convenience: return True if actionable, False otherwise."""
+        """Atalho: retorna True se acionável, False caso contrário."""
         return self.validate(selector, timeout=timeout).actionable

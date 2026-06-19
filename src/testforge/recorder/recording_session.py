@@ -1,4 +1,4 @@
-"""TestForge — Recording Session management."""
+"""TestForge — Gerenciamento de Sessão de Gravação."""
 import json
 import os
 from dataclasses import dataclass, field
@@ -24,16 +24,16 @@ class RecordingSession:
 
     @property
     def recording_status(self) -> Optional[RecordingStatus]:
-        """Get current RecordingStatus (semantic) from history."""
+        """Obtém RecordingStatus atual (semântico) do histórico."""
         return self.status_history.current
 
     @recording_status.setter
     def recording_status(self, value: RecordingStatus):
-        """Set current RecordingStatus and record in history."""
+        """Define RecordingStatus atual e registra no histórico."""
         self.status_history.record(value, reason=f"set to {value.value}")
 
     def to_metadata_dict(self) -> dict:
-        """Serialize session to metadata dict including status history."""
+        """Serializa sessão para dict de metadados incluindo histórico de status."""
         return {
             "recording_id": self.recording_id,
             "application": self.application,

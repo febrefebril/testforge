@@ -1,7 +1,7 @@
-"""TestForge — Intent Completeness Checker.
+"""TestForge — Verificador de Completude de Intenção.
 
-Validates that all necessary fields in a recording have reliable values.
-Produces structured reports and classifies each field's completeness status.
+Valida que todos os campos necessários em uma gravação têm valores confiáveis.
+Produz relatórios estruturados e classifica estado de completude de cada campo.
 """
 
 import json
@@ -13,7 +13,7 @@ from typing import Optional
 
 
 class FieldCompleteness(str, Enum):
-    """Classification for each field's completeness state."""
+    """Classificação para estado de completude de cada campo."""
     resolved = "resolved"
     resolved_with_warning = "resolved_with_warning"
     review_required = "review_required"
@@ -22,7 +22,7 @@ class FieldCompleteness(str, Enum):
 
 @dataclass
 class FieldStatus:
-    """Completeness status for a single field."""
+    """Status de completude para um campo único."""
     field_key: str
     label: str
     placeholder: str = ""
@@ -39,7 +39,7 @@ class FieldStatus:
 
 @dataclass
 class CompletenessReport:
-    """Full completeness report for a recording."""
+    """Relatório completo de completude para uma gravação."""
     recording_id: str = ""
     application: str = ""
     base_url: str = ""

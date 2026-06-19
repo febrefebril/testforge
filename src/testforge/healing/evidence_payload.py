@@ -1,7 +1,7 @@
-"""TestForge — EvidencePayload for LLM Healer (L3).
+"""TestForge — EvidencePayload para LLM Healer (L3).
 
-Structured payload: DOM snippet, console errors, network state, optional screenshot.
-Sanitized — never exposes raw PII or unsanitized DOM to LLM.
+Payload estruturado: snippet DOM, erros de console, estado de rede, screenshot opcional.
+Sanitizado — nunca expõe PII bruto ou DOM não sanitizado para LLM.
 """
 import base64
 import re
@@ -11,10 +11,10 @@ from typing import Optional
 
 @dataclass
 class EvidencePayload:
-    """Structured evidence payload for LLM Healer consumption.
+    """Payload de evidência estruturado para consumo do LLM Healer.
 
-    Built by EvidenceCollector.build_llm_payload().
-    Consumed by LLMHealer.heal(payload, error_message, family).
+    Construído por EvidenceCollector.build_llm_payload().
+    Consumido por LLMHealer.heal(payload, error_message, family).
     """
 
     step_context: dict = field(default_factory=dict)
@@ -26,10 +26,10 @@ class EvidencePayload:
     insufficiency_reason: str = ""
 
     def validate(self) -> None:
-        """Set is_sufficient based on evidence quality.
+        """Define is_sufficient baseado na qualidade de evidência.
 
-        Sufficient when: DOM snapshot exists (>=100 chars).
-        Console errors, network state, and screenshot are bonus context.
+        Suficiente quando: snapshot DOM existe (>=100 chars).
+        Erros de console, estado de rede, e screenshot são contexto bônus.
         """
         has_dom = len(self.dom_snapshot) >= 100
         has_console = len(self.console_errors) > 0

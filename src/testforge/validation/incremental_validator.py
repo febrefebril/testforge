@@ -1,14 +1,14 @@
-"""TestForge — IncrementalRecordingValidator.
+"""TestForge — Validador Incremental de Gravação.
 
-Orchestrates the validation pipeline for a complete recording:
-1. Normalize raw events → SemanticTestCase
-2. Check completeness (IntentCompletenessChecker)
-3. Re-execute steps incrementally (IncrementalRunner)
-4. Evaluate readiness gate (RecordingReadinessGate)
-5. Save reports
+Orquestra o pipeline de validação para uma gravação completa:
+1. Normaliza eventos brutos → SemanticTestCase
+2. Verifica completude (IntentCompletenessChecker)
+3. Re-executa passos incrementalmente (IncrementalRunner)
+4. Avalia portão de prontidão (RecordingReadinessGate)
+5. Salva relatórios
 
-The validator is the bridge between Sprint 1-4 (completeness + reconstruction)
-and Sprint 5+ (incremental validation + readiness gate).
+O validador é a ponte entre Sprint 1-4 (completude + reconstrução)
+e Sprint 5+ (validação incremental + portão de prontidão).
 """
 from __future__ import annotations
 
@@ -37,8 +37,8 @@ from testforge.validation.readiness_gate import (
 
 
 class IncrementalRecordingValidator:
-    """Validates a recording by normalizing, checking completeness, and
-    running incremental execution before evaluating readiness."""
+    """Valida uma gravação normalizando, verificando completude,
+    e executando incrementalmente antes de avaliar prontidão."""
 
     def __init__(
         self,

@@ -1,7 +1,7 @@
-"""TestForge — Recording Status Enum and History.
+"""TestForge — Status Enum e Histórico de Gravação.
 
-Formal states for recording lifecycle. Prevents incomplete recordings
-from being treated as ready.
+Estados formais para ciclo de vida de gravação. Evita que gravações incompletas
+sejam tratadas como prontas.
 """
 
 from enum import Enum
@@ -11,20 +11,20 @@ from typing import Optional
 
 
 class RecordingStatus(str, Enum):
-    """Formal recording status with semantic meaning for readiness gates.
+    """Status formal de gravação com significado semântico para gates de prontidão.
 
-    State machine (forward transitions):
+    Máquina de estados (transições para frente):
         completed_raw
-            → intent_reconstructed  (normalizer ran)
-            → needs_user_input      (missing fields detected)
-            → intent_complete       (all fields resolved)
+            → intent_reconstructed  (normalizador executado)
+            → needs_user_input      (campos ausentes detectados)
+            → intent_complete       (todos os campos resolvidos)
             → incremental_validation_running
             → incrementally_validated
-            → ready_for_team        (final pass)
+            → ready_for_team        (passagem final)
 
-    Alternative terminal states:
-        incomplete_intent  (recording has unresolved fields, cannot be compiled)
-        needs_review       (validation failed or user supplied values misapplied)
+    Estados terminais alternativos:
+        incomplete_intent  (gravação tem campos não resolvidos, não pode compilar)
+        needs_review       (validação falhou ou valores fornecidos pelo usuário mal aplicados)
     """
     # --- Recording phase ---
     completed_raw = "completed_raw"
@@ -47,17 +47,17 @@ class RecordingStatus(str, Enum):
 
     @classmethod
     def terminal_states(cls) -> set:
-        """States that indicate recording is ready for team or needs intervention."""
+        """Estados que indicam gravação pronta para o time ou precisa de intervenção."""
         return {cls.ready_for_team, cls.incomplete_intent, cls.needs_review}
 
     @classmethod
     def blocked_compile_states(cls) -> set:
-        """States that BLOCK compilation. Cannot produce test script."""
+        """Estados que BLOQUEIAM compilação. Não pode produzir script de teste."""
         return {cls.incomplete_intent, cls.needs_review}
 
     @classmethod
     def active_states(cls) -> set:
-        """States where recording is in progress (not terminal)."""
+        """Estados onde gravação está em andamento (não terminal)."""
         return {
             cls.completed_raw, cls.intent_reconstructed, cls.needs_user_input,
             cls.intent_complete, cls.incremental_validation_running,
@@ -67,7 +67,7 @@ class RecordingStatus(str, Enum):
 
 @dataclass
 class RecordingStatusEntry:
-    """Single entry in status history."""
+    """Entrada única no histórico de status."""
     status: RecordingStatus
     timestamp: str = ""
     reason: str = ""
@@ -80,15 +80,15 @@ class RecordingStatusEntry:
 
 @dataclass
 class RecordingStatusHistory:
-    """Auditable trail of status transitions."""
+    """Trilha auditável de transições de status."""
     entries: list = field(default_factory=list)
     _locked: bool = False
 
     def record(self, status: RecordingStatus, reason: str = "",
                metadata: Optional[dict] = None) -> RecordingStatusEntry:
-        """Record a status transition. Raises if history is locked."""
+        """Registra uma transição de status. Lança erro se histórico está bloqueado."""
         if self._locked:
-            raise RuntimeError("Status history is locked — recording finalized.")
+            raise RuntimeError("Histórico de status está bloqueado — gravação finalizada.")
         entry = RecordingStatusEntry(
             status=status,
             reason=reason,
@@ -99,24 +99,24 @@ class RecordingStatusHistory:
 
     @property
     def current(self) -> Optional[RecordingStatus]:
-        """Most recent status, or None if no entries."""
+        """Status mais recente, ou None se sem entradas."""
         if not self.entries:
             return None
         return self.entries[-1].status
 
     @property
     def current_entry(self) -> Optional[RecordingStatusEntry]:
-        """Most recent entry, or None."""
+        """Entrada mais recente, ou None."""
         if not self.entries:
             return None
         return self.entries[-1]
 
     def lock(self):
-        """Lock history — no more transitions allowed."""
+        """Bloqueia histórico — não são permitidas mais transições."""
         self._locked = True
 
     def to_dict(self) -> list:
-        """Serialize to JSON-friendly list."""
+        """Serializa para lista compatível com JSON."""
         return [
             {
                 "status": e.status.value,
@@ -129,7 +129,7 @@ class RecordingStatusHistory:
 
     @staticmethod
     def from_dict(data: list) -> "RecordingStatusHistory":
-        """Deserialize from list of dicts."""
+        """Desserializa da lista de dicionários."""
         history = RecordingStatusHistory()
         for entry in data:
             history.entries.append(RecordingStatusEntry(

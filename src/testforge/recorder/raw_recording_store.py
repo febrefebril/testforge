@@ -1,4 +1,4 @@
-"""TestForge — Raw Recording Store (JSONL persistence)."""
+"""TestForge — Armazém de Gravação Bruta (persistência JSONL)."""
 import json
 import os
 from .raw_event import RawRecordedEvent
@@ -26,7 +26,7 @@ class RawRecordingStore:
         return os.path.relpath(path, self._session_dir)
 
     def save_dom(self, event_id: str, html: str) -> str:
-        """Save DOM snapshot. Returns relative path, or empty string if DOM is empty."""
+        """Salva snapshot DOM. Retorna caminho relativo, ou string vazia se DOM está vazio."""
         path = os.path.join(self._session_dir, "dom_snapshots", f"{event_id}.html")
         # Validate content before saving — never write empty DOM files
         if not html or len(html.strip()) < 20:

@@ -538,6 +538,8 @@ class RecorderController:
                 target: target,
                 value: (el && el.value) ? el.value.substring(0,200) : null
             });
+            var stepCount = document.getElementById('tf-step-count');
+            if (stepCount) stepCount.textContent = parseInt(stepCount.textContent||0) + 1;
         }
 
         // ---- Field snapshot (Sprint 3) ----
@@ -777,28 +779,17 @@ class RecorderController:
         }
 
         // ---- Event listeners (capture phase) ----
-
-        // Returns true if the event target is inside TestForge's own UI panels.
-        // These must NOT be intercepted — their onclick handlers need to fire.
-        window._tf_isOverlayClick = function(e) {
-            var t = e.target;
-            if (!t || !t.closest) return false;
-            return !!(t.closest('#tf-overlay') || t.closest('#tf-assert-menu') ||
-                      t.closest('#tf-assert-confirm') || t.closest('#tf-stop-confirm'));
-        };
-
         window.addEventListener('pointerdown', function(e) {
             if (window.__tfAssertWaiting) {
-                if (window._tf_isOverlayClick(e)) return;
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
+                console.log('[TestForge] pointerdown em modo assert, target:', e.target.tagName, e.target.className);
             }
         }, true);
 
         window.addEventListener('mousedown', function(e) {
             if (window.__tfAssertWaiting) {
-                if (window._tf_isOverlayClick(e)) return;
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
@@ -812,7 +803,7 @@ class RecorderController:
                 if (interactive) el = interactive;
             }
             if (window.__tfAssertWaiting) {
-                if (window._tf_isOverlayClick(e)) return;
+                console.log('[TestForge] click em modo assert, el:', el.tagName, el.className, 'text:', (el.textContent||'').substring(0,30));
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
@@ -864,8 +855,6 @@ class RecorderController:
                 return;
             }
             _tf_pushEvent('click', el);
-            var stepCount = document.getElementById('tf-step-count');
-            if (stepCount) stepCount.textContent = parseInt(stepCount.textContent||0) + 1;
         }, true);
 
         window.addEventListener('input', function(e) {
@@ -939,18 +928,12 @@ class RecorderController:
             switch(e.key.toUpperCase()) {
                 case 'P':
                     window.__tfCommandQueue.push('TOGGLE_PAUSE');
-                    window.__tfIsPaused = !window.__tfIsPaused;
-                    _tf_updatePauseState();
-                    console.log('[TestForge] Shift+P: toggle pause, paused=', window.__tfIsPaused);
+                    console.log('[TestForge] Shift+P: toggle pause');
                     break;
                 case 'S':
-                    if (window.__tfAssertWaiting) {
-                        _tf_showStopConfirm();
-                    } else {
-                        window._tf_captureFinalState('user_stop');
-                        window.__tfCommandQueue.push('STOP');
-                        console.log('[TestForge] Shift+S: stop');
-                    }
+                    window._tf_captureFinalState('user_stop');
+                    window.__tfCommandQueue.push('STOP');
+                    console.log('[TestForge] Shift+S: stop');
                     break;
                 case 'A':
                     window.__tfCommandQueue.push('ASSERT');
@@ -967,7 +950,6 @@ class RecorderController:
 
         // ---- Overlay UI ----
         window._tf_showOverlay = function() {
-            if (document.getElementById('tf-overlay')) return;
             var ov = document.createElement('div');
             ov.id = 'tf-overlay';
             ov.innerHTML = '<div style="position:fixed;top:8px;right:8px;background:#1a1a2e;color:#fff;padding:8px 14px;border-radius:8px;font:14px monospace;z-index:99999;display:flex;gap:12px;align-items:center;box-shadow:0 4px 16px rgba(0,0,0,0.3)">' +
@@ -984,19 +966,8 @@ class RecorderController:
                 '</div>' +
                 '<div id="tf-toast" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 24px;border-radius:8px;font:14px sans-serif;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,0.3)"></div>';
             document.body.appendChild(ov);
-            document.getElementById('tf-btn-pause').onclick = function() {
-                window.__tfCommandQueue.push('TOGGLE_PAUSE');
-                window.__tfIsPaused = !window.__tfIsPaused;
-                _tf_updatePauseState();
-            };
-            document.getElementById('tf-btn-stop').onclick = function() {
-                if (window.__tfAssertWaiting) {
-                    _tf_showStopConfirm();
-                } else {
-                    window._tf_captureFinalState('user_stop');
-                    window.__tfCommandQueue.push('STOP');
-                }
-            };
+            document.getElementById('tf-btn-pause').onclick = function() { window.__tfCommandQueue.push('TOGGLE_PAUSE'); };
+            document.getElementById('tf-btn-stop').onclick = function() { window.__tfCommandQueue.push('STOP'); };
             document.getElementById('tf-btn-assert').onclick = function() {
                 window.__tfAssertWaiting = true;
                 window.__tfCommandQueue.push('ASSERT');
@@ -1007,27 +978,6 @@ class RecorderController:
             };
         }
 
-        window.__tfIsPaused = false;
-        window._tf_updatePauseState = function() {
-            var btn = document.getElementById('tf-btn-pause');
-            var dot = document.getElementById('tf-rec-dot');
-            var status = document.getElementById('tf-status');
-            if (!btn) return;
-            if (window.__tfIsPaused) {
-                btn.textContent = '▶';
-                btn.title = 'Retomar (Shift+P)';
-                btn.style.background = '#6366f1';
-                if (dot) dot.style.color = '#94a3b8';
-                if (status) status.textContent = 'Pausado...';
-            } else {
-                btn.textContent = '⏸';
-                btn.title = 'Pausar (Shift+P)';
-                btn.style.background = '#334155';
-                if (dot) dot.style.color = '#e94560';
-                if (status && !window.__tfAssertWaiting) status.textContent = 'Gravando...';
-            }
-        };
-
         window._tf_showToast = function(msg) {
             var toast = document.getElementById('tf-toast');
             if (!toast) return;
@@ -1035,85 +985,6 @@ class RecorderController:
             toast.style.display = 'block';
             setTimeout(function() { toast.style.display = 'none'; }, 2000);
         }
-
-        window._tf_showStopConfirm = function() {
-            var panel = document.getElementById('tf-stop-confirm');
-            if (!panel) {
-                panel = document.createElement('div');
-                panel.id = 'tf-stop-confirm';
-                panel.style.cssText = 'position:fixed;z-index:99999;background:#1e293b;padding:16px;border-radius:8px;display:flex;flex-direction:column;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,0.5);min-width:280px;';
-                document.body.appendChild(panel);
-            }
-            panel.innerHTML =
-                '<div style="color:#f59e0b;font:14px sans-serif;font-weight:600">Assert ativo sem confirmar</div>' +
-                '<div style="color:#cbd5e1;font:13px sans-serif">Deseja sair sem marcar o assert?</div>' +
-                '<div style="display:flex;gap:8px">' +
-                '<button id="tf-stop-yes" style="background:#991b1b;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font:13px sans-serif;font-weight:600;flex:1">Sair sem assert</button>' +
-                '<button id="tf-stop-no" style="background:#334155;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font:13px sans-serif;font-weight:600;flex:1">Continuar</button>' +
-                '</div>';
-            panel.style.left = Math.round((window.innerWidth - 280) / 2) + 'px';
-            panel.style.top = Math.round(window.innerHeight * 0.35) + 'px';
-            panel.style.display = 'flex';
-            document.getElementById('tf-stop-yes').onclick = function(e) {
-                e.stopPropagation();
-                panel.style.display = 'none';
-                window.__tfAssertWaiting = false;
-                window._tf_captureFinalState('user_stop');
-                window.__tfCommandQueue.push('STOP');
-            };
-            document.getElementById('tf-stop-no').onclick = function(e) {
-                e.stopPropagation();
-                panel.style.display = 'none';
-            };
-        };
-
-        window._tf_showAssertConfirm = function(targetEl, assertType) {
-            var expected = _tf_getExpectedValue(targetEl, assertType);
-            var panel = document.getElementById('tf-assert-confirm');
-            if (!panel) {
-                panel = document.createElement('div');
-                panel.id = 'tf-assert-confirm';
-                panel.style.cssText = 'position:fixed;z-index:99999;background:#1e293b;padding:16px;border-radius:8px;display:flex;flex-direction:column;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,0.5);min-width:280px;max-width:400px;';
-                document.body.appendChild(panel);
-            }
-            panel.innerHTML =
-                '<div style="color:#94a3b8;font:12px monospace">Assert ' + assertType + ' — <span style="color:#e2e8f0">' + (targetEl.tagName||'').toLowerCase() + '</span></div>' +
-                '<div style="color:#10b981;font:13px sans-serif;word-break:break-all"><strong>Valor capturado:</strong> &quot;' + (expected||'(vazio)').substring(0,120).replace(/</g,'&lt;') + '&quot;</div>' +
-                '<div style="display:flex;gap:8px">' +
-                '<button id="tf-ac-ok" style="background:#10b981;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font:13px sans-serif;font-weight:600;flex:1">Confirmar</button>' +
-                '<button id="tf-ac-cancel" style="background:#475569;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font:13px sans-serif;font-weight:600;flex:1">Descartar</button>' +
-                '</div>';
-            panel.style.left = Math.round((window.innerWidth - 320) / 2) + 'px';
-            panel.style.top = Math.round(window.innerHeight * 0.3) + 'px';
-            panel.style.display = 'flex';
-            document.getElementById('tf-ac-ok').onclick = function(e) {
-                e.stopPropagation();
-                panel.style.display = 'none';
-                _tf_addStep('assert', targetEl, assertType);
-                var assertCount = document.getElementById('tf-assert-count');
-                if (assertCount) assertCount.textContent = parseInt(assertCount.textContent||0) + 1;
-                var stepCount = document.getElementById('tf-step-count');
-                if (stepCount) stepCount.textContent = parseInt(stepCount.textContent||0) + 1;
-                _tf_showToast('Assert ' + assertType + ': "' + (expected||'').substring(0,40) + '"');
-                window.__tfAssertWaiting = false;
-                window.__tfAssertElement = null;
-                var dot = document.getElementById('tf-rec-dot');
-                var status = document.getElementById('tf-status');
-                if (dot) dot.style.color = '#e94560';
-                if (status) status.textContent = 'Gravando...';
-            };
-            document.getElementById('tf-ac-cancel').onclick = function(e) {
-                e.stopPropagation();
-                panel.style.display = 'none';
-                window.__tfAssertWaiting = true;
-                window.__tfAssertElement = null;
-                var dot = document.getElementById('tf-rec-dot');
-                var status = document.getElementById('tf-status');
-                if (dot) dot.style.color = '#f59e0b';
-                if (status) status.textContent = 'Modo Assert — clique em outro elemento';
-                _tf_showToast('Assert descartado — selecione novamente');
-            };
-        };
 
         window._tf_showAssertMenu = function(x, y) {
             var el = document.getElementById('tf-assert-menu');
@@ -1134,10 +1005,22 @@ class RecorderController:
                         e.preventDefault();
                         var assertType = btn.dataset.type;
                         var targetEl = window.__tfAssertElement;
-                        el.style.display = 'none';
                         if (targetEl) {
-                            _tf_showAssertConfirm(targetEl, assertType);
+                            _tf_addStep('assert', targetEl, assertType);
+                            var assertCount = document.getElementById('tf-assert-count');
+                            if (assertCount) assertCount.textContent = parseInt(assertCount.textContent||0) + 1;
+                            var stepCount = document.getElementById('tf-step-count');
+                            if (stepCount) stepCount.textContent = parseInt(stepCount.textContent||0) + 1;
+                            var expected = _tf_getExpectedValue(targetEl, assertType);
+                            _tf_showToast('✓ Assert ' + assertType + ': \"' + (expected||'').substring(0,40) + '\"');
                         }
+                        el.style.display = 'none';
+                        window.__tfAssertWaiting = false;
+                        window.__tfAssertElement = null;
+                        var dot = document.getElementById('tf-rec-dot');
+                        var status = document.getElementById('tf-status');
+                        if (dot) dot.style.color = '#e94560';
+                        if (status) status.textContent = 'Gravando...';
                     };
                 });
                 document.body.appendChild(el);
