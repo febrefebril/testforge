@@ -1,5 +1,5 @@
 @startuml
-title TestForge v0.3.0 — C4 Container (28 modulos, L0→L3 healing)
+title TestForge v0.4.0 — C4 Container (28 modulos, L0→L3 healing)
 
 skinparam backgroundColor #FFFFFF
 skinparam packageStyle rectangle
@@ -23,7 +23,7 @@ rectangle "Evidence\nCollector + Store" as Evidence #LightGreen {
   component "EvidenceStore\nSQLite" as ES
 }
 
-rectangle "Taxonomy\n11 families, 88 codes" as Taxonomy #LightBlue {
+rectangle "Taxonomy\n11 families, 80+ codes" as Taxonomy #LightGray {
   component "FailureClassifier\nkeyword+group+word-boundary" as FC
   component "FailureFamily\n+ FailureClassification" as FF
 }
@@ -42,14 +42,14 @@ rectangle "Healing L2\nSpecialist Agents" as L2 #LightBlue {
   component "ContextAgent\n(FAM-03)" as CA
   component "StateAgent\n(FAM-04)" as StA
   component "DynamicDOMAgent\n(FAM-05)" as DA
-  component "InputAgent\n(FAM-06/07)" as IA
+  component "InputAgent\n(FAM-06)" as IA
 }
 
 rectangle "Healing L3\nLLM Healer" as L3 #LightBlue {
-  component "CuradorAutomatico\nL0→L1→L2→L3 pipeline\nfailure tracker" as CUR
+  component "CuradorAutomatico\nL0→L1→L2→L3 pipeline\nFailureTracker" as CUR
   component "LLMHealer\n+ MockLLMHealer" as LLM
   component "LLMClient\nAzure/OpenAI" as LClient
-  component "LLMPrompts\n11 family prompts (EN)" as LPrompts
+  component "LLMPrompts\n11 family prompts (PT+EN)" as LPrompts
   component "EvidencePayload\nDOM + console + network" as EP
 }
 
@@ -67,7 +67,7 @@ database "evidence/\nmanifest + DOM" as EVIDB
 database "semantic_tests/\nscripts gerados" as STDB
 database "test_data.json\nmassa externa" as TDB
 
-cloud "Azure OpenAI\n(GPT-4.1-mini)\n[off critical path]" as AZURE
+cloud "Azure OpenAI\n(gpt-4o-mini)\n[off critical path]" as AZURE
 
 ' --- Connections ---
 

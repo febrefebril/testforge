@@ -1,5 +1,5 @@
 @startuml
-title TestForge v1 — Flowchart Pipeline (implementado)
+title TestForge v1 — Flowchart Pipeline (implementado, Fase A)
 
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontSize 13
