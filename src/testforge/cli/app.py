@@ -248,6 +248,17 @@ def _check_python_keyboard(page, recorder):
 
 def cmd_record(args):
     """Grava fluxo de teste com comandos de teclado."""
+    # Validate URL before any operation
+    if not args.url:
+        print("[TestForge] Erro: URL obrigatoria para iniciar nova gravacao.")
+        print()
+        print("  Exemplo:")
+        print("    python -m testforge.cli.app record --browser chrome \"https://sistema/\" --name minha_gravacao")
+        print()
+        print("  Ajuda:")
+        print("    python -m testforge.cli.app record --help")
+        return
+
     no_interactive = getattr(args, 'no_interactive', False)
     auto_complete = getattr(args, 'complete', False) and not no_interactive
 
