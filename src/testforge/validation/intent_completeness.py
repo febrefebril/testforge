@@ -255,6 +255,13 @@ class IntentCompletenessChecker:
 
         # 2. Examine steps for field interactions without field_value_map entry
         if steps:
+            # Build element_id index from existing fields — skip steps already covered by element_id
+            covered_el_ids: set = set()
+            for fs in fields.values():
+                el_id = (fs.identifiers or {}).get("id", "").strip()
+                if el_id:
+                    covered_el_ids.add(el_id)
+
             from testforge.semantic.model import SemanticAction
             for i, step in enumerate(steps):
                 if not isinstance(step, SemanticAction):
@@ -268,8 +275,11 @@ class IntentCompletenessChecker:
                         and tag in self.FIELD_TAGS):
                     field_key = self._field_key_from_step(step)
 
-                    # Skip if already in fields dict
+                    # Skip if already in fields dict (by key or element_id)
                     if field_key and field_key in fields:
+                        continue
+                    step_el_id = (getattr(step.target, "element_id", "") or "").strip()
+                    if step_el_id and step_el_id in covered_el_ids:
                         continue
 
                     # Detect missing fill via context flag

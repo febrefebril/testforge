@@ -109,6 +109,25 @@ class PilotMetrics:
             elif "mapping" in fl or "field" in fl:
                 self.failures["wrong_field_mapping"] += 1
 
+    def compute_auto_resolution_rate(self, completeness_report=None) -> float:
+        """Return fraction of fields resolved automatically (0.0 to 1.0).
+
+        If completeness_report provided, uses resolved_count / total from it.
+        Otherwise uses fields_auto_resolved / total from self.
+        """
+        if completeness_report is not None:
+            resolved = getattr(completeness_report, "resolved_count", 0) or 0
+            resolved_warn = getattr(completeness_report, "resolved_with_warning_count", 0) or 0
+            missing = getattr(completeness_report, "missing_count", 0) or 0
+            total = resolved + resolved_warn + missing
+            if total == 0:
+                return 1.0
+            return round((resolved + resolved_warn) / total, 4)
+        total = self.fields_auto_resolved + self.fields_user_supplied + self.fields_missing
+        if total == 0:
+            return 1.0
+        return round(self.fields_auto_resolved / total, 4)
+
     def to_dict(self) -> dict:
         """Serialize to dictionary for JSON output."""
         return {

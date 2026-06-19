@@ -261,8 +261,96 @@ class RecordingNormalizer:
         self._reconstruct_intents(stc, recording_dir)
         self._detect_missing_fills(stc.steps)
         self._build_field_value_map(stc)
+        # Phase B semantic dedup: collapse datepicker nav + prefill clicks
+        self._dedup_datepicker_sequences(stc.steps)
+        self._eliminate_prefill_clicks(stc.steps)
         self._audit_blind_spots(stc)
         return stc
+
+    def _eliminate_prefill_clicks(self, steps: list) -> None:
+        """Mark click steps that are immediately followed by fill on same element as skipped.
+
+        Angular Material inputs require a click to focus before fill, but Playwright's
+        fill() already handles focus internally. Recording both click + fill on the same
+        element produces a healed click step every run — eliminate the noise.
+        """
+        for i in range(len(steps) - 1):
+            curr = steps[i]
+            if curr.skip_reason or curr.action != "click":
+                continue
+            # Find next non-skipped step
+            nxt = None
+            for k in range(i + 1, min(i + 4, len(steps))):
+                if not steps[k].skip_reason:
+                    nxt = steps[k]
+                    break
+            if nxt is None or nxt.action != "fill":
+                continue
+            curr_tag = (curr.target.tag or "").lower() if curr.target else ""
+            if curr_tag not in ("input", "textarea"):
+                continue
+            # Same element: match by element_id or first candidate selector
+            curr_id = (curr.target.element_id or "") if curr.target else ""
+            nxt_id = (nxt.target.element_id or "") if nxt.target else ""
+            curr_sel = curr.target.candidates[0].selector if curr.target and curr.target.candidates else ""
+            nxt_sel = nxt.target.candidates[0].selector if nxt.target and nxt.target.candidates else ""
+            same = (curr_id and curr_id == nxt_id) or (curr_sel and curr_sel == nxt_sel)
+            if same:
+                curr.skip_reason = "prefill_click_noise"
+
+    def _dedup_datepicker_sequences(self, steps: list) -> None:
+        """Collapse Angular Material datepicker calendar navigation into the text fill.
+
+        Pattern: (open toggle) + (calendar nav clicks) + (fill on text input with date)
+        The text fill is the canonical intent. Calendar navigation is fragile because it
+        depends on which month the calendar opens at (current date changes between runs).
+        Keep only the fill, mark calendar steps as skipped.
+        """
+        DATEPICKER_SELECTORS = {
+            "mat-datepicker-toggle button",
+            "button.mat-calendar-previous-button",
+            "button.mat-calendar-next-button",
+            "button.mat-calendar-period-button",
+        }
+
+        i = 0
+        while i < len(steps):
+            step = steps[i]
+            if step.skip_reason or step.action != "click":
+                i += 1
+                continue
+            sel = step.target.candidates[0].selector if step.target and step.target.candidates else ""
+
+            # Detect datepicker toggle open
+            if "mat-datepicker-toggle" not in sel and "mat-calendar" not in sel:
+                i += 1
+                continue
+
+            # Scan forward for the fill step that closes the sequence
+            seq_start = i
+            seq_end = i
+            found_fill = -1
+            j = i + 1
+            while j < len(steps) and j < i + 15:
+                s = steps[j]
+                s_sel = s.target.candidates[0].selector if s.target and s.target.candidates else ""
+                if s.action == "fill" and s.target and (s.target.tag or "").lower() in ("input", "textarea"):
+                    # Fill closes the datepicker sequence
+                    found_fill = j
+                    seq_end = j - 1
+                    break
+                if s.action == "navigation":
+                    break
+                j += 1
+
+            if found_fill > seq_start:
+                # Mark all calendar steps as skipped
+                for k in range(seq_start, seq_end + 1):
+                    if not steps[k].skip_reason:
+                        steps[k].skip_reason = "datepicker_dedup"
+                i = found_fill + 1
+            else:
+                i += 1
 
     def _audit_blind_spots(self, stc) -> None:
         """Detect patterns where user intent was likely missed by the recorder.
@@ -607,6 +695,35 @@ class RecordingNormalizer:
                             existing["source"] = source
                             existing["step_index"] = i
 
+        # Secondary dedup: same physical field with different canonical keys (by element_id).
+        # fill_event keys by placeholder, setter_hook keys by element_id — same element, two entries.
+        _source_priority_map = {
+            "form_values": 100, "fill_event": 80, "setter_hook": 78,
+            "checked_transition": 72, "snapshot_diff": 70,
+            "network_payload": 60, "final_state": 55,
+            "polling": 50, "missing_fill": 10,
+        }
+        el_id_to_key: dict[str, str] = {}
+        keys_to_drop: set = set()
+        for canonical, entry in fill_registry.items():
+            el_id = (entry.get("identifiers") or {}).get("id", "").strip()
+            if not el_id:
+                continue
+            existing_canonical = el_id_to_key.get(el_id)
+            if existing_canonical is None:
+                el_id_to_key[el_id] = canonical
+            else:
+                existing_entry = fill_registry[existing_canonical]
+                old_p = _source_priority_map.get(existing_entry["source"], 0)
+                new_p = _source_priority_map.get(entry["source"], 0)
+                if new_p > old_p or (new_p == old_p and len(entry.get("value", "")) > len(existing_entry.get("value", ""))):
+                    keys_to_drop.add(existing_canonical)
+                    el_id_to_key[el_id] = canonical
+                else:
+                    keys_to_drop.add(canonical)
+        for k in keys_to_drop:
+            fill_registry.pop(k, None)
+
         # Convert to FieldValueMap and store in stc
         stc.field_values = {}
         for key, entry in fill_registry.items():
@@ -943,7 +1060,14 @@ class RecordingNormalizer:
         if target_data.get("label") and target_data.get("id"):
             label = target_data["label"]
             el_id = target_data["id"]
-            candidates.append(LocatorCandidate("label", f"label[for=\"{el_id}\"]", 0.90, f"label for={el_id}"))
+            if el_id.startswith("mat-radio-"):
+                candidates.insert(0, LocatorCandidate(
+                    "angular_material", f"mat-radio-button:has-text(\"{label}\")",
+                    0.92, f"Angular Material radio by label={label}",
+                ))
+                candidates.append(LocatorCandidate("label", f"label[for=\"{el_id}\"]", 0.30, f"label for={el_id} (mat-radio degraded)"))
+            else:
+                candidates.append(LocatorCandidate("label", f"label[for=\"{el_id}\"]", 0.90, f"label for={el_id}"))
         elif target_data.get("label"):
             label = target_data["label"]
             # Adjacent sibling: <label>Text</label> + <input> (most HTML forms)

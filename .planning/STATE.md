@@ -1,3 +1,18 @@
+---
+gsd_state_version: 1.0
+milestone: v0.2.0
+milestone_name: milestone
+status: unknown
+stopped_at: context exhaustion at 75% (2026-06-19)
+last_updated: "2026-06-19T15:46:01.903Z"
+progress:
+  total_phases: 6
+  completed_phases: 0
+  total_plans: 1
+  completed_plans: 0
+  percent: 0
+---
+
 # TestForge — Estado do Projeto
 
 **Inicio:** 2026-06-13
@@ -6,6 +21,7 @@
 **Ultimo commit:** `a9ecbd2` docs: BUGS.md — todos 5 bugs corrigidos
 
 ## Metricas
+
 - **100 commits** no main
 - **162 testes** passando (100%)
 - **28 modulos** Python
@@ -18,6 +34,7 @@
 - **LLM real validado:** Azure GPT-4.1-mini curou `change_id` (conf 0.90)
 
 ## Milestones Concluidos
+
 - [x] M1-M7 (v0.1.0): Fundacao + Recorder + Evidence + MIS + Oracle + Taxonomia + Metricas
 - [x] M8 (v0.2.0): CLI + Pipeline + Data-Driven Testing
 - [x] M9 (v0.3.0): LLM Self-Healing L0→L3 completo
@@ -37,7 +54,14 @@
   - BUGS.md documentado
 
 ## Proximo
+
 - Pipeline CI (GitHub Actions / Azure DevOps)
 - Dashboard web de metricas
 - Suporte a mais frameworks (PrimeFaces SelectOneMenu, autocomplete, datepicker)
 - Mascaramento automatico de dados sensiveis (alem de alert_only)
+
+## Session
+
+**Last session:** 2026-06-19T15:46:01.894Z
+**Stopped at:** context exhaustion at 75% (2026-06-19)
+**Resume file:** None

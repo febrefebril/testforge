@@ -351,6 +351,8 @@ class PlaywrightCompiler:
         lines.append("")
         return lines
 
+    _BAD_ASSERT_SELECTORS = {"#body", "body", "html", "#html", "body > ", "html > "}
+
     def _gen_assert(self, action: SemanticAction, idx: int) -> list[str]:
         assert_type = action.context.get("assert_type", "textual") if action.context else "textual"
         expected = action.value or ""
@@ -367,6 +369,11 @@ class PlaywrightCompiler:
             sel = f"text={action.target.text[:30]}"
         else:
             sel = "body"
+
+        # Skip bad asserts captured on page body — no meaningful assertion possible
+        if sel.strip().lower() in self._BAD_ASSERT_SELECTORS or sel.strip().lower().startswith("body"):
+            lines.append(f"    # SKIP: assert on body/page (no element selected) — re-record with Shift+A")
+            return lines
 
         if assert_type == "textual" or assert_type == "automatico":
             lines.append(f"    expect(page.locator({self._esc(sel)})).to_contain_text({self._esc(expected)})")

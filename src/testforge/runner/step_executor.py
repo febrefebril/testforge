@@ -134,7 +134,12 @@ class StepExecutor:
 
         if action == "click":
             tag = (step.target.tag or "").lower() if step.target else ""
-            if tag in ("input", "textarea"):
+            # Radio buttons (Angular Material mat-radio-button) must be clicked, not filled.
+            # Detected by element_id prefix or top candidate selector containing mat-radio-button.
+            _el_id = (getattr(step.target, "element_id", "") or "") if step.target else ""
+            _top_sel = (step.target.candidates[0].selector if step.target and step.target.candidates else "")
+            _is_radio = _el_id.startswith("mat-radio-") or "mat-radio-button" in _top_sel
+            if tag in ("input", "textarea") and not _is_radio:
                 ctx = getattr(step, "context", {}) or {}
 
                 # Resolve value + intention from field_value_map + data_values
@@ -314,6 +319,11 @@ class StepExecutor:
             if not sel:
                 continue
             try:
+                if "mat-radio-button" in sel:
+                    loc = self.page.locator(sel).first
+                    loc.dispatch_event("click")
+                    self.page.wait_for_timeout(300)
+                    return sel
                 self.page.click(sel, timeout=self.DEFAULT_TIMEOUT)
                 self.page.wait_for_timeout(200)
                 return sel

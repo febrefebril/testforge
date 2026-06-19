@@ -740,6 +740,16 @@ class RecorderController:
 
         window._tf_addStep = function(action, el, assertType) {
             try {
+                if (!el || el === document.body || el === document.documentElement ||
+                        (el.tagName && (el.tagName === 'BODY' || el.tagName === 'HTML'))) {
+                    _tf_showToast('⚠ Selecione um elemento específico, não a página inteira');
+                    window.__tfAssertWaiting = false;
+                    var dot = document.getElementById('tf-rec-dot');
+                    var status = document.getElementById('tf-status');
+                    if (dot) dot.style.color = '#e94560';
+                    if (status) status.textContent = 'Gravando...';
+                    return false;
+                }
                 var selector = '';
                 try { selector = _tf_getSelector(el); } catch(e) { selector = el.tagName || 'unknown'; }
                 var step = {

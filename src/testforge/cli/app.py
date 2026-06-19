@@ -192,6 +192,27 @@ def _run_post_recording_validation(rec_dir: str, rid: str, args,
     if stc and stc.field_values:
         field_values = stc.field_values
 
+    # Run headless incremental validation in pilot-mode for real step_results
+    step_results = []
+    if getattr(args, "pilot_mode", False):
+        try:
+            out_dir = os.path.join(rec_dir, "_pilot_tmp")
+            script_path = PlaywrightCompiler().compile(stc, out_dir)
+            from testforge.runner.incremental_runner import IncrementalRunner
+            runner = IncrementalRunner(
+                script_path=script_path,
+                headless=True,
+                timeout=90,
+                stop_on_failure=False,
+                no_healing=True,
+                capture=False,
+                output_root=os.path.join(rec_dir, "_pilot_runs"),
+            )
+            runner.run()
+            step_results = runner.step_results
+        except Exception as exc:
+            print(f"[TestForge] ⚠ Pilot run falhou: {exc}")
+
     # Evaluate readiness gate
     gate = RecordingReadinessGate()
     readiness_report = gate.evaluate(
@@ -199,7 +220,7 @@ def _run_post_recording_validation(rec_dir: str, rid: str, args,
         application=args.app or "web",
         base_url=args.url or "http://localhost",
         completeness_report=completeness_report,
-        step_results=[],  # No incremental execution in post-recording (CLI only)
+        step_results=step_results,
         field_values=field_values,
     )
 
@@ -448,6 +469,11 @@ def cmd_compile(args):
                                       RecordingStatus.incomplete_intent)
         print(f"  Relatorio JSON: {json_path}")
         print(f"  Relatorio MD:  {md_path}")
+
+        from testforge.metrics.pilot_metrics import PilotMetrics as _PilotMetrics
+        _pm = _PilotMetrics()
+        rate = _pm.compute_auto_resolution_rate(report)
+        print(f"[TestForge] % campos auto-resolvidos: {rate:.0%}")
 
     # Data-driven: extrai massa de dados externa
     data_file = ""

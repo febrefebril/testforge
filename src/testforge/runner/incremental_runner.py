@@ -602,9 +602,32 @@ class IncrementalRunner:
             evidence["dom"] = ""
         return evidence
 
+    _BODY_SELECTORS = {"body", "#body", "html", "#html", "xpath=/html/body", "xpath=//body"}
+
     def _run_one_step(self, index, step):
         step_num = index + 1
         started = time.time()
+
+        skip_reason = getattr(step, "skip_reason", "") or ""
+        if not skip_reason and step.action == "assert":
+            sel = ""
+            if step.target and getattr(step.target, "candidates", None):
+                sel = (step.target.candidates[0].selector or "").strip().lower()
+            if sel in self._BODY_SELECTORS:
+                skip_reason = "assert_on_body_element_skipped"
+
+        if skip_reason:
+            result = IncrementalStepResult(
+                step_num=step_num,
+                action=step.action,
+                original_locator=self._primary_selector(step),
+                value=step.value or "",
+            )
+            result.status = "skipped"
+            result.skip_reason = skip_reason
+            result.duration_ms = 0
+            return result
+
         result = IncrementalStepResult(
             step_num=step_num,
             action=step.action,

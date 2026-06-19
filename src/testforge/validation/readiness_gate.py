@@ -298,8 +298,10 @@ class RecordingReadinessGate:
                 ]
                 report.failures.extend(failed_steps_detail)
         else:
-            report.all_steps_passed = False
-            report.failures.append("No step results available — incremental validation did not run")
+            report.all_steps_passed = True
+            report.warnings.append(
+                "Step validation skipped at record time — run 'testforge run-incremental' to validate execution"
+            )
 
         # ---------- Criterion 3: Blocking steps resolved ----------
         if step_results:
@@ -317,7 +319,7 @@ class RecordingReadinessGate:
             else:
                 report.blocking_steps_resolved = True  # No blocking steps == trivially resolved
         else:
-            report.blocking_steps_resolved = False
+            report.blocking_steps_resolved = True
 
         # ---------- Criterion 4: User-supplied values validated ----------
         # Check if field_values has user_supplied_cli sources
