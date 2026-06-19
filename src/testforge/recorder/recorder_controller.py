@@ -28,8 +28,9 @@ class RecorderController:
         self._command_queue: list = []
         self._paused = False
         self._headless = False
+        self._evidence_level = "light"
 
-    def start(self, recording_id: str, application: str = "", base_url: str = "", headless: bool = False) -> RecordingSession:
+    def start(self, recording_id: str, application: str = "", base_url: str = "", headless: bool = False, evidence_level: str = "light") -> RecordingSession:
         session = self._session_manager.start(recording_id, application, base_url)
         self._store = RawRecordingStore(session.session_dir)
         self._network_entries = []
@@ -37,11 +38,16 @@ class RecorderController:
         self._command_queue = []
         self._paused = False
         self._headless = headless
+        self._evidence_level = evidence_level
 
         self._page.on("request", self._on_request)
         self._page.on("response", self._on_response)
 
         self._page.add_init_script(self._OVERLAY_JS)
+        self._store.save_metadata("recording_config", {
+            "evidence_level": self._evidence_level,
+            "headless": self._headless,
+        })
         return session
 
     def wait_for_command(self, timeout_ms: int = 500) -> list[str]:
@@ -186,17 +192,19 @@ class RecorderController:
 
     def _capture_snapshots(self, event: RawRecordedEvent):
         eid = event.event_id
+        # Screenshot only in full evidence mode (avoids flick, reduces disk I/O)
+        if self._evidence_level == "full":
+            try:
+                data = self._page.screenshot(type="png", full_page=False)
+                event.screenshot_path = self._store.save_screenshot(eid, data)
+            except Exception:
+                pass
+        # DOM snapshot always (needed for normalizer / locator scoring)
         try:
-            data = self._page.screenshot(type="png", full_page=False)
-            event.screenshot_path = self._store.save_screenshot(eid, data)
+            self._page.wait_for_load_state("domcontentloaded", timeout=3000)
         except Exception:
             pass
         try:
-            # Wait for DOM to be ready before capturing
-            try:
-                self._page.wait_for_load_state("domcontentloaded", timeout=3000)
-            except Exception:
-                pass
             dom = self._page.content()
             event.dom_snapshot_path = self._store.save_dom(eid, dom)
         except Exception:

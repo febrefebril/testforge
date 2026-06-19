@@ -262,7 +262,7 @@ def cmd_record(args):
         print(f"  Shift+P=pause | Shift+S=stop | Shift+A=assert | Shift+H=hide overlay")
         print()
 
-        session = recorder.start(recording_id=rid, application=args.app or "web", base_url=args.url)
+        session = recorder.start(recording_id=rid, application=args.app or "web", base_url=args.url, evidence_level=args.evidence_level)
         rid = session.recording_id  # may be suffixed (_2, _3) if original name exists
         page.goto(args.url)
 
@@ -1458,6 +1458,8 @@ def main():
                      help="Modo CAIXA: abre Edge/Chrome corporativo via CDP")
     rec.add_argument("--cdp-browser", choices=["edge", "chrome", "auto"], default=None,
                      help="Browser CDP: edge, chrome ou auto (default: auto)")
+    rec.add_argument("--evidence-level", choices=["light", "full"], default="light",
+                     help="Nivel de evidencia: light (padrao, sem screenshot por evento) ou full (screenshot + DOM por evento)")
     rec.set_defaults(func=cmd_record)
 
     # compile
