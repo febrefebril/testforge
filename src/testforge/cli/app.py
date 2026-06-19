@@ -250,7 +250,9 @@ def cmd_record(args):
         _validate_and_warn_url(args.url)
     with sync_playwright() as pw:
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
-        context = browser.new_context(viewport={"width": 1280, "height": 720})
+        # Only force viewport in headless mode — headed mode respects user's window size
+        viewport = {"width": 1280, "height": 720} if args.headless else None
+        context = browser.new_context(viewport=viewport)
         page = context.new_page()
         recorder = RecorderController(page)
 
@@ -259,6 +261,7 @@ def cmd_record(args):
 
         print(f"[TestForge] Gravando: {rid}")
         print(f"  URL: {args.url}")
+        print(f"  Viewport: {'1280x720 (headless)' if args.headless else 'janela real (headed)'}")
         print(f"  Shift+P=pause | Shift+S=stop | Shift+A=assert | Shift+H=hide overlay")
         print()
 
