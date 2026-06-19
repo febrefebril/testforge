@@ -538,6 +538,8 @@ class RecorderController:
                 target: target,
                 value: (el && el.value) ? el.value.substring(0,200) : null
             });
+            var stepCount = document.getElementById('tf-step-count');
+            if (stepCount) stepCount.textContent = parseInt(stepCount.textContent||0) + 1;
         }
 
         // ---- Field snapshot (Sprint 3) ----
@@ -805,21 +807,9 @@ class RecorderController:
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
-                // Captura automatica como textual (menu aparece como opcao adicional)
-                _tf_addStep('assert', el, 'textual');
-                var assertCount = document.getElementById('tf-assert-count');
-                if (assertCount) assertCount.textContent = parseInt(assertCount.textContent||0) + 1;
-                var stepCount = document.getElementById('tf-step-count');
-                if (stepCount) stepCount.textContent = parseInt(stepCount.textContent||0) + 1;
-                var expected = _tf_getExpectedValue(el, 'textual');
-                _tf_showToast('✓ Assert textual: \"' + (expected||'').substring(0,40) + '\"');
+                window.__tfAssertElement = el;
                 _tf_highlight(el);
-                window.__tfAssertWaiting = false;
-                window.__tfAssertElement = null;
-                var dot = document.getElementById('tf-rec-dot');
-                var status = document.getElementById('tf-status');
-                if (dot) dot.style.color = '#e94560';
-                if (status) status.textContent = 'Gravando...';
+                _tf_showAssertMenu(e.clientX, e.clientY);
                 return;
             }
             // Detect submit triggers: record as "submit" with postback flag.
