@@ -318,11 +318,19 @@ class StepExecutor:
 
         try:
             el = self.page.locator(selector).first
+            # Detect masked inputs: currencymask attribute OR placeholder patterns
             has_mask = el.get_attribute("currencymask") is not None
+            if not has_mask:
+                placeholder = (el.get_attribute("placeholder") or "").lower()
+                has_mask = any(p in placeholder for p in ("r$", "0,00", "__/__/____"))
             if has_mask:
+                # For masked inputs, use the recorded display value (with mask formatting
+                # like dots and commas) instead of resolved raw value. press_sequentially
+                # needs formatted characters so the mask interprets them correctly.
+                masked_val = (step.value or value).strip()
                 el.click()
                 self.page.wait_for_timeout(150)
-                el.press_sequentially(str(value), delay=50)
+                el.press_sequentially(str(masked_val), delay=50)
                 self.page.keyboard.press("Tab")
                 self.page.wait_for_timeout(200)
                 return selector

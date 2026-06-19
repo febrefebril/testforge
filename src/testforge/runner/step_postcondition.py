@@ -68,7 +68,9 @@ class StepPostconditionValidator:
 
     def _validate_fill(self, step):
         selector = self._primary_selector(step)
-        expected = step.value or ""
+        # Use resolved value from field_value_map if available (more accurate than raw step.value)
+        ctx = getattr(step, "context", {}) or {}
+        expected = (ctx.get("resolved_value") or step.value or "").strip()
         try:
             actual = self.page.locator(selector).first.input_value(timeout=3000)
         except Exception as exc:
