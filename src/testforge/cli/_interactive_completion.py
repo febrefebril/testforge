@@ -92,20 +92,50 @@ def prompt_missing_fields(
     # Save to test_data.json
     test_data_path = _save_test_data(rec_dir, values_provided, recording_id)
 
-    # Re-check completeness with new values
-    resolved = len(values_provided)
-    pending = len(report.pending_fields) - resolved
+    # Re-run normalizer + completeness checker with new values
+    if normalizer is None:
+        from testforge.semantic import RecordingNormalizer
+        normalizer = RecordingNormalizer()
+    try:
+        # Infer app/base_url from recording metadata if available
+        meta_path = os.path.join(rec_dir, "recording_metadata.json")
+        meta = {}
+        if os.path.exists(meta_path):
+            with open(meta_path) as f:
+                meta = json.load(f)
+        app = meta.get("application", "web")
+        base_url = meta.get("base_url", "http://localhost")
 
-    if pending == 0:
-        print(f"[TestForge] ✓ Todos os {resolved} campos resolvidos via CLI")
-        _update_recording_metadata(rec_dir, RecordingStatus.intent_complete)
-        return True
-    else:
-        print(f"[TestForge] ⚠ {pending} campo(s) ainda pendente(s)")
-        print(f"  Dados salvos: {test_data_path}")
-        print(f"  Para completar: testforge compile --check {recording_id}")
-        _update_recording_metadata(rec_dir, RecordingStatus.incomplete_intent)
-        return False
+        new_stc = normalizer.normalize(rec_dir, f"ST-{recording_id}", app, base_url)
+        checker = IntentCompletenessChecker()
+        new_report = checker.check_steps(new_stc.steps, new_stc.field_values)
+
+        report_dir = os.path.join(rec_dir, "completeness")
+        json_path, md_path = save_completeness_report(new_report, report_dir, recording_id)
+
+        if new_report.is_complete:
+            print(f"[TestForge] ✓ Todos os campos resolvidos — intencao COMPLETA")
+            _update_recording_metadata(rec_dir, RecordingStatus.intent_complete)
+        else:
+            print(f"[TestForge] ⚠ {new_report.missing_count} campo(s) ainda pendente(s)")
+            print(f"  Relatorio: {md_path}")
+            print(f"  Para completar: testforge compile --check {recording_id}")
+            _update_recording_metadata(rec_dir, RecordingStatus.incomplete_intent)
+        return new_report.is_complete
+    except Exception as e:
+        print(f"[TestForge] ⚠ Erro ao re-verificar completude: {e}")
+        # Fallback: simple count-based check
+        resolved = len(values_provided)
+        pending = len(report.pending_fields) - resolved
+        if pending == 0:
+            print(f"[TestForge] ✓ Todos os {resolved} campos resolvidos via CLI")
+            _update_recording_metadata(rec_dir, RecordingStatus.intent_complete)
+            return True
+        else:
+            print(f"[TestForge] ⚠ {pending} campo(s) ainda pendente(s) (contagem simples)")
+            print(f"  Dados salvos: {test_data_path}")
+            _update_recording_metadata(rec_dir, RecordingStatus.incomplete_intent)
+            return False
 
 
 def create_data_template(

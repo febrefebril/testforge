@@ -135,6 +135,18 @@ def _run_post_recording_completion(rec_dir: str, rid: str, args,
             # Interactive mode: prompt user for values
             all_resolved = prompt_missing_fields(rec_dir, rid, report,
                                                   normalizer, stc)
+            # Re-read completeness report after user input (prompt may have re-checked)
+            new_report_path = os.path.join(rec_dir, "completeness", f"completeness-{rid}.json")
+            if os.path.exists(new_report_path):
+                with open(new_report_path) as f:
+                    from testforge.validation.intent_completeness import CompletenessReport
+                    new_report = CompletenessReport.from_dict(json.load(f))
+                report = new_report
+                # Re-normalize to get fresh stc
+                try:
+                    stc = normalizer.normalize(rec_dir, f"ST-{rid}", args.app or "web", args.url or "http://localhost")
+                except Exception:
+                    pass
             if all_resolved:
                 print(f"[TestForge] ✅ Gravacao pronta para compilacao!")
                 print(f"  Use: testforge compile {rid}")
