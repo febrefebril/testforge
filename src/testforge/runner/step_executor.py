@@ -5,6 +5,7 @@ Não decide se o step passou semanticamente — isso é papel da pós-condição
 Usa field_value_map para ligar campo → valor com intenção e fallback.
 """
 from __future__ import annotations
+import re
 from typing import Optional
 
 
@@ -324,16 +325,20 @@ class StepExecutor:
                 placeholder = (el.get_attribute("placeholder") or "").lower()
                 has_mask = any(p in placeholder for p in ("r$", "0,00", "__/__/____"))
             if has_mask:
-                # For masked inputs, use the recorded display value (with mask formatting
-                # like dots and commas) instead of resolved raw value. press_sequentially
-                # needs formatted characters so the mask interprets them correctly.
+                # For masked inputs, type ONLY the raw digits — no formatting chars.
+                # Currency masks interpret each digit character-by-character; dots,
+                # commas, and spaces corrupt the value. Extract just [0-9] from
+                # the display value (e.g. "10.000,00" -> "1000000").
                 masked_val = (step.value or value).strip()
+                digits = re.sub(r"[^0-9]", "", masked_val)
+                if not digits:
+                    digits = masked_val
                 el.click()
                 self.page.wait_for_timeout(150)
                 # Clear existing value before typing — press_sequentially appends otherwise
                 el.fill("")
                 self.page.wait_for_timeout(80)
-                el.press_sequentially(str(masked_val), delay=50)
+                el.press_sequentially(str(digits), delay=50)
                 self.page.keyboard.press("Tab")
                 self.page.wait_for_timeout(200)
                 return selector
