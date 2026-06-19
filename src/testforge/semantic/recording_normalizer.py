@@ -715,6 +715,11 @@ class RecordingNormalizer:
 
         target = self._build_target(target_data)
 
+        # Skip click events with no target candidates — recording artifacts
+        # (clicks outside any recognizable element, e.g. background/whitespace).
+        if event_type == "click" and not target.candidates:
+            return None
+
         action_map = {
             "click": "click",
             "fill": "fill",
@@ -889,8 +894,15 @@ class RecordingNormalizer:
             inner = _clean_text(target_data["inner_html"])
             if inner:
                 tag = (target_data.get("tag") or "").lower()
-                sel = f"{tag}:has-text(\"{inner}\")" if tag else f":has-text(\"{inner}\")"
-                candidates.append(LocatorCandidate("inner_html", sel, 0.45, "inner HTML text"))
+                # Skip SVG elements — their "inner text" is path/geometry data,
+                # not meaningful text content. SVG icons are decorative.
+                # Without this filter, <svg><polygon points="0,0 5,5..."></svg>
+                # generates svg:has-text("<polygon points=...">") which never matches.
+                if tag in ("svg", "path", "polygon", "circle", "line", "g"):
+                    pass  # fall through to CSS path / class fallbacks
+                else:
+                    sel = f"{tag}:has-text(\"{inner}\")" if tag else f":has-text(\"{inner}\")"
+                    candidates.append(LocatorCandidate("inner_html", sel, 0.45, "inner HTML text"))
 
         # Fallback: CSS path
         css_path = target_data.get("css_path") or ""
