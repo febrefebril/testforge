@@ -50,6 +50,7 @@ class IncrementalRunner:
         no_healing: bool = False,
         shadow: bool = False,
         output_root: str = "runs",
+        capture: bool = True,
     ):
         self.script_path = script_path
         self.headless = headless
@@ -62,6 +63,8 @@ class IncrementalRunner:
         self.no_healing = no_healing
         self.shadow_mode = shadow
         self.output_root = output_root
+        self.capture_enabled = capture
+        self.replay_recorder = None
 
         self.page = None
         self.base_url = ""
@@ -175,6 +178,21 @@ class IncrementalRunner:
         self.precondition_validator = StepPreconditionValidator(self.page)
         self.step_executor = StepExecutor(self.page)
         self.postcondition_validator = StepPostconditionValidator(self.page)
+
+        # ReplayRecorder: capture execution telemetry in recording-compatible format
+        if self.capture_enabled and self.recording_id:
+            try:
+                from testforge.recorder.replay_recorder import ReplayRecorder
+                self.replay_recorder = ReplayRecorder(
+                    self.page,
+                    self.recording_id,
+                    output_root=str(Path(self.output_root).parent / "recordings"),
+                )
+                cap_dir = self.replay_recorder.start()
+                print(f"  📹 Captura: {cap_dir}")
+            except Exception as exc:
+                print(f"  ⚠ ReplayRecorder: {exc}")
+                self.replay_recorder = None
 
         try:
             from testforge.evidence import EvidenceCollector
@@ -721,12 +739,22 @@ class IncrementalRunner:
                 result = self._run_one_step(i, step)
                 self.step_results.append(result)
                 self.ui.step(i + 1, len(self.steps), result)
+                if self.replay_recorder:
+                    self.replay_recorder.capture_step(
+                        i, step,
+                        status=result.status,
+                        error_message=result.error_message or "",
+                    )
 
                 if result.status in ("failed", "healing_rejected"):
                     if getattr(step, "blocking", False):
                         self.failed_step_indices.add(i)
                     if self.stop_on_failure:
                         break
+
+            if self.replay_recorder:
+                cap_info = self.replay_recorder.finish()
+                print(f"  📹 Captura salva: {cap_info['session_dir']} ({cap_info['steps_captured']} steps)")
 
             browser.close()
 

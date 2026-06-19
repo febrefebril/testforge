@@ -25,6 +25,7 @@ def cmd_run_incremental(args):
         interactive=args.interactive,
         no_healing=args.no_healing,
         shadow=args.shadow,
+        capture=args.capture,
     )
     try:
         report = runner.run()
@@ -55,6 +56,8 @@ def register(sub):
     inc.add_argument("--interactive", action="store_true")
     inc.add_argument("--no-healing", dest="no_healing", action="store_true")
     inc.add_argument("--shadow", action="store_true")
+    inc.add_argument("--no-capture", dest="capture", action="store_false", default=True,
+                     help="Desabilitar captura de telemetria de execucao")
     inc.add_argument("--windows-caixa", action="store_true",
                      help="Modo CAIXA: abre Edge/Chrome corporativo via CDP")
     inc.add_argument("--cdp-browser", choices=["edge", "chrome", "auto"], default=None,
