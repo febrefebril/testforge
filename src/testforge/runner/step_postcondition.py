@@ -133,10 +133,30 @@ class StepPostconditionValidator:
         if causes_navigation:
             url_now = self.page.url
             changed = bool(url_before) and url_now != url_before
+            if changed:
+                return PostconditionResult(
+                    passed=True,
+                    checks={"url_changed": True},
+                    message=f"url mudou: '{url_before}' → '{url_now}'",
+                )
+            # SPA: URL pode não mudar (Angular router client-side).
+            # Fallback: verificar se próximo step está visível.
+            if next_step and getattr(next_step, "target", None):
+                cands = next_step.target.candidates
+                for c in (cands or [])[:3]:
+                    try:
+                        self.page.wait_for_selector(c.selector, state="visible", timeout=5000)
+                        return PostconditionResult(
+                            passed=True,
+                            checks={"url_changed": False, "next_step_visible": True},
+                            message=f"SPA nav sem mudanca de URL — proximo step visivel: {c.selector}",
+                        )
+                    except Exception:
+                        continue
             return PostconditionResult(
-                passed=changed,
-                checks={"url_changed": changed},
-                failures=[] if changed else ["url_not_changed"],
+                passed=False,
+                checks={"url_changed": False},
+                failures=["url_not_changed"],
                 message=f"url before='{url_before}' after='{url_now}'",
             )
 
