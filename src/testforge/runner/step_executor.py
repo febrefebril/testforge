@@ -330,6 +330,9 @@ class StepExecutor:
                 masked_val = (step.value or value).strip()
                 el.click()
                 self.page.wait_for_timeout(150)
+                # Clear existing value before typing — press_sequentially appends otherwise
+                el.fill("")
+                self.page.wait_for_timeout(80)
                 el.press_sequentially(str(masked_val), delay=50)
                 self.page.keyboard.press("Tab")
                 self.page.wait_for_timeout(200)
