@@ -1,0 +1,870 @@
+{
+  "run_id": "simulador-credito2_20260619-034449",
+  "recording_id": "simulador-credito2",
+  "script_path": "semantic_tests/ST-simulador-credito2/test_st-simulador-credito2.py",
+  "base_url": "https://simuladorhabitacao.caixa.gov.br/home",
+  "mode": "incremental",
+  "summary": {
+    "total": 19,
+    "passed": 16,
+    "healed_validated": 2,
+    "healing_rejected": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0,
+    "shadow_healed": 0
+  },
+  "steps": [
+    {
+      "step_num": 1,
+      "action": "navigation",
+      "status": "passed",
+      "original_locator": "",
+      "selected_locator": "",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "navigation_ok": true
+        },
+        "failures": [],
+        "message": ""
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url atual: https://simuladorhabitacao.caixa.gov.br/home"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/before_step_0001.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/before_step_0001.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/after_step_0001.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/after_step_0001.html"
+      },
+      "duration_ms": 476,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 2,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "a:has-text(\"Empréstimo com garantia de imóvel Descubra quanto dinheiro v\")",
+      "selected_locator": "a:has-text(\"Empréstimo com garantia de imóvel Descubra quanto dinheiro v\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_changed": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url before='https://simuladorhabitacao.caixa.gov.br/home' after='https://simuladorhabitacao.caixa.gov.br/calculadora-egi'"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/before_step_0002.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/before_step_0002.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/after_step_0002.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/after_step_0002.html"
+      },
+      "duration_ms": 746,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 3,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "mat-card:has-text(\"_circle Imóvel quitado Já paguei tudo e não tenho mais dívid\")",
+      "selected_locator": "mat-card:has-text(\"_circle Imóvel quitado Já paguei tudo e não tenho mais dívid\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: mat-datepicker-toggle button"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/before_step_0003.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/before_step_0003.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/after_step_0003.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/after_step_0003.html"
+      },
+      "duration_ms": 636,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 4,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "mat-datepicker-toggle button",
+      "selected_locator": "mat-datepicker-toggle button",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: button.mat-calendar-period-button"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/before_step_0004.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/before_step_0004.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/after_step_0004.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/after_step_0004.html"
+      },
+      "duration_ms": 726,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 5,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "button.mat-calendar-period-button",
+      "selected_locator": "button.mat-calendar-period-button",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: button.mat-calendar-previous-button"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/before_step_0005.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/before_step_0005.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/after_step_0005.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/after_step_0005.html"
+      },
+      "duration_ms": 606,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 6,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "button.mat-calendar-previous-button",
+      "selected_locator": "button.mat-calendar-previous-button",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: button.mat-calendar-previous-button"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/before_step_0006.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/before_step_0006.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/after_step_0006.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/after_step_0006.html"
+      },
+      "duration_ms": 622,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 7,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "button.mat-calendar-previous-button",
+      "selected_locator": "button.mat-calendar-previous-button",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: span:has-text(\"1969\")"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/before_step_0007.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/before_step_0007.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/after_step_0007.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/after_step_0007.html"
+      },
+      "duration_ms": 625,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 8,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "span:has-text(\"1969\")",
+      "selected_locator": "span:has-text(\"1969\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: span:has-text(\"FEV\")"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/before_step_0008.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/before_step_0008.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/after_step_0008.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/after_step_0008.html"
+      },
+      "duration_ms": 617,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 9,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "span:has-text(\"FEV\")",
+      "selected_locator": "span:has-text(\"FEV\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: span:has-text(\"4\")"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/before_step_0009.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/before_step_0009.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/after_step_0009.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/after_step_0009.html"
+      },
+      "duration_ms": 605,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 10,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "span:has-text(\"4\")",
+      "selected_locator": "span:has-text(\"4\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: input[placeholder=\"DD/MM/AAAA\"]"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/before_step_0010.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/before_step_0010.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/after_step_0010.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/after_step_0010.html"
+      },
+      "duration_ms": 625,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 11,
+      "action": "fill",
+      "status": "passed",
+      "original_locator": "input[placeholder=\"DD/MM/AAAA\"]",
+      "selected_locator": "input[placeholder=\"DD/MM/AAAA\"]",
+      "value": "04/02/1969",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "value_present": true,
+          "visible": true,
+          "editable": true
+        },
+        "failures": [],
+        "message": "fill precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "input_value_matches": true,
+          "actual_value_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": ""
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/before_step_0011.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/before_step_0011.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/after_step_0011.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/after_step_0011.html"
+      },
+      "duration_ms": 492,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 12,
+      "action": "click",
+      "status": "healed_validated",
+      "original_locator": "input[aria-label=\"Quanto vale seu imóvel hoje?*\"]",
+      "selected_locator": "input[aria-label=\"Quanto vale seu imóvel hoje?*\"]",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: input[aria-label=\"Quanto vale seu imóvel hoje?*\"]"
+      },
+      "healing": {
+        "attempted": true,
+        "status": "PASSED_STEP",
+        "layer": "L2",
+        "family": "FAM-06",
+        "taxonomy_id": "INP-007",
+        "strategy": "press_sequentially",
+        "original_locator": "input[aria-label=\"Quanto vale seu imóvel hoje?*\"]",
+        "proposed_locator": "input[aria-label=\"Quanto vale seu imóvel hoje?*\"]",
+        "confidence": 0.82,
+        "validated": true,
+        "oracle_passed": true,
+        "rejection_reason": [],
+        "rationale": "Masked input field — use press_sequentially instead of fill for JS-masked fields",
+        "raw_response": "",
+        "failure_phase": "execution",
+        "original_error": "fill_failed: 'unknown' value='FieldValueMap(field_key='quanto_vale_seu_imóvel_hoje?*', value='10.000,00', intention=\"fill Quanto vale seu imóvel hoje?* with '10.000,00' on input step 13\", identifiers={'aria_label': 'Quanto vale seu imóvel hoje?*'}, source='fill_event', step_index=12)' selector='input[aria-label=\"Quanto vale seu imóvel hoje?*\"]' — nenhuma estrategia funcionou",
+        "entry_id": "e391870e6876",
+        "promotion_state": "rejected",
+        "promotion_allowed": false,
+        "promotion_blocks": [
+          "oracle_missing"
+        ]
+      },
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/before_step_0012.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/before_step_0012.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/after_step_0012.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/after_step_0012.html"
+      },
+      "duration_ms": 792,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 13,
+      "action": "fill",
+      "status": "passed",
+      "original_locator": "input[aria-label=\"Quanto vale seu imóvel hoje?*\"]",
+      "selected_locator": "input[aria-label=\"Quanto vale seu imóvel hoje?*\"]",
+      "value": " 10.000,00 ",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "value_present": true,
+          "visible": true,
+          "editable": true
+        },
+        "failures": [],
+        "message": "fill precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "input_value_matches": true,
+          "actual_value_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": ""
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/before_step_0013.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/before_step_0013.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/after_step_0013.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/after_step_0013.html"
+      },
+      "duration_ms": 1245,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 14,
+      "action": "fill",
+      "status": "passed",
+      "original_locator": "input[aria-label=\"Quanto vale seu imóvel hoje?*\"]",
+      "selected_locator": "input[aria-label=\"Quanto vale seu imóvel hoje?*\"]",
+      "value": " 100.000,00 ",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "value_present": true,
+          "visible": true,
+          "editable": true
+        },
+        "failures": [],
+        "message": "fill precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "input_value_matches": true,
+          "actual_value_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": ""
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/before_step_0014.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/before_step_0014.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/after_step_0014.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/after_step_0014.html"
+      },
+      "duration_ms": 1332,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 15,
+      "action": "fill",
+      "status": "passed",
+      "original_locator": "input[aria-label=\"Quanto vale seu imóvel hoje?*\"]",
+      "selected_locator": "input[aria-label=\"Quanto vale seu imóvel hoje?*\"]",
+      "value": " 1.000.000,00 ",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "value_present": true,
+          "visible": true,
+          "editable": true
+        },
+        "failures": [],
+        "message": "fill precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "input_value_matches": true,
+          "actual_value_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": ""
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/before_step_0015.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/before_step_0015.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/after_step_0015.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/after_step_0015.html"
+      },
+      "duration_ms": 1402,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 16,
+      "action": "click",
+      "status": "healed_validated",
+      "original_locator": "input[aria-label=\"Qual sua renda mensal bruta?*\"]",
+      "selected_locator": "input[aria-label=\"Qual sua renda mensal bruta?*\"]",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: input[aria-label=\"Qual sua renda mensal bruta?*\"]"
+      },
+      "healing": {
+        "attempted": true,
+        "status": "PASSED_STEP",
+        "layer": "L2",
+        "family": "FAM-06",
+        "taxonomy_id": "INP-007",
+        "strategy": "press_sequentially",
+        "original_locator": "input[aria-label=\"Qual sua renda mensal bruta?*\"]",
+        "proposed_locator": "input[aria-label=\"Qual sua renda mensal bruta?*\"]",
+        "confidence": 0.82,
+        "validated": true,
+        "oracle_passed": true,
+        "rejection_reason": [],
+        "rationale": "Masked input field — use press_sequentially instead of fill for JS-masked fields",
+        "raw_response": "",
+        "failure_phase": "execution",
+        "original_error": "fill_failed: 'unknown' value='FieldValueMap(field_key='qual_sua_renda_mensal_bruta?*', value='2.000,00', intention=\"fill Qual sua renda mensal bruta?* with '2.000,00' on input step 17\", identifiers={'aria_label': 'Qual sua renda mensal bruta?*'}, source='fill_event', step_index=16)' selector='input[aria-label=\"Qual sua renda mensal bruta?*\"]' — nenhuma estrategia funcionou",
+        "entry_id": "3c21cb341c6a",
+        "promotion_state": "rejected",
+        "promotion_allowed": false,
+        "promotion_blocks": [
+          "oracle_missing"
+        ]
+      },
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/before_step_0016.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/before_step_0016.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/after_step_0016.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/after_step_0016.html"
+      },
+      "duration_ms": 702,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 17,
+      "action": "fill",
+      "status": "passed",
+      "original_locator": "input[aria-label=\"Qual sua renda mensal bruta?*\"]",
+      "selected_locator": "input[aria-label=\"Qual sua renda mensal bruta?*\"]",
+      "value": " 2.000,00 ",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "value_present": true,
+          "visible": true,
+          "editable": true
+        },
+        "failures": [],
+        "message": "fill precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "input_value_matches": true,
+          "actual_value_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": ""
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/before_step_0017.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/before_step_0017.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/after_step_0017.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/after_step_0017.html"
+      },
+      "duration_ms": 1190,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 18,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "button:has-text(\"Calcular\")",
+      "selected_locator": "button:has-text(\"Calcular\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: :has-text(\"Empréstimo com Garantia de Imóvel Transforme seu imóvel em c\")"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/before_step_0018.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/before_step_0018.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/after_step_0018.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/after_step_0018.html"
+      },
+      "duration_ms": 8640,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 19,
+      "action": "assert",
+      "status": "healing_rejected",
+      "original_locator": "#body",
+      "selected_locator": "#body",
+      "value": "Empréstimo com Garantia de Imóvel  Transforme seu imóvel em crédito  Use seu imóvel como garantia e acesse crédito com as melhores taxas do mercado, continuando a morar nele normalmente.  Qual a situa",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "expected_present": true
+        },
+        "failures": [],
+        "message": "assert precondition ok"
+      },
+      "postcondition": {
+        "passed": false,
+        "checks": {
+          "oracle_status": false
+        },
+        "oracle_results": [
+          "OracleResult(oracle_type='visual_dom', status='failed', expected='#body', actual='', message='Elemento nao encontrado: #body')"
+        ],
+        "failures": [
+          "oracle_failed"
+        ],
+        "message": "Elemento nao encontrado: #body"
+      },
+      "healing": {
+        "attempted": true,
+        "status": "UNRESOLVED",
+        "layer": "L3",
+        "family": "FAM-10",
+        "taxonomy_id": "OBS-001",
+        "strategy": "",
+        "original_locator": "#body",
+        "proposed_locator": "",
+        "confidence": 0.0,
+        "validated": false,
+        "oracle_passed": false,
+        "rejection_reason": [
+          "missing_new_locator",
+          "low_confidence",
+          "missing_family",
+          "missing_taxonomy_id",
+          "missing_strategy",
+          "generic_or_dangerous_locator",
+          "incompatible_action_strategy"
+        ],
+        "rationale": "Failed to parse LLM response",
+        "raw_response": "{\"strategy\":\"xpath_fallback\",\"reason\":\"Selector '#body' not found in DOM; fallback to XPath or alternative selector to locate the element for assertion.\"}",
+        "failure_phase": "postcondition",
+        "original_error": "Elemento nao encontrado: #body",
+        "entry_id": "",
+        "promotion_state": "",
+        "promotion_allowed": false,
+        "promotion_blocks": []
+      },
+      "error_message": "Proposta do curador rejeitada: missing_new_locator, low_confidence, missing_family, missing_taxonomy_id, missing_strategy, generic_or_dangerous_locator, incompatible_action_strategy",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/before_step_0019.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/before_step_0019.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-034417/screenshots/after_step_0019.png",
+        "dom": "evidence/simulador-credito2_20260619-034417/dom/after_step_0019.html"
+      },
+      "duration_ms": 7145,
+      "skip_reason": ""
+    }
+  ]
+}

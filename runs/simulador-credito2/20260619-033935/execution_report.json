@@ -1,0 +1,571 @@
+{
+  "run_id": "simulador-credito2_20260619-033935",
+  "recording_id": "simulador-credito2",
+  "script_path": "semantic_tests/ST-simulador-credito2/test_st-simulador-credito2.py",
+  "base_url": "https://simuladorhabitacao.caixa.gov.br/home",
+  "mode": "incremental",
+  "summary": {
+    "total": 13,
+    "passed": 12,
+    "healed_validated": 0,
+    "healing_rejected": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0,
+    "shadow_healed": 0
+  },
+  "steps": [
+    {
+      "step_num": 1,
+      "action": "navigation",
+      "status": "passed",
+      "original_locator": "",
+      "selected_locator": "",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "navigation_ok": true
+        },
+        "failures": [],
+        "message": ""
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url atual: https://simuladorhabitacao.caixa.gov.br/home"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/before_step_0001.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/before_step_0001.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/after_step_0001.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/after_step_0001.html"
+      },
+      "duration_ms": 427,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 2,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "a:has-text(\"Empréstimo com garantia de imóvel Descubra quanto dinheiro v\")",
+      "selected_locator": "a:has-text(\"Empréstimo com garantia de imóvel Descubra quanto dinheiro v\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_changed": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url before='https://simuladorhabitacao.caixa.gov.br/home' after='https://simuladorhabitacao.caixa.gov.br/calculadora-egi'"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/before_step_0002.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/before_step_0002.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/after_step_0002.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/after_step_0002.html"
+      },
+      "duration_ms": 629,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 3,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "mat-card:has-text(\"_circle Imóvel quitado Já paguei tudo e não tenho mais dívid\")",
+      "selected_locator": "mat-card:has-text(\"_circle Imóvel quitado Já paguei tudo e não tenho mais dívid\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: mat-datepicker-toggle button"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/before_step_0003.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/before_step_0003.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/after_step_0003.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/after_step_0003.html"
+      },
+      "duration_ms": 597,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 4,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "mat-datepicker-toggle button",
+      "selected_locator": "mat-datepicker-toggle button",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: button.mat-calendar-period-button"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/before_step_0004.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/before_step_0004.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/after_step_0004.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/after_step_0004.html"
+      },
+      "duration_ms": 858,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 5,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "button.mat-calendar-period-button",
+      "selected_locator": "button.mat-calendar-period-button",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: button.mat-calendar-previous-button"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/before_step_0005.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/before_step_0005.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/after_step_0005.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/after_step_0005.html"
+      },
+      "duration_ms": 533,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 6,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "button.mat-calendar-previous-button",
+      "selected_locator": "button.mat-calendar-previous-button",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: button.mat-calendar-previous-button"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/before_step_0006.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/before_step_0006.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/after_step_0006.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/after_step_0006.html"
+      },
+      "duration_ms": 607,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 7,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "button.mat-calendar-previous-button",
+      "selected_locator": "button.mat-calendar-previous-button",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: span:has-text(\"1969\")"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/before_step_0007.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/before_step_0007.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/after_step_0007.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/after_step_0007.html"
+      },
+      "duration_ms": 510,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 8,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "span:has-text(\"1969\")",
+      "selected_locator": "span:has-text(\"1969\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: span:has-text(\"FEV\")"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/before_step_0008.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/before_step_0008.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/after_step_0008.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/after_step_0008.html"
+      },
+      "duration_ms": 535,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 9,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "span:has-text(\"FEV\")",
+      "selected_locator": "span:has-text(\"FEV\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: span:has-text(\"4\")"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/before_step_0009.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/before_step_0009.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/after_step_0009.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/after_step_0009.html"
+      },
+      "duration_ms": 514,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 10,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "span:has-text(\"4\")",
+      "selected_locator": "span:has-text(\"4\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: input[placeholder=\"DD/MM/AAAA\"]"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/before_step_0010.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/before_step_0010.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/after_step_0010.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/after_step_0010.html"
+      },
+      "duration_ms": 552,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 11,
+      "action": "fill",
+      "status": "passed",
+      "original_locator": "input[placeholder=\"DD/MM/AAAA\"]",
+      "selected_locator": "input[placeholder=\"DD/MM/AAAA\"]",
+      "value": "04/02/1969",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "value_present": true,
+          "visible": true,
+          "editable": true
+        },
+        "failures": [],
+        "message": "fill precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "input_value_matches": true,
+          "actual_value_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": ""
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/before_step_0011.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/before_step_0011.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/after_step_0011.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/after_step_0011.html"
+      },
+      "duration_ms": 404,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 12,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "[aria-invalid='false']",
+      "selected_locator": "[aria-invalid='false']",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: [aria-required='false']"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/before_step_0012.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/before_step_0012.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/after_step_0012.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/after_step_0012.html"
+      },
+      "duration_ms": 8233,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 13,
+      "action": "fill",
+      "status": "healing_rejected",
+      "original_locator": "[aria-invalid='true']",
+      "selected_locator": "",
+      "value": " 10.000,00 ",
+      "precondition": {
+        "passed": false,
+        "checks": {
+          "selector_present": true,
+          "value_present": true
+        },
+        "failures": [
+          "locator_error: Locator.wait_for: Timeout 3000ms exceeded.\nCall log:\n  - waiting for locator(\"[aria-invalid='true']\").first to be visible\n"
+        ],
+        "message": "Locator.wait_for: Timeout 3000ms exceeded.\nCall log:\n  - waiting for locator(\"[aria-invalid='true']\").first to be visible\n"
+      },
+      "postcondition": {
+        "passed": false,
+        "checks": {},
+        "oracle_results": [],
+        "failures": [
+          "cannot_read_input_value"
+        ],
+        "message": "Locator.input_value: Timeout 3000ms exceeded.\nCall log:\n  - waiting for locator(\"[aria-invalid='true']\").first\n"
+      },
+      "healing": {
+        "attempted": true,
+        "status": "PASSED_STEP",
+        "layer": "L0",
+        "family": "FAM-02",
+        "taxonomy_id": "",
+        "strategy": "",
+        "original_locator": "[aria-invalid='true']",
+        "proposed_locator": "",
+        "confidence": 0.0,
+        "validated": false,
+        "oracle_passed": false,
+        "rejection_reason": [
+          "postcondition_failed",
+          "cannot_read_input_value"
+        ],
+        "rationale": "",
+        "raw_response": "",
+        "failure_phase": "precondition",
+        "original_error": "Locator.wait_for: Timeout 3000ms exceeded.\nCall log:\n  - waiting for locator(\"[aria-invalid='true']\").first to be visible\n",
+        "entry_id": "3a99ac4c1e6a",
+        "promotion_state": "",
+        "promotion_allowed": false,
+        "promotion_blocks": []
+      },
+      "error_message": "Healing executou, mas pos-condicao/oracle falhou: Locator.input_value: Timeout 3000ms exceeded.\nCall log:\n  - waiting for locator(\"[aria-invalid='true']\").first\n",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/before_step_0013.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/before_step_0013.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito2_20260619-033913/screenshots/after_step_0013.png",
+        "dom": "evidence/simulador-credito2_20260619-033913/dom/after_step_0013.html"
+      },
+      "duration_ms": 6283,
+      "skip_reason": ""
+    }
+  ]
+}
