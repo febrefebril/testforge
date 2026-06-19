@@ -183,7 +183,11 @@ class StepExecutor:
         if action == "fill":
             # Resolve value + intention
             resolved_val, intention = self._resolve_field_value(step, data_values, field_value_map)
-            self._inject_intention(step, resolved_val or step.value, intention)
+            # step.value has priority — field_value_map only fills when step is empty.
+            # This prevents field_value_map from overwriting later fills of same field
+            # (e.g. recording has 3 fills: 10.000 → 100.000 → 1.000.000 on same input).
+            use_val = step.value or resolved_val
+            self._inject_intention(step, use_val, intention)
             return self._execute_fill(step, selectors, data_values, field_value_map)
 
         if action == "select_option":
@@ -323,9 +327,12 @@ class StepExecutor:
             raise ValueError("fill sem selector")
         field_value_map = field_value_map or {}
 
-        # Resolve value from field_value_map first, then data_values
+        # Resolve value — step.value has priority over field_value_map.
+        # field_value_map only fills when step value is empty (e.g. placeholder from
+        # IntentReconstructor). This prevents overwriting later fills on same field
+        # (e.g. 3 fills: 10.000 → 100.000 → 1.000.000 on same currency input).
         resolved_val, intention = self._resolve_field_value(step, data_values, field_value_map)
-        value = (resolved_val or step.value or "").strip()
+        value = (step.value or resolved_val or "").strip()
 
         if not value:
             raise ValueError(f"fill sem valor: step='{step.action}'")
