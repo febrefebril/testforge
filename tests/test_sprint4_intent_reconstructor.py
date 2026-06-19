@@ -151,10 +151,10 @@ class TestCT_AUTO_4_1:
         ]
         entries = reconstructor._reconstruct_from_snapshots(recording_dir, steps)
 
-        # Should capture the first non-empty value that changed
+        # Should capture the last value transition (most complete for masked inputs)
         assert len(entries) >= 1, f"Got entries: {entries}"
         assert entries[0]["source"] == "snapshot_diff"
-        assert entries[0]["value"] == "ABC"
+        assert entries[0]["value"] == "ABCDEF"
 
     def test_no_snapshots_file_returns_empty(self, reconstructor, recording_dir):
         """Missing field_snapshots.jsonl returns empty list."""

@@ -232,6 +232,9 @@ class IntentCompletenessChecker:
                 elif fvm.source == "form_values":
                     fs.completeness = FieldCompleteness.resolved_with_warning
                     fs.reason = "reconstructed_from_form_values"
+                elif fvm.source in ("setter_hook", "snapshot_diff", "checked_transition", "final_state"):
+                    fs.completeness = FieldCompleteness.resolved_with_warning
+                    fs.reason = f"reconstructed_from_{fvm.source}"
                 elif fvm.source == "polling":
                     fs.completeness = FieldCompleteness.resolved_with_warning
                     fs.reason = "reconstructed_from_polling"

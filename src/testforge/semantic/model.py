@@ -50,7 +50,7 @@ class FieldValueMap:
     value: str = ""
     intention: str = ""
     identifiers: dict = field(default_factory=dict)
-    source: str = ""  # "form_values" | "polling" | "fill_event" | "missing_fill"
+    source: str = ""  # form_values | fill_event | setter_hook | checked_transition | snapshot_diff | final_state | missing_fill
     step_index: int = -1
 
 

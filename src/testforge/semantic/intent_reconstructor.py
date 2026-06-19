@@ -1,10 +1,12 @@
-"""TestForge — Intent Reconstructor (Sprint 4, Épico 5).
+"""TestForge — Intent Reconstructor (Sprint 4 + Phase B).
 
 Reconstructs missing field values and synthesizes fill steps from
-three evidence sources:
-1. snapshot_diff — field_snapshots.jsonl value changes between polls
-2. form_values — values captured at submit time
-3. network_payload — POST/PUT request body parsing
+evidence sources captured by the recorder:
+1. form_values — values captured at submit time
+2. setter_hook — value_mutations.jsonl (programmatic .value assignments)
+3. snapshot_diff / checked_transition — field_snapshots.jsonl
+4. network_payload — POST/PUT request body parsing
+5. final_state — final_state_snapshot.json end-of-session dump
 
 Each source produces FieldValueMap entries or semantic step context
 consumed by RecordingNormalizer during normalize().
@@ -16,7 +18,6 @@ import re
 from typing import Optional
 from urllib.parse import parse_qs, urlparse
 
-from .model import FieldValueMap, SemanticAction, SemanticTarget
 
 
 class IntentReconstructor:
@@ -26,8 +27,11 @@ class IntentReconstructor:
     SOURCE_PRIORITY = {
         "form_values": 100,
         "fill_event": 80,
+        "setter_hook": 78,
+        "checked_transition": 72,
         "snapshot_diff": 70,
         "network_payload": 60,
+        "final_state": 55,
         "polling": 50,
         "missing_fill": 10,
     }
@@ -39,31 +43,111 @@ class IntentReconstructor:
         """
         entries = []
 
-        # 1. Reconstruct from snapshot diffs
+        entries.extend(self._reconstruct_from_value_mutations(recording_dir, steps))
         entries.extend(self._reconstruct_from_snapshots(recording_dir, steps))
-
-        # 2. Reconstruct from form values (already propagated by normalizer)
         entries.extend(self._reconstruct_from_form_values(steps))
-
-        # 3. Reconstruct from network payloads
         entries.extend(self._reconstruct_from_network(recording_dir, steps))
+        entries.extend(self._reconstruct_from_final_state(recording_dir, steps))
+
+        return self._dedupe_entries(entries)
+
+    @staticmethod
+    def _dedupe_entries(entries: list[dict]) -> list[dict]:
+        """Keep highest-priority entry per field_key."""
+        best: dict[str, dict] = {}
+        for entry in entries:
+            key = entry.get("field_key", "")
+            if not key or not entry.get("value"):
+                continue
+            existing = best.get(key)
+            if not existing:
+                best[key] = entry
+                continue
+            old_p = IntentReconstructor.SOURCE_PRIORITY.get(existing.get("source", ""), 0)
+            new_p = IntentReconstructor.SOURCE_PRIORITY.get(entry.get("source", ""), 0)
+            if new_p > old_p:
+                best[key] = entry
+            elif new_p == old_p and len(entry.get("value", "")) >= len(existing.get("value", "")):
+                best[key] = entry
+        return list(best.values())
+
+    # ── Phase B: value_mutations.jsonl (setter hooks) ─────────────────────────
+
+    def _reconstruct_from_value_mutations(self, recording_dir: str, steps: list) -> list[dict]:
+        """Read value_mutations.jsonl — programmatic value changes (currency mask, etc.)."""
+        path = os.path.join(recording_dir, "value_mutations.jsonl")
+        if not os.path.exists(path):
+            return []
+
+        mutations = []
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    mutations.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+
+        if not mutations:
+            return []
+
+        # Last non-empty value per fingerprint wins
+        by_fp: dict[str, dict] = {}
+        for mut in mutations:
+            mut_type = mut.get("type", "value_mutation")
+            if mut_type == "content_edit":
+                value = (mut.get("value") or "").strip()
+                fp = mut.get("fingerprint", "")
+            else:
+                value = (mut.get("new_value") or "").strip()
+                fp = mut.get("fingerprint") or (
+                    f"{mut.get('tag', 'input')}#{mut.get('id', '')}[name={mut.get('name', '')}]"
+                )
+            if not value or not fp:
+                continue
+            by_fp[fp] = {**mut, "_resolved_value": value, "_fingerprint": fp}
+
+        entries = []
+        for fp, mut in by_fp.items():
+            value = mut["_resolved_value"]
+            name = mut.get("name") or ""
+            el_id = mut.get("id") or ""
+            tag = mut.get("tag", "input")
+            ts = mut.get("timestamp", "")
+            step_idx = self._find_nearest_step_index(steps, ts)
+
+            canonical = self._canonical_key(name or el_id or fp)
+            intention = (
+                f"fill {name or el_id or fp} with '{value}' "
+                f"(reconstructed from setter_hook)"
+            )
+            entries.append({
+                "field_key": canonical,
+                "value": value,
+                "intention": intention,
+                "identifiers": {
+                    "name": name,
+                    "id": el_id,
+                    "fingerprint": fp,
+                    "tag": tag,
+                },
+                "source": "setter_hook",
+                "step_index": step_idx,
+                "fingerprint": fp,
+            })
 
         return entries
 
-    # ── Story 5.1: Snapshot diff reconstruction ────────────────────────────────
+    # ── Story 5.1: Snapshot diff + checked transitions ───────────────────────
 
     def _reconstruct_from_snapshots(self, recording_dir: str, steps: list) -> list[dict]:
-        """Detect value changes between field snapshots, synthesize fill steps.
-
-        Reads field_snapshots.jsonl, groups by fingerprint, finds value transitions.
-        Associates each change with the nearest preceding click/focus event.
-        Returns FieldValueMap-like entries with source='snapshot_diff'.
-        """
+        """Detect value/checked changes between field snapshots."""
         snapshots_path = os.path.join(recording_dir, "field_snapshots.jsonl")
         if not os.path.exists(snapshots_path):
             return []
 
-        # Load all snapshots
         snapshots = []
         with open(snapshots_path) as f:
             for line in f:
@@ -77,7 +161,6 @@ class IntentReconstructor:
         if not snapshots:
             return []
 
-        # Flatten batch snapshots into individual field snapshots
         all_individual = []
         for entry in snapshots:
             if "snapshots" in entry and isinstance(entry["snapshots"], list):
@@ -90,80 +173,159 @@ class IntentReconstructor:
         if len(all_individual) < 2:
             return []
 
-        # Sort by timestamp
         all_individual.sort(key=lambda s: s.get("timestamp") or s.get("_batch_ts", ""))
 
-        # Group by fingerprint
         groups: dict[str, list[dict]] = {}
         for s in all_individual:
             fp = s.get("fingerprint") or s.get("identifiers", {}).get("css_path", "unknown")
-            if fp not in groups:
-                groups[fp] = []
-            groups[fp].append(s)
+            groups.setdefault(fp, []).append(s)
 
         entries = []
         for fp, items in groups.items():
-            # Find value transitions
             prev_val = ""
+            prev_checked = None
             has_prev = False
             for item in items:
                 curr_val = item.get("value", "") or ""
+                curr_checked = item.get("checked")
                 curr_ts = item.get("timestamp") or item.get("_batch_ts", "")
-                if has_prev and curr_val and curr_val != prev_val:
-                    ids = item.get("identifiers", {})
-                    tag = item.get("tag", "")
-                    field_type = item.get("type", "")
-                    name = ids.get("name") or ""
-                    label = ids.get("label") or ids.get("aria-label") or ""
-                    placeholder = ids.get("placeholder") or ""
-                    element_id = ids.get("id") or ""
+                ids = item.get("identifiers", {})
+                tag = item.get("tag", "")
+                field_type = item.get("type", "") or ""
+                name = ids.get("name") or ""
+                label = ids.get("label") or ids.get("aria-label") or ""
+                placeholder = ids.get("placeholder") or ""
+                element_id = ids.get("id") or ""
 
-                    # Find nearest step index by timestamp proximity
-                    step_idx = self._find_nearest_step_index(steps, curr_ts)
+                if has_prev:
+                    entry = None
+                    # Checked transition (radio/checkbox)
+                    if curr_checked is True and prev_checked is not True:
+                        display = label or name or placeholder or fp
+                        entry = self._make_snapshot_entry(
+                            fp=fp, value=display, ids=ids, tag=tag,
+                            name=name, label=label, placeholder=placeholder,
+                            element_id=element_id, steps=steps, ts=curr_ts,
+                            source="checked_transition",
+                            suffix="checked transition",
+                        )
+                    # Value transition (text inputs, selects, etc.)
+                    elif curr_val and curr_val != prev_val:
+                        entry = self._make_snapshot_entry(
+                            fp=fp, value=curr_val, ids=ids, tag=tag,
+                            name=name, label=label, placeholder=placeholder,
+                            element_id=element_id, steps=steps, ts=curr_ts,
+                            source="snapshot_diff",
+                            suffix="snapshot",
+                        )
 
-                    canonical = self._canonical_key(name or label or placeholder or fp)
-                    intention = f"fill {label or name or placeholder or fp} with '{curr_val}' (reconstructed from snapshot)"
-                    entries.append({
-                        "field_key": canonical,
-                        "value": curr_val,
-                        "intention": intention,
-                        "identifiers": {
-                            "name": name,
-                            "id": element_id,
-                            "label": label,
-                            "placeholder": placeholder,
-                            "aria_label": ids.get("aria-label") or "",
-                            "fingerprint": fp,
-                        },
-                        "source": "snapshot_diff",
-                        "step_index": step_idx,
-                        "fingerprint": fp,
-                    })
+                    if entry:
+                        entries.append(entry)
 
-                # Always update prev for next iteration
                 has_prev = True
                 if curr_val:
                     prev_val = curr_val
+                if curr_checked is not None:
+                    prev_checked = curr_checked
 
-        # Deduplicate by field_key — keep first occurrence only
-        seen_keys = set()
-        deduped = []
-        for e in entries:
-            if e["field_key"] not in seen_keys:
-                seen_keys.add(e["field_key"])
-                deduped.append(e)
+        # Keep last transition per field_key (most complete value for currency masks)
+        by_key: dict[str, dict] = {}
+        for entry in entries:
+            by_key[entry["field_key"]] = entry
+        return list(by_key.values())
 
-        return deduped
+    def _make_snapshot_entry(
+        self, fp, value, ids, tag, name, label, placeholder, element_id,
+        steps, ts, source, suffix,
+    ) -> dict:
+        step_idx = self._find_nearest_step_index(steps, ts)
+        canonical = self._canonical_key(name or label or placeholder or fp)
+        display = label or name or placeholder or fp
+        return {
+            "field_key": canonical,
+            "value": value,
+            "intention": f"fill {display} with '{value}' (reconstructed from {suffix})",
+            "identifiers": {
+                "name": name,
+                "id": element_id,
+                "label": label,
+                "placeholder": placeholder,
+                "aria_label": ids.get("aria-label") or "",
+                "fingerprint": fp,
+                "tag": tag,
+            },
+            "source": source,
+            "step_index": step_idx,
+            "fingerprint": fp,
+        }
+
+    # ── Phase B: final_state_snapshot.json ───────────────────────────────────
+
+    def _reconstruct_from_final_state(self, recording_dir: str, steps: list) -> list[dict]:
+        """Read final_state_snapshot.json as fallback for unresolved fields."""
+        path = os.path.join(recording_dir, "final_state_snapshot.json")
+        if not os.path.exists(path):
+            return []
+
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, ValueError):
+            return []
+
+        fields = data.get("fields") or []
+        if not fields:
+            return []
+
+        ts = data.get("timestamp", "")
+        step_idx = self._find_nearest_step_index(steps, ts) if ts else max(0, len(steps) - 1)
+
+        entries = []
+        for field in fields:
+            ids = field.get("identifiers", {})
+            tag = field.get("tag", "")
+            field_type = field.get("type", "") or ""
+            name = ids.get("name") or ""
+            label = ids.get("label") or ids.get("aria-label") or ""
+            placeholder = ids.get("placeholder") or ""
+            element_id = ids.get("id") or ""
+            fp = field.get("fingerprint", "")
+            checked = field.get("checked")
+            value = (field.get("value") or "").strip()
+
+            if checked is True and field_type in ("radio", "checkbox"):
+                value = label or name or "true"
+            elif checked is False:
+                continue
+            if not value:
+                continue
+
+            canonical = self._canonical_key(name or label or placeholder or fp)
+            display = label or name or placeholder or fp
+            entries.append({
+                "field_key": canonical,
+                "value": value,
+                "intention": f"fill {display} with '{value}' (from final_state)",
+                "identifiers": {
+                    "name": name,
+                    "id": element_id,
+                    "label": label,
+                    "placeholder": placeholder,
+                    "aria_label": ids.get("aria-label") or "",
+                    "fingerprint": fp,
+                    "tag": tag,
+                },
+                "source": "final_state",
+                "step_index": step_idx,
+                "fingerprint": fp,
+            })
+
+        return entries
 
     # ── Story 5.2: Form values reconstruction ──────────────────────────────────
 
     def _reconstruct_from_form_values(self, steps: list) -> list[dict]:
-        """Extract form_values from submit step contexts.
-
-        Form values are already captured at submit time and propagated
-        by the normalizer. This method extracts any that were missed or
-        not yet in field_value_map.
-        """
+        """Extract form_values from submit step contexts."""
         entries = []
         for i, step in enumerate(steps):
             ctx = getattr(step, "context", {}) or {}
@@ -189,11 +351,7 @@ class IntentReconstructor:
     # ── Story 5.3: Network payload reconstruction ──────────────────────────────
 
     def _reconstruct_from_network(self, recording_dir: str, steps: list) -> list[dict]:
-        """Parse POST/PUT request payloads for form field values.
-
-        Reads network_log.json, extracts form-urlencoded and JSON bodies,
-        correlates payload keys to field keys by name/id/label.
-        """
+        """Parse POST/PUT request payloads for form field values."""
         network_path = os.path.join(recording_dir, "network_log.json")
         if not os.path.exists(network_path):
             return []
@@ -204,7 +362,6 @@ class IntentReconstructor:
             except (json.JSONDecodeError, ValueError):
                 return []
 
-        # Collect all form-like payloads
         payloads = []
         for entry in network_entries:
             if entry.get("type") != "request":
@@ -212,15 +369,14 @@ class IntentReconstructor:
             method = entry.get("method", "").upper()
             if method not in ("POST", "PUT", "PATCH"):
                 continue
-            url = entry.get("url", "")
             post_data = entry.get("post_data")
             if not post_data:
                 continue
 
-            parsed = self._parse_payload(post_data, url)
+            parsed = self._parse_payload(post_data, entry.get("url", ""))
             if parsed:
                 payloads.append({
-                    "url": url,
+                    "url": entry.get("url", ""),
                     "method": method,
                     "timestamp": entry.get("timestamp", ""),
                     "fields": parsed,
@@ -229,7 +385,6 @@ class IntentReconstructor:
         if not payloads:
             return []
 
-        # Build all field identifiers from steps for correlation
         field_identifiers = self._build_field_identifiers(steps)
 
         entries = []
@@ -237,8 +392,9 @@ class IntentReconstructor:
             for key, value in payload["fields"].items():
                 if not value:
                     continue
-                # Try to correlate payload key to a field in our steps
-                step_idx = self._correlate_payload_key(key, value, payload, steps, field_identifiers)
+                step_idx = self._correlate_payload_key(
+                    key, value, payload, steps, field_identifiers,
+                )
                 canonical = self._canonical_key(key)
                 entries.append({
                     "field_key": canonical,
@@ -258,15 +414,7 @@ class IntentReconstructor:
                     },
                 })
 
-        # Deduplicate by field_key
-        seen_keys = set()
-        deduped = []
-        for e in entries:
-            if e["field_key"] not in seen_keys:
-                seen_keys.add(e["field_key"])
-                deduped.append(e)
-
-        return deduped
+        return entries
 
     # ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -306,7 +454,6 @@ class IntentReconstructor:
         if not post_data:
             return {}
 
-        # Try JSON first
         post_data = post_data.strip()
         if post_data.startswith("{") or post_data.startswith("["):
             try:
@@ -317,7 +464,6 @@ class IntentReconstructor:
             except json.JSONDecodeError:
                 pass
 
-        # Try form-urlencoded
         try:
             parsed = parse_qs(post_data)
             return {k: v[0] if v else "" for k, v in parsed.items()}
@@ -353,21 +499,10 @@ class IntentReconstructor:
     @staticmethod
     def _correlate_payload_key(key: str, value: str, payload: dict,
                                 steps: list, field_identifiers: dict) -> int:
-        """Find the step index most likely associated with a payload field.
-
-        Matches payload key to field identifiers by:
-        1. Exact key match
-        2. Name/id match
-        3. Label similarity
-        """
+        """Find the step index most likely associated with a payload field."""
         canonical_key = key.strip().lower().replace(" ", "_").replace("-", "_")
 
-        # Direct match in field identifiers
         if canonical_key in field_identifiers:
-            # Find step with matching name/id
-            ids = field_identifiers[canonical_key]
-            name = ids.get("name", "").lower()
-            el_id = ids.get("id", "").lower()
             for i, step in enumerate(steps):
                 if not step.target:
                     continue
@@ -376,7 +511,6 @@ class IntentReconstructor:
                 if step.target.element_id and step.target.element_id.lower() == canonical_key:
                     return i
 
-        # Fall back to URL-based matching
         for i, step in enumerate(steps):
             step_url = getattr(step, "url", "") or ""
             if step_url and payload.get("url", ""):

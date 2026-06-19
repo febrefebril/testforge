@@ -257,26 +257,26 @@ class RecordingNormalizer:
         self._mark_non_actionable(stc.steps)
         self._detect_step_dependencies(stc.steps)
         self._detect_navigation_clicks(stc.steps)
-        self._detect_missing_fills(stc.steps)
-        self._audit_blind_spots(stc.steps)
-        # Sprint 4: reconstruct missing intents from evidence sources
+        # Phase B: reconstruct from evidence BEFORE missing_fill heuristics
         self._reconstruct_intents(stc, recording_dir)
+        self._detect_missing_fills(stc.steps)
         self._build_field_value_map(stc)
-
+        self._audit_blind_spots(stc)
         return stc
 
-    def _audit_blind_spots(self, steps: list) -> None:
+    def _audit_blind_spots(self, stc) -> None:
         """Detect patterns where user intent was likely missed by the recorder.
 
-        Blind spots are systematic, not random. Common patterns:
-        1. Input click + gap + next click → typing not captured (currencymask)
-        2. Select element click → select_option event missing
-        3. Drag/move events → not captured at all
-        4. File upload click → file path not in events
-
-        Results are stored in stc.blind_spots for reporting.
+        Blind spots are systematic, not random. After Phase B reconstruction,
+        fields resolved via evidence (setter_hook, snapshot_diff, etc.) are
+        excluded from the report.
         """
+        steps = stc.steps
         blind_spots = []
+        resolved_keys = {
+            k for k, v in (stc.field_values or {}).items()
+            if v.value and v.source != "missing_fill"
+        }
         from datetime import datetime
 
         actionable = [(i, s) for i, s in enumerate(steps)
@@ -297,6 +297,20 @@ class RecordingNormalizer:
                 pass
 
             tag = (s_curr.target.tag or "").lower() if s_curr.target else ""
+            ctx = getattr(s_curr, "context", {}) or {}
+
+            # Skip if evidence reconstruction already resolved this step
+            if ctx.get("_has_reconstructed_values") or (s_curr.value or "").strip():
+                continue
+            field_key = self._canonical_field_key(
+                ctx.get("fill_label")
+                or (s_curr.target.accessible_name if s_curr.target else "")
+                or (s_curr.target.label if s_curr.target else "")
+                or (s_curr.target.placeholder if s_curr.target else "")
+                or (s_curr.target.text if s_curr.target else "")
+            )
+            if field_key in resolved_keys:
+                continue
 
             # Pattern: click on input with gap, no fill event between
             if s_curr.action == "click" and tag in ("input", "textarea"):
@@ -312,6 +326,20 @@ class RecordingNormalizer:
                         "gap_seconds": round(gap_s, 1),
                         "resolution": "data-file or submit_form_values",
                     })
+
+            # Pattern: click on label (radio/checkbox) without reconstructed value
+            if s_curr.action == "click" and tag == "label":
+                label_text = (s_curr.target.text or s_curr.target.label or "").strip()
+                if label_text and self._canonical_field_key(label_text) not in resolved_keys:
+                    if s_next.action != "fill" and gap_s > 2.0:
+                        blind_spots.append({
+                            "step": i_curr + 1,
+                            "pattern": "typing_not_captured",
+                            "element": "label",
+                            "label": label_text,
+                            "gap_seconds": round(gap_s, 1),
+                            "resolution": "checked_transition or data-file",
+                        })
 
             # Pattern: click on select, no select_option event
             if s_curr.action == "click" and tag == "select":
@@ -331,6 +359,7 @@ class RecordingNormalizer:
                     "resolution": "review manually",
                 })
 
+        stc.blind_spots = blind_spots
         if blind_spots:
             import sys
             print(f"[TestForge] ⚠ {len(blind_spots)} blind spot(s) detectado(s):", file=sys.stderr)
@@ -340,13 +369,8 @@ class RecordingNormalizer:
     def _reconstruct_intents(self, stc, recording_dir: str) -> None:
         """Run IntentReconstructor to synthesize fill steps and field values.
 
-        Sprint 4, Épico 5: reconstructs missing intents from:
-        - snapshot_diff (field_snapshots.jsonl value changes)
-        - form_values (submit-time field captures)
-        - network_payload (POST/PUT request bodies)
-
-        Synthesized steps are inserted into stc.steps. Reconstructed field
-        values are staged for _build_field_value_map via context.
+        Phase B: reconstructs from value_mutations, snapshots (incl. checked),
+        form_values, network_payload, and final_state_snapshot.
         """
         from .intent_reconstructor import IntentReconstructor
 
@@ -361,9 +385,22 @@ class RecordingNormalizer:
             intention = entry.get("intention", "")
             identifiers = entry.get("identifiers", {})
 
-            # Inject evidence into the nearest step's context
-            if 0 <= step_idx < len(stc.steps):
-                step = stc.steps[step_idx]
+            target_indices = {step_idx}
+            # Also match label/radio clicks by text similarity
+            entry_label = (identifiers.get("label") or value or "").strip().lower()
+            for i, step in enumerate(stc.steps):
+                if step.action != "click" or not step.target:
+                    continue
+                step_text = (step.target.text or step.target.label or "").strip().lower()
+                if entry_label and step_text and (
+                    entry_label in step_text or step_text in entry_label
+                ):
+                    target_indices.add(i)
+
+            for idx in target_indices:
+                if not (0 <= idx < len(stc.steps)):
+                    continue
+                step = stc.steps[idx]
                 ctx = getattr(step, "context", {}) or {}
                 if "_reconstructed_values" not in ctx:
                     ctx["_reconstructed_values"] = []
@@ -377,14 +414,12 @@ class RecordingNormalizer:
                 ctx["_has_reconstructed_values"] = True
                 step.context = ctx
 
-                # Also set value on the step if it's a click on a matching field
-                if step.action in ("click",) and step.target:
-                    tag = (step.target.tag or "").lower() if step.target else ""
-                    if tag in ("input", "textarea", "select"):
-                        step.value = value
-                        step.context["reconstructed_source"] = source
+                tag = (step.target.tag or "").lower() if step.target else ""
+                if step.action in ("click",) and tag in ("input", "textarea", "select", "label"):
+                    step.value = value
+                    step.context["reconstructed_source"] = source
+                    step.context.pop("missing_fill", None)
 
-        # Report
         if entries:
             import sys
             sources = {}
@@ -557,7 +592,12 @@ class RecordingNormalizer:
                     else:
                         existing = fill_registry[canonical]
                         # Only replace if existing is lower priority or empty
-                        _source_priority = {"form_values": 100, "fill_event": 80, "snapshot_diff": 70, "network_payload": 60, "polling": 50, "missing_fill": 10}
+                        _source_priority = {
+                            "form_values": 100, "fill_event": 80, "setter_hook": 78,
+                            "checked_transition": 72, "snapshot_diff": 70,
+                            "network_payload": 60, "final_state": 55,
+                            "polling": 50, "missing_fill": 10,
+                        }
                         existing_priority = _source_priority.get(existing["source"], 0)
                         new_priority = _source_priority.get(source, 0)
                         if new_priority > existing_priority or not existing["value"]:
@@ -585,7 +625,8 @@ class RecordingNormalizer:
             import sys
             source_icons = {
                 "form_values": "✓", "fill_event": "○", "missing_fill": "⚠",
-                "snapshot_diff": "◉", "network_payload": "◎",
+                "setter_hook": "⚡", "checked_transition": "◈",
+                "snapshot_diff": "◉", "network_payload": "◎", "final_state": "◇",
             }
             print(f"[TestForge] 📋 {len(stc.field_values)} campo(s) mapeado(s):", file=sys.stderr)
             for key, fvm in stc.field_values.items():
@@ -1267,9 +1308,8 @@ class RecordingNormalizer:
     def _detect_missing_fills(self, steps: list) -> None:
         """Detect clicks on inputs lacking fill events (currency-masked fields).
 
-        When user clicks input, types (not captured by recorder), then clicks
-        another element with >2s gap, mark for data-driven fill resolution.
-        Also propagates form_values from submit events to preceding input clicks.
+        Phase B: runs AFTER _reconstruct_intents. Skips steps already resolved
+        by evidence (setter_hook, snapshot_diff, checked_transition, etc.).
         """
         from datetime import datetime
 
@@ -1278,7 +1318,6 @@ class RecordingNormalizer:
             ctx = getattr(step, "context", {}) or {}
             form_vals = ctx.get("form_values") or {}
             if form_vals:
-                # Find input/textarea clicks before this submit
                 for j in range(i - 1, -1, -1):
                     prev = steps[j]
                     prev_tag = (prev.target.tag or "").lower() if prev.target else ""
@@ -1287,8 +1326,6 @@ class RecordingNormalizer:
                         prev_ctx["form_values"] = form_vals
                         prev.context = prev_ctx
 
-        # Second: detect missing fills by time gap
-
         actionable = [(i, s) for i, s in enumerate(steps)
                       if s.action != "navigation" and not s.skip_reason]
 
@@ -1304,48 +1341,13 @@ class RecordingNormalizer:
             if s_next.action == "fill":
                 continue
 
-            # Check if THIS step has form_values from a previous submit
-            # (submit captures all form field values at click time)
-            if s_curr.context.get("form_values"):
-                continue  # already has form values
-
-            t1_str = s_curr.context.get("timestamp", "")
-            t2_str = s_next.context.get("timestamp", "")
-            if not t1_str or not t2_str:
+            ctx = getattr(s_curr, "context", {}) or {}
+            if ctx.get("form_values"):
                 continue
-            try:
-                t1 = datetime.fromisoformat(t1_str.replace("Z", "+00:00"))
-                t2 = datetime.fromisoformat(t2_str.replace("Z", "+00:00"))
-                gap_s = (t2 - t1).total_seconds()
-            except ValueError:
+            if ctx.get("_has_reconstructed_values") or (s_curr.value or "").strip():
                 continue
 
-            if gap_s > 2.0:
-                s_curr.context["missing_fill"] = True
-                if s_curr.target:
-                    s_curr.context["fill_label"] = (
-                        s_curr.target.accessible_name
-                        or s_curr.target.label
-                        or s_curr.target.placeholder
-                        or ""
-                    )
-
-        actionable = [(i, s) for i, s in enumerate(steps)
-                      if s.action != "navigation" and not s.skip_reason]
-
-        for ai in range(len(actionable) - 1):
-            i_curr, s_curr = actionable[ai]
-            i_next, s_next = actionable[ai + 1]
-
-            if s_curr.action != "click":
-                continue
-            tag = (s_curr.target.tag or "").lower() if s_curr.target else ""
-            if tag not in ("input", "textarea"):
-                continue
-            if s_next.action == "fill":
-                continue
-
-            t1_str = s_curr.context.get("timestamp", "")
+            t1_str = ctx.get("timestamp", "")
             t2_str = s_next.context.get("timestamp", "")
             if not t1_str or not t2_str:
                 continue
