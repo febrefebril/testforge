@@ -750,6 +750,10 @@ class IncrementalRunner:
                 json.dumps(report, indent=2, ensure_ascii=False, default=str), encoding="utf-8"
             )
             self._write_healing_report(out_dir)
+            # Record aggregate run metrics before writing
+            if self.metrics:
+                any_healing = any(r.healing for r in self.step_results if r.healing and r.healing.attempted)
+                self.metrics.record_run(healed=any_healing)
             self._write_metrics(out_dir)
         except Exception as exc:
             print(f"[TestForge] Falha ao escrever relatorio: {exc}")
