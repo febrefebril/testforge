@@ -18,11 +18,14 @@ class StepExecutor:
         self.page = page
 
     def _primary_selector(self, step) -> str:
+        cands = self._all_selectors(step)
+        return cands[0] if cands else ""
+
+    def _all_selectors(self, step) -> list:
+        """Return ALL candidate selectors from step target, best-first."""
         if step.target and getattr(step.target, "candidates", None):
-            cands = step.target.candidates
-            if cands:
-                return cands[0].selector or ""
-        return ""
+            return [c.selector for c in step.target.candidates if c.selector]
+        return []
 
     def _canonical(self, s: str) -> str:
         """Normalize string for matching — lowercase, strip, collapse whitespace."""
@@ -119,7 +122,8 @@ class StepExecutor:
         data_values = data_values or {}
         field_value_map = field_value_map or {}
         action = step.action
-        selector = self._primary_selector(step)
+        selectors = self._all_selectors(step)
+        selector = selectors[0] if selectors else ""
 
         if action == "navigation":
             url = step.url or base_url
@@ -174,13 +178,13 @@ class StepExecutor:
                         f"fill_failed: '{intention or 'unknown'}' value='{resolved_val}' "
                         f"selector='{selector}' — nenhuma estrategia funcionou"
                     )
-            return self._execute_click(step, selector)
+            return self._execute_click(step, selectors)
 
         if action == "fill":
             # Resolve value + intention
             resolved_val, intention = self._resolve_field_value(step, data_values, field_value_map)
             self._inject_intention(step, resolved_val or step.value, intention)
-            return self._execute_fill(step, selector, data_values, field_value_map)
+            return self._execute_fill(step, selectors, data_values, field_value_map)
 
         if action == "select_option":
             return self._execute_select(step, selector)
@@ -298,15 +302,24 @@ class StepExecutor:
         except Exception:
             return False
 
-    def _execute_click(self, step, selector):
-        if not selector:
+    def _execute_click(self, step, selectors):
+        if not selectors:
             raise ValueError(f"click sem selector (step {step.action})")
-        self.page.click(selector, timeout=self.DEFAULT_TIMEOUT)
-        self.page.wait_for_timeout(200)
-        return selector
+        last_error = None
+        for sel in selectors:
+            if not sel:
+                continue
+            try:
+                self.page.click(sel, timeout=self.DEFAULT_TIMEOUT)
+                self.page.wait_for_timeout(200)
+                return sel
+            except Exception as e:
+                last_error = e
+                continue
+        raise last_error or ValueError(f"click falhou — todos os selectores tentados ({len(selectors)})")
 
-    def _execute_fill(self, step, selector, data_values, field_value_map=None):
-        if not selector:
+    def _execute_fill(self, step, selectors, data_values, field_value_map=None):
+        if not selectors:
             raise ValueError("fill sem selector")
         field_value_map = field_value_map or {}
 
@@ -315,38 +328,49 @@ class StepExecutor:
         value = (resolved_val or step.value or "").strip()
 
         if not value:
-            raise ValueError(f"fill sem valor: step='{step.action}' selector='{selector}'")
+            raise ValueError(f"fill sem valor: step='{step.action}'")
 
-        try:
-            el = self.page.locator(selector).first
-            # Detect masked inputs: currencymask attribute OR placeholder patterns
-            has_mask = el.get_attribute("currencymask") is not None
-            if not has_mask:
-                placeholder = (el.get_attribute("placeholder") or "").lower()
-                has_mask = any(p in placeholder for p in ("r$", "0,00", "__/__/____"))
-            if has_mask:
-                # For masked inputs, type ONLY the raw digits — no formatting chars.
-                # Currency masks interpret each digit character-by-character; dots,
-                # commas, and spaces corrupt the value. Extract just [0-9] from
-                # the display value (e.g. "10.000,00" -> "1000000").
-                masked_val = (step.value or value).strip()
-                digits = re.sub(r"[^0-9]", "", masked_val)
-                if not digits:
-                    digits = masked_val
-                el.click()
+        last_error = None
+        for selector in selectors:
+            if not selector:
+                continue
+            try:
+                el = self.page.locator(selector).first
+                # Detect masked inputs: currencymask attribute OR placeholder patterns
+                has_mask = el.get_attribute("currencymask") is not None
+                if not has_mask:
+                    placeholder = (el.get_attribute("placeholder") or "").lower()
+                    has_mask = any(p in placeholder for p in ("r$", "0,00", "__/__/____"))
+                if has_mask:
+                    # For masked inputs, type ONLY the raw digits — no formatting chars.
+                    # Currency masks interpret each digit character-by-character; dots,
+                    # commas, and spaces corrupt the value. Extract just [0-9] from
+                    # the display value (e.g. "10.000,00" -> "1000000").
+                    masked_val = (step.value or value).strip()
+                    digits = re.sub(r"[^0-9]", "", masked_val)
+                    if not digits:
+                        digits = masked_val
+                    el.click()
+                    self.page.wait_for_timeout(150)
+                    # Clear existing value before typing — press_sequentially appends otherwise
+                    el.fill("")
+                    self.page.wait_for_timeout(80)
+                    el.press_sequentially(str(digits), delay=50)
+                    self.page.keyboard.press("Tab")
+                    self.page.wait_for_timeout(200)
+                    return selector
+            except Exception:
+                pass
+            try:
+                self.page.fill(selector, value, timeout=self.DEFAULT_TIMEOUT)
                 self.page.wait_for_timeout(150)
-                # Clear existing value before typing — press_sequentially appends otherwise
-                el.fill("")
-                self.page.wait_for_timeout(80)
-                el.press_sequentially(str(digits), delay=50)
-                self.page.keyboard.press("Tab")
-                self.page.wait_for_timeout(200)
                 return selector
-        except Exception:
-            pass
-        self.page.fill(selector, value, timeout=self.DEFAULT_TIMEOUT)
-        self.page.wait_for_timeout(150)
-        return selector
+            except Exception as e:
+                last_error = e
+                continue
+        raise last_error or ValueError(
+            f"fill falhou — todos os {len(selectors)} selectores tentados"
+        )
 
     def _execute_select(self, step, selector):
         if not selector:
