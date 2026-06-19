@@ -307,6 +307,9 @@ class IncrementalRunner:
                 "visibility_wait", "overlay_dismiss", "dialog_handler",
                 "iframe_switch", "label_click", "synthetic_click",
                 "xpath_fallback",
+                # Masked input strategies: click on masked fields should allow
+                # press_sequentially (e.g. currency/date masks that reject fill())
+                "press_sequentially", "masked_input_detection",
             },
             "select_option": {
                 "semantic_locator_conversion", "visibility_wait", "xpath_fallback",
