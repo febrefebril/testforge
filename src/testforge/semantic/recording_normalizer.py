@@ -999,6 +999,19 @@ class RecordingNormalizer:
                 sel = f"[{attr_name}='{attr_value}']"
                 candidates.append(LocatorCandidate("aria_attr", sel, 0.30, f"{attr_name}={attr_value}"))
 
+        # aria-label como seletor para input/textarea quando role nao disponivel.
+        # Role-based selector (acima) é preferivel mas exige target_data["role"].
+        # Sem role, o aria-label nunca vira seletor (excluido do loop acima).
+        if not target_data.get("role"):
+            aria_label = (aria_attrs.get("aria-label", "") or
+                         (target_data.get("all_attributes") or {}).get("aria-label", "") or
+                         target_data.get("accessible_name", "") or "")
+            if aria_label and len(aria_label) < 60:
+                tag = (target_data.get("tag") or "").lower()
+                if tag in ("input", "textarea"):
+                    sel = f'{tag}[aria-label="{aria_label}"]'
+                    candidates.append(LocatorCandidate("aria_label", sel, 0.85, f"{tag} aria-label={aria_label}"))
+
         # Sort candidates by score (descending) for deterministic ordering
         candidates.sort(key=lambda c: c.score, reverse=True)
 
