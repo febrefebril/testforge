@@ -1,15 +1,15 @@
-"""TestForge — Reconstrutor de Intenção (Sprint 4 + Phase B).
+"""TestForge — Intent Reconstructor (Sprint 4 + Phase B).
 
-Reconstrói valores de campo ausentes e sintetiza passos de preenchimento a partir
-de fontes de evidência capturadas pelo gravador:
-1. form_values — valores capturados no tempo de submit
-2. setter_hook — value_mutations.jsonl (atribuições .value programáticas)
+Reconstructs missing field values and synthesizes fill steps from
+evidence sources captured by the recorder:
+1. form_values — values captured at submit time
+2. setter_hook — value_mutations.jsonl (programmatic .value assignments)
 3. snapshot_diff / checked_transition — field_snapshots.jsonl
-4. network_payload — análise de corpo de requisição POST/PUT
-5. final_state — final_state_snapshot.json dump do final da sessão
+4. network_payload — POST/PUT request body parsing
+5. final_state — final_state_snapshot.json end-of-session dump
 
-Cada fonte produz entradas FieldValueMap ou contexto de passo semântico
-consumido por RecordingNormalizer durante normalize().
+Each source produces FieldValueMap entries or semantic step context
+consumed by RecordingNormalizer during normalize().
 """
 
 import json
@@ -21,7 +21,7 @@ from urllib.parse import parse_qs, urlparse
 
 
 class IntentReconstructor:
-    """Combina múltiplas fontes de evidência para reconstruir intenções ausentes."""
+    """Combines multiple evidence sources to reconstruct missing intents."""
 
     # Default weights for source preference ordering
     SOURCE_PRIORITY = {
@@ -37,7 +37,7 @@ class IntentReconstructor:
     }
 
     def reconstruct_all(self, recording_dir: str, steps: list) -> list[dict]:
-        """Executa todas as estratégias de reconstrução, retorna entradas FieldValueMap.
+        """Run all reconstruction strategies, return FieldValueMap entries.
 
         Each entry dict: {field_key, value, intention, identifiers, source, step_index}
         """
@@ -48,8 +48,143 @@ class IntentReconstructor:
         entries.extend(self._reconstruct_from_form_values(steps))
         entries.extend(self._reconstruct_from_network(recording_dir, steps))
         entries.extend(self._reconstruct_from_final_state(recording_dir, steps))
+        entries.extend(self._reconstruct_from_polling(recording_dir, steps))
 
         return self._dedupe_entries(entries)
+
+    # ── Story 2.1: Polling strategy ───────────────────────────────────────────
+
+    def _reconstruct_from_polling(self, recording_dir: str, steps: list) -> list[dict]:
+        """Extrai valores de field_snapshots.jsonl com source=polling ou interval_ms>0.
+
+        Usa o último valor antes de cada step como evidência de polling.
+        Score: 50 (menor que snapshot_diff=70).
+        """
+        snapshots_path = os.path.join(recording_dir, "field_snapshots.jsonl")
+        if not os.path.exists(snapshots_path):
+            return []
+
+        polling_entries = []
+        with open(snapshots_path) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+
+                # Verificar se a entrada é de polling (source=polling ou interval_ms>0)
+                source = entry.get("source", "")
+                interval_ms = entry.get("interval_ms", 0) or 0
+                is_polling = source == "polling" or interval_ms > 0
+
+                if not is_polling:
+                    # Verificar snapshots internos
+                    for snap in entry.get("snapshots", []):
+                        snap_source = snap.get("source", "")
+                        snap_interval = snap.get("interval_ms", 0) or 0
+                        if snap_source == "polling" or snap_interval > 0:
+                            snap["_batch_ts"] = entry.get("timestamp", "")
+                            polling_entries.append(snap)
+                    continue
+
+                # Expandir batch de snapshots polling
+                if "snapshots" in entry and isinstance(entry["snapshots"], list):
+                    for snap in entry["snapshots"]:
+                        snap["_batch_ts"] = entry.get("timestamp", "")
+                        polling_entries.append(snap)
+                else:
+                    polling_entries.append(entry)
+
+        if not polling_entries:
+            return []
+
+        # Último valor por fingerprint antes do próximo step
+        by_fp: dict[str, dict] = {}
+        for snap in polling_entries:
+            fp = snap.get("fingerprint") or snap.get("identifiers", {}).get("css_path", "")
+            value = (snap.get("value") or "").strip()
+            if not fp or not value:
+                continue
+            # Mantém o último (mais recente) por fingerprint
+            by_fp[fp] = snap
+
+        entries = []
+        for fp, snap in by_fp.items():
+            value = (snap.get("value") or "").strip()
+            if not value:
+                continue
+
+            ids = snap.get("identifiers", {})
+            tag = snap.get("tag", "input")
+            name = ids.get("name") or ""
+            label = ids.get("label") or ids.get("aria-label") or ""
+            placeholder = ids.get("placeholder") or ""
+            element_id = ids.get("id") or ""
+            ts = snap.get("timestamp") or snap.get("_batch_ts", "")
+
+            step_idx = self._find_nearest_step_index(steps, ts)
+            canonical = self._canonical_key(name or label or placeholder or fp)
+            display = label or name or placeholder or fp
+
+            entries.append({
+                "field_key": canonical,
+                "value": value,
+                "intention": f"fill {display} with '{value}' (reconstructed from polling)",
+                "identifiers": {
+                    "name": name,
+                    "id": element_id,
+                    "label": label,
+                    "placeholder": placeholder,
+                    "aria_label": ids.get("aria-label") or "",
+                    "fingerprint": fp,
+                    "tag": tag,
+                },
+                "source": "polling",
+                "step_index": step_idx,
+                "fingerprint": fp,
+            })
+
+        return entries
+
+    # ── Story 2.2: Masked field detection ─────────────────────────────────────
+
+    @staticmethod
+    def _detect_masked_field(value: str, raw_value: str = "") -> bool:
+        """Detecta se um campo está mascarado (ex: "10.000,00", "123.456.789-00").
+
+        Heurística: valor contém dígitos intercalados com pontuação (.,/-) e
+        difere do raw_value, ou segue padrão típico de máscara numérica.
+        """
+        if not value:
+            return False
+
+        # Padrão de máscara: dígitos com pontuação intercalada (moeda, CPF, CNPJ, telefone, data)
+        # Ex: "10.000,00", "123.456.789-00", "11 99999-9999", "01/01/2026"
+        MASK_PATTERN = re.compile(r'^[\d\s.,/\-()]+$')
+        if not MASK_PATTERN.match(value):
+            return False
+
+        # Verifica se há pelo menos um separador de máscara
+        has_separator = bool(re.search(r'[.,/\-]', value))
+        if not has_separator:
+            return False
+
+        # Se raw_value fornecido e diferente, definitivamente mascarado
+        if raw_value and raw_value != value:
+            return True
+
+        # Padrões clássicos de máscara: moeda BR, CPF, CNPJ, telefone, data
+        KNOWN_MASKS = [
+            re.compile(r'^\d{1,3}(\.\d{3})+(,\d{2})?$'),        # moeda: 10.000,00
+            re.compile(r'^\d{3}\.\d{3}\.\d{3}-\d{2}$'),         # CPF
+            re.compile(r'^\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}$'),   # CNPJ
+            re.compile(r'^\(?\d{2}\)?\s?\d{4,5}-?\d{4}$'),      # telefone
+            re.compile(r'^\d{2}/\d{2}/\d{4}$'),                  # data
+        ]
+        return any(p.match(value) for p in KNOWN_MASKS)
 
     @staticmethod
     def _dedupe_entries(entries: list[dict]) -> list[dict]:
@@ -112,12 +247,14 @@ class IntentReconstructor:
         entries = []
         for fp, mut in by_fp.items():
             value = mut["_resolved_value"]
+            raw_value = (mut.get("old_value") or mut.get("raw_value") or "").strip()
             name = mut.get("name") or ""
             el_id = mut.get("id") or ""
             tag = mut.get("tag", "input")
             ts = mut.get("timestamp", "")
             step_idx = self._find_nearest_step_index(steps, ts)
 
+            is_masked = self._detect_masked_field(value, raw_value)
             canonical = self._canonical_key(name or el_id or fp)
             intention = (
                 f"fill {name or el_id or fp} with '{value}' "
@@ -132,10 +269,12 @@ class IntentReconstructor:
                     "id": el_id,
                     "fingerprint": fp,
                     "tag": tag,
+                    "is_masked": is_masked,
                 },
                 "source": "setter_hook",
                 "step_index": step_idx,
                 "fingerprint": fp,
+                "is_masked": is_masked,
             })
 
         return entries
@@ -392,9 +531,12 @@ class IntentReconstructor:
             for key, value in payload["fields"].items():
                 if not value:
                     continue
-                step_idx = self._correlate_payload_key(
+                step_idx, confidence = self._correlate_payload_key(
                     key, value, payload, steps, field_identifiers,
                 )
+                # Sem match confiável: não cria entry
+                if confidence == 0.0:
+                    continue
                 canonical = self._canonical_key(key)
                 entries.append({
                     "field_key": canonical,
@@ -404,6 +546,7 @@ class IntentReconstructor:
                         "network_key": key,
                         "payload_url": payload["url"],
                         "payload_method": payload["method"],
+                        "confidence": confidence,
                     },
                     "source": "network_payload",
                     "step_index": step_idx,
@@ -497,27 +640,52 @@ class IntentReconstructor:
         return ids
 
     @staticmethod
+    def _match_by_url(payload_url: str, steps: list) -> int:
+        """Encontra o índice do step cujo URL bate com a URL do payload.
+
+        Retorna o índice do primeiro step com URL correspondente, ou -1 se não
+        houver match.
+        """
+        if not payload_url:
+            return -1
+        for i, step in enumerate(steps):
+            step_url = getattr(step, "url", "") or ""
+            if not step_url:
+                continue
+            if step_url == payload_url or step_url.rstrip("/") == payload_url.rstrip("/"):
+                return i
+        return -1
+
+    @staticmethod
     def _correlate_payload_key(key: str, value: str, payload: dict,
-                                steps: list, field_identifiers: dict) -> int:
-        """Find the step index most likely associated with a payload field."""
+                                steps: list, field_identifiers: dict) -> tuple[int, float]:
+        """Encontra o step mais provável associado a um campo do payload.
+
+        Retorna uma tupla (step_index, confidence):
+        - Match por field_identifiers (nome/id do campo): confidence=1.0
+        - Fallback por URL do payload: confidence=0.7
+        - Sem match: retorna (0, 0.0)
+        """
         canonical_key = key.strip().lower().replace(" ", "_").replace("-", "_")
 
+        # Tentativa 1: match via field_identifiers (nome ou id do campo)
         if canonical_key in field_identifiers:
             for i, step in enumerate(steps):
                 if not step.target:
                     continue
                 if step.target.name and step.target.name.lower() == canonical_key:
-                    return i
+                    return i, 1.0
                 if step.target.element_id and step.target.element_id.lower() == canonical_key:
-                    return i
+                    return i, 1.0
 
-        for i, step in enumerate(steps):
-            step_url = getattr(step, "url", "") or ""
-            if step_url and payload.get("url", ""):
-                if step_url == payload["url"] or step_url.rstrip("/") == payload["url"].rstrip("/"):
-                    return i
+        # Tentativa 2: fallback via URL do payload
+        payload_url = payload.get("url", "")
+        url_match = IntentReconstructor._match_by_url(payload_url, steps)
+        if url_match >= 0:
+            return url_match, 0.7
 
-        return 0
+        # Sem match confiável
+        return 0, 0.0
 
     @staticmethod
     def _canonical_key(key: str) -> str:
