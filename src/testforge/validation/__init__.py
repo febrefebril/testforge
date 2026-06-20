@@ -6,5 +6,6 @@ from .intent_completeness import (  # noqa: F401
     FieldStatus as FieldStatus,
     CompletenessReport as CompletenessReport,
     IntentCompletenessChecker as IntentCompletenessChecker,
+    IntentCompletenessValidator as IntentCompletenessValidator,
     save_completeness_report as save_completeness_report,
 )

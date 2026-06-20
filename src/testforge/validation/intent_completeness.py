@@ -1,7 +1,7 @@
-"""TestForge — Verificador de Completude de Intenção.
+"""TestForge — Intent Completeness Checker.
 
-Valida que todos os campos necessários em uma gravação têm valores confiáveis.
-Produz relatórios estruturados e classifica estado de completude de cada campo.
+Validates that all necessary fields in a recording have reliable values.
+Produces structured reports and classifies each field's completeness status.
 """
 
 import json
@@ -13,7 +13,7 @@ from typing import Optional
 
 
 class FieldCompleteness(str, Enum):
-    """Classificação para estado de completude de cada campo."""
+    """Classification for each field's completeness state."""
     resolved = "resolved"
     resolved_with_warning = "resolved_with_warning"
     review_required = "review_required"
@@ -22,7 +22,7 @@ class FieldCompleteness(str, Enum):
 
 @dataclass
 class FieldStatus:
-    """Status de completude para um campo único."""
+    """Completeness status for a single field."""
     field_key: str
     label: str
     placeholder: str = ""
@@ -39,7 +39,7 @@ class FieldStatus:
 
 @dataclass
 class CompletenessReport:
-    """Relatório completo de completude para uma gravação."""
+    """Full completeness report for a recording."""
     recording_id: str = ""
     application: str = ""
     base_url: str = ""
@@ -418,6 +418,128 @@ class IntentCompletenessChecker:
             "role": t.role or "",
             "test_id": t.test_id or "",
         }
+
+
+class IntentCompletenessValidator:
+    """Valida completude de intenção a partir de um SemanticTestCase.
+
+    Calcula score de 0.0 a 1.0 baseado na proporção de campos esperados
+    que possuem valores confiáveis. Campos com blind_spot de
+    'typing_not_captured' ou 'select_not_captured' contam como ausentes
+    se não resolvidos por field_values.
+
+    Gate: score < 0.70 → passes_gate=False.
+    """
+
+    # Fontes que indicam campo sem valor confiável (conta como missing)
+    MISSING_SOURCES = {"missing_fill", ""}
+    # Padrões de blind_spot que indicam campo de preenchimento ausente
+    MISSING_BLIND_SPOT_PATTERNS = {"typing_not_captured", "select_not_captured"}
+
+    def validate(self, stc) -> dict:
+        """Valida completude de intenção no SemanticTestCase.
+
+        Args:
+            stc: SemanticTestCase com steps, field_values e blind_spots.
+
+        Returns:
+            Dicionário com:
+              - completeness_score: float (0.0–1.0)
+              - missing_fields: list[str] — chaves dos campos ausentes
+              - blind_spots_count: int — total de blind_spots no STC
+              - passes_gate: bool — True se score >= 0.70
+              - reason: str — descrição legível do resultado
+        """
+        field_values: dict = getattr(stc, "field_values", None) or {}
+        blind_spots: list = getattr(stc, "blind_spots", None) or []
+
+        # Classificar campos de field_values em preenchidos vs ausentes
+        campos_com_valor: set = set()
+        campos_ausentes: set = set()
+
+        for chave, fvm in field_values.items():
+            if hasattr(fvm, "source"):
+                source = fvm.source
+                value = fvm.value
+            else:
+                source = fvm.get("source", "")
+                value = fvm.get("value", "")
+
+            # Campo conta como ausente se source indica captura falha ou valor vazio
+            if source in self.MISSING_SOURCES or not value:
+                campos_ausentes.add(chave)
+            else:
+                campos_com_valor.add(chave)
+
+        # Blind spots com padrão de digitação/select não capturado → campo ausente
+        blind_spots_count = len(blind_spots)
+        for bs in blind_spots:
+            if isinstance(bs, dict):
+                pattern = bs.get("pattern", "")
+                label = bs.get("label", "")
+                step_num = bs.get("step", 0)
+            else:
+                pattern = getattr(bs, "pattern", "")
+                label = getattr(bs, "label", "")
+                step_num = getattr(bs, "step", 0)
+
+            if pattern not in self.MISSING_BLIND_SPOT_PATTERNS:
+                continue
+
+            # Derivar chave canônica a partir do label do blind_spot
+            chave_bs = self._canonicalizar_chave(label) if label else ""
+
+            if chave_bs:
+                # Blind spot com label identificável: rebaixa campo para ausente
+                # mesmo que estivesse em campos_com_valor (ex: field_values com
+                # source correto mas blind_spot indica que digitação foi perdida)
+                if chave_bs in campos_com_valor:
+                    campos_com_valor.discard(chave_bs)
+                campos_ausentes.add(chave_bs)
+            else:
+                # Sem label identificável — gera chave genérica pelo número do step
+                chave_generica = f"campo_blind_spot_step_{step_num}"
+                if chave_generica not in campos_com_valor:
+                    campos_ausentes.add(chave_generica)
+
+        total = len(campos_com_valor) + len(campos_ausentes)
+
+        if total == 0:
+            # Nenhum campo de preenchimento esperado — completude perfeita por vacuidade
+            score = 1.0
+            missing_fields: list = []
+            passes_gate = True
+            reason = "Nenhum campo de preenchimento esperado — completude por vacuidade."
+        else:
+            score = round(len(campos_com_valor) / total, 4)
+            missing_fields = sorted(campos_ausentes)
+            passes_gate = score >= 0.70
+            if passes_gate:
+                reason = (
+                    f"Score {score:.0%} — {len(campos_com_valor)} de {total} campos "
+                    f"preenchidos. Gate 70% aprovado."
+                )
+            else:
+                reason = (
+                    f"Score {score:.0%} — {len(campos_ausentes)} de {total} campos "
+                    f"ausentes. Gate 70% reprovado."
+                )
+
+        return {
+            "completeness_score": score,
+            "missing_fields": missing_fields,
+            "blind_spots_count": blind_spots_count,
+            "passes_gate": passes_gate,
+            "reason": reason,
+        }
+
+    @staticmethod
+    def _canonicalizar_chave(texto: str) -> str:
+        """Canonicaliza texto para chave de campo (lowercase, underscores)."""
+        import re
+        chave = re.sub(r"[^a-zA-Z0-9_]", "_", texto.lower())
+        chave = re.sub(r"_+", "_", chave).strip("_")
+        return chave or ""
 
 
 def save_completeness_report(report: CompletenessReport,
