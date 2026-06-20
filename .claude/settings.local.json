@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'docs: atualizar 14 diagramas PlantUML para v0.4.0 — alinhamento com código *)"
+    ]
+  }
+}

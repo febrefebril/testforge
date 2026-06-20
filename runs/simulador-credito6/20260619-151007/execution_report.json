@@ -1,0 +1,1213 @@
+{
+  "run_id": "simulador-credito6_20260619-151007",
+  "recording_id": "simulador-credito6",
+  "script_path": "semantic_tests/ST-simulador-credito6/test_st-simulador-credito6.py",
+  "base_url": "https://simuladorhabitacao.caixa.gov.br/home",
+  "mode": "incremental",
+  "summary": {
+    "total": 24,
+    "passed": 13,
+    "healed_validated": 9,
+    "healing_rejected": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 1,
+    "shadow_healed": 0
+  },
+  "steps": [
+    {
+      "step_num": 1,
+      "action": "navigation",
+      "status": "passed",
+      "original_locator": "",
+      "selected_locator": "",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "navigation_ok": true
+        },
+        "failures": [],
+        "message": ""
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url atual: https://simuladorhabitacao.caixa.gov.br/home"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0001.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0001.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0001.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0001.html"
+      },
+      "duration_ms": 489,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 2,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "a:has-text(\"Simulação Completa Confira o valor do seu financiamento de a\")",
+      "selected_locator": "a:has-text(\"Simulação Completa Confira o valor do seu financiamento de a\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_changed": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url before='https://simuladorhabitacao.caixa.gov.br/home' after='https://simuladorhabitacao.caixa.gov.br/simulacao'"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0002.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0002.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0002.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0002.html"
+      },
+      "duration_ms": 810,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 3,
+      "action": "click",
+      "status": "healed_validated",
+      "original_locator": "label[for=\"mat-radio-1-input\"]",
+      "selected_locator": "label[for=\"mat-radio-1-input\"]",
+      "value": "N",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: label[for=\"mat-radio-3-input\"]"
+      },
+      "healing": {
+        "attempted": true,
+        "status": "PASSED_STEP",
+        "layer": "L2",
+        "family": "FAM-06",
+        "taxonomy_id": "INP-007",
+        "strategy": "press_sequentially",
+        "original_locator": "label[for=\"mat-radio-1-input\"]",
+        "proposed_locator": "label[for=\"mat-radio-1-input\"]",
+        "confidence": 0.82,
+        "validated": true,
+        "oracle_passed": true,
+        "rejection_reason": [],
+        "rationale": "Masked input field — use press_sequentially instead of fill for JS-masked fields",
+        "raw_response": "",
+        "failure_phase": "execution",
+        "original_error": "fill_failed: 'unknown' value='FieldValueMap(field_key='possui3anosclt', value='Sim, tenho 3 anos ou mais', intention=\"fill Sim, tenho 3 anos ou mais with 'Sim, tenho 3 anos ou mais' (from final_state)\", identifiers={'name': 'possui3AnosCLT', 'id': 'mat-radio-0-input', 'label': 'Sim, tenho 3 anos ou mais', 'placeholder': '', 'aria_label': '', 'fingerprint': 'input#mat-radio-0-input[name=possui3AnosCLT]', 'tag': 'input'}, source='final_state', step_index=20)' selector='label[for=\"mat-radio-1-input\"]' — nenhuma estrategia funcionou",
+        "entry_id": "8e222d88c399",
+        "promotion_state": "rejected",
+        "promotion_allowed": false,
+        "promotion_blocks": [
+          "oracle_missing"
+        ]
+      },
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0003.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0003.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0003.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0003.html"
+      },
+      "duration_ms": 792,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 4,
+      "action": "click",
+      "status": "healed_validated",
+      "original_locator": "label[for=\"mat-radio-3-input\"]",
+      "selected_locator": "label[for=\"mat-radio-3-input\"]",
+      "value": "N",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: #mat-mdc-checkbox-0-input"
+      },
+      "healing": {
+        "attempted": true,
+        "status": "PASSED_STEP",
+        "layer": "L2",
+        "family": "FAM-06",
+        "taxonomy_id": "INP-007",
+        "strategy": "press_sequentially",
+        "original_locator": "label[for=\"mat-radio-3-input\"]",
+        "proposed_locator": "label[for=\"mat-radio-3-input\"]",
+        "confidence": 0.82,
+        "validated": true,
+        "oracle_passed": true,
+        "rejection_reason": [],
+        "rationale": "Masked input field — use press_sequentially instead of fill for JS-masked fields",
+        "raw_response": "",
+        "failure_phase": "execution",
+        "original_error": "fill_failed: 'unknown' value='FieldValueMap(field_key='existeoutrocomprador', value='Sim, tenho!', intention=\"fill Sim, tenho! with 'Sim, tenho!' (from final_state)\", identifiers={'name': 'existeOutroComprador', 'id': 'mat-radio-2-input', 'label': 'Sim, tenho!', 'placeholder': '', 'aria_label': '', 'fingerprint': 'input#mat-radio-2-input[name=existeOutroComprador]', 'tag': 'input'}, source='final_state', step_index=21)' selector='label[for=\"mat-radio-3-input\"]' — nenhuma estrategia funcionou",
+        "entry_id": "b09a21496469",
+        "promotion_state": "rejected",
+        "promotion_allowed": false,
+        "promotion_blocks": [
+          "oracle_missing"
+        ]
+      },
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0004.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0004.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0004.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0004.html"
+      },
+      "duration_ms": 832,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 5,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "#mat-mdc-checkbox-0-input",
+      "selected_locator": "#mat-mdc-checkbox-0-input",
+      "value": "on",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: input[placeholder=\"000.000.000-00\"]"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0005.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0005.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0005.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0005.html"
+      },
+      "duration_ms": 628,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 6,
+      "action": "click",
+      "status": "healed_validated",
+      "original_locator": "input[placeholder=\"000.000.000-00\"]",
+      "selected_locator": "input[placeholder=\"000.000.000-00\"]",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: input[placeholder=\"000.000.000-00\"]"
+      },
+      "healing": {
+        "attempted": true,
+        "status": "PASSED_STEP",
+        "layer": "L2",
+        "family": "FAM-06",
+        "taxonomy_id": "INP-007",
+        "strategy": "press_sequentially",
+        "original_locator": "input[placeholder=\"000.000.000-00\"]",
+        "proposed_locator": "input[placeholder=\"000.000.000-00\"]",
+        "confidence": 0.82,
+        "validated": true,
+        "oracle_passed": true,
+        "rejection_reason": [],
+        "rationale": "Masked input field — use press_sequentially instead of fill for JS-masked fields",
+        "raw_response": "",
+        "failure_phase": "execution",
+        "original_error": "fill_failed: 'unknown' value='FieldValueMap(field_key='000.000.000_00', value='022.442.581-14', intention=\"fill 000.000.000-00 with '022.442.581-14' on input step 7\", identifiers={'placeholder': '000.000.000-00', 'id': 'mat-input-2'}, source='fill_event', step_index=6)' selector='input[placeholder=\"000.000.000-00\"]' — nenhuma estrategia funcionou",
+        "entry_id": "96148a5c50e5",
+        "promotion_state": "rejected",
+        "promotion_allowed": false,
+        "promotion_blocks": [
+          "oracle_missing"
+        ]
+      },
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0006.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0006.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0006.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0006.html"
+      },
+      "duration_ms": 828,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 7,
+      "action": "fill",
+      "status": "passed",
+      "original_locator": "input[placeholder=\"000.000.000-00\"]",
+      "selected_locator": "input[placeholder=\"000.000.000-00\"]",
+      "value": "022.442.581-14",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "value_present": true,
+          "visible": true,
+          "editable": true
+        },
+        "failures": [],
+        "message": "fill precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "input_value_matches": true,
+          "actual_value_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": ""
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0007.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0007.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0007.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0007.html"
+      },
+      "duration_ms": 537,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 8,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "mat-datepicker-toggle button",
+      "selected_locator": "mat-datepicker-toggle button",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: button:has-text(\"JUN 2026\")"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0008.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0008.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0008.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0008.html"
+      },
+      "duration_ms": 687,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 9,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "button:has-text(\"JUN 2026\")",
+      "selected_locator": "button:has-text(\"JUN 2026\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: button.mat-calendar-previous-button"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0009.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0009.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0009.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0009.html"
+      },
+      "duration_ms": 665,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 10,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "button.mat-calendar-previous-button",
+      "selected_locator": "button.mat-calendar-previous-button",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: button.mat-calendar-previous-button"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0010.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0010.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0010.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0010.html"
+      },
+      "duration_ms": 647,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 11,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "button.mat-calendar-previous-button",
+      "selected_locator": "button.mat-calendar-previous-button",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: span:has-text(\"1974\")"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0011.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0011.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0011.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0011.html"
+      },
+      "duration_ms": 664,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 12,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "span:has-text(\"1974\")",
+      "selected_locator": "span:has-text(\"1974\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: span:has-text(\"MAR\")"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0012.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0012.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0012.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0012.html"
+      },
+      "duration_ms": 641,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 13,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "span:has-text(\"MAR\")",
+      "selected_locator": "span:has-text(\"MAR\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: span:has-text(\"7\")"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0013.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0013.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0013.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0013.html"
+      },
+      "duration_ms": 635,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 14,
+      "action": "click",
+      "status": "healed_validated",
+      "original_locator": "span:has-text(\"7\")",
+      "selected_locator": "span:has-text(\"7\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: input[placeholder=\"DD/MM/AAAA\"]"
+      },
+      "healing": {
+        "attempted": true,
+        "status": "PASSED_STEP",
+        "layer": "L0",
+        "family": "FAM-01",
+        "taxonomy_id": "",
+        "strategy": "",
+        "original_locator": "span:has-text(\"7\")",
+        "proposed_locator": "",
+        "confidence": 0.0,
+        "validated": true,
+        "oracle_passed": true,
+        "rejection_reason": [],
+        "rationale": "",
+        "raw_response": "",
+        "failure_phase": "execution",
+        "original_error": "Page.click: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"span:has-text(\\\"7\\\")\")\n    - locator resolved to 6 elements. Proceeding with the first one: <span aria-live=\"polite\" class=\"cdk-visually-hidden\" id=\"mat-calendar-period-label-0\">MAR 1974</span>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"mat-calendar-header\">…</div> intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"mat-calendar-header\">…</div> intercepts pointer events\n    - retrying click action\n      - waiting 100ms\n    9 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"mat-calendar-header\">…</div> intercepts pointer events\n    - retrying click action\n      - waiting 500ms\n",
+        "entry_id": "3a99ac4c1e6a",
+        "promotion_state": "rejected",
+        "promotion_allowed": false,
+        "promotion_blocks": [
+          "oracle_missing"
+        ]
+      },
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0014.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0014.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0014.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0014.html"
+      },
+      "duration_ms": 5457,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 15,
+      "action": "fill",
+      "status": "passed",
+      "original_locator": "input[placeholder=\"DD/MM/AAAA\"]",
+      "selected_locator": "input[placeholder=\"DD/MM/AAAA\"]",
+      "value": "07/03/1974",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "value_present": true,
+          "visible": true,
+          "editable": true
+        },
+        "failures": [],
+        "message": "fill precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "input_value_matches": true,
+          "actual_value_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": ""
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0015.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0015.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0015.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0015.html"
+      },
+      "duration_ms": 534,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 16,
+      "action": "click",
+      "status": "healed_validated",
+      "original_locator": "input[placeholder=\"(00) 00000-0000\"]",
+      "selected_locator": "input[placeholder=\"(00) 00000-0000\"]",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: input[placeholder=\"(00) 00000-0000\"]"
+      },
+      "healing": {
+        "attempted": true,
+        "status": "PASSED_STEP",
+        "layer": "L2",
+        "family": "FAM-06",
+        "taxonomy_id": "INP-007",
+        "strategy": "press_sequentially",
+        "original_locator": "input[placeholder=\"(00) 00000-0000\"]",
+        "proposed_locator": "input[placeholder=\"(00) 00000-0000\"]",
+        "confidence": 0.82,
+        "validated": true,
+        "oracle_passed": true,
+        "rejection_reason": [],
+        "rationale": "Masked input field — use press_sequentially instead of fill for JS-masked fields",
+        "raw_response": "",
+        "failure_phase": "execution",
+        "original_error": "fill_failed: 'unknown' value='FieldValueMap(field_key='(00)_00000_0000', value='(61) 98876-354', intention=\"fill (00) 00000-0000 with '(61) 98876-354' on input step 17\", identifiers={'placeholder': '(00) 00000-0000', 'id': 'mat-input-3'}, source='fill_event', step_index=16)' selector='input[placeholder=\"(00) 00000-0000\"]' — nenhuma estrategia funcionou",
+        "entry_id": "66fb7015ded9",
+        "promotion_state": "rejected",
+        "promotion_allowed": false,
+        "promotion_blocks": [
+          "oracle_missing"
+        ]
+      },
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0016.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0016.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0016.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0016.html"
+      },
+      "duration_ms": 5453,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 17,
+      "action": "fill",
+      "status": "passed",
+      "original_locator": "input[placeholder=\"(00) 00000-0000\"]",
+      "selected_locator": "input[placeholder=\"(00) 00000-0000\"]",
+      "value": "(61) 98876-354",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "value_present": true,
+          "visible": true,
+          "editable": true
+        },
+        "failures": [],
+        "message": "fill precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "input_value_matches": true,
+          "actual_value_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": ""
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0017.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0017.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0017.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0017.html"
+      },
+      "duration_ms": 552,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 18,
+      "action": "click",
+      "status": "healed_validated",
+      "original_locator": "input[placeholder=\"R$ 0,00\"]",
+      "selected_locator": "input[placeholder=\"R$ 0,00\"]",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: input[placeholder=\"R$ 0,00\"]"
+      },
+      "healing": {
+        "attempted": true,
+        "status": "PASSED_STEP",
+        "layer": "L2",
+        "family": "FAM-06",
+        "taxonomy_id": "INP-007",
+        "strategy": "press_sequentially",
+        "original_locator": "input[placeholder=\"R$ 0,00\"]",
+        "proposed_locator": "input[placeholder=\"R$ 0,00\"]",
+        "confidence": 0.82,
+        "validated": true,
+        "oracle_passed": true,
+        "rejection_reason": [],
+        "rationale": "Masked input field — use press_sequentially instead of fill for JS-masked fields",
+        "raw_response": "",
+        "failure_phase": "execution",
+        "original_error": "fill_failed: 'unknown' value='FieldValueMap(field_key='renda_bruta_mensal_*', value='1.000,00', intention=\"fill Renda bruta  mensal *  with '1.000,00' on input step 20\", identifiers={'aria_label': 'Renda bruta  mensal * ', 'placeholder': 'R$ 0,00', 'id': 'mat-input-1'}, source='fill_event', step_index=19)' selector='input[placeholder=\"R$ 0,00\"]' — nenhuma estrategia funcionou",
+        "entry_id": "82e409b83c91",
+        "promotion_state": "rejected",
+        "promotion_allowed": false,
+        "promotion_blocks": [
+          "oracle_missing"
+        ]
+      },
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0018.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0018.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0018.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0018.html"
+      },
+      "duration_ms": 5430,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 19,
+      "action": "click",
+      "status": "skipped",
+      "original_locator": "input[placeholder=\"R$ 0,00\"]",
+      "selected_locator": "",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "skipped": true
+        },
+        "failures": [],
+        "message": "skipped: Step 19: skipped — duplicate"
+      },
+      "postcondition": null,
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {},
+      "evidence_after": {},
+      "duration_ms": 0,
+      "skip_reason": "skipped: Step 19: skipped — duplicate"
+    },
+    {
+      "step_num": 20,
+      "action": "fill",
+      "status": "passed",
+      "original_locator": "input[placeholder=\"R$ 0,00\"]",
+      "selected_locator": "input[placeholder=\"R$ 0,00\"]",
+      "value": " 1.000,00 ",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "value_present": true,
+          "visible": true,
+          "editable": true
+        },
+        "failures": [],
+        "message": "fill precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "input_value_matches": true,
+          "actual_value_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": ""
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0020.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0020.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0020.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0020.html"
+      },
+      "duration_ms": 30546,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 21,
+      "action": "click",
+      "status": "healed_validated",
+      "original_locator": "label[for=\"mat-radio-0-input\"]",
+      "selected_locator": "label[for=\"mat-radio-0-input\"]",
+      "value": "Sim, tenho 3 anos ou mais",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: label[for=\"mat-radio-2-input\"]"
+      },
+      "healing": {
+        "attempted": true,
+        "status": "PASSED_STEP",
+        "layer": "L2",
+        "family": "FAM-06",
+        "taxonomy_id": "INP-007",
+        "strategy": "press_sequentially",
+        "original_locator": "label[for=\"mat-radio-0-input\"]",
+        "proposed_locator": "label[for=\"mat-radio-0-input\"]",
+        "confidence": 0.82,
+        "validated": true,
+        "oracle_passed": true,
+        "rejection_reason": [],
+        "rationale": "Masked input field — use press_sequentially instead of fill for JS-masked fields",
+        "raw_response": "",
+        "failure_phase": "execution",
+        "original_error": "fill_failed: 'unknown' value='FieldValueMap(field_key='possui3anosclt', value='Sim, tenho 3 anos ou mais', intention=\"fill Sim, tenho 3 anos ou mais with 'Sim, tenho 3 anos ou mais' (from final_state)\", identifiers={'name': 'possui3AnosCLT', 'id': 'mat-radio-0-input', 'label': 'Sim, tenho 3 anos ou mais', 'placeholder': '', 'aria_label': '', 'fingerprint': 'input#mat-radio-0-input[name=possui3AnosCLT]', 'tag': 'input'}, source='final_state', step_index=20)' selector='label[for=\"mat-radio-0-input\"]' — nenhuma estrategia funcionou",
+        "entry_id": "90ee56ff00ba",
+        "promotion_state": "rejected",
+        "promotion_allowed": false,
+        "promotion_blocks": [
+          "oracle_missing"
+        ]
+      },
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0021.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0021.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0021.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0021.html"
+      },
+      "duration_ms": 5466,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 22,
+      "action": "click",
+      "status": "healed_validated",
+      "original_locator": "label[for=\"mat-radio-2-input\"]",
+      "selected_locator": "label[for=\"mat-radio-2-input\"]",
+      "value": "Sim, tenho!",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: button:has-text(\"Continuar\")"
+      },
+      "healing": {
+        "attempted": true,
+        "status": "PASSED_STEP",
+        "layer": "L2",
+        "family": "FAM-06",
+        "taxonomy_id": "INP-007",
+        "strategy": "press_sequentially",
+        "original_locator": "label[for=\"mat-radio-2-input\"]",
+        "proposed_locator": "label[for=\"mat-radio-2-input\"]",
+        "confidence": 0.82,
+        "validated": true,
+        "oracle_passed": true,
+        "rejection_reason": [],
+        "rationale": "Masked input field — use press_sequentially instead of fill for JS-masked fields",
+        "raw_response": "",
+        "failure_phase": "execution",
+        "original_error": "fill_failed: 'unknown' value='FieldValueMap(field_key='existeoutrocomprador', value='Sim, tenho!', intention=\"fill Sim, tenho! with 'Sim, tenho!' (from final_state)\", identifiers={'name': 'existeOutroComprador', 'id': 'mat-radio-2-input', 'label': 'Sim, tenho!', 'placeholder': '', 'aria_label': '', 'fingerprint': 'input#mat-radio-2-input[name=existeOutroComprador]', 'tag': 'input'}, source='final_state', step_index=21)' selector='label[for=\"mat-radio-2-input\"]' — nenhuma estrategia funcionou",
+        "entry_id": "70073f26e564",
+        "promotion_state": "rejected",
+        "promotion_allowed": false,
+        "promotion_blocks": [
+          "oracle_missing"
+        ]
+      },
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0022.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0022.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0022.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0022.html"
+      },
+      "duration_ms": 5394,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 23,
+      "action": "click",
+      "status": "healed_validated",
+      "original_locator": "button:has-text(\"Continuar\")",
+      "selected_locator": "button:has-text(\"Continuar\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: :has-text(\"1 Dados pessoais 2 Dados do imóvel 3 Modalidades 4 Resultado\")"
+      },
+      "healing": {
+        "attempted": true,
+        "status": "PASSED_STEP",
+        "layer": "L0",
+        "family": "FAM-01",
+        "taxonomy_id": "",
+        "strategy": "",
+        "original_locator": "button:has-text(\"Continuar\")",
+        "proposed_locator": "",
+        "confidence": 0.0,
+        "validated": true,
+        "oracle_passed": true,
+        "rejection_reason": [],
+        "rationale": "",
+        "raw_response": "",
+        "failure_phase": "execution",
+        "original_error": "Page.click: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"button:has-text(\\\"Continuar\\\")\")\n    - locator resolved to <button tabindex=\"0\" type=\"button\" mat-flat-button=\"\" mat-ripple-loader-uninitialized=\"\" mat-ripple-loader-class-name=\"mat-mdc-button-ripple\" class=\"mdc-button mdc-button--unelevated mat-mdc-unelevated-button mdc-button--standard mat-mdc-unelevated-button--primary mat-unthemed mat-mdc-button-base\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"cdk-overlay-backdrop mat-overlay-transparent-backdrop mat-datepicker-0-backdrop cdk-overlay-backdrop-showing\"></div> from <div class=\"cdk-overlay-container\">…</div> subtree intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"cdk-overlay-backdrop mat-overlay-transparent-backdrop mat-datepicker-0-backdrop cdk-overlay-backdrop-showing\"></div> from <div class=\"cdk-overlay-container\">…</div> subtree intercepts pointer events\n    - retrying click action\n      - waiting 100ms\n    9 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"cdk-overlay-backdrop mat-overlay-transparent-backdrop mat-datepicker-0-backdrop cdk-overlay-backdrop-showing\"></div> from <div class=\"cdk-overlay-container\">…</div> subtree intercepts pointer events\n    - retrying click action\n      - waiting 500ms\n",
+        "entry_id": "3a99ac4c1e6a",
+        "promotion_state": "rejected",
+        "promotion_allowed": false,
+        "promotion_blocks": [
+          "oracle_missing"
+        ]
+      },
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0023.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0023.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0023.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0023.html"
+      },
+      "duration_ms": 13470,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 24,
+      "action": "assert",
+      "status": "healing_rejected",
+      "original_locator": "#body",
+      "selected_locator": "#body",
+      "value": "1 Dados pessoais 2 Dados do imóvel 3 Modalidades 4 Resultado  Simulação completa Seus dados pessoaisPrecisamos de algumas informações básicas sobre vocêperson_outlineInformações básicas CPF *  Data de",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "expected_present": true
+        },
+        "failures": [],
+        "message": "assert precondition ok"
+      },
+      "postcondition": {
+        "passed": false,
+        "checks": {
+          "oracle_status": false
+        },
+        "oracle_results": [
+          "OracleResult(oracle_type='visual_dom', status='failed', expected='#body', actual='', message='Elemento nao encontrado: #body')"
+        ],
+        "failures": [
+          "oracle_failed"
+        ],
+        "message": "Elemento nao encontrado: #body"
+      },
+      "healing": {
+        "attempted": true,
+        "status": "PASSED_STEP",
+        "layer": "L3",
+        "family": "FAM-10",
+        "taxonomy_id": "OBS-001",
+        "strategy": "visibility_wait",
+        "original_locator": "#body",
+        "proposed_locator": "text=1 Dados pessoais 2 Dados do imóvel 3 Modalidades 4 Resultado  Simulação completa",
+        "confidence": 0.85,
+        "validated": false,
+        "oracle_passed": false,
+        "rejection_reason": [
+          "postcondition_failed",
+          "oracle_failed"
+        ],
+        "rationale": "Mock: deterministic fallback using visibility_wait for assert",
+        "raw_response": "",
+        "failure_phase": "postcondition",
+        "original_error": "Elemento nao encontrado: #body",
+        "entry_id": "29225ab149dd",
+        "promotion_state": "",
+        "promotion_allowed": false,
+        "promotion_blocks": []
+      },
+      "error_message": "Healing executou, mas pos-condicao/oracle falhou: Elemento nao encontrado: #body",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/before_step_0024.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/before_step_0024.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito6_20260619-150836/screenshots/after_step_0024.png",
+        "dom": "evidence/simulador-credito6_20260619-150836/dom/after_step_0024.html"
+      },
+      "duration_ms": 5453,
+      "skip_reason": ""
+    }
+  ]
+}

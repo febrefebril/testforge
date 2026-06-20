@@ -1,0 +1,482 @@
+{
+  "run_id": "simulador-credito10_20260619-233814",
+  "recording_id": "simulador-credito10",
+  "script_path": "semantic_tests/ST-simulador-credito10/test_st-simulador-credito10.py",
+  "base_url": "https://simuladorhabitacao.caixa.gov.br/home",
+  "mode": "incremental",
+  "summary": {
+    "total": 12,
+    "passed": 11,
+    "healed_validated": 0,
+    "healing_rejected": 0,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 1,
+    "shadow_healed": 0
+  },
+  "steps": [
+    {
+      "step_num": 1,
+      "action": "navigation",
+      "status": "passed",
+      "original_locator": "",
+      "selected_locator": "",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "navigation_ok": true
+        },
+        "failures": [],
+        "message": ""
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url atual: https://simuladorhabitacao.caixa.gov.br/home"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/before_step_0001.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/before_step_0001.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/after_step_0001.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/after_step_0001.html"
+      },
+      "duration_ms": 476,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 2,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "a:has-text(\"Simulação Completa Confira o valor do seu financiamento de a\")",
+      "selected_locator": "a:has-text(\"Simulação Completa Confira o valor do seu financiamento de a\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_changed": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url mudou: 'https://simuladorhabitacao.caixa.gov.br/home' → 'https://simuladorhabitacao.caixa.gov.br/simulacao'"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/before_step_0002.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/before_step_0002.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/after_step_0002.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/after_step_0002.html"
+      },
+      "duration_ms": 798,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 3,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "mat-radio-button:has-text(\"Não, tenho menos de 3 anos\")",
+      "selected_locator": "mat-radio-button:has-text(\"Não, tenho menos de 3 anos\")",
+      "value": "N",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: mat-radio-button:has-text(\"Não, só eu\")"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/before_step_0003.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/before_step_0003.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/after_step_0003.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/after_step_0003.html"
+      },
+      "duration_ms": 631,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 4,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "mat-radio-button:has-text(\"Não, só eu\")",
+      "selected_locator": "mat-radio-button:has-text(\"Não, só eu\")",
+      "value": "N",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: #mat-mdc-checkbox-0-input"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/before_step_0004.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/before_step_0004.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/after_step_0004.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/after_step_0004.html"
+      },
+      "duration_ms": 639,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 5,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "#mat-mdc-checkbox-0-input",
+      "selected_locator": "#mat-mdc-checkbox-0-input",
+      "value": "on",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: input[placeholder=\"000.000.000-00\"]"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/before_step_0005.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/before_step_0005.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/after_step_0005.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/after_step_0005.html"
+      },
+      "duration_ms": 553,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 6,
+      "action": "click",
+      "status": "skipped",
+      "original_locator": "input[placeholder=\"000.000.000-00\"]",
+      "selected_locator": "",
+      "value": "",
+      "precondition": null,
+      "postcondition": null,
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {},
+      "evidence_after": {},
+      "duration_ms": 0,
+      "skip_reason": "prefill_click_noise"
+    },
+    {
+      "step_num": 7,
+      "action": "fill",
+      "status": "passed",
+      "original_locator": "input[placeholder=\"000.000.000-00\"]",
+      "selected_locator": "input[placeholder=\"000.000.000-00\"]",
+      "value": "021.626.581-94",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "value_present": true,
+          "visible": true,
+          "editable": true
+        },
+        "failures": [],
+        "message": "fill precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "input_value_matches": true,
+          "actual_value_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": ""
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/before_step_0007.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/before_step_0007.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/after_step_0007.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/after_step_0007.html"
+      },
+      "duration_ms": 495,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 8,
+      "action": "fill",
+      "status": "passed",
+      "original_locator": "input[placeholder=\"DD/MM/AAAA\"]",
+      "selected_locator": "input[placeholder=\"DD/MM/AAAA\"]",
+      "value": "17/02/1984",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "value_present": true,
+          "visible": true,
+          "editable": true
+        },
+        "failures": [],
+        "message": "fill precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "input_value_matches": true,
+          "actual_value_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": ""
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/before_step_0008.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/before_step_0008.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/after_step_0008.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/after_step_0008.html"
+      },
+      "duration_ms": 517,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 9,
+      "action": "fill",
+      "status": "passed",
+      "original_locator": "input[placeholder=\"(00) 00000-0000\"]",
+      "selected_locator": "input[placeholder=\"(00) 00000-0000\"]",
+      "value": "(61) 99887-76654",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "value_present": true,
+          "visible": true,
+          "editable": true
+        },
+        "failures": [],
+        "message": "fill precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "input_value_matches": true,
+          "actual_value_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": ""
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/before_step_0009.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/before_step_0009.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/after_step_0009.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/after_step_0009.html"
+      },
+      "duration_ms": 516,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 10,
+      "action": "fill",
+      "status": "passed",
+      "original_locator": "input[placeholder=\"R$ 0,00\"]",
+      "selected_locator": "input[placeholder=\"R$ 0,00\"]",
+      "value": " 10.000,00 ",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "value_present": true,
+          "visible": true,
+          "editable": true
+        },
+        "failures": [],
+        "message": "fill precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "input_value_matches": true,
+          "actual_value_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": ""
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/before_step_0010.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/before_step_0010.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/after_step_0010.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/after_step_0010.html"
+      },
+      "duration_ms": 1332,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 11,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "mat-radio-button:has-text(\"Sim, tenho 3 anos ou mais\")",
+      "selected_locator": "mat-radio-button:has-text(\"Sim, tenho 3 anos ou mais\")",
+      "value": "Sim, tenho 3 anos ou mais",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: mat-radio-button:has-text(\"Sim, tenho!\")"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/before_step_0011.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/before_step_0011.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/after_step_0011.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/after_step_0011.html"
+      },
+      "duration_ms": 657,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 12,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "mat-radio-button:has-text(\"Sim, tenho!\")",
+      "selected_locator": "mat-radio-button:has-text(\"Sim, tenho!\")",
+      "value": "Sim, tenho!",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "click_no_exception": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "click executou sem oracle especifico"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/before_step_0012.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/before_step_0012.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito10_20260619-233805/screenshots/after_step_0012.png",
+        "dom": "evidence/simulador-credito10_20260619-233805/dom/after_step_0012.html"
+      },
+      "duration_ms": 678,
+      "skip_reason": ""
+    }
+  ]
+}
