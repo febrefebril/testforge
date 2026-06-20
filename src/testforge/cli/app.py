@@ -267,6 +267,25 @@ def _check_python_keyboard(page, recorder):
         pass
 
 
+def _auto_publish_recording(rid: str, rec_dir: str):
+    """Auto-publish recording artifacts to Git repo if env vars configured."""
+    try:
+        from testforge.publisher import GitPublisher
+        publisher = GitPublisher.from_env()
+        if publisher is None:
+            return
+        recordings_root = str(_PROJECT_ROOT / "recordings")
+        semantic_root = str(_PROJECT_ROOT / "semantic_tests")
+        print(f"[TestForge] Publicando {rid} no Git...")
+        result = publisher.publish(rid, recordings_root, semantic_root)
+        if result.success:
+            print(f"[TestForge] ✓ Publicado: {result.remote_path} ({result.commit_sha[:8]})")
+        else:
+            print(f"[TestForge] ⚠ Publicacao falhou: {result.error}", file=sys.stderr)
+    except Exception as exc:
+        print(f"[TestForge] ⚠ Erro de publicacao (nao-bloqueante): {exc}", file=sys.stderr)
+
+
 def cmd_record(args):
     """Grava fluxo de teste com comandos de teclado."""
     # Validate URL before any operation
@@ -352,6 +371,9 @@ def cmd_record(args):
         print(f"[TestForge] Eventos brutos: {raw_count}")
         print(f"[TestForge] Sessao salva: recordings/{rid}/")
         browser.close()
+
+    # Auto-publish if configured
+    _auto_publish_recording(rid, rec_dir)
 
     # Post-recording: intent completeness check + validation
     validate_before_ready = getattr(args, 'validate_before_ready', False)
@@ -1486,6 +1508,31 @@ def cmd_pilot_report(args):
                 print(f"    {cat.replace('_', ' ').title()}: {count}")
 
 
+def cmd_send(args):
+    """Re-publish recording artifacts to configured Git repo."""
+    from testforge.publisher import GitPublisher
+    rid = args.recording_id
+    publisher = GitPublisher.from_env()
+    if publisher is None:
+        print("[TestForge] Git publisher nao configurado.")
+        print("  Configure: TESTFORGE_GIT_URL e TESTFORGE_GIT_TOKEN")
+        return
+
+    rec_dir = str(_PROJECT_ROOT / "recordings" / rid)
+    if not os.path.isdir(rec_dir):
+        print(f"[TestForge] Gravacao nao encontrada: {rec_dir}")
+        return
+
+    print(f"[TestForge] Enviando {rid}...")
+    result = publisher.publish(rid, str(_PROJECT_ROOT / "recordings"), str(_PROJECT_ROOT / "semantic_tests"))
+    if result.success:
+        print(f"[TestForge] ✓ Publicado: {result.remote_path}")
+        print(f"  Commit: {result.commit_sha[:8]}")
+        print(f"  Artefatos: {len(result.artifacts_copied)} arquivo(s)")
+    else:
+        print(f"[TestForge] ✗ Falha: {result.error}", file=sys.stderr)
+
+
 def main():
     parser = argparse.ArgumentParser(description="TestForge CLI — Gravacao inteligente de testes E2E")
     sub = parser.add_subparsers(dest="command")
@@ -1576,6 +1623,11 @@ def main():
                     default=str(_PROJECT_ROOT / "reports"),
                     help="Diretorio de saida para o relatorio (default: reports/)")
     pr.set_defaults(func=cmd_pilot_report)
+
+    # send (Git publisher)
+    send = sub.add_parser("send", help="Enviar artefatos de gravacao para repositorio Git")
+    send.add_argument("recording_id", help="ID da gravacao (ex: REC-20260619)")
+    send.set_defaults(func=cmd_send)
 
     args = parser.parse_args()
     if args.command:
