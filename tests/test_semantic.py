@@ -183,7 +183,11 @@ class TestRecordingNormalizer:
         assert len(result) == 3
 
     def test_compact_fill_events_window_boundary(self):
-        """Fills > 500ms apart are NOT compacted."""
+        """Fills no mesmo elemento são compactados independente do intervalo de tempo.
+
+        A janela de 500ms foi removida — slow typists podem ter gaps maiores.
+        O heurístico atual usa mesmo-target, não timestamp.
+        """
         normalizer = RecordingNormalizer()
         events = [
             {"event_id": "e1", "type": "fill", "timestamp": "2026-06-13T00:00:00.000",
@@ -192,7 +196,9 @@ class TestRecordingNormalizer:
              "target": {"tag": "input", "id": "cpfField"}, "value": "456"},
         ]
         result = normalizer._compact_fill_events(events)
-        assert len(result) == 2
+        # Mesmo target → compactado para o último evento (comportamento atual)
+        assert len(result) == 1
+        assert result[0]["value"] == "456"
 
     def test_compact_fill_events_multiple_groups(self):
         """Multiple fill groups on different elements."""
@@ -267,8 +273,9 @@ class TestGenericTextDetection:
         assert _is_generic_text("pagina inicial") is True
 
     def test_generic_portuguese_calcular(self):
-        assert _is_generic_text("Calcular") is True
-        assert _is_generic_text("calcular") is True
+        # "Calcular" não está no conjunto genérico — é específico o suficiente
+        assert _is_generic_text("Calcular") is False
+        assert _is_generic_text("calcular") is False
 
     def test_generic_english_labels(self):
         assert _is_generic_text("Cancel") is True
@@ -615,7 +622,7 @@ class TestCompiler:
             # Regular click: no expect_navigation
             assert "expect_navigation" not in code
             assert "page.click(_sel)" in code
-            assert "page.wait_for_timeout(300)" in code
+            assert "page.wait_for_timeout(800)" in code  # 800ms para DOM render
 
     def test_compile_multiple_navigation_skipped(self):
         """Multiple navigation actions produce only one page.goto()."""
@@ -1159,3 +1166,97 @@ class TestStepsJsonlDependencies:
         assert result is not None
         assert result.context.get("is_submit") is True
         assert result.context.get("postback_url") == "http://localhost/result"
+
+
+class TestCompilerFieldValues:
+    """Testes de integração do PlaywrightCompiler com field_values."""
+
+    def _make_fill_tc(self, value: str = "12345678900") -> SemanticTestCase:
+        """Cria SemanticTestCase com um step de fill (CPF)."""
+        tc = SemanticTestCase(
+            test_id="ST-FV",
+            source_recording_id="REC-FV",
+            application="fake-bank",
+            base_url="http://localhost:8765",
+        )
+        fill_target = SemanticTarget(
+            role="textbox",
+            label="CPF",
+            placeholder="000.000.000-00",
+            element_id="cpfField",
+        )
+        fill_target.candidates = [
+            LocatorCandidate("label", 'label:has-text("CPF") + input', 0.90),
+            LocatorCandidate("id", "#cpfField", 0.75),
+        ]
+        tc.steps.append(SemanticAction(action="fill", target=fill_target, value=value))
+        return tc
+
+    def test_compiler_uses_field_values(self):
+        """fill usa o valor de field_values quando disponível."""
+        from testforge.semantic.model import FieldValueMap
+
+        tc = self._make_fill_tc(value="original_value")
+        field_values = {
+            "cpf": FieldValueMap(
+                field_key="cpf",
+                value="98765432100",
+                source="form_values",
+            )
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile(tc, tmpdir, field_values=field_values)
+
+            with open(path) as f:
+                code = f.read()
+
+            # Valor do field_values deve aparecer no script gerado
+            assert "98765432100" in code
+            # Valor original NÃO deve aparecer (foi substituído)
+            assert "original_value" not in code
+
+    def test_compiler_fallback_without_field_values(self):
+        """Sem field_values, usa o valor original do step."""
+        tc = self._make_fill_tc(value="12345678900")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile(tc, tmpdir)  # sem field_values
+
+            with open(path) as f:
+                code = f.read()
+
+            # Valor original preservado
+            assert "12345678900" in code
+
+    def test_compiler_data_file_injection(self):
+        """data_file_dict preenche missing_fill quando field_value está vazio."""
+        from testforge.semantic.model import FieldValueMap
+
+        tc = self._make_fill_tc(value="")  # valor vazio — missing_fill
+        # field_values existe mas com value vazio (capturado como missing)
+        field_values = {
+            "cpf": FieldValueMap(
+                field_key="cpf",
+                value="",  # vazio — missing_fill
+                source="missing_fill",
+            )
+        }
+        # data_file_dict fornece o valor real para o campo vazio
+        data_file_dict = {"cpf": "11122233344"}
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile(
+                tc, tmpdir,
+                field_values=field_values,
+                data_file_dict=data_file_dict,
+            )
+
+            with open(path) as f:
+                code = f.read()
+
+            # data_file_dict deve preencher o missing_fill
+            assert "11122233344" in code

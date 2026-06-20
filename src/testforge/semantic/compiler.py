@@ -7,8 +7,9 @@ import os
 import re
 import textwrap
 import json as _json
+from typing import Optional
 
-from .model import SemanticTestCase, SemanticAction
+from .model import SemanticTestCase, SemanticAction, FieldValueMap
 from .data_extractor import _best_field_name
 
 
@@ -20,6 +21,8 @@ class PlaywrightCompiler:
         test_case: SemanticTestCase,
         output_dir: str,
         data_file: str = "",
+        field_values: Optional[dict[str, FieldValueMap]] = None,
+        data_file_dict: Optional[dict] = None,
     ) -> str:
         """Compila caso de teste para script Python Playwright.
 
@@ -28,6 +31,10 @@ class PlaywrightCompiler:
             output_dir: Diretório de saída para o script gerado.
             data_file: Caminho opcional para arquivo JSON de dados de teste.
                        Se fornecido, script lê valores do JSON em vez de hardcoding.
+            field_values: Mapa opcional de campo → FieldValueMap com valores capturados.
+                          Quando presente, valores de fill são substituídos pelos do mapa.
+            data_file_dict: Dict opcional para injeção via --data (leitura externa).
+                            Usado como fallback quando field_value está vazio.
         """
         os.makedirs(output_dir, exist_ok=True)
         safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', test_case.test_id)
@@ -36,7 +43,12 @@ class PlaywrightCompiler:
         filename = f"test_{test_name}.py"
         path = os.path.join(output_dir, filename)
 
-        code = self._generate(test_case, data_file=data_file)
+        code = self._generate(
+            test_case,
+            data_file=data_file,
+            field_values=field_values,
+            data_file_dict=data_file_dict,
+        )
         with open(path, "w") as f:
             f.write(code)
 
@@ -47,13 +59,13 @@ class PlaywrightCompiler:
         test_case: SemanticTestCase,
         output_dir: str,
     ) -> str:
-        """Gera semantic_steps.jsonl junto com script compilado.
+        """Generate semantic_steps.jsonl alongside compiled script.
 
-        Cada linha é um objeto JSON independente representando um
-        passo semântico — inclui ação, valor, alvo, candidatos,
-        url, contexto, e skip_reason para trilha de auditoria completa.
+        Each line is a self-contained JSON object representing one
+        semantic step — includes action, value, target, candidates,
+        url, context, and skip_reason for full audit trail.
 
-        Retorna caminho do arquivo gerado.
+        Returns path to generated file.
         """
         os.makedirs(output_dir, exist_ok=True)
         path = os.path.join(output_dir, "semantic_steps.jsonl")
@@ -129,23 +141,29 @@ class PlaywrightCompiler:
 
         return record
 
-    def _generate(self, tc: SemanticTestCase, data_file: str = "") -> str:
+    def _generate(
+        self,
+        tc: SemanticTestCase,
+        data_file: str = "",
+        field_values: Optional[dict[str, FieldValueMap]] = None,
+        data_file_dict: Optional[dict] = None,
+    ) -> str:
         lines = []
         lines.append('"""Teste gerado pelo TestForge — fonte de verdade: SemanticTestCase."""')
         lines.append("from playwright.sync_api import Page, expect")
         lines.append("import json, os")
 
         if data_file:
-            # Data-driven: load external JSON
+            # Data-driven: carrega JSON externo no script gerado
             data_path = os.path.basename(data_file)
             lines.append("")
-            lines.append(f"# Test data: external JSON fixture")
+            lines.append(f"# Dados de teste: fixture JSON externo")
             lines.append(f"_DATA_FILE = os.path.join(os.path.dirname(__file__), \"{data_path}\")")
             lines.append("_data = {}")
             lines.append("if os.path.exists(_DATA_FILE):")
             lines.append("    with open(_DATA_FILE) as f:")
             lines.append("        _raw = json.load(f)")
-            lines.append("    # Support both flat and scenario-based formats")
+            lines.append("    # Suporte a formato flat e scenario-based")
             lines.append("    if \"scenarios\" in _raw:")
             lines.append("        _data = _raw[\"scenarios\"].get(\"default\", {})")
             lines.append("    elif \"fields\" in _raw:")
@@ -163,15 +181,15 @@ class PlaywrightCompiler:
         lines.append(f"def test_{safe_name}(page: Page):")
         lines.append(f'    """{tc.application or "Fluxo gravado"} — source: {tc.source_recording_id}."""')
         lines.append("")
-        lines.append("    # Initial navigation: load page under test")
+        lines.append("    # Navegação inicial: carrega página sob teste")
         lines.append(f"    page.goto(BASE_URL)")
         lines.append("")
 
         step_idx = 0
         for action in tc.steps:
-            # Inject overlay wait before overlay steps
+            # Injetar espera de overlay antes de steps de overlay
             if action.context.get("overlay_step") and not action.context.get("overlay_trigger"):
-                lines.append("    # Wait for overlay (calendar, modal, dialog)")
+                lines.append("    # Aguarda overlay (calendário, modal, dialog)")
                 lines.append("    try:")
                 lines.append("        page.wait_for_selector('.cdk-overlay-container', state='visible', timeout=5000)")
                 lines.append("        page.wait_for_timeout(300)")
@@ -179,14 +197,14 @@ class PlaywrightCompiler:
                 lines.append("        pass")
 
             if action.action == "navigation":
-                # Skip redundant navigation — page already loaded at BASE_URL.
+                # Navegação redundante ignorada — página já carregada via BASE_URL.
                 continue
             elif action.action == "fill" and action.target and (action.target.tag or "").lower() == "select":
                 step_idx += 1
-                lines.extend(self._gen_select(action, step_idx, data_file))
+                lines.extend(self._gen_select(action, step_idx, data_file, field_values, data_file_dict))
             elif action.action == "fill":
                 step_idx += 1
-                lines.extend(self._gen_fill(action, step_idx, data_file))
+                lines.extend(self._gen_fill(action, step_idx, data_file, field_values, data_file_dict))
             elif action.action == "click":
                 step_idx += 1
                 is_submit = action.context.get("is_submit", False) if action.context else False
@@ -208,14 +226,68 @@ class PlaywrightCompiler:
                 return _best_field_name({"target": {"placeholder": placeholder}}, 0)
         return ""
 
-    def _resolved_value(self, action: SemanticAction, idx: int, data_file: str) -> str:
-        """Resolve fill value: from JSON data_file or hardcoded fallback."""
+    def _resolve_field_key(self, action: SemanticAction) -> str:
+        """Retorna a chave do campo para lookup em field_values ou data_file_dict.
+
+        Usa label > placeholder > campo gerado como prioridade.
+        """
+        if action.target:
+            label = (action.target.label or "").strip()
+            if label:
+                return _best_field_name({"target": {"label": label}}, 0)
+            placeholder = (action.target.placeholder or "").strip()
+            if placeholder:
+                return _best_field_name({"target": {"placeholder": placeholder}}, 0)
+            name = (action.target.name or "").strip()
+            if name:
+                return name
+            el_id = (action.target.element_id or "").strip()
+            if el_id:
+                return el_id
+        return ""
+
+    def _resolved_value(
+        self,
+        action: SemanticAction,
+        idx: int,
+        data_file: str,
+        field_values: Optional[dict[str, FieldValueMap]] = None,
+        data_file_dict: Optional[dict] = None,
+    ) -> str:
+        """Resolve valor de fill com prioridade: field_values > data_file > original.
+
+        Ordem de resolução (em tempo de compilação):
+        1. field_values[field_key].value  — valor capturado na gravação (preferido)
+        2. data_file_dict[field_key]      — injeção externa via --data (fallback de missing_fill)
+        3. data_file (caminho)            — script gerado lê JSON em runtime
+        4. action.value                   — valor hardcoded original (fallback final)
+        """
         value = action.value or ""
         escaped_value = value.replace('"', '\\"')
+        field_key = self._resolve_field_key(action)
+
+        # Prioridade 1: field_values com valor não-vazio
+        if field_values and field_key and field_key in field_values:
+            fv = field_values[field_key]
+            resolved = fv.value
+            # Prioridade 2: data_file_dict preenche missing_fill quando value está vazio
+            if not resolved and data_file_dict and field_key in data_file_dict:
+                resolved = str(data_file_dict[field_key])
+            escaped_resolved = resolved.replace('"', '\\"')
+            return f'"{escaped_resolved}"'
+
+        # Prioridade 3: data_file_dict sem field_values (injeção direta)
+        if data_file_dict and field_key and field_key in data_file_dict:
+            escaped_resolved = str(data_file_dict[field_key]).replace('"', '\\"')
+            return f'"{escaped_resolved}"'
+
+        # Prioridade 4: script gerado lê JSON em runtime (comportamento original)
         if data_file:
             field = self._data_field_name(action)
             if field:
                 return f'_data.get("{field}", "{escaped_value}")'
+
+        # Fallback final: valor hardcoded original
         return f'"{escaped_value}"'
 
     def _esc(self, sel: str) -> str:
@@ -241,9 +313,16 @@ class PlaywrightCompiler:
             return f"#{t.element_id}"
         return "input"
 
-    def _gen_select(self, action: SemanticAction, idx: int, data_file: str = "") -> list[str]:
-        """Generate page.select_option() for <select> elements."""
-        value = self._resolved_value(action, idx, data_file)
+    def _gen_select(
+        self,
+        action: SemanticAction,
+        idx: int,
+        data_file: str = "",
+        field_values: Optional[dict[str, FieldValueMap]] = None,
+        data_file_dict: Optional[dict] = None,
+    ) -> list[str]:
+        """Gera page.select_option() para elementos <select>."""
+        value = self._resolved_value(action, idx, data_file, field_values, data_file_dict)
         candidates = action.target.candidates if action.target else []
         sorted_candidates = sorted(candidates, key=lambda c: c.score, reverse=True)
 
@@ -273,8 +352,16 @@ class PlaywrightCompiler:
         lines.append("")
         return lines
 
-    def _gen_fill(self, action: SemanticAction, idx: int, data_file: str = "") -> list[str]:
-        value = self._resolved_value(action, idx, data_file)
+    def _gen_fill(
+        self,
+        action: SemanticAction,
+        idx: int,
+        data_file: str = "",
+        field_values: Optional[dict[str, FieldValueMap]] = None,
+        data_file_dict: Optional[dict] = None,
+    ) -> list[str]:
+        """Gera page.fill() com fallback loop de seletores."""
+        value = self._resolved_value(action, idx, data_file, field_values, data_file_dict)
         candidates = action.target.candidates if action.target else []
 
         # Ordena por score decrescente
