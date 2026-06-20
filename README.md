@@ -425,17 +425,32 @@ oh -p "tarefa"          # OpenHarness modo prompt
 
 ## 📚 Documentação
 
+**Nova em v0.4.0:** Documentação consolidada em hierarquia navegável. [Comece pelo índice →](docs/INDEX.md)
+
+### Índices Principais
+
+| Link | Descrição |
+|------|----------|
+| **[📖 Índice Principal](docs/INDEX.md)** | Guia completo por audiência (testers, developers, researchers) |
+| **[🎯 Visão Geral em 5 min](docs/OVERVIEW.md)** | O que é TestForge, exemplos, FAQ |
+| **[🏗️ Arquitetura](docs/ARQUITETURA/FASES.md)** | As 4 fases: Recorder → Intent → Compiler → Executor |
+
+### Documentação Ativa (v0.4.0)
+
 | Documento | Conteúdo |
 |-----------|----------|
-| [SPRINT-REVIEW.md](docs/SPRINT-REVIEW.md) | Roteiro da sprint review |
-| [PLANO-DE-TESTE.md](docs/PLANO-DE-TESTE.md) | 27+ casos de teste manuais |
-| [PLANO-TESTE-INTENT-LAB.md](docs/PLANO-TESTE-INTENT-LAB.md) | 14 casos manuais do Intent Lab |
-| [BUGS.md](docs/BUGS.md) | 5 bugs documentados e corrigidos |
-| [TUTORIAL-LLM-HEALING.md](docs/TUTORIAL-LLM-HEALING.md) | Guia de uso do LLM healing |
-| [run-incremental.md](docs/run-incremental.md) | Guia do executor incremental |
-| [Sprint Plan](docs/testforge_plano_sprints_intent_readiness.md) | Plano completo de 8 sprints |
+| [Bugs Conhecidos](docs/REFERENCIA/BUGS-KNOWNS.md) | 5 corrigidos + 20 abertos + 3 limitações |
+| [Governance](docs/REFERENCIA/GOVERNANCE.md) | Princípios e roadmap |
+| [Decisões de Arquitetura (ADRs)](docs/REFERENCIA/ADR-INDEX.md) | 4 decisões formalmente documentadas |
+| [LLM Healing](docs/TUTORIAIS/05-llm-healing.md) | Guia de uso do healing com LLM |
+| [Executor Incremental](docs/TUTORIAIS/06-incremental-execution.md) | Guia do executor passo a passo |
+| [Debugging Fase B](docs/TUTORIAIS/09-debugging-fase-b.md) | Troubleshooting do pipeline de intenção |
 | [STATE.md](.planning/STATE.md) | Estado atual do projeto |
-| [Diagramas PNG](docs/diagramas/png/) | 14 diagramas PlantUML |
+| [CONSOLIDACAO-SUMMARY.md](CONSOLIDACAO-SUMMARY.md) | Resumo da consolidação v0.4.0 |
+
+### Arquivo Histórico
+
+Documentação anterior arquivada em [`.planning/ARCHIVE/`](.planning/ARCHIVE/README.md) incluindo planos de sprint, análises de bugs (Fase A), e plano/report da Fase B (v0.3.1).
 
 ---
 
