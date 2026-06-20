@@ -1,12 +1,12 @@
 @startuml
-title TestForge v0.4.0 — Componentes (28 modulos, 100+ commits, 165+ testes)
+title TestForge v0.3.1 — Componentes (28 modulos, 100 commits, 162 testes)
 
 skinparam packageStyle rectangle
 skinparam backgroundColor #FFFFFF
 skinparam componentStyle rectangle
 
 ' === CLI ===
-package "CLI" as cli #LightGray {
+package "CLI" as cli #LightYellow {
   [app.py\n(record, compile --data,\nrun inline healing,\npipeline, demo-heal)] as App
 }
 
@@ -25,7 +25,7 @@ package "Evidence" as evidence #LightGreen {
 }
 
 ' === Semantic (MIS) ===
-package "Semantic (MIS)" as semantic #LightGray {
+package "Semantic (MIS)" as semantic #LightYellow {
   [model.py] as Model
   [recording_normalizer.py\n(+_clean_text, +fallback candidates)] as RN
   [compiler.py\n(+data-driven)] as Compiler
@@ -41,7 +41,7 @@ package "Healing - L1" as l1 #LightGreen {
   [fallback_runner.py\n(FallbackRunner + SmartStepRunner)] as FR
 }
 
-package "Healing - L2 Agents (Fase B)" as l2 #LightBlue {
+package "Healing - L2 Agents" as l2 #LightBlue {
   [agents/__init__.py\n(FAMILY_AGENT_MAP)] as AG
   [agents/selector_agent.py] as SA
   [agents/timing_agent.py] as TA
@@ -54,7 +54,7 @@ package "Healing - L2 Agents (Fase B)" as l2 #LightBlue {
 package "Healing - L3 LLM" as l3 #LightBlue {
   [llm_healer.py\n(LLMHealer + MockLLMHealer)] as LHealer
   [llm_client.py\n(Azure/OpenAI)] as LClient
-  [llm_prompts.py\n(11 family prompts PT+EN)] as LPrompts
+  [llm_prompts.py\n(11 family prompts EN)] as LPrompts
   [evidence_payload.py\n(DOM, console, network)] as EP
   [curator.py\n(CuradorAutomatico L0→L3\n+FailureTracker)] as Curator
 }
@@ -70,7 +70,7 @@ package "Promotion" as promotion #LightGreen {
 
 ' === Taxonomy ===
 package "Taxonomy" as taxonomy #LightBlue {
-  [taxonomy.py\n(11 families, 80+ codes,\n51 keywords)] as TX
+  [taxonomy.py\n(11 families, 88 codes,\n51 keywords)] as TX
 }
 
 ' === Metrics ===
@@ -130,8 +130,8 @@ CF --> TP : serve
 legend right
   |= Cor |= Significado |
   | <#LightGreen> | v0.1.0 — estável |
-  | <#LightGray> | v0.2.0 — atualizado |
-  | <#LightBlue> | v0.4.0 — Fase A |
+  | <#LightYellow> | v0.2.0 — atualizado |
+  | <#LightBlue> | v0.3.0 — novo |
   | <#LightCyan> | Test infra |
 endlegend
 

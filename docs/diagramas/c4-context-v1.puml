@@ -1,12 +1,12 @@
 @startuml
-title TestForge v0.4.0 — C4 Context
+title TestForge v0.3.0 — C4 Context
 
 skinparam backgroundColor #FFFFFF
 skinparam packageStyle rectangle
 
 actor "QA Engineer" as QA
 
-rectangle "TestForge CLI\nv0.4.0" as TF #LightBlue {
+rectangle "TestForge CLI\nv0.3.0" as TF #LightBlue {
   usecase "Gravar fluxo\n(record)" as UC1
   usecase "Compilar script\n(compile --data)" as UC2
   usecase "Executar + Curar\n(run L0→L3)" as UC3

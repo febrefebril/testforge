@@ -197,7 +197,7 @@ LLMHealer ..> LLMClient : "chat()"
 
 legend bottom
   |= Cor |= Significado |
-  | Branco | Novo — Fase A (congelada) |
+  | Branco | Novo — Fase 3-4 |
   | <#LightGreen> | Existente — sera estendido |
 endlegend
 

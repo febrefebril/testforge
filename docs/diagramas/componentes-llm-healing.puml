@@ -37,10 +37,10 @@ package "Healing - L3 LLM (Novo)" as l3 #LightBlue {
 
 ' === L2 Agents (Opcional) ===
 
-package "Healing - L2 Agents (Fase B)" as l2 #LightGray {
+package "Healing - L2 Agents (Futuro)" as l2 #LightGray {
   [SelectorAgent\n(FAM-01)] as SA
   [TimingAgent\n(FAM-02)] as TA
-  [InputAgent\n(FAM-06)] as IA
+  [InputAgent\n(FAM-06/07)] as IA
   [ContextAgent\n(FAM-03)] as CA
   [StateAgent\n(FAM-04)] as StA
   [DynamicDOMAgent\n(FAM-05)] as DA
@@ -83,8 +83,8 @@ legend right
   |= Cor |= Significado |
   | <#LightGreen> | Existente — sem mudanças |
   | <#LightYellow> | Existente — será atualizado |
-  | <#LightBlue> | Novo — Fase A |
-  | <#LightGray> | Fase B — Fase B/C |
+  | <#LightBlue> | Novo — Fase 3-4 |
+  | <#LightGray> | Futuro — Fase 7 (opcional) |
 endlegend
 
 @enduml

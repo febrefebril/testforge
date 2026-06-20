@@ -75,7 +75,7 @@ rectangle "PROD — Shadow Mode" as PROD #E8F5E9 {
   node "Testes E2E\n(semantic_tests/)" as TESTS_PROD
 
   database "HealingCatalog\n(produção)" as CAT_PROD
-  database "Evidências\n(7 dias retencao)" as EVID_PROD
+  database "Evidências\n(7 dias retenção)" as EVID_PROD
 
   agent "Notificação\n(Email / Teams)" as NOTIFY
 
