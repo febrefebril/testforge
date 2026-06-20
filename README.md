@@ -66,6 +66,63 @@ QA grava fluxo → MIS captura intenção → Compiler gera script → Runner ex
 
 ---
 
+## 🔬 Fase B — Pipeline de Intenção
+
+### Fluxo de Dados
+
+```
+raw_events.jsonl
+field_snapshots.jsonl     ┐
+value_mutations.jsonl     ├──► RecordingNormalizer ──► IntentReconstructor
+network_log.json          │         │
+final_state_snapshot.json ┘         │
+                                    ▼
+                          SemanticTestCase
+                               │
+                               ├── steps[]          — ações do QA
+                               ├── field_values{}   — valores reconstruídos
+                               └── blind_spots[]    — campos não resolvidos
+                                    │
+                                    ▼
+                          PlaywrightCompiler ──► test_st_<nome>.py
+```
+
+### Fontes de Evidência — Prioridade
+
+O IntentReconstructor combina múltiplas fontes. Quando duas fontes capturam o
+mesmo campo, a de maior prioridade vence.
+
+| Prioridade | Fonte | O que captura | Quando usar |
+|-----------|-------|--------------|------------|
+| 100 | `form_values` | Valores do submit payload | Fluxos com form HTML clássico |
+| 80 | `fill_event` | Eventos input/change nativos | Inputs sem máscara |
+| 78 | `setter_hook` | Atribuições `element.value = ...` via JS | Campos com máscara (CPF, moeda) |
+| 72 | `checked_transition` | Radio/checkbox marcado | Seleção de opções |
+| 70 | `snapshot_diff` | Polling DOM — variação de valor entre snapshots | PreventDefault inputs |
+| 60 | `network_payload` | Corpo de POST/PUT/PATCH | Fetch/XHR sem form submit |
+| 55 | `final_state` | Dump do estado DOM ao final da sessão | Fallback de último recurso |
+| 10 | `missing_fill` | Valor fornecido manualmente pelo QA via CLI | Blind spots irrecuperáveis |
+
+### Confidence Score (network_payload)
+
+A partir da Fase B, o `network_payload` inclui um score de confiança em `identifiers.confidence`:
+
+| Situação | confidence | O que significa |
+|---------|-----------|----------------|
+| Nome/ID do campo bate com step | 1.0 | Match determinístico |
+| URL do payload bate com step | 0.7 | Match por proximidade |
+| Sem correspondência | — | Entry não criada |
+
+### Debugging
+
+Ver [docs/PHASE-B-RUNBOOK.md](docs/PHASE-B-RUNBOOK.md) para:
+- Como debugar field_values ausentes
+- Como inspecionar blind_spots
+- Como usar `--data` para missing_fill
+- Troubleshooting: campo com máscara não capturado
+
+---
+
 ## 🚀 Quick Start
 
 ```bash
