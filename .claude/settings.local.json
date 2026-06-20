@@ -3,7 +3,17 @@
     "allow": [
       "Bash(python *)",
       "Bash(git add *)",
-      "Bash(git commit -m 'docs: atualizar 14 diagramas PlantUML para v0.4.0 — alinhamento com código *)"
+      "Bash(git commit -m 'docs: atualizar 14 diagramas PlantUML para v0.4.0 — alinhamento com código *)",
+      "Bash(cp docs/TUTORIAL-LLM-HEALING.md docs/TUTORIAIS/05-llm-healing.md)",
+      "Bash(cp docs/run-incremental.md docs/TUTORIAIS/06-incremental-execution.md)",
+      "Bash(mv docs/TUTORIAL-LLM-HEALING.md docs/run-incremental.md .planning/ARCHIVE/)",
+      "Bash(cp docs/TUTORIAL.md .planning/ARCHIVE/)",
+      "Bash(cp docs/GOVERNANCA.md docs/REFERENCIA/GOVERNANCE.md)",
+      "Bash(cp docs/DIAGRAMA-VERSIONING.md docs/DIAGRAMAS/)",
+      "Bash(cp docs/ANALISE-LLM.md docs/PESQUISA/)",
+      "Bash(cp docs/PRESERVACAO-CONHECIMENTO.md docs/PESQUISA/PRESERVED-INTENT.md)",
+      "Bash(rm docs/GOVERNANCA.md docs/DIAGRAMA-VERSIONING.md docs/ANALISE-LLM.md docs/PRESERVACAO-CONHECIMENTO.md)",
+      "Bash(git commit -m 'docs\\(consolidacao\\): reorganizar documentação — 7 fases completas *)"
     ]
   }
 }
