@@ -80,6 +80,10 @@ def _clean_text(text: str) -> str:
 
 # Generic UI text that produces poor, brittle locators.
 # Scored at 0.10 to deprioritize below all structural strategies.
+# Angular Material auto-generates IDs like mat-mdc-error-1, mat-input-3, mat-hint-0.
+# These change between runs when the number of form fields changes.
+_ANGULAR_AUTOID_RE = _re.compile(r'^mat-[\w]+-[\w]+-\d+$|^mat-[\w]+-\d+$')
+
 _GENERIC_TEXT_SET = {
     "ok", "cancel", "cancelar", "submit", "enviar", "search", "buscar",
     "select", "selecione", "choose", "escolha", "next", "previous",
@@ -1090,9 +1094,11 @@ class RecordingNormalizer:
                 sel = f"[placeholder=\"{ph}\"]"
             candidates.append(LocatorCandidate("placeholder", sel, 0.85, f"placeholder={ph}"))
 
-        if target_data.get("id") and target_data["id"] != "mat-input-0" and target_data["id"] != "mat-input-1":
+        if target_data.get("id") and target_data["id"] not in ("mat-input-0", "mat-input-1"):
             el_id = target_data["id"]
-            candidates.append(LocatorCandidate("id", f"#{el_id}", 0.75, f"id={el_id}"))
+            # Angular Material auto-generated IDs are fragile — deprioritize them
+            id_score = 0.15 if _ANGULAR_AUTOID_RE.match(el_id) else 0.75
+            candidates.append(LocatorCandidate("id", f"#{el_id}", id_score, f"id={el_id}"))
 
         if target_data.get("name"):
             name = target_data["name"]

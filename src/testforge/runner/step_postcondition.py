@@ -202,27 +202,34 @@ class StepPostconditionValidator:
         )
 
     def _validate_assert(self, step):
-        selector = self._primary_selector(step) or "body"
+        candidates = (step.target.candidates if step.target and step.target.candidates else [])
+        selectors = [c.selector for c in candidates if c.selector] or [self._primary_selector(step) or "body"]
         expected = step.value or ""
         ctx = getattr(step, "context", {}) or {}
         assert_type = ctx.get("assert_type", "textual")
 
         if not self._oracle:
-            try:
-                text = self.page.locator(selector).first.text_content(timeout=3000)
-                matched = expected.lower() in (text or "").lower()
-                return PostconditionResult(
-                    passed=matched,
-                    checks={"text_contains_expected": matched},
-                    failures=[] if matched else ["assert_text_mismatch"],
-                    message=f"esperado='{expected}' obtido='{(text or '')[:80]}'",
-                )
-            except Exception as exc:
-                return PostconditionResult(
-                    passed=False,
-                    failures=["assert_error"],
-                    message=str(exc),
-                )
+            last_exc = None
+            for selector in selectors:
+                try:
+                    locator = self.page.locator(selector).first
+                    locator.wait_for(state="attached", timeout=2000)
+                    text = locator.text_content(timeout=2000)
+                    matched = expected.lower() in (text or "").lower()
+                    return PostconditionResult(
+                        passed=matched,
+                        checks={"text_contains_expected": matched, "selector_used": selector},
+                        failures=[] if matched else ["assert_text_mismatch"],
+                        message=f"[{selector}] esperado='{expected[:60]}' obtido='{(text or '')[:80]}'",
+                    )
+                except Exception as exc:
+                    last_exc = exc
+                    continue
+            return PostconditionResult(
+                passed=False,
+                failures=["assert_element_not_found"],
+                message=f"Nenhum seletor encontrou o elemento ({len(selectors)} tentativas): {last_exc}",
+            )
 
         if assert_type in ("textual", "automatico"):
             r = self._oracle.run_visual_dom(selector, expected)
