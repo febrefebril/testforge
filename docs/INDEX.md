@@ -1,142 +1,87 @@
 # Documentação TestForge v0.4.0
 
-**Bem-vindo!** Esta é a documentação completa do TestForge, um gravador de intenção para testes resilientes com self-healing.
+Índice navegável com links e descrições. Comece pela seção que se aplica a você.
 
 ---
 
-## 🎯 Novo por Aqui?
+## Novo por Aqui?
 
-Comece pelo [OVERVIEW.md](OVERVIEW.md) — Visão geral em 5 minutos.
-
----
-
-## 👥 Para Testers / Usuários Finais
-
-| Link | Descrição |
-|------|-----------|
-| [Quick Start](USER-GUIDE/QUICK-START.md) | 5 minutos para gravar seu 1º teste |
-| [Guia Completo](USER-GUIDE/GRAVAR-FLUXO.md) | Como gravar, compilar, executar testes |
-| [Troubleshooting](USER-GUIDE/TROUBLESHOOTING.md) | Problemas comuns e soluções |
+- [OVERVIEW.md](OVERVIEW.md) — Visão geral do TestForge em 5 minutos: o que é, como funciona, as 4 fases
 
 ---
 
-## 📚 Tutoriais Passo a Passo
+## Para Testers / Usuários Finais
 
-Aprenda TestForge com exemplos práticos:
+Guias para usar o TestForge no dia a dia:
 
-1. [Setup do Ambiente](TUTORIAIS/01-setup-ambiente.md) — Instalar dependências
-2. [Seu Primeiro Teste](TUTORIAIS/02-gravar-seu-primeiro-teste.md) — Primeira gravação
-3. [Compilar e Executar](TUTORIAIS/03-compilar-executar.md) — Gerar e rodar script
-4. [Healing Determinístico](TUTORIAIS/04-healing-deterministico.md) — Estratégias L0-L1
-5. [Healing com LLM](TUTORIAIS/05-llm-healing.md) — Self-healing automático
-6. [Execução Incremental](TUTORIAIS/06-incremental-execution.md) — Runner passo a passo
-7. [Data-Driven Testing](TUTORIAIS/07-data-driven-testing.md) — Múltiplos datasets
-8. [Modo Piloto](TUTORIAIS/08-modo-piloto.md) — Fase de avaliação
+- [Quick Start](USER-GUIDE/QUICK-START.md) — Grave seu primeiro teste em 5 minutos (instalação + gravação + execução)
+- [Guia Completo de Gravação](USER-GUIDE/GRAVAR-FLUXO.md) — Como gravar fluxos, atalhos, asserts, envio de gravações
+- [Troubleshooting](USER-GUIDE/TROUBLESHOOTING.md) — Problemas comuns e soluções
 
 ---
 
-## 🏗️ Arquitetura (Para Desenvolvedores)
+## Tutoriais
+
+Aprenda com exemplos práticos:
+
+- [LLM Self-Healing](TUTORIAIS/llm-healing.md) — Healing automático L0-L3: gravar, compilar, testar healing com e sem LLM real
+- [Debugging Fase B](TUTORIAIS/debugging-fase-b.md) — Runbook para depurar field_values ausentes, blind_spots, máscaras JS
+- [Execução Incremental](TUTORIAIS/incremental-runner.md) — Runner passo a passo: arquitetura, estados de step, CLI
+
+---
+
+## Arquitetura (Para Desenvolvedores)
 
 Entenda como o TestForge funciona internamente:
 
-| Seção | Conteúdo |
-|-------|----------|
-| [Visão Geral das Fases](ARQUITETURA/FASES.md) | A-D: Recorder → Intent → Compiler → Executor |
-| [Pipeline Semantic MIS](ARQUITETURA/FLUXO-SEMANTIC-MIS.md) | Fluxo de transformação raw_events → SemanticTestCase |
-| [Healing L0-L3](ARQUITETURA/HEALING-L0-L3.md) | Estratégias de recuperação automática |
-| [Intent Reconstruction](ARQUITETURA/INTENT-RECONSTRUCTION.md) | 5 estratégias de reconstrução de intenção |
-| [Field Values Mapping](ARQUITETURA/FIELD-VALUES-MAPPING.md) | Mapeamento de valores de formulário |
-| [Oracle e Promotion Gate](ARQUITETURA/ORACLE-PROMOTION-GATE.md) | Validação e gates de qualidade |
-| [Incremental Runner](ARQUITETURA/INCREMENTAL-RUNNER.md) | Executor com healing L0-L2 |
+- [Fases A-D](ARQUITETURA/FASES.md) — Visão geral do pipeline: Recorder, Intent Reconstructor, Compiler, Executor+Healer
+- [Diagramas PlantUML](diagramas/) — 14 diagramas C4, componentes, classes, estados, sequências (`.puml` + `.png`)
+- [Versionamento de Diagramas](DIAGRAMAS/DIAGRAMA-VERSIONING.md) — Política de versionamento e sincronização código-diagrama
 
 ---
 
-## 📖 Referência Rápida
+## Referência Rápida
 
 Consulte informações específicas:
 
-| Link | Descrição |
-|------|-----------|
-| [Todos os Comandos CLI](REFERENCIA/CLI.md) | `record`, `compile`, `run`, `heal` |
-| [Bugs Conhecidos](REFERENCIA/BUGS-KNOWNS.md) | Issues abertos e corrigidos |
-| [Glossário](REFERENCIA/GLOSSARIO.md) | Termos e conceitos do TestForge |
-| [Governance e Processo](REFERENCIA/GOVERNANCE.md) | Princípios de design e roadmap |
-| [Decisões de Arquitetura (ADRs)](REFERENCIA/ADR-INDEX.md) | Decisões técnicas documentadas |
-| [Stack Tecnológico](REFERENCIA/STACK-TECNOLOGICO.md) | Dependências e versões |
+- [Bugs Conhecidos e Resolvidos](REFERENCIA/BUGS-KNOWNS.md) — 5 bugs corrigidos, 20 bugs abertos (P0/P1/P2), limitações
+- [Governance e Processo](REFERENCIA/GOVERNANCE.md) — Pipeline oficial, regras, artefatos obrigatórios, quality gates
+- [Decisões de Arquitetura (ADRs)](REFERENCIA/ADR-INDEX.md) — Índice de ADRs e matriz de decisões técnicas
 
 ---
 
-## 🔬 Pesquisa e Desenvolvimento
+## Pesquisa e Desenvolvimento
 
-Conhecimento de desenvolvimento e análises:
+Conhecimento interno e análises técnicas:
 
-| Link | Descrição |
-|------|-----------|
-| [Análise de Validação LLM](PESQUISA/ANALISE-LLM.md) | Como o LLM valida testes e evidência |
-| [Preservação de Contexto](PESQUISA/PRESERVED-INTENT.md) | Métodos de preservação de intenção |
+- [Análise de Validação LLM](PESQUISA/ANALISE-LLM.md) — Como o LLM valida testes, heurísticas, debug de 18 commits
+- [Preservação de Contexto](PESQUISA/PRESERVED-INTENT.md) — Métodos de preservação de intenção em 3 camadas
 
 ---
 
-## 📊 Diagramas
+## Histórico e Arquivo
 
-Visualizações da arquitetura:
+Documentação de planejamento e sprints anteriores:
 
-| Diagrama | Descrição |
-|----------|-----------|
-| [Versioning](DIAGRAMAS/DIAGRAMA-VERSIONING.md) | Versionamento de gravações e compilações |
-| [Healing Flow](DIAGRAMAS/DIAGRAMA-HEALING.md) | Fluxo de healing L0-L3 |
+- [Arquivo de Planejamento](../.planning/ARCHIVE/) — Planos de fase, bugs históricos, planos de teste, sprint reviews
+- [Conhecimento Ancestral](../conhecimento_ancestral/) — Pesquisa de contexto de tentativas anteriores
 
 ---
 
-## 📜 Histórico e Arquivo
+## Links Rápidos
 
-Documentação anterior e histórico de planejamento:
-
-- [Planos Anteriores](./../.planning/ARCHIVE/) — Planos arquivados por fase
-- [Conhecimento Ancestral](./../../conhecimento_ancestral/) — Pesquisa de contexto
-
----
-
-## 🗺️ Mapas de Migração
-
-Documentação movida durante consolidação v0.4.0:
-
-| Arquivo Antigo | Novo Local | Tipo | Status |
-|----------------|-----------|------|--------|
-| `BUGS.md` + `bugs.md` | `REFERENCIA/BUGS-KNOWNS.md` | Consolidado | ✅ |
-| `FASE-B-PLAN.md` | `.planning/ARCHIVE/` | Arquivado | ✅ |
-| `FASE-B-COMPLETION-REPORT.md` | `ARQUITETURA/FASES.md` | Consolidado | ✅ |
-| `TUTORIAL-LLM-HEALING.md` | `TUTORIAIS/05-llm-healing.md` | Movido | ✅ |
-| `run-incremental.md` | `TUTORIAIS/06-incremental-execution.md` | Movido | ✅ |
-| `PHASE-B-RUNBOOK.md` | `TUTORIAIS/09-debugging-fase-b.md` | Movido | ✅ |
-| `GOVERNANCA.md` | `REFERENCIA/GOVERNANCE.md` | Movido | ✅ |
-| `DIAGRAMA-VERSIONING.md` | `DIAGRAMAS/` | Movido | ✅ |
-| `ANALISE-LLM.md` | `PESQUISA/` | Movido | ✅ |
-| `PRESERVACAO-CONHECIMENTO.md` | `PESQUISA/PRESERVED-INTENT.md` | Movido | ✅ |
-| BUG-FIX-PLAN* | `.planning/ARCHIVE/` | Arquivado | ✅ |
-| PLANO-* | `.planning/ARCHIVE/` | Arquivado | ✅ |
-| SPRINT-REVIEW* | `.planning/ARCHIVE/` | Arquivado | ✅ |
-
----
-
-## 🔗 Links Rápidos
-
-- **README Principal:** [../../README.md](../../README.md)
-- **Agents & Governance:** [../../AGENTS.md](../../AGENTS.md)
-- **Changelog:** [../../CHANGELOG.md](../../CHANGELOG.md)
+- [README Principal](../README.md) — README do projeto
+- [AGENTS.md](../AGENTS.md) — Instruções de agente e governance GSD
+- [CHANGELOG.md](../CHANGELOG.md) — Changelog do projeto
+- [ADRs](../adrs/) — Decisões arquiteturais formais (ADR-0001 a ADR-0006)
 - **Source Code:** `src/testforge/`
-- **Tests:** `tests/`
+- **Testes:** `tests/`
 
 ---
 
-## 📞 Suporte
+## Sobre este documento
 
-- **Issues:** GitHub issues no repositório
-- **Discussões:** GitHub discussions
-- **Email:** andre.pnetto@gmail.com
+Este índice contém apenas links para arquivos que existem. Se encontrar um link quebrado, abra uma issue.
 
----
-
-**Última atualização:** 2026-06-20  
-**Versão:** v0.4.0  
-**Status:** Documentação consolidada e navegável
+**Última atualização:** 2026-06-22
+**Versão:** v0.4.0

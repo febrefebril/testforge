@@ -295,7 +295,7 @@ testforge compile <gravação> --data
 ```
 
 Para evitar regressão, registre o campo como blind_spot esperado no plano de
-teste (PLANO-DE-TESTE.md), indicando que o valor deve ser fornecido via
+teste do projeto, indicando que o valor deve ser fornecido via
 `--data` nesse fluxo específico.
 
 ---
@@ -304,8 +304,7 @@ teste (PLANO-DE-TESTE.md), indicando que o valor deve ser fornecido via
 
 | Documento | Conteúdo |
 |-----------|---------|
-| [PLANO-DE-TESTE.md](PLANO-DE-TESTE.md) | 27+ casos de teste manuais |
-| [BUGS.md](BUGS.md) | Bugs documentados e corrigidos |
-| [run-incremental.md](run-incremental.md) | Executor passo a passo |
+| [Bugs Conhecidos](../REFERENCIA/BUGS-KNOWNS.md) | Issues abertos e corrigidos |
+| [Execução Incremental](incremental-runner.md) | Runner passo a passo |
 | `src/testforge/semantic/intent_reconstructor.py` | Código do reconstructor |
 | `tests/test_sprint4_intent_reconstructor.py` | Testes do reconstructor |
