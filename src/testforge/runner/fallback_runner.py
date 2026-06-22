@@ -61,7 +61,14 @@ class SmartStepRunner:
                     self._page.press_sequentially(sel, value, timeout=self.FILL_TIMEOUT)
                 else:
                     self._page.fill(sel, value, timeout=self.FILL_TIMEOUT)
-                self._page.wait_for_timeout(200)
+                # Trigger blur so Angular/React form validators run (marking field touched).
+                # Playwright fill() does not dispatch blur, so validation errors won't appear
+                # without this — asserts on error messages would always fail.
+                try:
+                    self._page.locator(sel).first.dispatch_event("blur")
+                except Exception:
+                    pass
+                self._page.wait_for_timeout(300)
 
             elif action == "click":
                 if strat == "label_click":
