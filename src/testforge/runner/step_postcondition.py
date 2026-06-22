@@ -231,6 +231,7 @@ class StepPostconditionValidator:
                 message=f"Nenhum seletor encontrou o elemento ({len(selectors)} tentativas): {last_exc}",
             )
 
+        selector = selectors[0] if selectors else "body"
         if assert_type in ("textual", "automatico"):
             r = self._oracle.run_visual_dom(selector, expected)
         elif assert_type == "visivel":
