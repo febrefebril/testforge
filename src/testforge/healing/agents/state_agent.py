@@ -33,7 +33,7 @@ class StateAgent:
                 strategy="dialog_handler",
                 new_locator=sel,
                 confidence=0.85,
-                rationale="Dialog detected — register page.on('dialog') handler before interaction",
+                rationale="Dialog detectado — registre page.on('dialog') antes de interagir",
             )
 
         # 2. Overlay / obscured
@@ -43,7 +43,7 @@ class StateAgent:
                 strategy="overlay_dismiss",
                 new_locator=sel,
                 confidence=0.75,
-                rationale="Overlay detected — dismiss overlay or wait for it to disappear",
+                rationale="Overlay detectado — feche o overlay ou aguarde ele desaparecer",
             )
 
         # 3. Session expired
@@ -53,7 +53,7 @@ class StateAgent:
                 strategy="re_auth_hook",
                 new_locator=sel,
                 confidence=0.60,
-                rationale="Session may be expired — re-authenticate before retry",
+                rationale="Sessao pode ter expirado — re-autentique antes de tentar novamente",
             )
 
         # 4. Disabled element
@@ -63,7 +63,7 @@ class StateAgent:
                 strategy="label_click",
                 new_locator=sel,
                 confidence=0.45,
-                rationale="Element disabled — wait for enable or click label instead",
+                rationale="Elemento desabilitado — aguarde habilitar ou clique no label",
             )
 
         # 5. LLM fallback

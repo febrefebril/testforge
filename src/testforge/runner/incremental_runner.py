@@ -736,9 +736,9 @@ class IncrementalRunner:
 
         with sync_playwright() as pw:
             browser = launch_browser(pw, self.browser_type, headless=self.headless)
-            self.page = browser.new_page()
-            if self.headless:
-                self.page.set_viewport_size({"width": 1280, "height": 720})
+            _vp = {"width": 1280, "height": 720} if self.headless else None
+            ctx = browser.new_context(viewport=_vp)
+            self.page = ctx.new_page()
 
             try:
                 self._load_semantic_steps()

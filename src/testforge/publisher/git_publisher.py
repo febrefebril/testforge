@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import tempfile
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Optional
 
 
@@ -31,11 +32,17 @@ class GitPublisher:
         token: str,
         branch: str = "main",
         path_prefix: str = "recordings",
+        local_mode: bool = False,
+        git_root: str = "",
+        remote: str = "origin",
     ):
         self._url = url
         self._token = token
         self._branch = branch
         self._path_prefix = path_prefix
+        self._local_mode = local_mode
+        self._git_root = git_root
+        self._remote = remote
         self._log = logging.getLogger("testforge.publisher")
 
     @classmethod
@@ -48,6 +55,43 @@ class GitPublisher:
         prefix = os.getenv("TESTFORGE_GIT_PATH_PREFIX", "recordings")
         return cls(url=url, token=token, branch=branch, path_prefix=prefix)
 
+    @classmethod
+    def from_config(cls, cwd: str = None) -> Optional[GitPublisher]:
+        """Load from .testforge/config.yml in git repo root. No token needed."""
+        git_root = cls._find_git_root(cwd or os.getcwd())
+        if not git_root:
+            return None
+        config_path = os.path.join(git_root, ".testforge", "config.yml")
+        if not os.path.exists(config_path):
+            return None
+        import yaml
+        with open(config_path) as f:
+            cfg = yaml.safe_load(f) or {}
+        pub = cfg.get("publisher", {})
+        if not pub.get("enabled", True):
+            return None
+        return cls(
+            url="",
+            token="",
+            branch=pub.get("branch", "main"),
+            path_prefix=pub.get("path_prefix", "recordings"),
+            local_mode=True,
+            git_root=git_root,
+            remote=pub.get("remote", "origin"),
+        )
+
+    @staticmethod
+    def _find_git_root(start: str) -> Optional[str]:
+        """Walk up from start looking for .git directory."""
+        path = os.path.abspath(start)
+        while True:
+            if os.path.isdir(os.path.join(path, ".git")):
+                return path
+            parent = os.path.dirname(path)
+            if parent == path:
+                return None
+            path = parent
+
     def publish(
         self,
         recording_id: str,
@@ -55,6 +99,8 @@ class GitPublisher:
         semantic_tests_dir: str | pathlib.Path,
     ) -> PublishResult:
         """Publish recording artifacts to configured Git repo."""
+        if self._local_mode:
+            return self._local_publish(recording_id, recordings_dir, semantic_tests_dir)
         try:
             recordings_dir = str(recordings_dir)
             semantic_tests_dir = str(semantic_tests_dir)
@@ -76,14 +122,31 @@ class GitPublisher:
                 self._clone_shallow(tmp_dir)
                 repo_dir = os.path.join(tmp_dir, "repo")
 
+                # Compute hierarchical remote path from system/suite/test_case
+                remote_path = self._build_remote_path(recording_id, metadata)
+
                 # Create destination directory
-                dest_dir = os.path.join(repo_dir, self._path_prefix, recording_id)
+                dest_dir = os.path.join(repo_dir, remote_path)
                 os.makedirs(dest_dir, exist_ok=True)
 
                 # Copy artifacts
                 copied = self._copy_artifacts(
-                    repo_dir, recording_id, recordings_dir, semantic_tests_dir
+                    repo_dir, recording_id, recordings_dir, semantic_tests_dir,
+                    remote_path=remote_path,
                 )
+
+                # Generate submission report (compact, team-facing)
+                submission_report = self._generate_submission_report(
+                    recording_id, metadata, recordings_dir
+                )
+                # Save locally in recording dir (permanent copy)
+                local_report_path = os.path.join(recordings_dir, recording_id, "submission_report.json")
+                with open(local_report_path, "w") as f:
+                    json.dump(submission_report, f, indent=2, default=str)
+                # Copy to repo
+                report_path = os.path.join(dest_dir, "submission_report.json")
+                shutil.copy2(local_report_path, report_path)
+                copied.append("submission_report.json")
 
                 # Generate summary
                 summary_md = self._generate_summary(recording_id, metadata)
@@ -102,7 +165,7 @@ class GitPublisher:
                     return PublishResult(
                         recording_id=recording_id,
                         success=True,
-                        remote_path=os.path.join(self._path_prefix, recording_id),
+                        remote_path=remote_path,
                         commit_sha="",
                         artifacts_copied=copied,
                         summary_generated=summary_generated,
@@ -119,7 +182,7 @@ class GitPublisher:
                 self._git(
                     "commit",
                     "-m",
-                    f"chore: testforge recording {recording_id}",
+                    f"chore: gravacao testforge {recording_id}",
                     cwd=repo_dir,
                     env=commit_env,
                 )
@@ -133,7 +196,7 @@ class GitPublisher:
                 return PublishResult(
                     recording_id=recording_id,
                     success=True,
-                    remote_path=os.path.join(self._path_prefix, recording_id),
+                    remote_path=remote_path,
                     commit_sha=sha,
                     artifacts_copied=copied,
                     summary_generated=summary_generated,
@@ -146,6 +209,91 @@ class GitPublisher:
                 success=False,
                 error=scrubbed_error,
             )
+
+    def _local_publish(
+        self,
+        recording_id: str,
+        recordings_dir: str | pathlib.Path,
+        semantic_tests_dir: str | pathlib.Path,
+    ) -> PublishResult:
+        """Publish by committing directly to the local git repo. No token required."""
+        try:
+            recordings_dir = str(recordings_dir)
+            semantic_tests_dir = str(semantic_tests_dir)
+
+            metadata_path = os.path.join(recordings_dir, recording_id, "recording_metadata.json")
+            if not os.path.exists(metadata_path):
+                return PublishResult(
+                    recording_id=recording_id,
+                    success=False,
+                    error=f"metadata not found: {metadata_path}",
+                )
+
+            with open(metadata_path) as f:
+                metadata = json.load(f)
+
+            remote_path = self._build_remote_path(recording_id, metadata)
+            dest_dir = os.path.join(self._git_root, remote_path)
+            os.makedirs(dest_dir, exist_ok=True)
+
+            copied = self._copy_artifacts(
+                self._git_root, recording_id, recordings_dir, semantic_tests_dir,
+                remote_path=remote_path,
+            )
+
+            submission_report = self._generate_submission_report(
+                recording_id, metadata, recordings_dir
+            )
+            local_report_path = os.path.join(recordings_dir, recording_id, "submission_report.json")
+            with open(local_report_path, "w") as f:
+                json.dump(submission_report, f, indent=2, default=str)
+            shutil.copy2(local_report_path, os.path.join(dest_dir, "submission_report.json"))
+            if "submission_report.json" not in copied:
+                copied.append("submission_report.json")
+
+            summary_md = self._generate_summary(recording_id, metadata)
+            with open(os.path.join(dest_dir, "SUMMARY.md"), "w") as f:
+                f.write(summary_md)
+
+            rel_dest = os.path.relpath(dest_dir, self._git_root)
+            self._git("add", rel_dest, cwd=self._git_root)
+
+            staged = self._git("diff", "--cached", "--name-only", cwd=self._git_root)
+            if not staged.strip():
+                return PublishResult(
+                    recording_id=recording_id,
+                    success=True,
+                    remote_path=remote_path,
+                    commit_sha="(no changes)",
+                    artifacts_copied=copied,
+                    summary_generated=True,
+                )
+
+            commit_env = os.environ.copy()
+            commit_env.update({
+                "GIT_AUTHOR_NAME": "TestForge",
+                "GIT_AUTHOR_EMAIL": "testforge@noreply",
+                "GIT_COMMITTER_NAME": "TestForge",
+                "GIT_COMMITTER_EMAIL": "testforge@noreply",
+            })
+            self._git(
+                "commit", "-m", f"chore: gravacao testforge {recording_id}",
+                cwd=self._git_root, env=commit_env,
+            )
+            self._git("push", self._remote, f"HEAD:{self._branch}", cwd=self._git_root)
+            sha = self._git("rev-parse", "HEAD", cwd=self._git_root)
+
+            return PublishResult(
+                recording_id=recording_id,
+                success=True,
+                remote_path=remote_path,
+                commit_sha=sha[:12],
+                artifacts_copied=copied,
+                summary_generated=True,
+            )
+
+        except Exception as exc:
+            return PublishResult(recording_id=recording_id, success=False, error=str(exc))
 
     def _git(self, *args: str, cwd: str, env: dict | None = None) -> str:
         """Run a git command. Never logs the token. Returns stdout."""
@@ -183,16 +331,101 @@ class GitPublisher:
             repo_dir = os.path.join(tmp_dir, "repo")
             self._git("checkout", "-b", self._branch, cwd=repo_dir)
 
+    def _build_remote_path(self, recording_id: str, metadata: dict) -> str:
+        """Build hierarchical remote path from system/suite/test_case metadata.
+
+        Returns: {prefix}/{system}/{suite}/{test_case}/{recording_id}
+        Falls back to {prefix}/uncategorized/{recording_id} if fields missing.
+        """
+        system = metadata.get("system", "").strip()
+        suite = metadata.get("suite", "").strip()
+        test_case = metadata.get("test_case", "").strip()
+        if system and suite:
+            parts = [self._path_prefix, system, suite]
+            if test_case and test_case != recording_id:
+                parts.append(test_case)
+            parts.append(recording_id)
+            return os.path.join(*parts)
+        return os.path.join(self._path_prefix, "uncategorized", recording_id)
+
+    def _generate_submission_report(
+        self,
+        recording_id: str,
+        metadata: dict,
+        recordings_dir: str,
+    ) -> dict:
+        """Generate compact team-facing submission report.
+
+        Reads readiness_report.json if available. Otherwise derives status from metadata.
+        The `testforge_issue` flag is set when verdict is not 'pass', signalling the
+        team that something in TestForge needs fixing (not just the recording).
+        """
+        rec_dir = os.path.join(recordings_dir, recording_id)
+
+        # Read readiness report if available
+        readiness_path = os.path.join(rec_dir, "readiness", "readiness_report.json")
+        verdict = "not_evaluated"
+        criteria_passed = 0
+        criteria_total = 5
+        steps: dict = {}
+        failures: list = []
+        warnings: list = []
+
+        if os.path.exists(readiness_path):
+            try:
+                with open(readiness_path) as f:
+                    rr = json.load(f).get("readiness_report", {})
+                verdict = rr.get("verdict", "not_evaluated")
+                criteria = rr.get("criteria", {})
+                criteria_passed = sum(1 for v in criteria.values() if v)
+                steps = rr.get("steps", {})
+                failures = rr.get("failures", [])
+                warnings = rr.get("warnings", [])
+            except Exception:
+                pass
+
+        # Read testforge version
+        version = "unknown"
+        try:
+            version_file = pathlib.Path(__file__).parent.parent.parent.parent / "VERSION"
+            if version_file.exists():
+                version = version_file.read_text().strip()
+        except Exception:
+            pass
+
+        status = metadata.get("recording_status") or metadata.get("status", "unknown")
+
+        report = {
+            "testforge_version": version,
+            "submitted_at": datetime.now(timezone.utc).isoformat(),
+            "recording_id": recording_id,
+            "system": metadata.get("system", ""),
+            "suite": metadata.get("suite", ""),
+            "test_case": metadata.get("test_case", ""),
+            "application": metadata.get("application", ""),
+            "base_url": metadata.get("base_url", ""),
+            "status": status,
+            "verdict": verdict,
+            "criteria_passed": criteria_passed,
+            "criteria_total": criteria_total,
+            "steps": steps,
+            "failures": failures,
+            "warnings": warnings,
+            "testforge_issue": verdict not in ("pass", "not_evaluated"),
+        }
+        return report
+
     def _copy_artifacts(
         self,
         repo_dir: str,
         recording_id: str,
         recordings_dir: str,
         semantic_tests_dir: str,
+        remote_path: str = "",
     ) -> list[str]:
         """Copy recording and semantic test artifacts. Returns list of copied files."""
         copied = []
-        dest_dir = os.path.join(repo_dir, self._path_prefix, recording_id)
+        dest_dir = os.path.join(repo_dir, remote_path) if remote_path else os.path.join(repo_dir, self._path_prefix, recording_id)
 
         # Flat files from recordings/
         rec_dir = os.path.join(recordings_dir, recording_id)
@@ -205,6 +438,7 @@ class GitPublisher:
             "final_state_snapshot.json",
             "network_log.json",
             "recording_config.json",
+            "submission_report.json",
         ]
         for fname in flat_files:
             src = os.path.join(rec_dir, fname)
@@ -256,15 +490,15 @@ class GitPublisher:
         status = metadata.get("recording_status", "unknown")
         status_history = metadata.get("status_history", [])
 
-        md = f"""# TestForge Recording: {recording_id}
+        md = f"""# Gravacao TestForge: {recording_id}
 
-**Application**: {app}
-**Base URL**: {url}
-**Started**: {started}
-**Finished**: {finished}
+**Aplicacao**: {app}
+**URL Base**: {url}
+**Iniciado**: {started}
+**Finalizado**: {finished}
 **Status**: {status}
 
-## Artifacts
+## Artefatos
 
 - recording_metadata.json
 - raw_events.jsonl
@@ -274,14 +508,14 @@ class GitPublisher:
 - final_state_snapshot.json
 - network_log.json
 - recording_config.json
-- dom_snapshots/ (directory)
-- screenshots/ (if captured)
-- test_*.py (if compiled)
-- semantic_steps.jsonl (if compiled)
+- dom_snapshots/ (diretorio)
+- screenshots/ (se capturado)
+- test_*.py (se compilado)
+- semantic_steps.jsonl (se compilado)
 
-## Status History
+## Historico de Status
 
-| Status | Timestamp | Details |
+| Status | Timestamp | Detalhes |
 |--------|-----------|---------|
 """
         for entry in status_history:

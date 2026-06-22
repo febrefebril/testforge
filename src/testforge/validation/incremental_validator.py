@@ -94,15 +94,15 @@ class IncrementalRecordingValidator:
             )
             self.status_history.record(
                 RecordingStatus.intent_reconstructed,
-                reason="Normalization completed successfully",
+                reason="Normalizacao concluida com sucesso",
             )
             return True
         except Exception as exc:
             import sys
-            print(f"[TestForge] Normalization failed: {exc}", file=sys.stderr)
+            print(f"[TestForge] Normalizacao falhou: {exc}", file=sys.stderr)
             self.status_history.record(
                 RecordingStatus.incomplete_intent,
-                reason=f"Normalization failed: {exc}",
+                reason=f"Normalizacao falhou: {exc}",
             )
             return False
 
@@ -128,7 +128,7 @@ class IncrementalRecordingValidator:
         if report.is_complete:
             self.status_history.record(
                 RecordingStatus.intent_complete,
-                reason="All fields resolved",
+                reason="Todos os campos resolvidos",
                 metadata={
                     "total_fields": report.total_fields,
                     "resolved": report.resolved_count,
@@ -138,7 +138,7 @@ class IncrementalRecordingValidator:
         elif report.missing_count > 0:
             self.status_history.record(
                 RecordingStatus.incomplete_intent,
-                reason=f"{report.missing_count} field(s) missing",
+                reason=f"{report.missing_count} campo(s) ausente(s)",
                 metadata={
                     "missing": report.missing_count,
                     "review_required": report.review_required_count,
@@ -147,7 +147,7 @@ class IncrementalRecordingValidator:
         elif report.review_required_count > 0:
             self.status_history.record(
                 RecordingStatus.needs_user_input,
-                reason=f"{report.review_required_count} field(s) require review",
+                reason=f"{report.review_required_count} campo(s) requerem revisao",
             )
 
         self.completeness_report = report
@@ -172,7 +172,7 @@ class IncrementalRecordingValidator:
 
         self.status_history.record(
             RecordingStatus.incremental_validation_running,
-            reason=f"Starting incremental validation of {len(self.semantic_test_case.steps)} steps",
+            reason=f"Iniciando validacao incremental de {len(self.semantic_test_case.steps)} step(s)",
         )
 
         if script_path and os.path.exists(script_path):
@@ -198,7 +198,7 @@ class IncrementalRecordingValidator:
             self.step_results = report.get("steps", []) if isinstance(report, dict) else []
         except Exception as exc:
             import sys
-            print(f"[TestForge] Incremental validation error: {exc}", file=sys.stderr)
+            print(f"[TestForge] Erro na validacao incremental: {exc}", file=sys.stderr)
             self.step_results = []
 
         return self.step_results
@@ -328,12 +328,12 @@ class IncrementalRecordingValidator:
         self.application = meta.get("application", "")
         self.base_url = meta.get("base_url", "")
 
-        print(f"[TestForge] 🔍 Validating recording: {self.recording_id}", file=sys.stderr)
+        print(f"[TestForge] 🔍 Validando gravacao: {self.recording_id}", file=sys.stderr)
 
         # 2. Normalize
         if not self._normalize():
-            print("[TestForge] ❌ Normalization failed — cannot validate", file=sys.stderr)
-            return self._make_failed_report("Normalization failed")
+            print("[TestForge] ❌ Normalizacao falhou — impossivel validar", file=sys.stderr)
+            return self._make_failed_report("Normalizacao falhou")
 
         # 3. Check completeness
         completeness = self._check_completeness()
@@ -345,8 +345,8 @@ class IncrementalRecordingValidator:
         total = completeness.total_fields
         missing = completeness.missing_count
         print(
-            f"[TestForge] 📋 Completeness: {total} fields, "
-            f"{'✅ complete' if completeness.is_complete else f'❌ {missing} missing'}",
+            f"[TestForge] 📋 Completude: {total} campo(s), "
+            f"{'✅ completo' if completeness.is_complete else f'❌ {missing} ausente(s)'}",
             file=sys.stderr,
         )
 
@@ -354,7 +354,7 @@ class IncrementalRecordingValidator:
         self._run_incremental()
         step_count = len(self.step_results)
         print(
-            f"[TestForge] 🔄 Incremental validation: {step_count} steps executed",
+            f"[TestForge] 🔄 Validacao incremental: {step_count} step(s) executado(s)",
             file=sys.stderr,
         )
 

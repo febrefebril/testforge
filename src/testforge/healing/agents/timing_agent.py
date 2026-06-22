@@ -32,7 +32,7 @@ class TimingAgent:
                 strategy="visibility_wait",
                 new_locator=sel,
                 confidence=0.75,
-                rationale="Network error detected — wait for networkidle before retry",
+                rationale="Erro de rede detectado — aguarde networkidle antes de tentar novamente",
             )
 
         # 2. Check for timeout → increase wait
@@ -42,7 +42,7 @@ class TimingAgent:
                 strategy="visibility_wait",
                 new_locator=sel,
                 confidence=0.80,
-                rationale="Timeout detected — increase wait with visibility check",
+                rationale="Timeout detectado — aumente o tempo de espera com verificacao de visibilidade",
             )
 
         # 3. Check for stale element
@@ -52,7 +52,7 @@ class TimingAgent:
                 strategy="visibility_wait",
                 new_locator=sel,
                 confidence=0.70,
-                rationale="Stale/detached element — re-acquire after DOM stabilization",
+                rationale="Elemento obsoleto/desconectado — re-adquira apos estabilizacao do DOM",
             )
 
         # 4. LLM fallback

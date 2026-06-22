@@ -185,7 +185,7 @@ class StepPostconditionValidator:
                         )
                     except Exception:
                         import sys
-                        print(f"  ⚡ postcondition: {next_sel[:60]} not found", file=sys.stderr)
+                        print(f"  ⚡ pos-condicao: {next_sel[:60]} nao encontrado", file=sys.stderr)
                         continue
 
                 return PostconditionResult(

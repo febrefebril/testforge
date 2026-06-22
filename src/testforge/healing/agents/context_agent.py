@@ -33,7 +33,7 @@ class ContextAgent:
                 strategy="manual_checkpoint",
                 new_locator=sel,
                 confidence=0.30,  # Low — needs human review
-                rationale="Cross-origin iframe — cannot access DOM. Manual intervention required.",
+                rationale="Iframe cross-origin — acesso ao DOM indisponivel. Intervencao manual necessaria.",
             )
 
         # 2. Iframe
@@ -43,7 +43,7 @@ class ContextAgent:
                 strategy="iframe_switch",
                 new_locator=sel,
                 confidence=0.65,
-                rationale="Element may be inside iframe — switch context before interaction",
+                rationale="Elemento pode estar dentro de iframe — troque o contexto antes de interagir",
             )
 
         # 3. Shadow DOM
@@ -53,7 +53,7 @@ class ContextAgent:
                 strategy="shadow_pierce",
                 new_locator=sel,
                 confidence=0.55,
-                rationale="Shadow DOM detected — pierce shadow root or use text fallback",
+                rationale="Shadow DOM detectado — acesse o shadow root ou use fallback por texto",
             )
 
         # 4. Popup / new tab
@@ -63,7 +63,7 @@ class ContextAgent:
                 strategy="capture_popup",
                 new_locator=sel,
                 confidence=0.70,
-                rationale="Popup detected — capture new page context before interaction",
+                rationale="Popup detectado — capture o novo contexto de pagina antes de interagir",
             )
 
         # 5. LLM fallback

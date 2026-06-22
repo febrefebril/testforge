@@ -35,14 +35,14 @@ class DynamicDOMAgent:
                     strategy="has_text_fallback",
                     new_locator=f"text={text_val[:80]}",
                     confidence=0.78,
-                    rationale="Stale element — relocate by stable text instead of DOM position",
+                    rationale="Elemento obsoleto — relocalize pelo texto estavel em vez da posicao no DOM",
                 )
             return LLMHealingProposal(
                 taxonomy_id="DOM-001", family="FAM-05",
                 strategy="dom_stabilization",
                 new_locator=sel,
                 confidence=0.60,
-                rationale="Stale element — wait for DOM stabilization before re-acquire",
+                rationale="Elemento obsoleto — aguarde estabilizacao do DOM antes de re-adquirir",
             )
 
         # 2. Not visible / viewport
@@ -52,7 +52,7 @@ class DynamicDOMAgent:
                 strategy="visibility_wait",
                 new_locator=sel,
                 confidence=0.72,
-                rationale="Element not visible — scroll into view and wait for visibility",
+                rationale="Elemento nao visivel — role ate ele e aguarde visibilidade",
             )
 
         # 3. Reorder / nth-child
@@ -63,14 +63,14 @@ class DynamicDOMAgent:
                     strategy="has_text_fallback",
                     new_locator=f"text={text_val[:80]}",
                     confidence=0.70,
-                    rationale="List reordered — select by text content instead of position",
+                    rationale="Lista reordenada — selecione pelo conteudo de texto em vez da posicao",
                 )
             return LLMHealingProposal(
                 taxonomy_id="DOM-002", family="FAM-05",
                 strategy="semantic_locator_conversion",
                 new_locator=sel.replace(":nth-child", ""),
                 confidence=0.45,
-                rationale="Positional selector unstable — use semantic locator",
+                rationale="Seletor posicional instavel — use localizador semantico",
             )
 
         # 4. Lazy loading
@@ -80,7 +80,7 @@ class DynamicDOMAgent:
                 strategy="visibility_wait",
                 new_locator=sel,
                 confidence=0.65,
-                rationale="Lazy loading — wait for content to appear before interaction",
+                rationale="Carregamento lazy — aguarde o conteudo aparecer antes de interagir",
             )
 
         # 5. LLM fallback

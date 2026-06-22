@@ -107,7 +107,7 @@ class SelectorAgent:
                 strategy="semantic_locator_conversion",
                 new_locator=selector,
                 confidence=0.85,
-                rationale=f"Found data-testid attribute in DOM: {testid}",
+                rationale=f"data-testid encontrado no DOM: {testid}",
             )
         return None
 
@@ -124,7 +124,7 @@ class SelectorAgent:
                     strategy="semantic_locator_conversion",
                     new_locator=f"#{old_id}",
                     confidence=0.60,
-                    rationale=f"ID '{old_id}' found in current DOM — may still be valid",
+                    rationale=f"ID '{old_id}' encontrado no DOM atual — pode ainda ser valido",
                 )
         return None
 
@@ -143,7 +143,7 @@ class SelectorAgent:
                 strategy="aria_role_strategy",
                 new_locator=selector,
                 confidence=0.45,  # Lower: aria-label alone is weak without role context
-                rationale=f"Found aria-label in DOM: {label}",
+                rationale=f"aria-label encontrado no DOM: {label}",
             )
         return None
 
@@ -157,7 +157,7 @@ class SelectorAgent:
                 strategy="semantic_locator_conversion",
                 new_locator=selector,
                 confidence=0.80,
-                rationale=f"Found placeholder in DOM: {ph}",
+                rationale=f"placeholder encontrado no DOM: {ph}",
             )
         return None
 
@@ -171,7 +171,7 @@ class SelectorAgent:
                 strategy="has_text_fallback",
                 new_locator=f'text="{escaped}"',
                 confidence=0.70,
-                rationale=f"Fallback to visible text (exact): '{text_val[:80]}'",
+                rationale=f"Fallback por texto visivel (exato): '{text_val[:80]}'",
             )
         return None
 

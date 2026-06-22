@@ -35,7 +35,7 @@ class InputAgent:
                 strategy="press_sequentially",
                 new_locator=sel,
                 confidence=0.82,
-                rationale="Masked input field — use press_sequentially instead of fill for JS-masked fields",
+                rationale="Campo com mascara JS — use press_sequentially em vez de fill",
             )
 
         # 2. Clear failure
@@ -45,7 +45,7 @@ class InputAgent:
                 strategy="masked_input_detection",
                 new_locator=sel,
                 confidence=0.70,
-                rationale="Clear failed — use JS native setter as fallback",
+                rationale="Limpeza falhou — use JS native setter como fallback",
             )
 
         # 3. File upload
@@ -55,7 +55,7 @@ class InputAgent:
                 strategy="label_click",
                 new_locator="input[type=file]",
                 confidence=0.68,
-                rationale="File input may be hidden — trigger via label or direct input[type=file]",
+                rationale="Input de arquivo pode estar oculto — acione via label ou input[type=file] direto",
             )
 
         # 4. Download
@@ -65,7 +65,7 @@ class InputAgent:
                 strategy="semantic_locator_conversion",
                 new_locator=sel,
                 confidence=0.55,
-                rationale="Download may need session context — capture within authenticated flow",
+                rationale="Download pode precisar de contexto de sessao — capture dentro do fluxo autenticado",
             )
 
         # 5. Drag and drop
@@ -75,7 +75,7 @@ class InputAgent:
                 strategy="synthetic_click",
                 new_locator=sel,
                 confidence=0.50,
-                rationale="Drag-and-drop not reproducible — simulate via controlled mouse events or synthetic click",
+                rationale="Drag-and-drop nao reproduzivel — simule via eventos de mouse controlados ou clique sintetico",
             )
 
         # 6. CAPTCHA — unrecoverable
@@ -85,7 +85,7 @@ class InputAgent:
                 strategy="manual_checkpoint",
                 new_locator=sel,
                 confidence=0.10,
-                rationale="CAPTCHA detected — manual intervention required. Do not attempt to bypass.",
+                rationale="CAPTCHA detectado — intervencao manual necessaria. Nao tente contornar.",
             )
 
         # 7. LLM fallback

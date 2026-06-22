@@ -106,7 +106,7 @@ class TestGenerateSummary:
         }
         summary = publisher._generate_summary("REC-20260619", metadata)
         assert "REC-20260619" in summary
-        assert "# TestForge Recording: REC-20260619" in summary
+        assert "# Gravacao TestForge: REC-20260619" in summary
 
     def test_summary_contains_base_url(self):
         publisher = GitPublisher("https://example.com", "token")
@@ -148,7 +148,7 @@ class TestGenerateSummary:
             ],
         }
         summary = publisher._generate_summary("REC-001", metadata)
-        assert "Status History" in summary
+        assert "Historico de Status" in summary
         assert "recording" in summary
         assert "stopped" in summary
 
@@ -162,7 +162,7 @@ class TestGenerateSummary:
             "recording_status": "completed",
         }
         summary = publisher._generate_summary("REC-001", metadata)
-        assert "Status History" in summary
+        assert "Historico de Status" in summary
 
 
 class TestCopyArtifacts:
@@ -388,3 +388,149 @@ class TestPublish:
                 assert result.success is False
                 assert "secret-token-123" not in result.error
                 assert "***" in result.error
+
+
+class TestFromConfig:
+    def test_from_config_reads_yml(self, tmp_path):
+        git_dir = tmp_path / ".git"
+        git_dir.mkdir()
+        tf_dir = tmp_path / ".testforge"
+        tf_dir.mkdir()
+        config = tf_dir / "config.yml"
+        config.write_text(
+            "publisher:\n  enabled: true\n  branch: qa\n  path_prefix: tests\n  remote: upstream\n"
+        )
+        pub = GitPublisher.from_config(cwd=str(tmp_path))
+        assert pub is not None
+        assert pub._local_mode is True
+        assert pub._branch == "qa"
+        assert pub._path_prefix == "tests"
+        assert pub._remote == "upstream"
+        assert pub._git_root == str(tmp_path)
+
+    def test_from_config_defaults(self, tmp_path):
+        (tmp_path / ".git").mkdir()
+        tf_dir = tmp_path / ".testforge"
+        tf_dir.mkdir()
+        (tf_dir / "config.yml").write_text("publisher:\n  enabled: true\n")
+        pub = GitPublisher.from_config(cwd=str(tmp_path))
+        assert pub is not None
+        assert pub._branch == "main"
+        assert pub._path_prefix == "recordings"
+        assert pub._remote == "origin"
+
+    def test_from_config_returns_none_when_disabled(self, tmp_path):
+        (tmp_path / ".git").mkdir()
+        tf_dir = tmp_path / ".testforge"
+        tf_dir.mkdir()
+        (tf_dir / "config.yml").write_text("publisher:\n  enabled: false\n")
+        assert GitPublisher.from_config(cwd=str(tmp_path)) is None
+
+    def test_from_config_returns_none_without_file(self, tmp_path):
+        (tmp_path / ".git").mkdir()
+        assert GitPublisher.from_config(cwd=str(tmp_path)) is None
+
+    def test_from_config_walks_up_to_git_root(self, tmp_path):
+        (tmp_path / ".git").mkdir()
+        tf_dir = tmp_path / ".testforge"
+        tf_dir.mkdir()
+        (tf_dir / "config.yml").write_text("publisher:\n  enabled: true\n")
+        subdir = tmp_path / "a" / "b"
+        subdir.mkdir(parents=True)
+        pub = GitPublisher.from_config(cwd=str(subdir))
+        assert pub is not None
+        assert pub._git_root == str(tmp_path)
+
+
+class TestFindGitRoot:
+    def test_finds_root_at_cwd(self, tmp_path):
+        (tmp_path / ".git").mkdir()
+        assert GitPublisher._find_git_root(str(tmp_path)) == str(tmp_path)
+
+    def test_walks_up(self, tmp_path):
+        (tmp_path / ".git").mkdir()
+        child = tmp_path / "deep" / "dir"
+        child.mkdir(parents=True)
+        assert GitPublisher._find_git_root(str(child)) == str(tmp_path)
+
+    def test_returns_none_outside_repo(self):
+        assert GitPublisher._find_git_root("/") is None
+
+
+class TestLocalPublish:
+    def _make_recording(self, recordings_dir: str, rid: str) -> None:
+        rec = os.path.join(recordings_dir, rid)
+        os.makedirs(rec)
+        meta = {
+            "recording_id": rid,
+            "application": "TestApp",
+            "base_url": "http://localhost",
+            "system": "sys",
+            "suite": "suite",
+            "test_case": "tc",
+            "recording_status": "complete",
+            "started_at": "2026-01-01T00:00:00Z",
+            "finished_at": "2026-01-01T00:01:00Z",
+            "status_history": [],
+        }
+        with open(os.path.join(rec, "recording_metadata.json"), "w") as f:
+            json.dump(meta, f)
+
+    def test_local_publish_success(self, tmp_path):
+        (tmp_path / ".git").mkdir()
+        git_root = str(tmp_path)
+        pub = GitPublisher(
+            url="", token="", local_mode=True, git_root=git_root, branch="main", remote="origin"
+        )
+        rid = "REC-local-001"
+        recordings_dir = str(tmp_path / "recordings_src")
+        os.makedirs(recordings_dir)
+        self._make_recording(recordings_dir, rid)
+
+        calls = []
+        def fake_git(*args, cwd=None, env=None):
+            calls.append(args)
+            if args[0] == "diff":
+                return "some/file.json"
+            if args[0] == "rev-parse":
+                return "abc123def456"
+            return ""
+
+        with mock.patch.object(pub, "_git", side_effect=fake_git):
+            result = pub.publish(rid, recordings_dir, str(tmp_path / "semantic_tests"))
+
+        assert result.success is True
+        assert result.commit_sha == "abc123def456"
+        assert any(a[0] == "add" for a in calls)
+        assert any(a[0] == "commit" for a in calls)
+        assert any(a[0] == "push" and f"HEAD:main" in a for a in calls)
+
+    def test_local_publish_no_changes(self, tmp_path):
+        (tmp_path / ".git").mkdir()
+        pub = GitPublisher(
+            url="", token="", local_mode=True, git_root=str(tmp_path), branch="main", remote="origin"
+        )
+        rid = "REC-nochange"
+        recordings_dir = str(tmp_path / "recordings_src")
+        os.makedirs(recordings_dir)
+        self._make_recording(recordings_dir, rid)
+
+        def fake_git(*args, cwd=None, env=None):
+            if args[0] == "diff":
+                return ""
+            return ""
+
+        with mock.patch.object(pub, "_git", side_effect=fake_git):
+            result = pub.publish(rid, recordings_dir, str(tmp_path / "semantic"))
+
+        assert result.success is True
+        assert result.commit_sha == "(no changes)"
+
+    def test_local_publish_missing_metadata(self, tmp_path):
+        (tmp_path / ".git").mkdir()
+        pub = GitPublisher(
+            url="", token="", local_mode=True, git_root=str(tmp_path), branch="main", remote="origin"
+        )
+        result = pub.publish("REC-missing", str(tmp_path / "recordings_src"), str(tmp_path))
+        assert result.success is False
+        assert "metadata not found" in result.error

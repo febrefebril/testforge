@@ -268,18 +268,36 @@ def _check_python_keyboard(page, recorder):
 
 
 def _auto_publish_recording(rid: str, rec_dir: str):
-    """Auto-publish recording artifacts to Git repo if env vars configured."""
+    """Auto-publish recording artifacts to Git repo if env vars configured.
+
+    Always called — even for incomplete recordings — so the team can diagnose
+    TestForge issues from submission_report.json.
+    """
     try:
         from testforge.publisher import GitPublisher
-        publisher = GitPublisher.from_env()
+        publisher = GitPublisher.from_config() or GitPublisher.from_env()
         if publisher is None:
             return
+        mode = "local" if publisher._local_mode else "remoto"
+        # Warn if system/suite not set
+        import os as _os
+        meta_path = _os.path.join(rec_dir, "recording_metadata.json")
+        if _os.path.exists(meta_path):
+            with open(meta_path) as _f:
+                _meta = json.load(_f)
+            if not _meta.get("system") and (_os.getenv("TESTFORGE_GIT_URL") or publisher._local_mode):
+                print(
+                    "[TestForge] ⚠ Aviso: --system e --suite nao informados. "
+                    "Gravacao publicada em 'uncategorized'.",
+                    file=sys.stderr,
+                )
         recordings_root = str(_PROJECT_ROOT / "recordings")
         semantic_root = str(_PROJECT_ROOT / "semantic_tests")
-        print(f"[TestForge] Publicando {rid} no Git...")
+        print(f"[TestForge] Publicando {rid} no Git ({mode})...")
         result = publisher.publish(rid, recordings_root, semantic_root)
         if result.success:
-            print(f"[TestForge] ✓ Publicado: {result.remote_path} ({result.commit_sha[:8]})")
+            sha_short = result.commit_sha[:8] if result.commit_sha else "sem-commit"
+            print(f"[TestForge] ✓ Publicado: {result.remote_path} ({sha_short})")
         else:
             print(f"[TestForge] ⚠ Publicacao falhou: {result.error}", file=sys.stderr)
     except Exception as exc:
@@ -330,6 +348,21 @@ def cmd_record(args):
 
         session = recorder.start(recording_id=rid, application=args.app or "web", base_url=args.url, evidence_level=args.evidence_level)
         rid = session.recording_id  # may be suffixed (_2, _3) if original name exists
+
+        # Write system/suite/test_case classification metadata
+        _system = getattr(args, 'system', None) or ""
+        _suite = getattr(args, 'suite', None) or ""
+        _test_case = getattr(args, 'test_case', None) or args.name or rid
+        _meta_path = str(_PROJECT_ROOT / "recordings" / rid / "recording_metadata.json")
+        if os.path.exists(_meta_path):
+            with open(_meta_path) as _f:
+                _meta = json.load(_f)
+            _meta["system"] = _system
+            _meta["suite"] = _suite
+            _meta["test_case"] = _test_case
+            with open(_meta_path, "w", encoding="utf-8") as _f:
+                json.dump(_meta, _f, indent=2, default=str)
+
         page.goto(args.url)
 
         step_count = 0
@@ -646,8 +679,8 @@ def cmd_run(args):
             print(f"  Data: {len(_data_values)} valores carregados de {data_file}")
         with sync_playwright() as pw:
             browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
-            page = browser.new_page()
-            page.set_viewport_size({"width": 1280, "height": 720})
+            _vp = {"width": 1280, "height": 720} if args.headless else None
+            page = browser.new_context(viewport=_vp).new_page()
 
             # Navegar
             page.goto(base_url)
@@ -1534,6 +1567,9 @@ def cmd_send(args):
 
 
 def main():
+    from testforge.updater import check_and_apply_update
+    check_and_apply_update(_PROJECT_ROOT)
+
     parser = argparse.ArgumentParser(description="TestForge CLI — Gravacao inteligente de testes E2E")
     sub = parser.add_subparsers(dest="command")
 
@@ -1559,6 +1595,12 @@ def main():
                      help="Browser CDP: edge, chrome ou auto (default: auto)")
     rec.add_argument("--evidence-level", choices=["light", "full"], default="light",
                      help="Nivel de evidencia: light (padrao, sem screenshot por evento) ou full (screenshot + DOM por evento)")
+    rec.add_argument("--system", default="",
+                     help="Sistema/aplicacao (ex: SIOPI, Habitacao) — usado para organizar no repo")
+    rec.add_argument("--suite", default="",
+                     help="Suite de testes (ex: credito, cadastro) — usado para organizar no repo")
+    rec.add_argument("--test-case", dest="test_case", default="",
+                     help="Caso de teste (padrao: valor de --name) — usado para organizar no repo")
     rec.set_defaults(func=cmd_record)
 
     # compile

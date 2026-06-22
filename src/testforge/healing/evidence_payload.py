@@ -46,7 +46,7 @@ class EvidencePayload:
             # — they provide bonus context but are not required
             if not (has_console or has_network or has_screenshot):
                 self.insufficiency_reason = (
-                    "Note: no console errors, network state, or screenshot available "
+                    "Nota: sem erros de console, estado de rede ou screenshot disponivel "
                     "(bonus context missing but DOM sufficient)"
                 )
 

@@ -56,7 +56,7 @@ class ActionabilityValidator:
             locator = self._page.locator(selector)
         except Exception as e:
             result.failures.append(f"invalid_selector: {e}")
-            result.message = f"Invalid selector '{selector}': {e}"
+            result.message = f"Seletor invalido '{selector}': {e}"
             return result
 
         # Presença: elemento deve existir no DOM
@@ -64,7 +64,7 @@ class ActionabilityValidator:
             locator.first.wait_for(state="attached", timeout=timeout)
         except (PlaywrightTimeout, Exception):
             result.failures.append("not_attached")
-            result.message = f"Element '{selector}' not attached to DOM"
+            result.message = f"Elemento '{selector}' nao encontrado no DOM"
             return result
 
         el = locator.first
@@ -102,9 +102,9 @@ class ActionabilityValidator:
         result.actionable = len(result.failures) == 0
 
         if result.actionable:
-            result.message = f"Element '{selector}' is actionable"
+            result.message = f"Elemento '{selector}' esta acionavel"
         else:
-            result.message = f"Element '{selector}' not actionable: {'; '.join(result.failures)}"
+            result.message = f"Elemento '{selector}' nao esta acionavel: {'; '.join(result.failures)}"
 
         return result
 

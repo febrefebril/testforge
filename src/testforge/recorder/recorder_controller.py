@@ -295,6 +295,8 @@ class RecorderController:
         window.__tfValueMutationQueue = [];
         window.__tfEventCounter = window.__tfEventCounter || 0;
         window.__tfAssertWaiting = false;
+        window.__tfDragMode  = false;
+        window.__tfDragState = null;
         window.__tfPendingSubmit = null;  // { url, method, timestamp } or null — restored from sessionStorage
 
         // Restore pending submit flag from sessionStorage (survives page navigation).
@@ -538,8 +540,6 @@ class RecorderController:
                 target: target,
                 value: (el && el.value) ? el.value.substring(0,200) : null
             });
-            var stepCount = document.getElementById('tf-step-count');
-            if (stepCount) stepCount.textContent = parseInt(stepCount.textContent||0) + 1;
         }
 
         // ---- Field snapshot (Sprint 3) ----
@@ -781,6 +781,7 @@ class RecorderController:
         // ---- Event listeners (capture phase) ----
         window.addEventListener('pointerdown', function(e) {
             if (window.__tfAssertWaiting) {
+                if (e.target && e.target.closest && e.target.closest('#tf-assert-menu, #tf-assert-confirm, #tf-overlay, #tf-stop-confirm')) return;
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
@@ -790,6 +791,7 @@ class RecorderController:
 
         window.addEventListener('mousedown', function(e) {
             if (window.__tfAssertWaiting) {
+                if (e.target && e.target.closest && e.target.closest('#tf-assert-menu, #tf-assert-confirm, #tf-overlay, #tf-stop-confirm')) return;
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
@@ -803,13 +805,14 @@ class RecorderController:
                 if (interactive) el = interactive;
             }
             if (window.__tfAssertWaiting) {
+                if (e.target && e.target.closest && e.target.closest('#tf-assert-menu, #tf-assert-confirm, #tf-overlay, #tf-stop-confirm')) return;
                 console.log('[TestForge] click em modo assert, el:', el.tagName, el.className, 'text:', (el.textContent||'').substring(0,30));
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
                 window.__tfAssertElement = el;
                 _tf_highlight(el);
-                _tf_showAssertMenu(e.clientX, e.clientY);
+                _tf_showAssertConfirm(el, e.clientX, e.clientY);
                 return;
             }
             // Detect submit triggers: record as "submit" with postback flag.
@@ -835,6 +838,12 @@ class RecorderController:
                 try { sessionStorage.setItem('__tfPendingSubmit', JSON.stringify(_pending)); } catch(_e) {}
                 window._tf_captureFinalState('form_submit');
                 _tf_pushEvent('submit', el);
+                var _sc2 = document.getElementById('tf-step-count');
+                if (_sc2) {
+                    var _n2 = parseInt(_sc2.textContent||0) + 1;
+                    _sc2.textContent = _n2;
+                    try { sessionStorage.setItem('__tfStepCount', _n2); } catch(_e){}
+                }
                 // Capture form field values at submit time (currency-masked inputs
                 // prevent native input events, so this is the only point we can read them).
                 try {
@@ -855,6 +864,12 @@ class RecorderController:
                 return;
             }
             _tf_pushEvent('click', el);
+            var _sc = document.getElementById('tf-step-count');
+            if (_sc) {
+                var _n = parseInt(_sc.textContent||0) + 1;
+                _sc.textContent = _n;
+                try { sessionStorage.setItem('__tfStepCount', _n); } catch(_e){}
+            }
         }, true);
 
         window.addEventListener('input', function(e) {
@@ -931,8 +946,7 @@ class RecorderController:
                     console.log('[TestForge] Shift+P: toggle pause');
                     break;
                 case 'S':
-                    window._tf_captureFinalState('user_stop');
-                    window.__tfCommandQueue.push('STOP');
+                    window._tf_confirmStop();
                     console.log('[TestForge] Shift+S: stop');
                     break;
                 case 'A':
@@ -945,14 +959,28 @@ class RecorderController:
                     if (dot) dot.style.color = '#f59e0b';
                     if (status) status.textContent = 'Modo Assert — clique no elemento';
                     break;
+                case 'M':
+                    window.__tfDragMode = !window.__tfDragMode;
+                    var _panel = document.getElementById('tf-panel');
+                    if (_panel) {
+                        _panel.style.cursor  = window.__tfDragMode ? 'grab' : '';
+                        _panel.style.outline = window.__tfDragMode ? '2px dashed #f59e0b' : '';
+                    }
+                    _tf_showToast(window.__tfDragMode ? '↕ Arrastar ativo — solte para fixar' : '📌 Overlay fixado');
+                    break;
             }
         }, true);
 
         // ---- Overlay UI ----
         window._tf_showOverlay = function() {
+            var _initSteps = 0, _initAsserts = 0;
+            try {
+                _initSteps   = parseInt(sessionStorage.getItem('__tfStepCount')   || 0);
+                _initAsserts = parseInt(sessionStorage.getItem('__tfAssertCount') || 0);
+            } catch(_e) {}
             var ov = document.createElement('div');
             ov.id = 'tf-overlay';
-            ov.innerHTML = '<div style="position:fixed;top:8px;right:8px;background:#1a1a2e;color:#fff;padding:8px 14px;border-radius:8px;font:14px monospace;z-index:99999;display:flex;gap:12px;align-items:center;box-shadow:0 4px 16px rgba(0,0,0,0.3)">' +
+            ov.innerHTML = '<div id="tf-panel" style="position:fixed;top:8px;right:8px;background:#1a1a2e;color:#fff;padding:8px 14px;border-radius:8px;font:14px monospace;z-index:99999;display:flex;gap:12px;align-items:center;box-shadow:0 4px 16px rgba(0,0,0,0.3)">' +
                 '<span id="tf-rec-dot" style="color:#e94560;font-size:18px">●</span>' +
                 '<span id="tf-status">Gravando...</span>' +
                 '<span style="color:#aaa">|</span>' +
@@ -960,14 +988,14 @@ class RecorderController:
                 '<button id="tf-btn-stop" style="background:#991b1b;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font:12px monospace" title="Shift+S">■</button>' +
                 '<button id="tf-btn-assert" style="background:#6366f1;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font:12px monospace" title="Shift+A">Assert</button>' +
                 '<span style="color:#aaa">|</span>' +
-                '<span>Passos: <strong id="tf-step-count">0</strong></span>' +
+                '<span>Passos: <strong id="tf-step-count">' + _initSteps + '</strong></span>' +
                 ' <span>|</span>' +
-                '<span>Asserts: <strong id="tf-assert-count">0</strong></span>' +
+                '<span>Asserts: <strong id="tf-assert-count">' + _initAsserts + '</strong></span>' +
                 '</div>' +
                 '<div id="tf-toast" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 24px;border-radius:8px;font:14px sans-serif;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,0.3)"></div>';
             document.body.appendChild(ov);
             document.getElementById('tf-btn-pause').onclick = function() { window.__tfCommandQueue.push('TOGGLE_PAUSE'); };
-            document.getElementById('tf-btn-stop').onclick = function() { window.__tfCommandQueue.push('STOP'); };
+            document.getElementById('tf-btn-stop').onclick = function() { window._tf_confirmStop(); };
             document.getElementById('tf-btn-assert').onclick = function() {
                 window.__tfAssertWaiting = true;
                 window.__tfCommandQueue.push('ASSERT');
@@ -1008,9 +1036,17 @@ class RecorderController:
                         if (targetEl) {
                             _tf_addStep('assert', targetEl, assertType);
                             var assertCount = document.getElementById('tf-assert-count');
-                            if (assertCount) assertCount.textContent = parseInt(assertCount.textContent||0) + 1;
+                            if (assertCount) {
+                                var _an = parseInt(assertCount.textContent||0) + 1;
+                                assertCount.textContent = _an;
+                                try { sessionStorage.setItem('__tfAssertCount', _an); } catch(_e){}
+                            }
                             var stepCount = document.getElementById('tf-step-count');
-                            if (stepCount) stepCount.textContent = parseInt(stepCount.textContent||0) + 1;
+                            if (stepCount) {
+                                var _sn = parseInt(stepCount.textContent||0) + 1;
+                                stepCount.textContent = _sn;
+                                try { sessionStorage.setItem('__tfStepCount', _sn); } catch(_e){}
+                            }
                             var expected = _tf_getExpectedValue(targetEl, assertType);
                             _tf_showToast('✓ Assert ' + assertType + ': \"' + (expected||'').substring(0,40) + '\"');
                         }
@@ -1029,6 +1065,110 @@ class RecorderController:
             el.style.left = Math.min(x, window.innerWidth - 320) + 'px';
             el.style.top = Math.min(y + 10, window.innerHeight - 60) + 'px';
         }
+
+        window._tf_showAssertConfirm = function(el, x, y) {
+            var existing = document.getElementById('tf-assert-confirm');
+            if (existing) existing.remove();
+            var desc = (el.textContent || '').trim().replace(/\s+/g, ' ').substring(0, 60) ||
+                       el.getAttribute('aria-label') || el.getAttribute('placeholder') ||
+                       el.getAttribute('name') || el.tagName.toLowerCase();
+            var dlg = document.createElement('div');
+            dlg.id = 'tf-assert-confirm';
+            dlg.style.cssText = 'position:fixed;z-index:999999;background:#1e293b;color:#fff;' +
+                'padding:14px;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.5);' +
+                'max-width:340px;font:13px sans-serif';
+            dlg.style.left = Math.min(x, window.innerWidth - 360) + 'px';
+            dlg.style.top  = Math.min(y + 10, window.innerHeight - 130) + 'px';
+            dlg.innerHTML =
+                '<div style="color:#94a3b8;font-size:11px;margin-bottom:8px">CONFIRMAR ASSERT</div>' +
+                '<div style="margin-bottom:12px;word-break:break-word">' +
+                    '<span style="color:#f59e0b">Elemento:</span> “' + desc + '” ' +
+                    '<span style="color:#64748b;font-size:11px">(&lt;' + el.tagName.toLowerCase() + '&gt;)</span>' +
+                '</div>' +
+                '<div style="display:flex;gap:8px">' +
+                    '<button id="tf-confirm-yes" style="background:#10b981;color:#fff;border:none;' +
+                        'padding:7px 16px;border-radius:6px;cursor:pointer;font:13px sans-serif;font-weight:600">✓ Sim</button>' +
+                    '<button id="tf-confirm-no" style="background:#64748b;color:#fff;border:none;' +
+                        'padding:7px 16px;border-radius:6px;cursor:pointer;font:13px sans-serif;font-weight:600">✗ Não</button>' +
+                '</div>';
+            document.body.appendChild(dlg);
+            document.getElementById('tf-confirm-yes').onclick = function(ev) {
+                ev.stopPropagation(); ev.preventDefault();
+                dlg.remove();
+                _tf_showAssertMenu(x, y);
+            };
+            document.getElementById('tf-confirm-no').onclick = function(ev) {
+                ev.stopPropagation(); ev.preventDefault();
+                dlg.remove();
+                window.__tfAssertWaiting = false;
+                window.__tfAssertElement = null;
+                var dot = document.getElementById('tf-rec-dot');
+                var status = document.getElementById('tf-status');
+                if (dot) dot.style.color = '#e94560';
+                if (status) status.textContent = 'Gravando...';
+            };
+        };
+
+        window._tf_confirmStop = function() {
+            var assertCount = parseInt((document.getElementById('tf-assert-count') || {}).textContent || 0);
+            if (assertCount === 0) {
+                var existing = document.getElementById('tf-stop-confirm');
+                if (existing) existing.remove();
+                var dlg = document.createElement('div');
+                dlg.id = 'tf-stop-confirm';
+                dlg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);' +
+                    'z-index:999999;background:#1e293b;color:#fff;padding:20px 24px;border-radius:12px;' +
+                    'box-shadow:0 8px 32px rgba(0,0,0,0.6);font:14px sans-serif;text-align:center;max-width:360px';
+                dlg.innerHTML =
+                    '<div style="font-size:24px;margin-bottom:12px">⚠️</div>' +
+                    '<div style="margin-bottom:16px">O teste gravado <strong>não terá nenhum assert</strong>.<br>' +
+                    '<span style="color:#94a3b8;font-size:12px">Sem assert, o TestForge não verifica resultado esperado.</span></div>' +
+                    '<div style="display:flex;gap:10px;justify-content:center">' +
+                        '<button id="tf-stop-yes" style="background:#991b1b;color:#fff;border:none;' +
+                            'padding:9px 20px;border-radius:6px;cursor:pointer;font:13px sans-serif;font-weight:600">Sair mesmo assim</button>' +
+                        '<button id="tf-stop-no" style="background:#334155;color:#fff;border:none;' +
+                            'padding:9px 20px;border-radius:6px;cursor:pointer;font:13px sans-serif;font-weight:600">Voltar</button>' +
+                    '</div>';
+                document.body.appendChild(dlg);
+                document.getElementById('tf-stop-yes').onclick = function() {
+                    dlg.remove();
+                    window._tf_captureFinalState('user_stop');
+                    window.__tfCommandQueue.push('STOP');
+                };
+                document.getElementById('tf-stop-no').onclick = function() { dlg.remove(); };
+                return;
+            }
+            window._tf_captureFinalState('user_stop');
+            window.__tfCommandQueue.push('STOP');
+        };
+
+        document.addEventListener('mousedown', function(e) {
+            if (!window.__tfDragMode) return;
+            var panel = document.getElementById('tf-panel');
+            if (!panel || !panel.contains(e.target)) return;
+            var rect = panel.getBoundingClientRect();
+            window.__tfDragState = { dx: e.clientX - rect.left, dy: e.clientY - rect.top };
+            panel.style.cursor = 'grabbing';
+            e.preventDefault();
+        }, true);
+
+        document.addEventListener('mousemove', function(e) {
+            if (!window.__tfDragState || !window.__tfDragMode) return;
+            var panel = document.getElementById('tf-panel');
+            if (!panel) return;
+            var x = Math.max(0, Math.min(e.clientX - window.__tfDragState.dx, window.innerWidth  - panel.offsetWidth));
+            var y = Math.max(0, Math.min(e.clientY - window.__tfDragState.dy, window.innerHeight - panel.offsetHeight));
+            panel.style.right = 'auto';
+            panel.style.left  = x + 'px';
+            panel.style.top   = y + 'px';
+        });
+
+        document.addEventListener('mouseup', function() {
+            if (!window.__tfDragState) return;
+            window.__tfDragState = null;
+            var panel = document.getElementById('tf-panel');
+            if (panel && window.__tfDragMode) panel.style.cursor = 'grab';
+        });
 
         window._tf_highlight = function(el) {
             var orig = el.style.outline;

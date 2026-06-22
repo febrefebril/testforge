@@ -160,7 +160,7 @@ def generate_test_data_file(
 
     # Print sensitive data alerts
     for alert in data.get("sensitive_alerts", []):
-        print(f"  ⚠ Sensitive: {alert['field']} — {alert['reason']}")
+        print(f"  ⚠ Sensivel: {alert['field']} — {alert['reason']}")
 
     return output_path
 
