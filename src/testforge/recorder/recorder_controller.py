@@ -812,7 +812,10 @@ class RecorderController:
                 e.stopImmediatePropagation();
                 window.__tfAssertElement = el;
                 _tf_highlight(el);
-                // Go directly to type menu — skip confirm dialog to reduce friction
+                var _elDesc = el.getAttribute('aria-label') || el.getAttribute('placeholder') ||
+                              (el.textContent||'').trim().replace(/\s+/g,' ').substring(0,40) ||
+                              el.tagName.toLowerCase();
+                _tf_showToast('🎯 Elemento: "' + _elDesc + '" — escolha o tipo');
                 _tf_showAssertMenu(e.clientX, e.clientY);
                 return;
             }
@@ -1044,60 +1047,100 @@ class RecorderController:
         }
 
         window._tf_showAssertMenu = function(x, y) {
-            var el = document.getElementById('tf-assert-menu');
-            if (!el) {
-                el = document.createElement('div');
-                el.id = 'tf-assert-menu';
-                el.innerHTML = [
-                    '<button data-type="textual" style="background:#10b981">📝 Texto</button>',
-                    '<button data-type="estado" style="background:#f59e0b">🔘 Estado</button>',
-                    '<button data-type="visivel" style="background:#3b82f6">👁 Visivel</button>',
-                    '<button data-type="automatico" style="background:#8b5cf6">🤖 Auto</button>'
-                ].join('');
-                el.style.cssText = 'position:fixed;z-index:99999;background:#1e293b;padding:6px;border-radius:8px;display:flex;gap:4px;box-shadow:0 4px 20px rgba(0,0,0,0.4)';
-                el.querySelectorAll('button').forEach(function(btn) {
-                    btn.style.cssText = 'color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font:13px sans-serif;font-weight:600';
-                    btn.onclick = function(e) {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        var assertType = btn.dataset.type;
-                        var targetEl = window.__tfAssertElement;
-                        if (!targetEl) {
-                            _tf_showToast('⚠ Elemento perdido — tente novamente');
-                        }
-                        if (targetEl) {
-                            _tf_addStep('assert', targetEl, assertType);
-                            var assertCount = document.getElementById('tf-assert-count');
-                            if (assertCount) {
-                                var _an = parseInt(assertCount.textContent||0) + 1;
-                                assertCount.textContent = _an;
-                                try { sessionStorage.setItem('__tfAssertCount', _an); } catch(_e){}
-                            }
-                            var stepCount = document.getElementById('tf-step-count');
-                            if (stepCount) {
-                                var _sn = parseInt(stepCount.textContent||0) + 1;
-                                stepCount.textContent = _sn;
-                                try { sessionStorage.setItem('__tfStepCount', _sn); } catch(_e){}
-                            }
-                            var expected = _tf_getExpectedValue(targetEl, assertType);
-                            _tf_showToast('✓ Assert ' + assertType + ': \"' + (expected||'').substring(0,40) + '\"');
-                        }
-                        el.style.display = 'none';
-                        if (window.__tfAssertTimeout) { clearTimeout(window.__tfAssertTimeout); window.__tfAssertTimeout = null; }
-                        window.__tfAssertWaiting = false;
-                        window.__tfAssertElement = null;
-                        document.body.style.outline = '';
-                        var dot = document.getElementById('tf-rec-dot');
-                        var status = document.getElementById('tf-status');
-                        if (dot) dot.style.color = '#e94560';
-                        if (status) status.textContent = 'Gravando...';
-                    };
-                });
-                document.body.appendChild(el);
-            }
-            el.style.display = 'flex';
-            el.style.left = Math.min(x, window.innerWidth - 320) + 'px';
-            el.style.top = Math.min(y + 10, window.innerHeight - 60) + 'px';
+            // Always destroy and recreate so onclick closures are fresh
+            var old = document.getElementById('tf-assert-menu');
+            if (old) old.remove();
+
+            var el = document.createElement('div');
+            el.id = 'tf-assert-menu';
+            // Fixed center-top position — always visible regardless of click location
+            el.style.cssText = [
+                'position:fixed',
+                'z-index:2147483647',  // max z-index
+                'top:60px',
+                'left:50%',
+                'transform:translateX(-50%)',
+                'background:#1e293b',
+                'border:2px solid #f59e0b',
+                'padding:10px 14px',
+                'border-radius:10px',
+                'display:flex',
+                'flex-direction:column',
+                'gap:8px',
+                'box-shadow:0 8px 32px rgba(0,0,0,0.7)',
+                'font:13px sans-serif',
+                'min-width:260px'
+            ].join(';');
+
+            // Show selected element info
+            var targetEl = window.__tfAssertElement;
+            var desc = targetEl ? (
+                (targetEl.getAttribute('aria-label') || targetEl.getAttribute('placeholder') ||
+                 (targetEl.textContent||'').trim().replace(/\s+/g,' ').substring(0,50) ||
+                 targetEl.tagName.toLowerCase())
+            ) : '?';
+            var header = document.createElement('div');
+            header.style.cssText = 'color:#94a3b8;font-size:11px;margin-bottom:2px';
+            header.textContent = 'ASSERT em: "' + desc.substring(0,50) + '"';
+            el.appendChild(header);
+
+            var btnRow = document.createElement('div');
+            btnRow.style.cssText = 'display:flex;gap:6px';
+            [
+                {type:'textual',  label:'📝 Texto',  bg:'#10b981'},
+                {type:'estado',   label:'🔘 Estado', bg:'#f59e0b'},
+                {type:'visivel',  label:'👁 Visivel', bg:'#3b82f6'},
+                {type:'automatico', label:'🤖 Auto', bg:'#8b5cf6'},
+                {type:'_cancel',  label:'✗',         bg:'#475569'}
+            ].forEach(function(item) {
+                var btn = document.createElement('button');
+                btn.textContent = item.label;
+                btn.style.cssText = 'color:#fff;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;font:13px sans-serif;font-weight:600;background:' + item.bg;
+                btn.addEventListener('pointerdown', function(e) { e.stopPropagation(); }, true);
+                btn.addEventListener('mousedown',   function(e) { e.stopPropagation(); }, true);
+                btn.onclick = function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    el.remove();
+                    if (item.type === '_cancel') {
+                        _tf_showToast('✗ Assert cancelado');
+                        window._tf_cancelAssertMode();
+                        return;
+                    }
+                    var target = window.__tfAssertElement;
+                    if (!target) {
+                        _tf_showToast('⚠ Elemento perdido — clique novamente');
+                        window._tf_cancelAssertMode();
+                        return;
+                    }
+                    _tf_addStep('assert', target, item.type);
+                    var assertCount = document.getElementById('tf-assert-count');
+                    if (assertCount) {
+                        var _an = parseInt(assertCount.textContent||0) + 1;
+                        assertCount.textContent = _an;
+                        try { sessionStorage.setItem('__tfAssertCount', _an); } catch(_e){}
+                    }
+                    var stepCount = document.getElementById('tf-step-count');
+                    if (stepCount) {
+                        var _sn = parseInt(stepCount.textContent||0) + 1;
+                        stepCount.textContent = _sn;
+                        try { sessionStorage.setItem('__tfStepCount', _sn); } catch(_e){}
+                    }
+                    var expected = _tf_getExpectedValue(target, item.type);
+                    _tf_showToast('✓ Assert ' + item.type + ': "' + (expected||'').substring(0,40) + '"');
+                    if (window.__tfAssertTimeout) { clearTimeout(window.__tfAssertTimeout); window.__tfAssertTimeout = null; }
+                    window.__tfAssertWaiting = false;
+                    window.__tfAssertElement = null;
+                    document.body.style.outline = '';
+                    var dot = document.getElementById('tf-rec-dot');
+                    var status = document.getElementById('tf-status');
+                    if (dot) dot.style.color = '#e94560';
+                    if (status) status.textContent = 'Gravando...';
+                };
+                btnRow.appendChild(btn);
+            });
+            el.appendChild(btnRow);
+            document.body.appendChild(el);
         }
 
         window._tf_showAssertConfirm = function(el, x, y) {
