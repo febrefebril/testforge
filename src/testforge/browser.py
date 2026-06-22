@@ -16,6 +16,9 @@ _WINDOWS_GPU_ARGS = [
     "--enable-features=Vulkan,UseSkiaRenderer",
     "--ignore-gpu-blocklist",
     "--disable-gpu-sandbox",
+    "--window-size=1280,720",
+    "--no-first-run",
+    "--no-default-browser-check",
 ]
 
 
