@@ -812,7 +812,8 @@ class RecorderController:
                 e.stopImmediatePropagation();
                 window.__tfAssertElement = el;
                 _tf_highlight(el);
-                _tf_showAssertConfirm(el, e.clientX, e.clientY);
+                // Go directly to type menu — skip confirm dialog to reduce friction
+                _tf_showAssertMenu(e.clientX, e.clientY);
                 return;
             }
             // Detect submit triggers: record as "submit" with postback flag.
@@ -937,8 +938,48 @@ class RecorderController:
             window._tf_captureFinalState('beforeunload');
         });
 
+        // ---- Assert mode helpers ----
+        window._tf_cancelAssertMode = function() {
+            window.__tfAssertWaiting = false;
+            window.__tfAssertElement = null;
+            if (window.__tfAssertTimeout) { clearTimeout(window.__tfAssertTimeout); window.__tfAssertTimeout = null; }
+            var menu = document.getElementById('tf-assert-menu');
+            if (menu) menu.style.display = 'none';
+            var dot = document.getElementById('tf-rec-dot');
+            var status = document.getElementById('tf-status');
+            if (dot) dot.style.color = '#e94560';
+            if (status) status.textContent = 'Gravando...';
+            document.body.style.outline = '';
+        };
+
+        window._tf_enterAssertMode = function() {
+            window.__tfAssertWaiting = true;
+            window.__tfCommandQueue.push('ASSERT');
+            console.log('[TestForge] Shift+A: modo assert ATIVADO');
+            _tf_showToast('🟡 Modo Assert — clique no elemento (Esc cancela)');
+            var dot = document.getElementById('tf-rec-dot');
+            var status = document.getElementById('tf-status');
+            if (dot) dot.style.color = '#f59e0b';
+            if (status) status.textContent = 'Assert — clique no elemento (Esc cancela)';
+            document.body.style.outline = '3px solid #f59e0b';
+            if (window.__tfAssertTimeout) clearTimeout(window.__tfAssertTimeout);
+            window.__tfAssertTimeout = setTimeout(function() {
+                if (window.__tfAssertWaiting) {
+                    _tf_showToast('⏱ Assert cancelado (timeout 30s)');
+                    window._tf_cancelAssertMode();
+                }
+            }, 30000);
+        };
+
         // ---- Keyboard shortcuts ----
         window.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && window.__tfAssertWaiting) {
+                e.preventDefault();
+                e.stopPropagation();
+                _tf_showToast('✗ Assert cancelado');
+                window._tf_cancelAssertMode();
+                return;
+            }
             if (!e.shiftKey) return;
             switch(e.key.toUpperCase()) {
                 case 'P':
@@ -950,14 +991,7 @@ class RecorderController:
                     console.log('[TestForge] Shift+S: stop');
                     break;
                 case 'A':
-                    window.__tfCommandQueue.push('ASSERT');
-                    window.__tfAssertWaiting = true;
-                    console.log('[TestForge] Shift+A: modo assert ATIVADO');
-                    _tf_showToast('🟡 Modo Assert — clique no elemento');
-                    var dot = document.getElementById('tf-rec-dot');
-                    var status = document.getElementById('tf-status');
-                    if (dot) dot.style.color = '#f59e0b';
-                    if (status) status.textContent = 'Modo Assert — clique no elemento';
+                    window._tf_enterAssertMode();
                     break;
                 case 'M':
                     window.__tfDragMode = !window.__tfDragMode;
@@ -997,12 +1031,7 @@ class RecorderController:
             document.getElementById('tf-btn-pause').onclick = function() { window.__tfCommandQueue.push('TOGGLE_PAUSE'); };
             document.getElementById('tf-btn-stop').onclick = function() { window._tf_confirmStop(); };
             document.getElementById('tf-btn-assert').onclick = function() {
-                window.__tfAssertWaiting = true;
-                window.__tfCommandQueue.push('ASSERT');
-                var dot = document.getElementById('tf-rec-dot');
-                var status = document.getElementById('tf-status');
-                if (dot) dot.style.color = '#f59e0b';
-                if (status) status.textContent = 'Modo Assert — clique no elemento';
+                window._tf_enterAssertMode();
             };
         }
 
@@ -1033,6 +1062,9 @@ class RecorderController:
                         e.preventDefault();
                         var assertType = btn.dataset.type;
                         var targetEl = window.__tfAssertElement;
+                        if (!targetEl) {
+                            _tf_showToast('⚠ Elemento perdido — tente novamente');
+                        }
                         if (targetEl) {
                             _tf_addStep('assert', targetEl, assertType);
                             var assertCount = document.getElementById('tf-assert-count');
@@ -1051,8 +1083,10 @@ class RecorderController:
                             _tf_showToast('✓ Assert ' + assertType + ': \"' + (expected||'').substring(0,40) + '\"');
                         }
                         el.style.display = 'none';
+                        if (window.__tfAssertTimeout) { clearTimeout(window.__tfAssertTimeout); window.__tfAssertTimeout = null; }
                         window.__tfAssertWaiting = false;
                         window.__tfAssertElement = null;
+                        document.body.style.outline = '';
                         var dot = document.getElementById('tf-rec-dot');
                         var status = document.getElementById('tf-status');
                         if (dot) dot.style.color = '#e94560';
