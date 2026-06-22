@@ -49,7 +49,7 @@ _MATERIAL_ICONS = {
 }
 
 
-def _clean_text(text: str) -> str:
+def _clean_text(text: str, max_len: int = 60) -> str:
     """Remove material icon ligatures from text content and truncate."""
     if not text:
         return ""
@@ -72,9 +72,8 @@ def _clean_text(text: str) -> str:
                     break
         cleaned.append(stripped)
     result = " ".join(cleaned).strip()
-    # Truncate long text for selector use (no "...": has-text() needs real substring)
-    if len(result) > 60:
-        result = result[:60]
+    if len(result) > max_len:
+        result = result[:max_len]
     return result
 
 
@@ -986,7 +985,7 @@ class RecordingNormalizer:
             return SemanticAction(
                 action="assert",
                 target=target,
-                value=step.get("expected_value", ""),
+                value=_clean_text(step.get("expected_value", ""), max_len=200),
                 context={"assert_type": assert_type, "assert_state": assert_state},
             )
         # Non-assert curated steps (fill, click, select_option, etc.)
@@ -1198,11 +1197,12 @@ class RecordingNormalizer:
         if xpath and not candidates:
             candidates.append(LocatorCandidate("xpath", xpath, 0.10, "XPath fallback"))
 
-        # Fallback: nth-child for disambiguation
+        # nth-child for disambiguation — always add when available so healing
+        # can use positional fallback for sibling buttons/tabs with similar text
         nth = target_data.get("nth_child") or 0
         tag = target_data.get("tag") or ""
-        if nth > 0 and tag and not candidates:
-            candidates.append(LocatorCandidate("nth_child", f"{tag}:nth-child({nth})", 0.15, f"nth-child position"))
+        if nth > 0 and tag:
+            candidates.append(LocatorCandidate("nth_child", f"{tag}:nth-child({nth})", 0.35, "nth-child position"))
 
         # Fallback: CSS classes (stable, non-hash, non-generic)
         class_list = target_data.get("class_list") or []

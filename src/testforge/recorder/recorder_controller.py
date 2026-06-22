@@ -730,7 +730,9 @@ class RecorderController:
             switch(assertType) {
                 case 'textual':
                 case 'automatico':
-                    return (el.textContent||'').trim().substring(0,200);
+                    var _clone = el.cloneNode(true);
+                    _clone.querySelectorAll('mat-icon,svg,[aria-hidden="true"]').forEach(function(n){n.remove();});
+                    return (_clone.textContent||'').trim().replace(/\s+/g,' ').substring(0,200);
                 case 'estado':
                     return _tf_detectState(el);
                 case 'visivel':
