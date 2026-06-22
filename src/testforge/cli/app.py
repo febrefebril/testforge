@@ -1192,8 +1192,8 @@ def _try_heal_inline(base_url: str, headless: bool, error_text: str,
     try:
         with sync_playwright() as pw:
             browser = launch_browser(pw, browser_type, headless=headless)
-            page = browser.new_page()
-            page.set_viewport_size({"width": 1280, "height": 720})
+            _vp = {"width": 1280, "height": 720} if headless else None
+            page = browser.new_context(viewport=_vp).new_page()
             page.goto(base_url)
             page.wait_for_timeout(500)
 
@@ -1248,8 +1248,8 @@ def cmd_pipeline(args):
 
     with sync_playwright() as pw:
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
-        page = browser.new_page()
-        page.set_viewport_size({"width": 1280, "height": 720})
+        _vp = {"width": 1280, "height": 720} if args.headless else None
+        page = browser.new_context(viewport=_vp).new_page()
         recorder = RecorderController(page)
 
         recorder.start(recording_id=rid, application="pipeline", base_url=args.url)
@@ -1291,8 +1291,7 @@ def cmd_pipeline(args):
 
         # Step 3: Run
         print("\n▶ Fase 3: Execucao + Healing")
-        page2 = browser.new_page()
-        page2.set_viewport_size({"width": 1280, "height": 720})
+        page2 = browser.new_context(viewport=_vp).new_page()
 
         page2.goto(args.url)
         page2.wait_for_timeout(300)
@@ -1387,8 +1386,8 @@ def cmd_demo_heal(args):
 
     with sync_playwright() as pw:
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
-        page = browser.new_page()
-        page.set_viewport_size({"width": 1280, "height": 720})
+        _vp = {"width": 1280, "height": 720} if args.headless else None
+        page = browser.new_context(viewport=_vp).new_page()
         recorder = RecorderController(page)
 
         # Fase 1: Gravar fluxo normal
@@ -1427,8 +1426,8 @@ def cmd_demo_heal(args):
     # Abrir pagina com mutacao
     with sync_playwright() as pw:
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
-        page = browser.new_page()
-        page.set_viewport_size({"width": 1280, "height": 720})
+        _vp = {"width": 1280, "height": 720} if args.headless else None
+        page = browser.new_context(viewport=_vp).new_page()
 
         mutation_url = "http://localhost:8765/?mutation=change_id"
         page.goto(mutation_url)
