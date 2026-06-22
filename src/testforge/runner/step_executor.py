@@ -355,26 +355,31 @@ class StepExecutor:
                 el = self.page.locator(selector).first
                 # Detect masked inputs: currencymask attribute OR placeholder patterns
                 has_mask = el.get_attribute("currencymask") is not None
-                if not has_mask:
-                    placeholder = (el.get_attribute("placeholder") or "").lower()
-                    has_mask = any(p in placeholder for p in ("r$", "0,00", "__/__/____"))
-                if has_mask:
-                    # For masked inputs, type ONLY the raw digits — no formatting chars.
-                    # Currency masks interpret each digit character-by-character; dots,
-                    # commas, and spaces corrupt the value. Extract just [0-9] from
-                    # the display value (e.g. "10.000,00" -> "1000000").
+                placeholder = (el.get_attribute("placeholder") or "").lower()
+                is_date_mask = any(p in placeholder for p in (
+                    "dd/mm", "mm/dd", "aaaa", "__/__/____", "dd/mm/aaaa",
+                ))
+                if not has_mask and not is_date_mask:
+                    has_mask = any(p in placeholder for p in ("r$", "0,00"))
+                if has_mask or is_date_mask:
                     masked_val = (step.value or value).strip()
-                    digits = re.sub(r"[^0-9]", "", masked_val)
-                    if not digits:
-                        digits = masked_val
+                    if is_date_mask:
+                        # Date masks expect formatted string with slashes (e.g. "10/06/2026")
+                        # Do NOT strip slashes — they position the cursor in the mask.
+                        type_val = masked_val
+                    else:
+                        # Currency masks: type ONLY raw digits; mask adds formatting.
+                        # "10.000,00" → "1000000"
+                        digits = re.sub(r"[^0-9]", "", masked_val)
+                        type_val = digits if digits else masked_val
                     el.click()
                     self.page.wait_for_timeout(150)
-                    # Clear existing value before typing — press_sequentially appends otherwise
-                    el.fill("")
+                    # Triple-click selects all existing content before overwriting
+                    el.click(click_count=3)
                     self.page.wait_for_timeout(80)
-                    el.press_sequentially(str(digits), delay=50)
+                    el.press_sequentially(type_val, delay=60)
                     self.page.keyboard.press("Tab")
-                    self.page.wait_for_timeout(200)
+                    self.page.wait_for_timeout(400)
                     return selector
             except Exception:
                 pass
