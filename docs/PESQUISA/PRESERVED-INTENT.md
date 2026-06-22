@@ -12,7 +12,7 @@ Todo aprendizado e armazenado em 3 camadas independentes:
 1. HealingCatalog (.planning/healing-catalog.jsonl)
    └── 53 receitas de cura (4 novas + 49 ancestrais)
 
-2. Conhecimento Ancestral (conhecimento_ancestral/)
+2. Conhecimento Ancestral (docs/conhecimento_ancestral/)
    └── Documentacao completa das 4 tentativas
 
 3. Git History (35+ commits)
@@ -39,7 +39,7 @@ O conhecimento sobrevive em 3 lugares independentes:
 | Fonte | Conteudo | Como recuperar |
 |-------|----------|---------------|
 | `.planning/healing-catalog.jsonl` | 53 receitas de cura | `cat .planning/healing-catalog.jsonl` |
-| `conhecimento_ancestral/` | Documentacao + codigo | `cat conhecimento_ancestral/INDEX.md` |
+| `docs/conhecimento_ancestral/` | Documentacao + codigo | `cat docs/conhecimento_ancestral/INDEX.md` |
 | `git log` | Historico completo | `git log --oneline` |
 
 ## Catalogo Atual (53 receitas)
@@ -70,7 +70,7 @@ git clone <repo>
 cat .planning/healing-catalog.jsonl
 
 # 3. A documentacao ancestral tambem
-cat conhecimento_ancestral/INDEX.md
+cat docs/conhecimento_ancestral/INDEX.md
 
 # 4. O historico completo de decisoes
 git log --oneline

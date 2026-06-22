@@ -67,9 +67,9 @@ método `build_llm_payload()` para gerar payloads estruturados sob demanda.
 - `.planning/ROADMAP.md` — M9: LLM Self-Healing L3, Fase 9.2
 
 ### Reference Implementation (projeto-anterior)
-- `conhecimento_ancestral/projeto-anterior/packages/core/testforge/core/healing/llm/healer.py` — `_truncate_dom()`, `_build_prompt()`, `LLMHealer`, `MockLLMHealer`
-- `conhecimento_ancestral/projeto-anterior/packages/core/testforge/core/healing/collector.py` — `EvidencePayload`, `EvidenceCollector`
-- `conhecimento_ancestral/projeto-anterior/docs/pipeline-overview.md` — Pipeline L0→L3, integração
+- `docs/conhecimento_ancestral/projeto-anterior/packages/core/testforge/core/healing/llm/healer.py` — `_truncate_dom()`, `_build_prompt()`, `LLMHealer`, `MockLLMHealer`
+- `docs/conhecimento_ancestral/projeto-anterior/packages/core/testforge/core/healing/collector.py` — `EvidencePayload`, `EvidenceCollector`
+- `docs/conhecimento_ancestral/projeto-anterior/docs/pipeline-overview.md` — Pipeline L0→L3, integração
 
 ### Planning Docs
 - `.planning/EPICOS-STORIES.md` — EP-09: US-09.02 (EvidencePayload), US-09.03 (LLMClient)

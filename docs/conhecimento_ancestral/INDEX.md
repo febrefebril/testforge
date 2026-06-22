@@ -3,6 +3,8 @@
 Conhecimento acumulado em 4 tentativas anteriores de construir o TestForge.
 Organizado, limpo e renomeado para facilitar consulta.
 
+> **Localização:** `docs/conhecimento_ancestral/` (movido da raiz do projeto para integrar a documentação oficial)
+
 ---
 
 ## Estrutura

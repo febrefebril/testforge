@@ -64,7 +64,7 @@ Conhecimento interno e análises técnicas:
 Documentação de planejamento e sprints anteriores:
 
 - [Arquivo de Planejamento](../.planning/ARCHIVE/) — Planos de fase, bugs históricos, planos de teste, sprint reviews
-- [Conhecimento Ancestral](../conhecimento_ancestral/) — Pesquisa de contexto de tentativas anteriores
+- [Conhecimento Ancestral](./conhecimento_ancestral/) — Pesquisa de contexto de tentativas anteriores
 
 ---
 

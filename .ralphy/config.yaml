@@ -26,4 +26,4 @@ boundaries:
   never_touch:
     - ".venv/**"
     - "node_modules/**"
-    - "conhecimento_ancestral/**"
+    - "docs/conhecimento_ancestral/**"

@@ -12,7 +12,7 @@ A documentação do TestForge está **espalhada e redundante**:
 - **23 arquivos .md** na raiz, `docs/`, e subpastas
 - **Conteúdo duplicado:** BUGS.md vs docs/BUGS.md, FASE-B-PLAN.md vs FASE-B-COMPLETION-REPORT.md
 - **Falta de hierarquia:** Sem índice claro, sem separação usuário vs desenvolvedor
-- **Conhecimento disperso:** histórico em `conhecimento_ancestral/`, outputs em `_bmad-output/`
+- **Conhecimento disperso:** histórico em `docs/conhecimento_ancestral/`, outputs em `_bmad-output/`
 
 **Objetivo:** Consolidar em estrutura clara (docs/ organizada) mantendo integridade histórica.
 
@@ -328,7 +328,7 @@ rmdir _bmad-output/
 ## Histórico
 
 - [Planos Anteriores](.../.planning/ARCHIVE/)
-- [Conhecimento Ancestral](../../conhecimento_ancestral/)
+- [Conhecimento Ancestral](conhecimento_ancestral/)
 
 ## Mapas de Arquivo
 

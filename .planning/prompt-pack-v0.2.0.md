@@ -51,7 +51,7 @@ Diretorios:
 - evidence/            → Evidencias de execucao (gitignored)
 - semantic_tests/      → Contratos semanticos gerados (gitignored)
 - generated_tests/     → Scripts Playwright gerados (gitignored)
-- conhecimento_ancestral/ → Documentacao das 4 tentativas anteriores
+- docs/conhecimento_ancestral/ → Documentacao das 4 tentativas anteriores
 - .planning/           → Planejamento GSD
 ```
 

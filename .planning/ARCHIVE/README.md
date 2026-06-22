@@ -64,7 +64,7 @@ Documentação consolidada e movida para `docs/`:
 1. **Buglist Completa:** → `../docs/REFERENCIA/BUGS-KNOWNS.md`
 2. **Fase B Details:** → `../docs/ARQUITETURA/FASES.md`
 3. **Planos de Teste:** Veja `PLANO-DE-TESTE.md` neste diretório
-4. **Documentação Ancestral:** → `../../conhecimento_ancestral/`
+4. **Documentação Ancestral:** → `../../docs/conhecimento_ancestral/`
 
 ### Links para Documentação Ativa
 
