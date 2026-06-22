@@ -49,7 +49,7 @@ class GitPublisher:
     def from_env(cls) -> Optional[GitPublisher]:
         url = os.getenv("TESTFORGE_GIT_URL", "")
         token = os.getenv("TESTFORGE_GIT_TOKEN", "")
-        if not url or not token:
+        if not url:
             return None
         branch = os.getenv("TESTFORGE_GIT_BRANCH", "main")
         prefix = os.getenv("TESTFORGE_GIT_PATH_PREFIX", "recordings")
@@ -70,12 +70,15 @@ class GitPublisher:
         pub = cfg.get("publisher", {})
         if not pub.get("enabled", True):
             return None
+        url = pub.get("url", "").strip()
+        token = pub.get("token", "").strip()
+        local_mode = not bool(url)
         return cls(
-            url="",
-            token="",
+            url=url,
+            token=token,
             branch=pub.get("branch", "main"),
             path_prefix=pub.get("path_prefix", "recordings"),
-            local_mode=True,
+            local_mode=local_mode,
             git_root=git_root,
             remote=pub.get("remote", "origin"),
         )
@@ -320,7 +323,10 @@ class GitPublisher:
 
     def _clone_shallow(self, tmp_dir: str) -> None:
         """Clone repo with --depth 1."""
-        auth_url = self._url.replace("https://", f"https://:{self._token}@")
+        if self._token:
+            auth_url = self._url.replace("https://", f"https://:{self._token}@")
+        else:
+            auth_url = self._url  # relies on OS credential manager (e.g. Windows GCM)
 
         try:
             # Try clone with branch

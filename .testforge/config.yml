@@ -1,0 +1,6 @@
+publisher:
+  enabled: true
+  url: "https://dev.azure.com/sua-org/seu-projeto/_git/testforge-recordings"
+  branch: main
+  path_prefix: recordings
+  # token: omitir — Windows Git Credential Manager autentica automaticamente

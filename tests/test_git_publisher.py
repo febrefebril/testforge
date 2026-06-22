@@ -39,10 +39,12 @@ class TestFromEnv:
             result = GitPublisher.from_env()
             assert result is None
 
-    def test_from_env_returns_none_when_only_url_set(self):
+    def test_from_env_returns_publisher_when_only_url_set(self):
         with mock.patch.dict(os.environ, {"TESTFORGE_GIT_URL": "https://dev.azure.com/org/proj/_git/repo"}, clear=True):
             result = GitPublisher.from_env()
-            assert result is None
+            assert result is not None
+            assert result._url == "https://dev.azure.com/org/proj/_git/repo"
+            assert result._token == ""
 
     def test_from_env_creates_publisher_with_all_vars(self):
         env = {
