@@ -61,14 +61,18 @@ class SmartStepRunner:
                     self._page.press_sequentially(sel, value, timeout=self.FILL_TIMEOUT)
                 else:
                     self._page.fill(sel, value, timeout=self.FILL_TIMEOUT)
-                # Trigger blur so Angular/React form validators run (marking field touched).
-                # Playwright fill() does not dispatch blur, so validation errors won't appear
-                # without this — asserts on error messages would always fail.
+                # Press Tab to trigger blur via real keyboard event.
+                # dispatch_event("blur") is synthetic — Angular's Zone.js ignores it,
+                # so form validators never run and validation errors don't appear.
+                # Tab is a real event that Zone.js intercepts → change detection fires.
                 try:
-                    self._page.locator(sel).first.dispatch_event("blur")
+                    self._page.locator(sel).first.press("Tab")
                 except Exception:
-                    pass
-                self._page.wait_for_timeout(300)
+                    try:
+                        self._page.keyboard.press("Tab")
+                    except Exception:
+                        pass
+                self._page.wait_for_timeout(400)
 
             elif action == "click":
                 if strat == "label_click":
