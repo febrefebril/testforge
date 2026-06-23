@@ -169,6 +169,33 @@ class TestRecordingNormalizer:
         assert result[0]["value"] == "123"
         assert result[1]["value"] == "João"
 
+    def test_compact_fill_events_same_placeholder_different_accessible_name(self):
+        """Two fields sharing placeholder but different accessible_name must NOT be merged.
+
+        Regression: currency fields like 'Renda' and 'Imóvel' both use placeholder
+        'R$0,00' with no id/name. Without accessible_name in _target_key, all fills
+        collapse to the last field's final value, silently dropping the first field.
+        """
+        normalizer = RecordingNormalizer()
+        events = [
+            {"event_id": "e1", "type": "fill", "timestamp": "2026-06-23T00:00:00.000",
+             "target": {"tag": "input", "placeholder": "R$0,00",
+                        "accessible_name": "Renda mensal *"}, "value": " 0,01 "},
+            {"event_id": "e2", "type": "fill", "timestamp": "2026-06-23T00:00:01.000",
+             "target": {"tag": "input", "placeholder": "R$0,00",
+                        "accessible_name": "Renda mensal *"}, "value": " 1.000,00 "},
+            {"event_id": "e3", "type": "fill", "timestamp": "2026-06-23T00:00:02.000",
+             "target": {"tag": "input", "placeholder": "R$0,00",
+                        "accessible_name": "Valor do imóvel *"}, "value": " 0,01 "},
+            {"event_id": "e4", "type": "fill", "timestamp": "2026-06-23T00:00:03.000",
+             "target": {"tag": "input", "placeholder": "R$0,00",
+                        "accessible_name": "Valor do imóvel *"}, "value": " 100.000,00 "},
+        ]
+        result = normalizer._compact_fill_events(events)
+        assert len(result) == 2, f"Expected 2 fills (one per field), got {len(result)}"
+        assert result[0]["value"] == " 1.000,00 "
+        assert result[1]["value"] == " 100.000,00 "
+
     def test_compact_fill_events_non_fill_preserved(self):
         """Non-fill events (navigation, click) pass through unchanged."""
         normalizer = RecordingNormalizer()

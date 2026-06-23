@@ -39,8 +39,13 @@ class OracleRunner:
                     message=f"Elemento {expected_selector} nao visivel"
                 )
             if expected_text:
+                import re
                 text = el.text_content() or ""
-                if expected_text not in text:
+                # Normalize whitespace before comparing — DOM text_content() preserves
+                # raw spacing including icon text prefixes and extra whitespace between
+                # nodes. Playwright's has-text() normalizes internally; we mirror that.
+                _norm = lambda s: re.sub(r'\s+', ' ', s).strip().lower()
+                if _norm(expected_text) not in _norm(text):
                     return OracleResult(
                         oracle_type="visual_dom", status="failed",
                         expected=expected_text,

@@ -208,41 +208,81 @@ class StepPostconditionValidator:
         ctx = getattr(step, "context", {}) or {}
         assert_type = ctx.get("assert_type", "textual")
 
-        if not self._oracle:
-            last_exc = None
-            for selector in selectors:
-                try:
-                    locator = self.page.locator(selector).first
-                    locator.wait_for(state="attached", timeout=2000)
-                    text = locator.text_content(timeout=2000)
-                    matched = expected.lower() in (text or "").lower()
-                    return PostconditionResult(
-                        passed=matched,
-                        checks={"text_contains_expected": matched, "selector_used": selector},
-                        failures=[] if matched else ["assert_text_mismatch"],
-                        message=f"[{selector}] esperado='{expected[:60]}' obtido='{(text or '')[:80]}'",
-                    )
-                except Exception as exc:
-                    last_exc = exc
-                    continue
+        # Reorder and augment selectors based on assert_type:
+        #
+        # textual/automatico — assertion IS the text content:
+        #   has-text first (exact match on what user wants to verify),
+        #   then role/aria, then CSS path.
+        #   Append has-text fallback if not already present.
+        #
+        # visivel — element identity matters, but text can confirm presence:
+        #   id/aria/role first (already highest-scored from normalizer),
+        #   CSS path middle, has-text last resort.
+        #   Append has-text fallback if expected known.
+        #
+        # estado — must be the exact form element (input/checkbox/radio);
+        #   has-text finds any container with that text, not the control itself.
+        #   id → aria-label → role-based → CSS path. No has-text fallback.
+        selectors = list(selectors)
+        if assert_type in ("textual", "automatico"):
+            if expected and not any(":has-text(" in s for s in selectors):
+                selectors.append(f':has-text("{expected}")')
+            text_sels = [s for s in selectors if ":has-text(" in s]
+            other_sels = [s for s in selectors if ":has-text(" not in s]
+            selectors = text_sels + other_sels
+        elif assert_type == "visivel":
+            if expected and not any(":has-text(" in s for s in selectors):
+                selectors.append(f':has-text("{expected}")')
+            # Structural selectors first (id/aria/role ranked highest by normalizer),
+            # has-text appended last — any element containing the text is sufficient
+            # to confirm visibility.
+        # estado: no reordering, no has-text append — element identity is critical
+
+        # Resolve first selector that actually finds an element in the DOM.
+        resolved_selector = None
+        for selector in selectors:
+            try:
+                self.page.locator(selector).first.wait_for(state="attached", timeout=2000)
+                resolved_selector = selector
+                break
+            except Exception:
+                continue
+
+        if resolved_selector is None:
             return PostconditionResult(
                 passed=False,
                 failures=["assert_element_not_found"],
-                message=f"Nenhum seletor encontrou o elemento ({len(selectors)} tentativas): {last_exc}",
+                message=f"Nenhum seletor encontrou o elemento ({len(selectors)} tentativas)",
             )
 
-        selector = selectors[0] if selectors else "body"
+        if not self._oracle:
+            try:
+                text = self.page.locator(resolved_selector).first.text_content(timeout=2000)
+                matched = expected.lower() in (text or "").lower()
+                return PostconditionResult(
+                    passed=matched,
+                    checks={"text_contains_expected": matched, "selector_used": resolved_selector},
+                    failures=[] if matched else ["assert_text_mismatch"],
+                    message=f"[{resolved_selector}] esperado='{expected[:60]}' obtido='{(text or '')[:80]}'",
+                )
+            except Exception as exc:
+                return PostconditionResult(
+                    passed=False,
+                    failures=["assert_element_not_found"],
+                    message=str(exc),
+                )
+
         if assert_type in ("textual", "automatico"):
-            r = self._oracle.run_visual_dom(selector, expected)
+            r = self._oracle.run_visual_dom(resolved_selector, expected)
         elif assert_type == "visivel":
-            r = self._oracle.run_visual_dom(selector, "")
+            r = self._oracle.run_visual_dom(resolved_selector, "")
         else:
-            r = self._oracle.run_business_state(selector, expected)
+            r = self._oracle.run_business_state(resolved_selector, expected)
 
         passed = getattr(r, "status", "") == "passed"
         return PostconditionResult(
             passed=passed,
-            checks={"oracle_status": passed},
+            checks={"oracle_status": passed, "selector_used": resolved_selector},
             oracle_results=[r],
             failures=[] if passed else ["oracle_failed"],
             message=getattr(r, "message", ""),

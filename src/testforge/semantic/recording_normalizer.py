@@ -843,7 +843,13 @@ class RecordingNormalizer:
         def _target_key(t) -> tuple:
             if not t:
                 return ("__none__",)
-            return (t.get("tag", ""), t.get("id", ""), t.get("name", ""), t.get("placeholder", ""))
+            return (
+                t.get("tag", ""),
+                t.get("id", "") or (t.get("all_attributes") or {}).get("id", ""),
+                t.get("name", ""),
+                t.get("placeholder", ""),
+                t.get("accessible_name", ""),
+            )
 
         result: list = []
         i = 0
@@ -921,10 +927,11 @@ class RecordingNormalizer:
                 return ("__none__",)
             return (
                 target.get("tag", ""),
-                target.get("id", ""),
+                target.get("id", "") or (target.get("all_attributes") or {}).get("id", ""),
                 target.get("name", ""),
                 target.get("test_id", ""),
                 target.get("placeholder", ""),
+                target.get("accessible_name", ""),
             )
 
         compacted: list = []
@@ -1408,7 +1415,7 @@ class RecordingNormalizer:
                 tag = (target_data.get("tag") or "").lower()
                 if tag in ("input", "textarea"):
                     sel = f'{tag}[aria-label="{aria_label}"]'
-                    candidates.append(LocatorCandidate("aria_label", sel, 0.85, f"{tag} aria-label={aria_label}"))
+                    candidates.append(LocatorCandidate("aria_label", sel, 0.90, f"{tag} aria-label={aria_label}"))
 
         # Sort candidates by score (descending) for deterministic ordering
         candidates.sort(key=lambda c: c.score, reverse=True)
