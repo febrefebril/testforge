@@ -1,5 +1,5 @@
 @startuml
-title TestForge — Sequência: Pipeline de Curadoria L0→L1→L2→L3
+title TestForge v0.4.1 — Sequência: Pipeline de Curadoria L0→L1→L2→L3 + Handler Healing
 
 skinparam backgroundColor #FFFFFF
 skinparam sequenceMessageAlign center
@@ -10,6 +10,7 @@ participant "cmd_run\norquestrador" as CMD
 participant "FailureClassifier" as FC
 participant "HealingCatalog\n(L0)" as CAT
 participant "FallbackRunner\n(L1)" as FR
+participant "ComponentHandler\ndetect_handler()" as HD
 participant "EvidenceCollector" as EC
 participant "CuradorAutomatico\n(orquestrador L3)" as CUR
 participant "LLMHealer\n(Mock ou Real)" as LLM
@@ -63,6 +64,25 @@ alt candidato funciona
 else todos falham
   FR --> CMD: ok=False
   deactivate FR
+end
+
+== 3.5 — Component Handler Healing ==
+
+CMD -> HD: detect_handler(step)
+activate HD
+alt handler encontrado
+  HD -> HD: handler.heal(evidence, error)
+  alt handler resolveu
+    HD --> CMD: PASSED_STEP
+    deactivate HD
+    CMD --> CMD: ✅ curado por Handler
+  else handler nao resolveu
+    HD --> CMD: None → L2
+    deactivate HD
+  end
+else sem handler
+  HD --> CMD: None → L2
+  deactivate HD
 end
 
 == 4. L2 — Evidencias para LLM ==

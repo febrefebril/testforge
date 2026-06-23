@@ -1,5 +1,5 @@
 @startuml
-title TestForge — Sequência: Integração cmd_run com CuradorAutomatico
+title TestForge v0.4.1 — Sequência: Integração cmd_run com CuradorAutomatico + Handler Delegation
 
 skinparam backgroundColor #FFFFFF
 skinparam sequenceMessageAlign center
@@ -13,6 +13,7 @@ participant "Browser\n(headless/headed)" as BROWSER
 participant "EvidenceCollector" as EC
 participant "CuradorAutomatico" as CUR
 participant "LLMHealer\n(Mock ou Real)" as LLM
+participant "Component\nHandler" as HD
 participant "HealingCatalog" as CAT
 database "Metricas\n(MetricsRepository)" as MET
 
@@ -47,6 +48,12 @@ CLI -> EC: start(run_id)
 activate EC
 
 loop para cada step do script
+  CLI -> HD: detect_handler(step)
+  alt handler encontrado
+    HD --> CLI: handler.execute(page, step)
+  else sem handler
+    HD --> CLI: None → fallback padrao
+  end
   CLI -> EC: capture_dom(step_id, "before")
   CLI -> EC: capture_screenshot(step_id, "before")
   CLI -> EC: capture_network_log(entries)

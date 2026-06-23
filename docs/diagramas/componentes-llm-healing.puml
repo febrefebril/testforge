@@ -1,5 +1,5 @@
 @startuml
-title TestForge — LLM Self-Healing: Componentes (L0→L3)
+title TestForge v0.4.1 — LLM Self-Healing: Componentes (L0→L3 + Handlers)
 
 skinparam packageStyle rectangle
 skinparam backgroundColor #FFFFFF
@@ -35,9 +35,20 @@ package "Healing - L3 LLM (Novo)" as l3 #LightBlue {
   [CurationOutcome\n(PASSED/UNRESOLVED/...)] as COutcome
 }
 
-' === L2 Agents (Opcional) ===
+' === Component Handlers ===
 
-package "Healing - L2 Agents (Futuro)" as l2 #LightGray {
+package "Component Handlers\nFramework Detection" as handlers #LightBlue {
+  [ComponentHandler\n(ABC)] as BASE
+  [AngularMaterialHandler\nmat-select, autocomplete,\ndialog, tabs, slide-toggle] as AMH
+  [PrimeFacesHandler\n(skeleton)] as PFH
+  [ReactMUIHandler\n(skeleton)] as RWH
+  [CDKOverlayHandler\noverlay utilities] as COH
+  [detect_handler()\nregistry dispatch] as DET
+}
+
+' === L2 Agents (Implementados) ===
+
+package "Healing - L2 Agents" as l2 #LightGreen {
   [SelectorAgent\n(FAM-01)] as SA
   [TimingAgent\n(FAM-02)] as TA
   [InputAgent\n(FAM-06/07)] as IA
@@ -77,14 +88,24 @@ SA ..> LHealer : "_llm_fallback()"
 TA ..> LHealer : "_llm_fallback()"
 IA ..> LHealer : "_llm_fallback()"
 
+' === Handler connections ===
+
+DET -down-> BASE : extends
+DET -down-> AMH : routes
+DET -down-> PFH : routes
+DET -down-> RWH : routes
+AMH -down-> COH : uses
+FR -down-> DET : detect_handler()
+Curator -down-> DET : handler.heal()
+Curator -down-> AMH : Angular-specific
+
 ' === Legend ===
 
 legend right
   |= Cor |= Significado |
   | <#LightGreen> | Existente — sem mudanças |
   | <#LightYellow> | Existente — será atualizado |
-  | <#LightBlue> | Novo — Fase 3-4 |
-  | <#LightGray> | Futuro — Fase 7 (opcional) |
+  | <#LightBlue> | Novo — v0.4.1 |
 endlegend
 
 @enduml

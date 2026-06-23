@@ -1,5 +1,5 @@
 @startuml
-title TestForge v0.3.0 — C4 Container (28 modulos, L0→L3 healing)
+title TestForge v0.4.1 — C4 Container (32 modulos, L0→L3 healing + ComponentHandlers)
 
 skinparam backgroundColor #FFFFFF
 skinparam packageStyle rectangle
@@ -51,6 +51,15 @@ rectangle "Healing L3\nLLM Healer" as L3 #LightBlue {
   component "LLMClient\nAzure/OpenAI" as LClient
   component "LLMPrompts\n11 family prompts (EN)" as LPrompts
   component "EvidencePayload\nDOM + console + network" as EP
+}
+
+rectangle "Component Handlers\nFramework Detection" as Handlers #LightBlue {
+  component "ComponentHandler\n(ABC)" as BASE
+  component "AngularMaterialHandler\nmat-select, mat-autocomplete\nmat-dialog, mat-tabs, mat-slide" as AMH
+  component "PrimeFacesHandler\n(skeleton)" as PFH
+  component "ReactMUIHandler\n(skeleton)" as RWH
+  component "CDKOverlayHandler\noverlay utilities" as COH
+  component "detect_handler()\nregistry dispatch" as DET
 }
 
 rectangle "Oracle + Gate" as Oracle #LightGreen {
@@ -105,6 +114,19 @@ OR --> App : validate
 PG --> OR : evaluate
 MR --> CUR : metrics
 
+' --- Handler connections ---
+
+DET --> BASE : extends
+DET --> AMH : routes
+DET --> PFH : routes
+DET --> RWH : routes
+AMH --> COH : uses
+PFH --> COH : uses
+RWH --> COH : uses
+
+FR --> DET : detect_handler()
+CUR --> DET : handler.heal()
+CUR --> AMH : Angular-specific\nexecute/heal
 LClient ..> AZURE : HTTPS
 
 @enduml

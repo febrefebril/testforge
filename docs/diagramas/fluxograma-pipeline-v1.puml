@@ -32,6 +32,18 @@ fill, click, navigation, assert;
 :Gera LocatorCandidates
 (role > label > placeholder > id > name > text);
 
+|Handler Detection|
+:detect_handler(step)
+Verifica candidates, element_id, tag
+em todos handlers registrados;
+if (handler encontrado?) then (sim)
+  :Delega para handler.execute()
+  Handler executa acao especifica
+  (mat-select, autocomplete, etc);
+else (nao)
+  :Usa fallback padrao Playwright;
+endif
+
 |Compiler|
 :PlaywrightCompiler.compile()
 Le SemanticTestCase;

@@ -1,5 +1,5 @@
 @startuml
-title TestForge v0.3.0 — Sequencia: Gravacao → MIS → Compilacao → Data-Driven → Execucao → Healing L0→L3
+title TestForge v0.4.1 — Sequencia: Gravacao → MIS → Compilacao → Data-Driven → Execucao → Healing L0→L3 + Handlers
 
 skinparam backgroundColor #FFFFFF
 skinparam sequenceMessageAlign center
@@ -27,6 +27,7 @@ participant "Curador\nAutomatico" as CUR
 participant "L0: Catalog" as L0
 participant "L2: Agents" as L2
 participant "L3: LLM\n(Mock ou Azure)" as L3
+participant "Handler\ndetect_handler()" as HD
 participant "Oracle\n+ Gate" as OG
 
 == Fase 1: Gravacao ==
@@ -63,8 +64,17 @@ QA -> CLI_X: run script.py
 CLI_X -> RUN: carrega recording → 46 steps
 
 loop para cada step
-  RUN -> APP: page.goto / fill / click / assert
-  APP --> RUN: resultado
+  RUN -> HD: detect_handler(step)
+  HD -> HD: verifica candidates,\nelement_id, tag
+  alt handler encontrado (ex: AngularMaterial)
+    HD --> RUN: handler.execute(page, step)
+    RUN -> APP: action via handler\n(abre overlay, seleciona opcao)
+    APP --> RUN: resultado
+  else sem handler
+    HD --> RUN: None → fallback padrao
+    RUN -> APP: page.goto / fill / click / assert
+    APP --> RUN: resultado
+  end
 
   alt step OK
     RUN -> RUN: ✓ Step N: fill 12345678900
