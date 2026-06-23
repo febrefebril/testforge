@@ -298,12 +298,21 @@ class RecordingNormalizer:
             curr_tag = (curr.target.tag or "").lower() if curr.target else ""
             if curr_tag not in ("input", "textarea"):
                 continue
-            # Same element: match by element_id or first candidate selector
+            # Same element: prefer element_id, then accessible_name, then selector.
+            # Selector alone is ambiguous when two distinct fields share the same
+            # placeholder (e.g. two "R$0,00" inputs on one form).
             curr_id = (curr.target.element_id or "") if curr.target else ""
             nxt_id = (nxt.target.element_id or "") if nxt.target else ""
+            curr_name = (curr.target.accessible_name or "") if curr.target else ""
+            nxt_name = (nxt.target.accessible_name or "") if nxt.target else ""
             curr_sel = curr.target.candidates[0].selector if curr.target and curr.target.candidates else ""
             nxt_sel = nxt.target.candidates[0].selector if nxt.target and nxt.target.candidates else ""
-            same = (curr_id and curr_id == nxt_id) or (curr_sel and curr_sel == nxt_sel)
+            if curr_id and nxt_id:
+                same = curr_id == nxt_id
+            elif curr_name and nxt_name:
+                same = curr_name == nxt_name
+            else:
+                same = bool(curr_sel) and curr_sel == nxt_sel
             if same:
                 curr.skip_reason = "prefill_click_noise"
 
@@ -711,6 +720,8 @@ class RecordingNormalizer:
         }
         el_id_to_key: dict[str, str] = {}
         keys_to_drop: set = set()
+        # Track loser→winner pairs so we can merge identifiers after deciding
+        merge_pairs: list[tuple[str, str]] = []  # (loser_key, winner_key)
         for canonical, entry in fill_registry.items():
             el_id = (entry.get("identifiers") or {}).get("id", "").strip()
             if not el_id:
@@ -724,9 +735,22 @@ class RecordingNormalizer:
                 new_p = _source_priority_map.get(entry["source"], 0)
                 if new_p > old_p or (new_p == old_p and len(entry.get("value", "")) > len(existing_entry.get("value", ""))):
                     keys_to_drop.add(existing_canonical)
+                    merge_pairs.append((existing_canonical, canonical))
                     el_id_to_key[el_id] = canonical
                 else:
                     keys_to_drop.add(canonical)
+                    merge_pairs.append((canonical, existing_canonical))
+        # Merge identifiers from dropped entries into their winners so that
+        # _resolve_field_value can still find fields by aria_label/label/placeholder
+        # even when the winner only has element_id in its identifiers.
+        for loser_key, winner_key in merge_pairs:
+            loser = fill_registry.get(loser_key) or {}
+            winner = fill_registry.get(winner_key)
+            if winner is None:
+                continue
+            for id_k, id_v in (loser.get("identifiers") or {}).items():
+                if id_v and not winner["identifiers"].get(id_k):
+                    winner["identifiers"][id_k] = id_v
         for k in keys_to_drop:
             fill_registry.pop(k, None)
 
@@ -1240,14 +1264,20 @@ class RecordingNormalizer:
             (target_data.get("all_attributes") or {}).get("contenteditable", "")
         )
         if _contenteditable_attrs in ("true", "") and tag:
+            # Buttons with contenteditable="" are an Angular Material quirk (ripple layer).
+            # For buttons, contenteditable selector is unreliable — generate at low score
+            # so that button:has-text() candidates ranked above it take precedence.
+            _is_button_like = tag in ("button", "a", "summary")
+            _ce_base_score = 0.25 if _is_button_like else 0.50
+            _ce_text_score = 0.30 if _is_button_like else 0.60
             contenteditable_sel = f'{tag}[contenteditable="{_contenteditable_attrs}"]'
-            candidates.append(LocatorCandidate("contenteditable", contenteditable_sel, 0.50, "contenteditable element"))
+            candidates.append(LocatorCandidate("contenteditable", contenteditable_sel, _ce_base_score, "contenteditable element"))
             # Also add text-based variant if text is available for disambiguation
             ce_text = _clean_text(target_data.get("text") or target_data.get("accessible_name") or "")
             if ce_text and len(ce_text) <= 40 and not _is_generic_text(ce_text):
                 candidates.append(LocatorCandidate(
                     "contenteditable", f'{tag}[contenteditable="{_contenteditable_attrs}"]:has-text("{ce_text}")',
-                    0.60, f"contenteditable with text: {ce_text}"
+                    _ce_text_score, f"contenteditable with text: {ce_text}"
                 ))
 
         # Fallback: CSS path
