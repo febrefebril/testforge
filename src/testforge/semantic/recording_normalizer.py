@@ -941,6 +941,7 @@ class RecordingNormalizer:
             "click": "click",
             "fill": "fill",
             "keypress": "fill",
+            "contenteditable": "fill",  # contenteditable div changes mapped to fill
             "submit": "click",  # submit is a click on a submit button
         }
         action = action_map.get(event_type)
@@ -1144,6 +1145,24 @@ class RecordingNormalizer:
                     sel = f"{tag}:has-text(\"{inner}\")" if tag else f":has-text(\"{inner}\")"
                     candidates.append(LocatorCandidate("inner_html", sel, 0.45, "inner HTML text"))
 
+        # -- Contenteditable detection (GT-08) --
+        # When the element has contenteditable=true and no stable locator was found,
+        # generate a direct attribute selector. Playwright supports fill() on [contenteditable].
+        _contenteditable_attrs = (
+            (target_data.get("attributes") or {}).get("contenteditable", "") or
+            (target_data.get("all_attributes") or {}).get("contenteditable", "")
+        )
+        if _contenteditable_attrs in ("true", "") and tag:
+            contenteditable_sel = f'{tag}[contenteditable="{_contenteditable_attrs}"]'
+            candidates.append(LocatorCandidate("contenteditable", contenteditable_sel, 0.50, "contenteditable element"))
+            # Also add text-based variant if text is available for disambiguation
+            ce_text = _clean_text(target_data.get("text") or target_data.get("accessible_name") or "")
+            if ce_text and len(ce_text) <= 40 and not _is_generic_text(ce_text):
+                candidates.append(LocatorCandidate(
+                    "contenteditable", f'{tag}[contenteditable="{_contenteditable_attrs}"]:has-text("{ce_text}")',
+                    0.60, f"contenteditable with text: {ce_text}"
+                ))
+
         # Fallback: CSS path
         css_path = target_data.get("css_path") or ""
         if css_path and not candidates:
@@ -1199,6 +1218,26 @@ class RecordingNormalizer:
                             "material_btn", f"button:has-text(\"{clean_parent}\")",
                             0.50, f"Material button by text: {clean_parent}"
                         ))
+
+            # -- Select2 / combobox heuristic (GT-07) --
+            # Select2 plugin renders a div.select2-selection[role="combobox"].
+            # The native <select> is hidden (display:none) and value is set via JS.
+            # Generate a reliable selector for the combobox div.
+            if tag == "div" and "select2-selection" in css_path:
+                # aria-label on the combobox
+                aria_label = target_data.get("aria_attrs", {}).get("aria-label", "")
+                if aria_label:
+                    candidates.append(LocatorCandidate(
+                        "select2", f'div[role="combobox"][aria-label="{aria_label}"]',
+                        0.60, f"Select2 combobox by aria-label: {aria_label}"
+                    ))
+                # Text-based fallback
+                ce_text = _clean_text(target_data.get("text", ""))[:40]
+                if ce_text and not _is_generic_text(ce_text):
+                    candidates.append(LocatorCandidate(
+                        "select2", f'div.select2-selection:has-text("{ce_text}")',
+                        0.55, f"Select2 combobox by text: {ce_text}"
+                    ))
 
         # Fallback: XPath (lowest priority)
         xpath = target_data.get("xpath") or ""
