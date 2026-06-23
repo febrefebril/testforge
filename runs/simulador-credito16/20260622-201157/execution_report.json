@@ -1,0 +1,267 @@
+{
+  "run_id": "simulador-credito16_20260622-201157",
+  "recording_id": "simulador-credito16",
+  "script_path": "semantic_tests/ST-simulador-credito16/test_st-simulador-credito16.py",
+  "base_url": "https://simuladorhabitacao.caixa.gov.br/home",
+  "mode": "incremental",
+  "summary": {
+    "total": 8,
+    "passed": 5,
+    "healed_validated": 0,
+    "healing_rejected": 0,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 3,
+    "shadow_healed": 0
+  },
+  "steps": [
+    {
+      "step_num": 1,
+      "action": "navigation",
+      "status": "passed",
+      "original_locator": "",
+      "selected_locator": "",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "navigation_ok": true
+        },
+        "failures": [],
+        "message": ""
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url atual: https://simuladorhabitacao.caixa.gov.br/home"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito16_20260622-201153/screenshots/before_step_0001.png",
+        "dom": "evidence/simulador-credito16_20260622-201153/dom/before_step_0001.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito16_20260622-201153/screenshots/after_step_0001.png",
+        "dom": "evidence/simulador-credito16_20260622-201153/dom/after_step_0001.html"
+      },
+      "duration_ms": 320,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 2,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "a:has-text(\"Calculadora poder de compra Veja estimativas a partir da pre\")",
+      "selected_locator": "a:has-text(\"Calculadora poder de compra Veja estimativas a partir da pre\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_changed": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url mudou: 'https://simuladorhabitacao.caixa.gov.br/home' → 'https://simuladorhabitacao.caixa.gov.br/calculadora'"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito16_20260622-201153/screenshots/before_step_0002.png",
+        "dom": "evidence/simulador-credito16_20260622-201153/dom/before_step_0002.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito16_20260622-201153/screenshots/after_step_0002.png",
+        "dom": "evidence/simulador-credito16_20260622-201153/dom/after_step_0002.html"
+      },
+      "duration_ms": 544,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 3,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "div:has-text(\"Pela prestaçãoSei quanto posso pagar por mês Descubra qual i\")",
+      "selected_locator": "div:has-text(\"Pela prestaçãoSei quanto posso pagar por mês Descubra qual i\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: input[placeholder=\"DD/MM/AAAA\"]"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito16_20260622-201153/screenshots/before_step_0003.png",
+        "dom": "evidence/simulador-credito16_20260622-201153/dom/before_step_0003.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito16_20260622-201153/screenshots/after_step_0003.png",
+        "dom": "evidence/simulador-credito16_20260622-201153/dom/after_step_0003.html"
+      },
+      "duration_ms": 462,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 4,
+      "action": "click",
+      "status": "skipped",
+      "original_locator": "input[placeholder=\"DD/MM/AAAA\"]",
+      "selected_locator": "",
+      "value": "",
+      "precondition": null,
+      "postcondition": null,
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {},
+      "evidence_after": {},
+      "duration_ms": 0,
+      "skip_reason": "prefill_click_noise"
+    },
+    {
+      "step_num": 5,
+      "action": "click",
+      "status": "skipped",
+      "original_locator": "mat-datepicker-toggle button",
+      "selected_locator": "",
+      "value": "",
+      "precondition": null,
+      "postcondition": null,
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {},
+      "evidence_after": {},
+      "duration_ms": 0,
+      "skip_reason": "datepicker_dedup"
+    },
+    {
+      "step_num": 6,
+      "action": "click",
+      "status": "skipped",
+      "original_locator": "span:has-text(\"16\")",
+      "selected_locator": "",
+      "value": "",
+      "precondition": null,
+      "postcondition": null,
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {},
+      "evidence_after": {},
+      "duration_ms": 0,
+      "skip_reason": "datepicker_dedup"
+    },
+    {
+      "step_num": 7,
+      "action": "fill",
+      "status": "passed",
+      "original_locator": "input[placeholder=\"DD/MM/AAAA\"]",
+      "selected_locator": "input[placeholder=\"DD/MM/AAAA\"]",
+      "value": "16/06/2026",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "value_present": true,
+          "visible": true,
+          "editable": true
+        },
+        "failures": [],
+        "message": "fill precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "input_value_matches": true,
+          "actual_value_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": ""
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito16_20260622-201153/screenshots/before_step_0007.png",
+        "dom": "evidence/simulador-credito16_20260622-201153/dom/before_step_0007.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito16_20260622-201153/screenshots/after_step_0007.png",
+        "dom": "evidence/simulador-credito16_20260622-201153/dom/after_step_0007.html"
+      },
+      "duration_ms": 1644,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 8,
+      "action": "assert",
+      "status": "passed",
+      "original_locator": ":has-text(\"A idade deve ser igual ou superior a 16 anos.\")",
+      "selected_locator": ":has-text(\"A idade deve ser igual ou superior a 16 anos.\")",
+      "value": "warning A idade deve ser igual ou superior a 16 anos.",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "expected_present": true
+        },
+        "failures": [],
+        "message": "assert precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "oracle_status": true
+        },
+        "oracle_results": [
+          "OracleResult(oracle_type='visual_dom', status='passed', expected='warning A idade deve ser igual ou superior a 16 anos.', actual='', message='Elemento visivel e texto OK')"
+        ],
+        "failures": [],
+        "message": "Elemento visivel e texto OK"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/simulador-credito16_20260622-201153/screenshots/before_step_0008.png",
+        "dom": "evidence/simulador-credito16_20260622-201153/dom/before_step_0008.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/simulador-credito16_20260622-201153/screenshots/after_step_0008.png",
+        "dom": "evidence/simulador-credito16_20260622-201153/dom/after_step_0008.html"
+      },
+      "duration_ms": 176,
+      "skip_reason": ""
+    }
+  ]
+}

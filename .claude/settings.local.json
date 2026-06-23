@@ -13,7 +13,20 @@
       "Bash(cp docs/ANALISE-LLM.md docs/PESQUISA/)",
       "Bash(cp docs/PRESERVACAO-CONHECIMENTO.md docs/PESQUISA/PRESERVED-INTENT.md)",
       "Bash(rm docs/GOVERNANCA.md docs/DIAGRAMA-VERSIONING.md docs/ANALISE-LLM.md docs/PRESERVACAO-CONHECIMENTO.md)",
-      "Bash(git commit -m 'docs\\(consolidacao\\): reorganizar documentação — 7 fases completas *)"
+      "Bash(git commit -m 'docs\\(consolidacao\\): reorganizar documentação — 7 fases completas *)",
+      "Bash(xargs ls -la)",
+      "Bash(git commit -m ' *)",
+      "Bash(grep -E '\\\\.\\(json|toml|yaml|yml|sh|md\\)$')",
+      "Bash(cat)",
+      "Bash(python3 /tmp/analyze_recorder.py)",
+      "Bash(python3 -c \"import sys,json; [print\\(json.dumps\\(json.loads\\(l\\), ensure_ascii=False\\)\\) for l in sys.stdin if 'assert' in l.lower\\(\\) or 'Shift' in l or 'assert' in json.loads\\(l\\).get\\('type',''\\).lower\\(\\)]\")",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 *)",
+      "mcp__playwright__browser_navigate",
+      "WebSearch",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:developer.chrome.com)"
     ]
   }
 }
