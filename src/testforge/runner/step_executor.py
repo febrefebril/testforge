@@ -165,10 +165,18 @@ class StepExecutor:
                         if self._fill_input(self.page, label=name, value=val):
                             return f"submit_form:{name}"
 
-                # Priority 2: resolved value from field_value_map
+                # Priority 2: resolved value from field_value_map.
+                # Use accessible_name/label/placeholder from the target as the fill label —
+                # the intention string is a human-readable description, not a valid aria-label.
                 if resolved_val:
-                    if self._fill_input(self.page, label=intention or "", value=resolved_val):
-                        return f"field_map:{intention}"
+                    fill_label = (
+                        ((step.target.accessible_name or "") if step.target else "")
+                        or ((step.target.label or "") if step.target else "")
+                        or ((step.target.placeholder or "") if step.target else "")
+                        or intention
+                    )
+                    if self._fill_input(self.page, label=fill_label, value=resolved_val):
+                        return f"field_map:{fill_label}"
 
                 # Priority 3: missing_fill → match data_values by fill_label
                 if ctx.get("missing_fill"):
