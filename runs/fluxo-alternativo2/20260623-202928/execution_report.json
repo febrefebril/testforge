@@ -1,0 +1,155 @@
+{
+  "run_id": "fluxo-alternativo2_20260623-202928",
+  "recording_id": "fluxo-alternativo2",
+  "script_path": "semantic_tests/ST-fluxo-alternativo2/test_st-fluxo-alternativo2.py",
+  "base_url": "https://simuladorhabitacao.caixa.gov.br/home",
+  "mode": "incremental",
+  "summary": {
+    "total": 3,
+    "passed": 2,
+    "healed_validated": 0,
+    "healing_rejected": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0,
+    "shadow_healed": 0
+  },
+  "steps": [
+    {
+      "step_num": 1,
+      "action": "navigation",
+      "status": "passed",
+      "original_locator": "",
+      "selected_locator": "",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "navigation_ok": true
+        },
+        "failures": [],
+        "message": ""
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url atual: https://simuladorhabitacao.caixa.gov.br/home"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/fluxo-alternativo2_20260623-202922/screenshots/before_step_0001.png",
+        "dom": "evidence/fluxo-alternativo2_20260623-202922/dom/before_step_0001.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/fluxo-alternativo2_20260623-202922/screenshots/after_step_0001.png",
+        "dom": "evidence/fluxo-alternativo2_20260623-202922/dom/after_step_0001.html"
+      },
+      "duration_ms": 505,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 2,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "a[href=\"/calculadora-egi\"]",
+      "selected_locator": "a[href=\"/calculadora-egi\"]",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_changed": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url mudou: 'https://simuladorhabitacao.caixa.gov.br/home' → 'https://simuladorhabitacao.caixa.gov.br/calculadora-egi'"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/fluxo-alternativo2_20260623-202922/screenshots/before_step_0002.png",
+        "dom": "evidence/fluxo-alternativo2_20260623-202922/dom/before_step_0002.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/fluxo-alternativo2_20260623-202922/screenshots/after_step_0002.png",
+        "dom": "evidence/fluxo-alternativo2_20260623-202922/dom/after_step_0002.html"
+      },
+      "duration_ms": 742,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 3,
+      "action": "click",
+      "status": "healing_rejected",
+      "original_locator": "app-root > app-form-resultado > div#formInit > div.bg-neutral-1 mx-auto rounded-lg border border-grayscale-50 shadow-[0_1px_3px_rgba(0,92,169,0.3),0_4px_8px_rgba(0,92,169,0.15)] overflow-hidden max-w-[1152px] text-start px-smaller md:p-12 > section.mt-10 md:mt-medium > div.grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-smaller > app-card-egi > mat-card.mat-mdc-card mdc-card option-card cursor-pointer transition-all min-h-[183px] flex flex-col items-center p-smaller text-center py-4 tone-success mat-mdc-card-outlined mdc-card--outlined",
+      "selected_locator": "",
+      "value": "",
+      "precondition": {
+        "passed": false,
+        "checks": {
+          "selector_present": true,
+          "actionable": false,
+          "visible": false,
+          "enabled": false,
+          "area_positive": false
+        },
+        "failures": [
+          "not_attached"
+        ],
+        "message": "Elemento 'app-root > app-form-resultado > div#formInit > div.bg-neutral-1 mx-auto rounded-lg border border-grayscale-50 shadow-[0_1px_3px_rgba(0,92,169,0.3),0_4px_8px_rgba(0,92,169,0.15)] overflow-hidden max-w-[1152px] text-start px-smaller md:p-12 > section.mt-10 md:mt-medium > div.grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-smaller > app-card-egi > mat-card.mat-mdc-card mdc-card option-card cursor-pointer transition-all min-h-[183px] flex flex-col items-center p-smaller text-center py-4 tone-success mat-mdc-card-outlined mdc-card--outlined' nao encontrado no DOM"
+      },
+      "postcondition": null,
+      "healing": {
+        "attempted": true,
+        "status": "PASSED_STEP",
+        "layer": "L1",
+        "family": "FAM-01",
+        "taxonomy_id": "SEL-004",
+        "strategy": "semantic_locator_conversion",
+        "original_locator": "app-root > app-form-resultado > div#formInit > div.bg-neutral-1 mx-auto rounded-lg border border-grayscale-50 shadow-[0_1px_3px_rgba(0,92,169,0.3),0_4px_8px_rgba(0,92,169,0.15)] overflow-hidden max-w-[1152px] text-start px-smaller md:p-12 > section.mt-10 md:mt-medium > div.grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-smaller > app-card-egi > mat-card.mat-mdc-card mdc-card option-card cursor-pointer transition-all min-h-[183px] flex flex-col items-center p-smaller text-center py-4 tone-success mat-mdc-card-outlined mdc-card--outlined",
+        "proposed_locator": "mat-card:has-text(\"_circle Imóvel quitado Já paguei tudo e não tenho mais dívid\")",
+        "confidence": 0.45000000000000007,
+        "validated": false,
+        "oracle_passed": false,
+        "rejection_reason": [
+          "low_confidence"
+        ],
+        "rationale": "Candidato MIS (text) score=0.45: mat-card:has-text(\"_circle Imóvel quitado Já paguei tudo e não tenho mais dívid\")",
+        "raw_response": "",
+        "failure_phase": "precondition",
+        "original_error": "Elemento 'app-root > app-form-resultado > div#formInit > div.bg-neutral-1 mx-auto rounded-lg border border-grayscale-50 shadow-[0_1px_3px_rgba(0,92,169,0.3),0_4px_8px_rgba(0,92,169,0.15)] overflow-hidden max-w-[1152px] text-start px-smaller md:p-12 > section.mt-10 md:mt-medium > div.grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-smaller > app-card-egi > mat-card.mat-mdc-card mdc-card option-card cursor-pointer transition-all min-h-[183px] flex flex-col items-center p-smaller text-center py-4 tone-success mat-mdc-card-outlined mdc-card--outlined' nao encontrado no DOM",
+        "entry_id": "",
+        "promotion_state": "",
+        "promotion_allowed": false,
+        "promotion_blocks": []
+      },
+      "error_message": "Proposta do curador rejeitada: low_confidence",
+      "evidence_before": {
+        "screenshot": "evidence/fluxo-alternativo2_20260623-202922/screenshots/before_step_0003.png",
+        "dom": "evidence/fluxo-alternativo2_20260623-202922/dom/before_step_0003.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/fluxo-alternativo2_20260623-202922/screenshots/after_step_0003.png",
+        "dom": "evidence/fluxo-alternativo2_20260623-202922/dom/after_step_0003.html"
+      },
+      "duration_ms": 3764,
+      "skip_reason": ""
+    }
+  ]
+}

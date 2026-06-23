@@ -47,6 +47,8 @@ _MATERIAL_ICONS = {
     "keyboard_arrow_down", "keyboard_arrow_up", "keyboard_arrow_right",
     "keyboard_arrow_left", "cancel", "done", "clear",
     "fact_check", "paid", "receipt", "monetization_on",
+    "check_circle", "check_circle_outline", "radio_button_checked", "radio_button_unchecked",
+    "check_box", "check_box_outline_blank", "indeterminate_check_box",
 }
 
 
@@ -1155,6 +1157,13 @@ class RecordingNormalizer:
             if attr_name.startswith("data-") and attr_value and len(attr_value) < 60:
                 sel = f"[{attr_name}='{attr_value}']"
                 candidates.append(LocatorCandidate("data_attr", sel, 0.65, f"{attr_name}={attr_value}"))
+
+        # 0.2 <a href="..."> — route-based locator stable across Tailwind class changes
+        if tag == "a":
+            _href = (target_data.get("all_attributes") or {}).get("href") or ""
+            if _href and not _href.startswith("javascript:") and not _href.startswith("#") and len(_href) < 200:
+                _href_score = 0.87 if (_href.startswith("/") or _href.startswith("http")) else 0.65
+                candidates.append(LocatorCandidate("href", f'a[href="{_href}"]', _href_score, f"href={_href}"))
 
         # For <select> elements: prefer name/id, NEVER use label + input
         if tag == "select":

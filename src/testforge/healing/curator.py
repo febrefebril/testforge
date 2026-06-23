@@ -168,6 +168,8 @@ class CuradorAutomatico:
         # Try layers in order
         outcome = self._try_layer0_catalog(family, step_data, error_message)
         if outcome is None:
+            outcome = self._try_layer1_candidates(step_data, family)
+        if outcome is None:
             outcome = self._try_layer2_agents(family, step_data, error_message, evidence)
         if outcome is None:
             outcome = self._run_healing_cycle(step_data, evidence, error_message, family=family)
@@ -221,6 +223,51 @@ class CuradorAutomatico:
             )
 
         return None  # Fall through to L1
+
+    # ── L1: Ranked Candidates (MIS fallback) ──────────────────────────
+
+    _DANGEROUS_SELS = {"body", "html", "div", "span", "*", "a", "button", "input"}
+
+    def _try_layer1_candidates(
+        self, step_data: dict, family: str,
+    ) -> Optional[CurationOutcome]:
+        """L1: Try ranked LocatorCandidates from the MIS (step.target.candidates)."""
+        candidates = step_data.get("candidates") or []
+        if not candidates or not self._step_runner:
+            return None
+
+        sorted_cands = sorted(candidates, key=lambda c: c.get("score", 0), reverse=True)
+        for cand in sorted_cands:
+            sel = (cand.get("selector") or "").strip()
+            score = cand.get("score", 0)
+            if not sel or score < 0.3:
+                continue
+            # Skip dangerously generic selectors
+            if sel.lower() in self._DANGEROUS_SELS:
+                continue
+            if sel.startswith("nth-child") or sel.startswith(":nth-child"):
+                continue
+
+            patched = self._build_step_copy(step_data, sel, "semantic_locator_conversion")
+            passed, _ = self._try_execute_step(patched)
+            if passed:
+                # Execution success proves locator works — boost confidence above validator threshold
+                confirmed_confidence = max(score, 0.60)
+                proposal = LLMHealingProposal(
+                    taxonomy_id="SEL-004", family="FAM-01",
+                    strategy="semantic_locator_conversion",
+                    new_locator=sel,
+                    confidence=confirmed_confidence,
+                    rationale=f"Candidato MIS ({cand.get('strategy','')}) score={score:.2f} confirmado por execucao: {sel}",
+                )
+                return CurationOutcome(
+                    status=ProgressResult.PASSED_STEP,
+                    proposal=proposal,
+                    layer_used="L1",
+                    family=family or "FAM-01",
+                    taxonomy_id="SEL-004",
+                )
+        return None
 
     # ── L2: Specialist Agents ──────────────────────────────────────────
 

@@ -1,0 +1,417 @@
+{
+  "run_id": "fluxo-errado2_20260623-011140",
+  "recording_id": "fluxo-errado2",
+  "script_path": "semantic_tests/ST-fluxo-errado2/test_st-fluxo-errado2.py",
+  "base_url": "https://simuladorhabitacao.caixa.gov.br/home",
+  "mode": "incremental",
+  "summary": {
+    "total": 14,
+    "passed": 5,
+    "healed_validated": 0,
+    "healing_rejected": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 8,
+    "shadow_healed": 0
+  },
+  "steps": [
+    {
+      "step_num": 1,
+      "action": "navigation",
+      "status": "passed",
+      "original_locator": "",
+      "selected_locator": "",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "navigation_ok": true
+        },
+        "failures": [],
+        "message": ""
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url atual: https://simuladorhabitacao.caixa.gov.br/home"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/fluxo-errado2_20260623-011108/screenshots/before_step_0001.png",
+        "dom": "evidence/fluxo-errado2_20260623-011108/dom/before_step_0001.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/fluxo-errado2_20260623-011108/screenshots/after_step_0001.png",
+        "dom": "evidence/fluxo-errado2_20260623-011108/dom/after_step_0001.html"
+      },
+      "duration_ms": 507,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 2,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "a[role=\"listitem\"]:has-text(\"Calculadora poder de compra Veja estimativas a partir da pre\")",
+      "selected_locator": "a[role=\"listitem\"]:has-text(\"Calculadora poder de compra Veja estimativas a partir da pre\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_changed": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url mudou: 'https://simuladorhabitacao.caixa.gov.br/home' → 'https://simuladorhabitacao.caixa.gov.br/calculadora'"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/fluxo-errado2_20260623-011108/screenshots/before_step_0002.png",
+        "dom": "evidence/fluxo-errado2_20260623-011108/dom/before_step_0002.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/fluxo-errado2_20260623-011108/screenshots/after_step_0002.png",
+        "dom": "evidence/fluxo-errado2_20260623-011108/dom/after_step_0002.html"
+      },
+      "duration_ms": 784,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 3,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "div[role=\"button\"]:has-text(\"Valor do imóvel + renda Já escolheu a casa? Veja se essa cas\")",
+      "selected_locator": "div[role=\"button\"]:has-text(\"Valor do imóvel + renda Já escolheu a casa? Veja se essa cas\")",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "next_step_visible": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "proximo step visivel: input[placeholder=\"DD/MM/AAAA\"]"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/fluxo-errado2_20260623-011108/screenshots/before_step_0003.png",
+        "dom": "evidence/fluxo-errado2_20260623-011108/dom/before_step_0003.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/fluxo-errado2_20260623-011108/screenshots/after_step_0003.png",
+        "dom": "evidence/fluxo-errado2_20260623-011108/dom/after_step_0003.html"
+      },
+      "duration_ms": 588,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 4,
+      "action": "click",
+      "status": "skipped",
+      "original_locator": "input[placeholder=\"DD/MM/AAAA\"]",
+      "selected_locator": "",
+      "value": "",
+      "precondition": null,
+      "postcondition": null,
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {},
+      "evidence_after": {},
+      "duration_ms": 0,
+      "skip_reason": "datepicker_dedup"
+    },
+    {
+      "step_num": 5,
+      "action": "click",
+      "status": "skipped",
+      "original_locator": "span[contenteditable=\"\"]",
+      "selected_locator": "",
+      "value": "",
+      "precondition": null,
+      "postcondition": null,
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {},
+      "evidence_after": {},
+      "duration_ms": 0,
+      "skip_reason": "datepicker_dedup"
+    },
+    {
+      "step_num": 6,
+      "action": "click",
+      "status": "skipped",
+      "original_locator": "span[contenteditable=\"\"]",
+      "selected_locator": "",
+      "value": "",
+      "precondition": null,
+      "postcondition": null,
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {},
+      "evidence_after": {},
+      "duration_ms": 0,
+      "skip_reason": "datepicker_dedup"
+    },
+    {
+      "step_num": 7,
+      "action": "click",
+      "status": "skipped",
+      "original_locator": "span[contenteditable=\"\"]",
+      "selected_locator": "",
+      "value": "",
+      "precondition": null,
+      "postcondition": null,
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {},
+      "evidence_after": {},
+      "duration_ms": 0,
+      "skip_reason": "datepicker_dedup"
+    },
+    {
+      "step_num": 8,
+      "action": "click",
+      "status": "skipped",
+      "original_locator": "span[contenteditable=\"\"]",
+      "selected_locator": "",
+      "value": "",
+      "precondition": null,
+      "postcondition": null,
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {},
+      "evidence_after": {},
+      "duration_ms": 0,
+      "skip_reason": "datepicker_dedup"
+    },
+    {
+      "step_num": 9,
+      "action": "click",
+      "status": "skipped",
+      "original_locator": "span[contenteditable=\"\"]:has-text(\"JAN\")",
+      "selected_locator": "",
+      "value": "",
+      "precondition": null,
+      "postcondition": null,
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {},
+      "evidence_after": {},
+      "duration_ms": 0,
+      "skip_reason": "datepicker_dedup"
+    },
+    {
+      "step_num": 10,
+      "action": "click",
+      "status": "skipped",
+      "original_locator": "span[contenteditable=\"\"]",
+      "selected_locator": "",
+      "value": "",
+      "precondition": null,
+      "postcondition": null,
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {},
+      "evidence_after": {},
+      "duration_ms": 0,
+      "skip_reason": "datepicker_dedup"
+    },
+    {
+      "step_num": 11,
+      "action": "fill",
+      "status": "passed",
+      "original_locator": "input[placeholder=\"DD/MM/AAAA\"]",
+      "selected_locator": "input[placeholder=\"DD/MM/AAAA\"]",
+      "value": "06/01/1992",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "value_present": true,
+          "visible": true,
+          "editable": true
+        },
+        "failures": [],
+        "message": "fill precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "input_value_matches": true,
+          "actual_value_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": ""
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/fluxo-errado2_20260623-011108/screenshots/before_step_0011.png",
+        "dom": "evidence/fluxo-errado2_20260623-011108/dom/before_step_0011.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/fluxo-errado2_20260623-011108/screenshots/after_step_0011.png",
+        "dom": "evidence/fluxo-errado2_20260623-011108/dom/after_step_0011.html"
+      },
+      "duration_ms": 1848,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 12,
+      "action": "click",
+      "status": "skipped",
+      "original_locator": "input[placeholder=\"R$0,00\"]",
+      "selected_locator": "",
+      "value": "",
+      "precondition": null,
+      "postcondition": null,
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {},
+      "evidence_after": {},
+      "duration_ms": 0,
+      "skip_reason": "prefill_click_noise"
+    },
+    {
+      "step_num": 13,
+      "action": "fill",
+      "status": "passed",
+      "original_locator": "input[placeholder=\"R$0,00\"]",
+      "selected_locator": "input[placeholder=\"R$0,00\"]",
+      "value": " 100.000,00 ",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "value_present": true,
+          "visible": true,
+          "editable": true
+        },
+        "failures": [],
+        "message": "fill precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "input_value_matches": true,
+          "actual_value_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": ""
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence/fluxo-errado2_20260623-011108/screenshots/before_step_0013.png",
+        "dom": "evidence/fluxo-errado2_20260623-011108/dom/before_step_0013.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/fluxo-errado2_20260623-011108/screenshots/after_step_0013.png",
+        "dom": "evidence/fluxo-errado2_20260623-011108/dom/after_step_0013.html"
+      },
+      "duration_ms": 1592,
+      "skip_reason": ""
+    },
+    {
+      "step_num": 14,
+      "action": "click",
+      "status": "healing_rejected",
+      "original_locator": "button[contenteditable=\"\"]:has-text(\"Calcular\")",
+      "selected_locator": "",
+      "value": "",
+      "precondition": {
+        "passed": false,
+        "checks": {
+          "selector_present": true,
+          "actionable": false,
+          "visible": false,
+          "enabled": false,
+          "area_positive": false
+        },
+        "failures": [
+          "not_attached"
+        ],
+        "message": "Elemento 'button[contenteditable=\"\"]:has-text(\"Calcular\")' nao encontrado no DOM"
+      },
+      "postcondition": {
+        "passed": false,
+        "checks": {
+          "next_step_visible": false
+        },
+        "oracle_results": [],
+        "failures": [
+          "next_step_not_visible"
+        ],
+        "message": "proximo step nao apareceu: #app-root > app-calculadora > div.bg-highlight-1\\ px-smaller\\ py-small\\ min-h-screen > div.bg-neutral-1\\ mx-auto\\ rounded-lg\\ border\\ border-grayscale-50\\ shadow-\\[0_1px_3px_rgba\\(0\\,92\\,169\\,0\\.3\\)\\,0_4px_8px_rgba\\(0\\,92\\,169\\,0\\.15\\)\\]\\ overflow-hidden\\ max-w-\\[1152px\\]\\ text-start\\ px-smaller\\ md\\:p-12 > app-resultados-calculadora > div.border\\ border-grayscale-50\\ rounded-lg\\ p-smaller\\ md\\:p-6\\ bg-white > div.mt-8\\ grid\\ grid-cols-1\\ sm\\:grid-cols-2\\ lg\\:grid-cols-3\\ gap-6\\ md\\:gap-5 > div.rounded-lg\\ border\\ border-secondary-90\\ bg-accent-1\\ p-4\\ md\\:p-5"
+      },
+      "healing": {
+        "attempted": true,
+        "status": "PASSED_STEP",
+        "layer": "L2",
+        "family": "FAM-01",
+        "taxonomy_id": "SEL-004",
+        "strategy": "has_text_fallback",
+        "original_locator": "button[contenteditable=\"\"]:has-text(\"Calcular\")",
+        "proposed_locator": "text=\"calculate_outline  Calcular\"",
+        "confidence": 0.7,
+        "validated": false,
+        "oracle_passed": false,
+        "rejection_reason": [
+          "postcondition_failed",
+          "next_step_not_visible"
+        ],
+        "rationale": "Fallback por texto visivel (exato): 'calculate_outline  Calcular'",
+        "raw_response": "",
+        "failure_phase": "precondition",
+        "original_error": "Elemento 'button[contenteditable=\"\"]:has-text(\"Calcular\")' nao encontrado no DOM",
+        "entry_id": "c8a375dda5fa",
+        "promotion_state": "",
+        "promotion_allowed": false,
+        "promotion_blocks": []
+      },
+      "error_message": "Healing executou, mas pos-condicao/oracle falhou: proximo step nao apareceu: #app-root > app-calculadora > div.bg-highlight-1\\ px-smaller\\ py-small\\ min-h-screen > div.bg-neutral-1\\ mx-auto\\ rounded-lg\\ border\\ border-grayscale-50\\ shadow-\\[0_1px_3px_rgba\\(0\\,92\\,169\\,0\\.3\\)\\,0_4px_8px_rgba\\(0\\,92\\,169\\,0\\.15\\)\\]\\ overflow-hidden\\ max-w-\\[1152px\\]\\ text-start\\ px-smaller\\ md\\:p-12 > app-resultados-calculadora > div.border\\ border-grayscale-50\\ rounded-lg\\ p-smaller\\ md\\:p-6\\ bg-white > div.mt-8\\ grid\\ grid-cols-1\\ sm\\:grid-cols-2\\ lg\\:grid-cols-3\\ gap-6\\ md\\:gap-5 > div.rounded-lg\\ border\\ border-secondary-90\\ bg-accent-1\\ p-4\\ md\\:p-5",
+      "evidence_before": {
+        "screenshot": "evidence/fluxo-errado2_20260623-011108/screenshots/before_step_0014.png",
+        "dom": "evidence/fluxo-errado2_20260623-011108/dom/before_step_0014.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence/fluxo-errado2_20260623-011108/screenshots/after_step_0014.png",
+        "dom": "evidence/fluxo-errado2_20260623-011108/dom/after_step_0014.html"
+      },
+      "duration_ms": 24275,
+      "skip_reason": ""
+    }
+  ]
+}

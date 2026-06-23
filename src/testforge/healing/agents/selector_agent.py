@@ -89,12 +89,17 @@ class SelectorAgent:
         if proposal and proposal.confidence >= 0.7:
             return proposal
 
-        # 5. Try text-based
+        # 5. Try href (stable for <a> navigation links)
+        proposal = self._try_href(payload)
+        if proposal and proposal.confidence >= 0.7:
+            return proposal
+
+        # 6. Try text-based
         proposal = self._try_text(text_val)
         if proposal and proposal.confidence >= 0.7:
             return proposal
 
-        # 6. Fallback to LLM
+        # 7. Fallback to LLM
         return self._llm_fallback(payload, error_message)
 
     def _try_testid(self, payload: EvidencePayload) -> Optional[LLMHealingProposal]:
@@ -160,6 +165,24 @@ class SelectorAgent:
                 rationale=f"placeholder encontrado no DOM: {ph}",
             )
         return None
+
+    def _try_href(self, payload: EvidencePayload) -> Optional[LLMHealingProposal]:
+        """Extract href from <a> in DOM snapshot — stable across Tailwind class changes."""
+        dom = payload.dom_snapshot
+        m = re.search(r'<a\b[^>]+\bhref\s*=\s*["\']([^"\']+)["\'][^>]*>', dom, re.IGNORECASE)
+        if not m:
+            return None
+        href = m.group(1).strip()
+        if not href or href.startswith("javascript:") or href.startswith("#"):
+            return None
+        score = 0.87 if (href.startswith("/") or href.startswith("http")) else 0.65
+        return LLMHealingProposal(
+            taxonomy_id="SEL-004", family="FAM-01",
+            strategy="semantic_locator_conversion",
+            new_locator=f'a[href="{href}"]',
+            confidence=score,
+            rationale=f"href estavel para link de navegacao: {href}",
+        )
 
     def _try_text(self, text_val: str) -> Optional[LLMHealingProposal]:
         if text_val and len(text_val) >= 2:

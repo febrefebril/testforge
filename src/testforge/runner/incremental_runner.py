@@ -451,6 +451,11 @@ class IncrementalRunner:
             "action": step.action,
             "value": step.value or "",
             "base_url": self.base_url,
+            "candidates": [
+                {"selector": c.selector, "score": c.score, "strategy": c.strategy}
+                for c in (step.target.candidates if step.target and step.target.candidates else [])
+                if c.selector and c.selector != original_selector
+            ],
         }
 
         if self.metrics:
