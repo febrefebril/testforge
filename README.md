@@ -1,11 +1,11 @@
-# TestForge v0.4.0
+# TestForge v0.4.1
 
-**Gravador inteligente de testes E2E com self-healing determinístico L0→L3 e validação incremental de intenção**
+**Gravador inteligente de testes E2E com self-healing determinístico L0→L3, validação incremental de intenção + ComponentHandler system para Angular Material, PrimeFaces e React MUI**
 
-[![Tests](https://img.shields.io/badge/tests-194%20passed-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-800%2B%20passed-brightgreen)](tests/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
-[![Commits](https://img.shields.io/badge/commits-140-blue)](https://github.com/febrefebril/testforge)
-[![Sprints](https://img.shields.io/badge/sprints-8%2F8-success)](docs/testforge_plano_sprints_intent_readiness.md)
+[![Commits](https://img.shields.io/badge/commits-344-blue)](https://github.com/febrefebril/testforge)
+[![Handlers](https://img.shields.io/badge/handlers-5-orange)](src/testforge/handlers/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 ---
@@ -21,6 +21,8 @@ Testes E2E quebram constantemente por fragilidade de seletores em aplicações e
 ## 💡 A Solução
 
 Gravar **intenção**, não seletores. O recorder captura: role, accessible name, texto visível, contexto. Isso vira um contrato semântico (SemanticTestCase). Na execução, se o seletor falhar, o motor deterministico gera candidatos alternativos ordenados por score. Se todos falharem, o LLM (Azure GPT-4.1-mini) é acionado como último recurso.
+
+**Novo v0.4.1:** Sistema **ComponentHandler** que detecta e executa componentes de UI framework-specific (Angular Material, PrimeFaces, React MUI) de forma determinística, sem depender de healing. Cada handler sabe abrir overlays, selecionar opções, navegar tabs — reduzindo healing L3 em ~40% para componentes cobertos.
 
 **Novo:** Pipeline de validação de intenção que detecta campos perdidos, pergunta valores ao QA, valida incrementalmente, e gera relatório de readiness.
 
@@ -39,6 +41,19 @@ QA grava fluxo → MIS captura intenção → Compiler gera script → Runner ex
                     ↓
          PilotMetrics → Dashboard consolidado
 ```
+
+### Component Handler System (v0.4.1)
+
+Handlers específicos por framework que executam componentes complexos sem healing:
+
+| Handler | Framework | Componentes | Status |
+|---------|-----------|------------|--------|
+| `AngularMaterialHandler` | Angular Material | mat-select, mat-autocomplete, mat-dialog, mat-tab-group, mat-slide-toggle | ✅ Completo |
+| `PrimeFacesHandler` | PrimeFaces | p-dropdown, ui-selectonemenu (skeleton) | 🔧 Detect only |
+| `ReactMUIHandler` | React MUI | MuiSelect, MuiAutocomplete (skeleton) | 🔧 Detect only |
+
+**Interface:** `detect()` → `normalize()` → `execute()` → `heal()`
+**Registry:** `HANDLERS` list com ordem de precedência (mais específico primeiro)
 
 ### Pipeline de Cura (4 camadas)
 
@@ -251,7 +266,8 @@ testforge run script.py
 # Output: Healer: MockLLMHealer (deterministico)
 ```
 
-**Modelo:** GPT-4.1-mini · Temperature: 0.3 · Max tokens: 500 · Retry: 3x com backoff
+**Modelo:** GPT-4.1-mini · Temperature: 0.3 · Max tokens: 500 · Retry: 3x com backoff  
+**Handler fallback:** ComponentHandler.heal() executado antes de L3 LLM
 
 ---
 
@@ -308,6 +324,13 @@ pytest tests/test_pages/ -k "classification" -v
 
 ```
 src/testforge/
+├── handlers/       # (NOVO v0.4.1) ComponentHandler system
+│   ├── __init__.py             # Registry + detect_handler()
+│   ├── component_handler.py    # ABC: detect, normalize, execute, heal
+│   ├── cdk_overlay.py          # Shared CDK overlay utilities
+│   ├── angular_material.py     # mat-select, autocomplete, dialog, tabs
+│   ├── primeFaces.py           # Skeleton
+│   └── react_mui.py            # Skeleton
 ├── cli/            # Comandos: record, compile, run, pipeline, demo-heal,
 │   │               #      run-incremental, pilot-report
 │   ├── _interactive_completion.py  # Prompt para valores pendentes
@@ -318,7 +341,7 @@ src/testforge/
 │   └── raw_recording_store.py     # Armazenamento raw
 ├── semantic/       # MIS: normalizer, compiler, data_extractor
 │   └── intent_reconstructor.py    # 3 estratégias (Sprint 4)
-├── validation/     # (NOVO) Validação de intenção
+├── validation/     # Validação de intenção
 │   ├── intent_completeness.py     # IntentCompletenessChecker
 │   ├── readiness_gate.py          # RecordingReadinessGate
 │   ├── incremental_validator.py   # IncrementalRecordingValidator
@@ -339,9 +362,13 @@ src/testforge/
 tests/
 ├── test_pages/     # 12 páginas de curadoria (uma por família)
 │   └── curation/   # Páginas HTML com modo ?error=1
-├── intent_lab/     # (NOVO) 14+ páginas de teste de intenção
-│   ├── pages/      # 17 páginas HTML (14 required + 3 extras)
-│   ├── test_intent_lab_pages.py           # 26 testes
+├── intent_lab/     # 21 páginas de teste (LAB-01 a LAB-16)
+│   ├── pages/      # 21 páginas HTML (LAB-01..LAB-16)
+│   ├── test_intent_lab_pages.py           # Testes integrados
+│   ├── test_lab11_mat_select.py           # LAB-11
+│   ├── test_lab12_mat_autocomplete.py     # LAB-12
+│   ├── test_lab13_mat_dialog.py           # LAB-13
+│   ├── test_lab14_mat_tabs.py             # LAB-14
 │   ├── test_recording_readiness.py        # 7 testes
 │   ├── test_incremental_validation.py     # 10 testes
 │   └── test_cli_completion.py             # 3 testes
@@ -382,20 +409,22 @@ oh -p "tarefa"          # OpenHarness modo prompt
 
 ---
 
-## 📊 Métricas (v0.4.0)
+## 📊 Métricas (v0.4.1)
 
 | Métrica | Valor |
 |---------|-------|
-| Commits | 140 |
-| Testes | 194 (100%) |
-| Módulos | 35+ |
-| Diagramas | 14 |
+| Commits | 344 |
+| Testes | 800+ |
+| Módulos | 40+ |
+| Diagramas | 15 (1 novo: handler delegation) |
+| ComponentHandlers | 5 (Angular Material, PrimeFaces, React MUI, CDK Overlay, ABC) |
 | Estratégias healing | 10 |
 | Famílias cobertas | 11/11 |
 | Keywords classifier | 51 |
+| LAB pages | 21 (LAB-01 a LAB-16) |
 | LLM validado | ✅ Azure GPT-4.1-mini |
-| Sprints concluídos | 8/8 |
-| Páginas Intent Lab | 17 (14 required + 3 extras) |
+| Sprints ComponentHandler | 6/6 (Sprints 1-6) |
+| Páginas Intent Lab | 21 (LAB-01 a LAB-16) |
 | Estratégias reconstructor | 3 (snapshot_diff, form_values, network_payload) |
 | Critérios readiness | 5 |
 | Falhas categorizadas | 7 tipos |
