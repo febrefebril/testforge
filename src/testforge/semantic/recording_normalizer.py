@@ -1259,11 +1259,18 @@ class RecordingNormalizer:
         # -- Contenteditable detection (GT-08) --
         # When the element has contenteditable=true and no stable locator was found,
         # generate a direct attribute selector. Playwright supports fill() on [contenteditable].
-        _contenteditable_attrs = (
-            (target_data.get("attributes") or {}).get("contenteditable", "") or
-            (target_data.get("all_attributes") or {}).get("contenteditable", "")
-        )
-        if _contenteditable_attrs in ("true", "") and tag:
+        # Must check key EXISTENCE before checking value: .get("contenteditable", "") returns ""
+        # for elements that lack the attribute entirely, making "" in ("true","") → True for all
+        # elements (false positive). Only fire when the key is actually present in the DOM.
+        _attrs_dict = target_data.get("attributes") or {}
+        _all_attrs_dict = target_data.get("all_attributes") or {}
+        if "contenteditable" in _attrs_dict:
+            _contenteditable_attrs = _attrs_dict["contenteditable"] or ""
+        elif "contenteditable" in _all_attrs_dict:
+            _contenteditable_attrs = _all_attrs_dict["contenteditable"] or ""
+        else:
+            _contenteditable_attrs = None  # attribute absent — do not generate CE candidate
+        if _contenteditable_attrs is not None and _contenteditable_attrs in ("true", "") and tag:
             # Buttons with contenteditable="" are an Angular Material quirk (ripple layer).
             # For buttons, contenteditable selector is unreliable — generate at low score
             # so that button:has-text() candidates ranked above it take precedence.
@@ -1282,21 +1289,18 @@ class RecordingNormalizer:
 
         # Fallback: CSS path
         css_path = target_data.get("css_path") or ""
-        if css_path and not candidates:
-            css_clean = _strip_transient_classes(css_path)
-            candidates.append(LocatorCandidate("css_path", css_clean, 0.20, "CSS path fallback"))
 
-            # Heuristic: Angular Material datepicker toggle — target is often
-            # <span.mat-mdc-button-touch-target> inside <button> inside <mat-datepicker-toggle>.
-            # Generate a reliable fallback selector.
+        # Angular Material calendar context markers — always add when CSS path reveals calendar
+        # context, regardless of whether other candidates exist. These markers serve dual purpose:
+        # (1) provide a working locator for the element, (2) let _detect_overlay_steps and
+        # _dedup_datepicker_sequences recognise the element as part of a calendar interaction so
+        # the whole sequence can be collapsed into the single fill on the date input.
+        if css_path:
             if "mat-datepicker-toggle" in css_path:
                 candidates.append(LocatorCandidate(
                     "material_touch_target", "mat-datepicker-toggle button",
                     0.50, "Material datepicker toggle button"
                 ))
-
-            # Heuristic: Calendar overlay navigation buttons.
-            # Target is <span.mat-focus-indicator> inside <button.mat-calendar-*-button>.
             if "mat-calendar-previous-button" in css_path:
                 candidates.append(LocatorCandidate(
                     "material_nav", "button.mat-calendar-previous-button",
@@ -1312,9 +1316,6 @@ class RecordingNormalizer:
                     "material_nav", "button.mat-calendar-period-button",
                     0.50, "Material calendar period button"
                 ))
-
-            # Heuristic: Calendar cell clicks — target is <span> inside <button.mat-calendar-body-cell>.
-            # Clicking the span doesn't trigger the button's handler. Generate button:has-text() instead.
             if tag == "span" and "mat-calendar-body-cell" in css_path and target_data.get("text"):
                 cell_text = _clean_text(target_data["text"])
                 if cell_text:
@@ -1322,11 +1323,7 @@ class RecordingNormalizer:
                         "material_cell", f"button.mat-calendar-body-cell:has-text(\"{cell_text}\")",
                         0.50, f"Material calendar cell: {cell_text}"
                     ))
-
-            # Heuristic: Material button touch targets — <span.mat-mdc-button-touch-target>
-            # inside <button>. Click the button, not the transparent touch overlay.
             if tag == "span" and "mat-mdc-button-touch-target" in css_path and "button" in css_path:
-                # Try to extract button text from CSS path context
                 parent_text = target_data.get("parent_text") or ""
                 if parent_text:
                     clean_parent = _clean_text(parent_text)
@@ -1335,6 +1332,10 @@ class RecordingNormalizer:
                             "material_btn", f"button:has-text(\"{clean_parent}\")",
                             0.50, f"Material button by text: {clean_parent}"
                         ))
+
+        if css_path and not candidates:
+            css_clean = _strip_transient_classes(css_path)
+            candidates.append(LocatorCandidate("css_path", css_clean, 0.20, "CSS path fallback"))
 
             # -- Select2 / combobox heuristic (GT-07) --
             # Select2 plugin renders a div.select2-selection[role="combobox"].

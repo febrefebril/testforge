@@ -101,12 +101,33 @@ class AngularMaterialHandler(ComponentHandler):
     def _dedup_datepicker_sequences(self, steps: list) -> None:
         """Collapse Angular Material datepicker calendar navigation into the text fill.
 
-        Pattern: (open toggle) + (calendar nav clicks) + (fill on text input with date)
-        The text fill is the canonical intent. Calendar navigation is fragile because it
-        depends on which month the calendar opens at (current date changes between runs).
-        Keep only the fill, mark calendar steps as skipped.
+        Pattern: (open toggle) + (calendar nav clicks) + (fill on date input)
+        Only the fill is the canonical intent. Calendar navigation is fragile because it
+        depends on which month/year the calendar opens at, which changes between runs.
+
+        Handles two cases:
+        - Completed: toggle + nav + date fill → suppress toggle+nav, keep fill.
+        - Abandoned: toggle + nav + non-calendar click (user clicked away) → suppress
+          toggle+nav only; the click that closed the calendar is kept.
         """
+        import re
+
         _DP_MARKERS = ("mat-datepicker-toggle", "mat-calendar", "cdk-overlay", "data-mat-calendar")
+
+        def _step_sels(step) -> list:
+            if not step.target or not step.target.candidates:
+                return []
+            return [c.selector for c in step.target.candidates if c.selector]
+
+        def _has_dp_marker(step) -> bool:
+            return any(m in sel for sel in _step_sels(step) for m in _DP_MARKERS)
+
+        def _is_calendar_step(step) -> bool:
+            return _has_dp_marker(step) or bool(step.context.get("overlay_step"))
+
+        def _is_date_value(val: str) -> bool:
+            val = (val or "").strip()
+            return bool(re.match(r'\d{1,2}/\d{1,2}/\d{4}', val) or re.match(r'\d{4}-\d{2}-\d{2}', val))
 
         i = 0
         while i < len(steps):
@@ -114,40 +135,46 @@ class AngularMaterialHandler(ComponentHandler):
             if step.skip_reason or step.action != "click":
                 i += 1
                 continue
-            all_sels = [c.selector for c in step.target.candidates if c.selector] if step.target and step.target.candidates else []
-            element_id = (step.target.element_id or "") if step.target else ""
-
-            has_dp_marker_sel = any(m in sel for sel in all_sels for m in _DP_MARKERS)
-            has_dp_marker_path = any(m in element_id for m in _DP_MARKERS)
-            has_date_placeholder = any(
-                "DD/MM" in sel or "MM/DD" in sel or "AAAA" in sel
-                for sel in all_sels
-            )
-            if not has_dp_marker_sel and not has_dp_marker_path and not has_date_placeholder:
+            if not _has_dp_marker(step):
                 i += 1
                 continue
 
+            # Found a datepicker-related click. Scan forward.
             seq_start = i
-            seq_end = i
             found_fill = -1
             j = i + 1
-            while j < len(steps) and j < i + 15:
+
+            while j < len(steps) and j < i + 20:
                 s = steps[j]
-                if s.action == "fill" and s.target and (s.target.tag or "").lower() in ("input", "textarea"):
-                    found_fill = j
-                    seq_end = j - 1
+
+                if s.action == "fill":
+                    if _is_date_value(s.value or ""):
+                        found_fill = j
+                    # Stop at any fill: date fill = success, non-date fill = calendar abandoned
                     break
+
                 if s.action == "navigation":
                     break
+
+                if s.action == "click" and not s.skip_reason:
+                    if not _is_calendar_step(s):
+                        # User clicked outside the calendar — sequence abandoned
+                        break
+
                 j += 1
 
             if found_fill > seq_start:
-                for k in range(seq_start, seq_end + 1):
+                # Completed sequence: suppress toggle + nav, keep date fill
+                for k in range(seq_start, found_fill):
                     if not steps[k].skip_reason:
                         steps[k].skip_reason = "datepicker_dedup"
                 i = found_fill + 1
             else:
-                i += 1
+                # Abandoned sequence: suppress only the calendar steps in range
+                for k in range(seq_start, j):
+                    if not steps[k].skip_reason and _is_calendar_step(steps[k]):
+                        steps[k].skip_reason = "datepicker_dedup"
+                i = j
 
     def heal(self, evidence, error: str) -> Optional[object]:
         return None
