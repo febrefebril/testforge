@@ -1093,10 +1093,16 @@ class RecordingNormalizer:
     def _convert_step(self, step: dict) -> Optional[SemanticAction]:
         step_action = step.get("action", "")
         if step_action == "assert":
+            attrs = step.get("attrs", {})
+            expected = _clean_text(step.get("expected_value", ""), max_len=200)
             target_data = {
-                "tag": step.get("tagName", ""),
-                "text": step.get("text", ""),
-                "id": step.get("selector", "").lstrip("#"),
+                "tag": step.get("tag_name", "") or step.get("tagName", ""),
+                # Use cleaned expected_value as text so has-text candidate is clean
+                "text": expected or step.get("accessible_name", "") or step.get("text", ""),
+                "id": step.get("element_id", ""),
+                "accessible_name": step.get("aria_label", "") or step.get("accessible_name", "") or attrs.get("aria-label", ""),
+                "role": step.get("role", "") or attrs.get("role", ""),
+                "css_path": step.get("css_path", "") or step.get("selector", ""),
             }
             target = self._build_target(target_data)
             assert_type = step.get("assert_type", "textual")
@@ -1104,7 +1110,7 @@ class RecordingNormalizer:
             return SemanticAction(
                 action="assert",
                 target=target,
-                value=_clean_text(step.get("expected_value", ""), max_len=200),
+                value=expected,
                 context={"assert_type": assert_type, "assert_state": assert_state},
             )
         # Non-assert curated steps (fill, click, select_option, etc.)
@@ -1416,6 +1422,23 @@ class RecordingNormalizer:
                 if tag in ("input", "textarea"):
                     sel = f'{tag}[aria-label="{aria_label}"]'
                     candidates.append(LocatorCandidate("aria_label", sel, 0.90, f"{tag} aria-label={aria_label}"))
+
+        # css_path: stored separately from id — structural fallback for assert steps
+        if target_data.get("css_path"):
+            css_path = target_data["css_path"]
+            # Only add if it's a real CSS path (not just a tag name or empty)
+            if css_path and len(css_path) > 4 and ">" in css_path:
+                candidates.append(LocatorCandidate("css_path", css_path, 0.60, f"css_path"))
+
+        # accessible_name as aria-label selector for any element type (not just input/textarea)
+        # Covers assert on buttons, divs, spans with aria-label
+        if target_data.get("accessible_name") and not target_data.get("role"):
+            acc = target_data["accessible_name"]
+            tag = (target_data.get("tag") or "").lower()
+            if acc and len(acc) < 80:
+                sel = f'{tag}[aria-label="{acc}"]' if tag else f'[aria-label="{acc}"]'
+                if not any(c.selector == sel for c in candidates):
+                    candidates.append(LocatorCandidate("accessible_name", sel, 0.80, f"accessible_name={acc[:40]}"))
 
         # Sort candidates by score (descending) for deterministic ordering
         candidates.sort(key=lambda c: c.score, reverse=True)

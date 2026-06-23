@@ -186,6 +186,11 @@ class RecorderController:
             "expected_value": data.get("expected_value", ""),
             "attrs": data.get("attrs", {}),
             "fallbacks": data.get("fallbacks", []),
+            "element_id": data.get("element_id", ""),
+            "aria_label": data.get("aria_label", ""),
+            "role": data.get("role", ""),
+            "css_path": data.get("css_path", ""),
+            "accessible_name": data.get("accessible_name", ""),
         }
         with open(path, "a") as f:
             f.write(json.dumps(step, default=str) + "\n")
@@ -766,6 +771,15 @@ class RecorderController:
                     timestamp: new Date().toISOString()
                 };
                 try { step.attrs = _tf_captureAttr(el); } catch(e) {}
+                // Capture semantic identity fields for reliable locator generation
+                step.element_id = el.id || '';
+                step.aria_label = el.getAttribute('aria-label') || '';
+                step.role = el.getAttribute('role') || '';
+                step.css_path = selector;
+                // accessible_name: aria-label preferred, then visible text (cleaned)
+                var _clone = el.cloneNode(true);
+                try { _clone.querySelectorAll('mat-icon,svg,[aria-hidden="true"]').forEach(function(n){n.remove();}); } catch(_e){}
+                step.accessible_name = el.getAttribute('aria-label') || (_clone.textContent||'').trim().replace(/\\s+/g,' ').substring(0,80);
                 if (assertType) {
                     step.assert_type = assertType;
                     step.assert_state = assertType === 'estado' ? _tf_detectState(el) : '';
@@ -802,11 +816,10 @@ class RecorderController:
 
         window.addEventListener('click', function(e) {
             var el = e.target;
-            if (el && el.closest) {
-                var interactive = el.closest('button, a, input, select, textarea, [role="button"], [role="listitem"], [role="option"], [role="menuitem"], mat-icon, .mat-icon, [class*="mat-"]');
-                if (interactive) el = interactive;
-            }
             if (window.__tfAssertWaiting) {
+                // In assert mode: do NOT walk up to interactive elements.
+                // The user is selecting the exact element they want to verify —
+                // closest() would hijack a text click into a Material container.
                 if (e.target && e.target.closest && e.target.closest('#tf-assert-menu, #tf-assert-confirm, #tf-overlay, #tf-stop-confirm')) return;
                 console.log('[TestForge] click em modo assert, el:', el.tagName, el.className, 'text:', (el.textContent||'').substring(0,30));
                 e.preventDefault();
@@ -820,6 +833,10 @@ class RecorderController:
                 _tf_showToast('🎯 Elemento: "' + _elDesc + '" — escolha o tipo');
                 _tf_showAssertMenu(e.clientX, e.clientY);
                 return;
+            }
+            if (el && el.closest) {
+                var interactive = el.closest('button, a, input, select, textarea, [role="button"], [role="listitem"], [role="option"], [role="menuitem"], mat-icon, .mat-icon, [class*="mat-"]');
+                if (interactive) el = interactive;
             }
             // Detect submit triggers: record as "submit" with postback flag.
             // Only elements that actually trigger form submission qualify.
@@ -942,6 +959,32 @@ class RecorderController:
             clearInterval(window.__tfFieldSnapshotInterval);
             window._tf_captureFinalState('beforeunload');
         });
+
+        // ---- Assert mode hover highlight ----
+        window.__tfAssertHoverEl = null;
+        window.__tfAssertHoverStyle = '';
+        window.addEventListener('mouseover', function(e) {
+            if (!window.__tfAssertWaiting) return;
+            if (e.target && e.target.closest && e.target.closest('#tf-assert-menu, #tf-overlay')) return;
+            var el = e.target;
+            if (el === window.__tfAssertHoverEl) return;
+            // Restore previous hover element
+            if (window.__tfAssertHoverEl) {
+                window.__tfAssertHoverEl.style.outline = window.__tfAssertHoverStyle;
+                window.__tfAssertHoverEl = null;
+            }
+            if (!el || el === document.body || el === document.documentElement) return;
+            window.__tfAssertHoverStyle = el.style.outline || '';
+            el.style.outline = '2px dashed #f59e0b';
+            window.__tfAssertHoverEl = el;
+        }, true);
+        window.addEventListener('mouseout', function(e) {
+            if (!window.__tfAssertWaiting) return;
+            if (e.target === window.__tfAssertHoverEl) {
+                e.target.style.outline = window.__tfAssertHoverStyle;
+                window.__tfAssertHoverEl = null;
+            }
+        }, true);
 
         // ---- Assert mode helpers ----
         window._tf_cancelAssertMode = function() {

@@ -193,6 +193,7 @@ class TestStepPersistence:
             "step_id", "timestamp", "action", "selector", "tag_name",
             "text", "value", "url", "page_title", "assert_type",
             "assert_state", "expected_value", "attrs", "fallbacks",
+            "element_id", "aria_label", "role", "css_path", "accessible_name",
         }
         assert set(data.keys()) == expected_fields
 
