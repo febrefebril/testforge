@@ -1,6 +1,76 @@
+# =============================================================================
+# TestForge — Configuracao do Publisher Git
+# =============================================================================
+#
+# Ao final de cada gravacao (`testforge record`), o TestForge publica
+# automaticamente os artefatos no Git. Isso permite que o time veja,
+# revisE e audite as gravacoes centralizadamente.
+#
+# Caminho no repositorio:
+#   {path_prefix}/{system}/{suite}/{test_case}/{recording_id}/
+#
+# Exemplo:
+#   recordings/sistema-frotas/fluxo-cadastro/CT-001-criar-motorista/REC-20260623-153000/
+#     ├── recording_metadata.json
+#     ├── dom_snapshots/
+#     ├── screenshots/
+#     ├── test_ct_001_criar_motorista.py
+#     └── submission_report.json
+#
+# -----------------------------------------------------------------------------
+# MODO LOCAL  (sem url)
+# -----------------------------------------------------------------------------
+# Se `url` estiver vazio ou ausente, o TestForge opera em MODO LOCAL:
+# commita diretamente no repositorio local do projeto, sem clone.
+# Util para times que compartilham o mesmo repo do codigo fonte.
+#
+#   publisher:
+#     enabled: true
+#     # url: (vazio → modo local)
+#     branch: main
+#     path_prefix: recordings
+#
+# -----------------------------------------------------------------------------
+# MODO REMOTO (com url)
+# -----------------------------------------------------------------------------
+# Se `url` estiver preenchido, o TestForge clona o repositorio remoto,
+# copia os artefatos e faz push. Util para separar recordings do codigo.
+#
+# ATENCAO: O token e OPCIONAL se voce usa autenticacao nativa:
+#   - Windows: Git Credential Manager (GCM) autentica automaticamente
+#   - Linux:  SSH keys ou GCM
+#   - Azure DevOps: `az devops login` + `system-prompt` via GCM
+#   - GitHub: `gh auth login`
+#
+# -----------------------------------------------------------------------------
+# VARIAVEIS DE AMBIENTE (alternativa ao config.yml)
+# -----------------------------------------------------------------------------
+# Se o arquivo .testforge/config.yml nao existir, o TestForge le as env vars:
+#
+#   TESTFORGE_GIT_URL          URL do repositorio (obrigatorio se sem config.yml)
+#   TESTFORGE_GIT_TOKEN        Token de acesso (opicional se GCM configurado)
+#   TESTFORGE_GIT_BRANCH       Branch alvo (default: main)
+#   TESTFORGE_GIT_PATH_PREFIX  Prefixo no repositorio (default: recordings)
+#
+# =============================================================================
+
 publisher:
+  # Habilita/desabilita publicacao automatica apos gravacao
   enabled: true
-  url: "https://dev.azure.com/sua-org/seu-projeto/_git/testforge-recordings"
+
+  # URL do repositorio Git para publicacao.
+  # Vazio = modo local (commita no repo local do projeto)
+  url: ""
+
+  # Token de acesso (OPCIONAL — GCM/SSH autentica automaticamente).
+  # Nao usar se GCM ja configurado.
+  # token: ""
+
+  # Branch alvo para os commits
   branch: main
+
+  # Prefixo do caminho no repositorio
   path_prefix: recordings
-  # token: omitir — Windows Git Credential Manager autentica automaticamente
+
+  # Nome do remote (usado apenas em modo local)
+  remote: origin
