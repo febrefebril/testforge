@@ -323,13 +323,14 @@ class RecordingNormalizer:
                 i += 1
                 continue
             sel = step.target.candidates[0].selector if step.target and step.target.candidates else ""
-            css_path = step.target.id if step.target else ""  # css_path stored in target.id
+            element_id = (step.target.element_id or "") if step.target else ""
 
-            # Detect datepicker toggle open — check both primary selector AND css_path (css_path contains
-            # mat-datepicker-toggle / mat-calendar even when candidates[0] is generic span[contenteditable])
+            # Detect datepicker toggle open — check both primary selector AND element_id.
+            # element_id contains mat-datepicker-toggle-N even when candidates[0] is generic
+            # span[contenteditable=""] (the contenteditable span inside the toggle).
             _DP_MARKERS = ("mat-datepicker-toggle", "mat-calendar", "cdk-overlay")
             has_dp_marker_sel = any(m in sel for m in _DP_MARKERS)
-            has_dp_marker_path = any(m in css_path for m in _DP_MARKERS)
+            has_dp_marker_path = any(m in element_id for m in _DP_MARKERS)
             if not has_dp_marker_sel and not has_dp_marker_path:
                 i += 1
                 continue
