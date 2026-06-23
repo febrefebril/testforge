@@ -450,6 +450,57 @@ class RecordingNormalizer:
                     "resolution": "review manually",
                 })
 
+            # GT-01: Shadow DOM closed mode — custom element (tag with hyphen)
+            # is a potential shadow host. The recorder captures clicks on the host
+            # but fill events inside closed shadow root are invisible.
+            if s_curr.action in ("click", "fill") and tag and "-" in tag:
+                # Custom element names contain at least one hyphen per HTML spec.
+                # If there's no fill event following this step, the internal
+                # field might be inside closed shadow DOM.
+                if s_next.action != "fill" and gap_s > 1.0:
+                    blind_spots.append({
+                        "step": i_curr + 1,
+                        "pattern": "shadow_dom_closed",
+                        "element": tag,
+                        "label": (s_curr.target.accessible_name
+                                  or s_curr.target.label
+                                  or s_curr.target.text or ""),
+                        "gap_seconds": round(gap_s, 1),
+                        "resolution": "shadow-root agent or data-file",
+                    })
+
+            # GT-02: Iframe element click — recorder cannot inject JS inside
+            # cross-origin iframes. Events inside are invisible.
+            if s_curr.action == "click" and tag == "iframe":
+                blind_spots.append({
+                    "step": i_curr + 1,
+                    "pattern": "iframe_cross_origin",
+                    "element": "iframe",
+                    "label": s_curr.target.text or s_curr.target.name or "",
+                    "resolution": "manual curation in steps.jsonl or same-origin required",
+                })
+
+        # GT-01 (cont.): Also scan all steps for custom elements with fill actions
+        # that might indicate shadow DOM field interaction
+        for i, step in enumerate(steps):
+            if step.skip_reason:
+                continue
+            tag = (step.target.tag or "").lower() if step.target else ""
+            if tag and "-" in tag and step.action == "fill":
+                # Custom element being filled — check if value was captured
+                if not (step.value or "").strip():
+                    ctx = getattr(step, "context", {}) or {}
+                    if not ctx.get("_has_reconstructed_values"):
+                        blind_spots.append({
+                            "step": i + 1,
+                            "pattern": "shadow_dom_fill_missed",
+                            "element": tag,
+                            "label": (step.target.accessible_name
+                                      or step.target.label
+                                      or step.target.text or ""),
+                            "resolution": "final_state or data-file",
+                        })
+
         stc.blind_spots = blind_spots
         if blind_spots:
             import sys
