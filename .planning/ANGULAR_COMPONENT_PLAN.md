@@ -66,7 +66,7 @@ def detect_handler(step) -> ComponentHandler | None:
 - [x] Sprint 3 — mat-dialog + mat-tab-group + mat-slide-toggle
 - [x] Sprint 4 — Normalizer migration (replace _dedup_datepicker_sequences)
 - [x] Sprint 5 — PrimeFaces handler skeleton
-- [ ] Sprint 6 — React MUI handler skeleton
+- [x] Sprint 6 — React MUI handler skeleton
 
 ---
 

@@ -4,12 +4,15 @@ from .component_handler import ComponentHandler
 from .cdk_overlay import CDKOverlayHandler
 from .angular_material import AngularMaterialHandler
 from .primeFaces import PrimeFacesHandler
+from .react_mui import ReactMUIHandler
 
 # Order matters: more specific handlers first.
-# AngularMaterial before PrimeFaces — both may match generic role/class patterns.
+# AngularMaterial before PrimeFaces/MUI — mat-* selectors are unambiguous.
+# PrimeFaces before ReactMUI — ui-* class names are PF-specific.
 HANDLERS: list[ComponentHandler] = [
     AngularMaterialHandler(),
     PrimeFacesHandler(),
+    ReactMUIHandler(),
 ]
 
 
@@ -32,6 +35,7 @@ __all__ = [
     "CDKOverlayHandler",
     "AngularMaterialHandler",
     "PrimeFacesHandler",
+    "ReactMUIHandler",
     "HANDLERS",
     "detect_handler",
 ]
