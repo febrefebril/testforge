@@ -6,14 +6,6 @@ import sys
 
 def cmd_run_incremental(args):
     from testforge.runner.incremental_runner import IncrementalRunner
-    try:
-        from testforge.cdp_launcher import ensure_cdp_ready, is_windows_caixa_mode, get_preferred_browser
-        if is_windows_caixa_mode(args):
-            ok, msg = ensure_cdp_ready(preferred_browser=get_preferred_browser(args), quiet=False)
-            if not ok:
-                print(f"[TestForge] X CDP falhou: {msg}", file=sys.stderr)
-    except ImportError:
-        pass
     runner = IncrementalRunner(
         script_path=args.script,
         headless=args.headless,
@@ -59,10 +51,6 @@ def register(sub):
     inc.add_argument("--shadow", action="store_true")
     inc.add_argument("--no-capture", dest="capture", action="store_false", default=True,
                      help="Desabilitar captura de telemetria de execucao")
-    inc.add_argument("--windows-caixa", action="store_true",
-                     help="Modo CAIXA: abre Edge/Chrome corporativo via CDP")
-    inc.add_argument("--cdp-browser", choices=["edge", "chrome", "auto"], default=None,
-                     help="Browser CDP: edge, chrome ou auto")
     inc.add_argument("--debug-healing", dest="debug_healing", action="store_true",
                      help="Log payloads LLM + respostas brutas em stderr")
     inc.set_defaults(func=cmd_run_incremental)

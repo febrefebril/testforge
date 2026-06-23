@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=TestForge Recorder
+Comment=Lançador gráfico do gravador de testes TestForge
+Exec=bash -c "cd /home/febre/Projetos/testforge-v1-claude/testforge && source activate.sh && testforge-gui"
+Icon=utilities-terminal
+Terminal=false
+Categories=Development;Testing;
+StartupNotify=true

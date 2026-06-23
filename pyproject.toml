@@ -12,6 +12,7 @@ dependencies = [
 
 [project.scripts]
 testforge = "testforge.cli.app:main"
+testforge-gui = "testforge.gui.recorder_launcher:main"
 
 [project.optional-dependencies]
 dev = [
