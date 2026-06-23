@@ -11,6 +11,7 @@ from typing import Optional
 from urllib.parse import urlparse, urlunparse
 
 from .model import LocatorCandidate, SemanticAction, SemanticTarget, SemanticTestCase
+from testforge.handlers import HANDLERS
 
 
 def _is_hash_class(cls: str) -> bool:
@@ -268,8 +269,9 @@ class RecordingNormalizer:
         self._reconstruct_intents(stc, recording_dir)
         self._detect_missing_fills(stc.steps)
         self._build_field_value_map(stc)
-        # Phase B semantic dedup: collapse datepicker nav + prefill clicks
-        self._dedup_datepicker_sequences(stc.steps)
+        # Phase B semantic dedup: component handlers + prefill clicks
+        for handler in HANDLERS:
+            handler.normalize(stc.steps)
         self._eliminate_prefill_clicks(stc.steps)
         self._audit_blind_spots(stc)
         return stc
@@ -304,71 +306,6 @@ class RecordingNormalizer:
             same = (curr_id and curr_id == nxt_id) or (curr_sel and curr_sel == nxt_sel)
             if same:
                 curr.skip_reason = "prefill_click_noise"
-
-    def _dedup_datepicker_sequences(self, steps: list) -> None:
-        """Collapse Angular Material datepicker calendar navigation into the text fill.
-
-        Pattern: (open toggle) + (calendar nav clicks) + (fill on text input with date)
-        The text fill is the canonical intent. Calendar navigation is fragile because it
-        depends on which month the calendar opens at (current date changes between runs).
-        Keep only the fill, mark calendar steps as skipped.
-        """
-        DATEPICKER_SELECTORS = {
-            "mat-datepicker-toggle button",
-            "button.mat-calendar-previous-button",
-            "button.mat-calendar-next-button",
-            "button.mat-calendar-period-button",
-        }
-
-        i = 0
-        while i < len(steps):
-            step = steps[i]
-            if step.skip_reason or step.action != "click":
-                i += 1
-                continue
-            all_sels = [c.selector for c in step.target.candidates if c.selector] if step.target and step.target.candidates else []
-            element_id = (step.target.element_id or "") if step.target else ""
-
-            # Detect datepicker toggle open — check ALL candidates + element_id.
-            # CAIXA uses data-mat-calendar on candidates[1] when candidates[0] is the input itself.
-            # Some sites put mat-datepicker-toggle on element_id (e.g. mat-datepicker-toggle-0).
-            _DP_MARKERS = ("mat-datepicker-toggle", "mat-calendar", "cdk-overlay", "data-mat-calendar")
-            has_dp_marker_sel = any(m in sel for sel in all_sels for m in _DP_MARKERS)
-            has_dp_marker_path = any(m in element_id for m in _DP_MARKERS)
-            # Also detect by date placeholder on any candidate — CAIXA pattern
-            has_date_placeholder = any(
-                "DD/MM" in sel or "MM/DD" in sel or "AAAA" in sel
-                for sel in all_sels
-            )
-            if not has_dp_marker_sel and not has_dp_marker_path and not has_date_placeholder:
-                i += 1
-                continue
-
-            # Scan forward for the fill step that closes the sequence
-            seq_start = i
-            seq_end = i
-            found_fill = -1
-            j = i + 1
-            while j < len(steps) and j < i + 15:
-                s = steps[j]
-                s_sel = s.target.candidates[0].selector if s.target and s.target.candidates else ""
-                if s.action == "fill" and s.target and (s.target.tag or "").lower() in ("input", "textarea"):
-                    # Fill closes the datepicker sequence
-                    found_fill = j
-                    seq_end = j - 1
-                    break
-                if s.action == "navigation":
-                    break
-                j += 1
-
-            if found_fill > seq_start:
-                # Mark all calendar steps as skipped
-                for k in range(seq_start, seq_end + 1):
-                    if not steps[k].skip_reason:
-                        steps[k].skip_reason = "datepicker_dedup"
-                i = found_fill + 1
-            else:
-                i += 1
 
     def _audit_blind_spots(self, stc) -> None:
         """Detect patterns where user intent was likely missed by the recorder.

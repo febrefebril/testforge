@@ -96,6 +96,59 @@ class AngularMaterialHandler(ComponentHandler):
                 ctx["dialog_open_trigger"] = True
                 step.context = ctx
 
+        self._dedup_datepicker_sequences(steps)
+
+    def _dedup_datepicker_sequences(self, steps: list) -> None:
+        """Collapse Angular Material datepicker calendar navigation into the text fill.
+
+        Pattern: (open toggle) + (calendar nav clicks) + (fill on text input with date)
+        The text fill is the canonical intent. Calendar navigation is fragile because it
+        depends on which month the calendar opens at (current date changes between runs).
+        Keep only the fill, mark calendar steps as skipped.
+        """
+        _DP_MARKERS = ("mat-datepicker-toggle", "mat-calendar", "cdk-overlay", "data-mat-calendar")
+
+        i = 0
+        while i < len(steps):
+            step = steps[i]
+            if step.skip_reason or step.action != "click":
+                i += 1
+                continue
+            all_sels = [c.selector for c in step.target.candidates if c.selector] if step.target and step.target.candidates else []
+            element_id = (step.target.element_id or "") if step.target else ""
+
+            has_dp_marker_sel = any(m in sel for sel in all_sels for m in _DP_MARKERS)
+            has_dp_marker_path = any(m in element_id for m in _DP_MARKERS)
+            has_date_placeholder = any(
+                "DD/MM" in sel or "MM/DD" in sel or "AAAA" in sel
+                for sel in all_sels
+            )
+            if not has_dp_marker_sel and not has_dp_marker_path and not has_date_placeholder:
+                i += 1
+                continue
+
+            seq_start = i
+            seq_end = i
+            found_fill = -1
+            j = i + 1
+            while j < len(steps) and j < i + 15:
+                s = steps[j]
+                if s.action == "fill" and s.target and (s.target.tag or "").lower() in ("input", "textarea"):
+                    found_fill = j
+                    seq_end = j - 1
+                    break
+                if s.action == "navigation":
+                    break
+                j += 1
+
+            if found_fill > seq_start:
+                for k in range(seq_start, seq_end + 1):
+                    if not steps[k].skip_reason:
+                        steps[k].skip_reason = "datepicker_dedup"
+                i = found_fill + 1
+            else:
+                i += 1
+
     def heal(self, evidence, error: str) -> Optional[object]:
         return None
 
