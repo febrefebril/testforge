@@ -39,7 +39,10 @@ def register(sub):
         help="Executar teste passo a passo com pre/pos-condicoes e healing validado",
     )
     inc.add_argument("script", help="Caminho do script Python gerado")
-    inc.add_argument("--headless", action="store_true")
+    inc.add_argument("--headless", dest="headless", action="store_true", default=False,
+                     help="Modo headless: viewport 1280x720 forcado (sem flicker, ideal para CI)")
+    inc.add_argument("--headed", dest="headless", action="store_false",
+                     help="Modo headed: viewport da janela real (padrao). Evita flicker no Windows.")
     inc.add_argument("--timeout", type=int, default=60)
     inc.add_argument("--verbose", action="store_true")
     inc.add_argument("--data", type=str, default="")
