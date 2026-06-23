@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Select2 Plugin — Simulated jQuery Plugin Pattern</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 2em auto; padding: 0 1em; }
+    h1 { font-size: 1.5em; color: #444; }
+    p.sub { color: #666; font-size: .9em; }
+    label { display: block; margin-top: 1em; font-weight: bold; color: #333; }
+    /* Native select hidden by Select2 */
+    select.select2-hidden-accessible { display: none; }
+    /* Select2 replacement container */
+    .select2-container { display: block; margin-top: .25em; }
+    .select2-selection { border: 1px solid #aaa; border-radius: 4px; padding: .5em; background: #fff;
+                         cursor: pointer; min-height: 2em; display: flex; align-items: center; position: relative; }
+    .select2-selection__arrow { position: absolute; right: .5em; top: 50%; transform: translateY(-50%); }
+    .select2-selection__rendered { flex: 1; }
+    .select2-dropdown { display: none; border: 1px solid #aaa; border-radius: 4px; background: #fff;
+                        max-height: 200px; overflow-y: auto; margin-top: 2px; position: absolute; z-index: 10;
+                        min-width: 200px; }
+    .select2-dropdown.open { display: block; }
+    .select2-results__option { padding: .5em; cursor: pointer; }
+    .select2-results__option:hover { background: #e3f2fd; }
+    .select2-results__option--selected { background: #bbdefb; font-weight: bold; }
+    button { margin-top: 1.5em; padding: .5em 2em; background: #006600; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    .result { margin-top: 1.5em; padding: 1em; background: #e8f5e9; border-radius: 4px; display: none; }
+  </style>
+</head>
+<body>
+  <h1>Select2 Plugin — Simulado</h1>
+  <p class="sub">Simula Select2/jQuery plugin: &lt;select&gt; oculto, div visível com role=combobox.</p>
+
+  <form id="mainForm">
+    <label for="produto-select">Produto</label>
+    <!-- Native select: hidden by Select2, value set by plugin -->
+    <select id="produto-select" name="produto" class="select2-hidden-accessible" style="display:none">
+      <option value="">Selecione um produto</option>
+      <option value="notebook">Notebook</option>
+      <option value="tablet">Tablet</option>
+      <option value="smartphone">Smartphone</option>
+      <option value="monitor">Monitor</option>
+    </select>
+    <!-- Select2 replacement -->
+    <div class="select2-container" id="s2id_produto">
+      <div class="select2-selection" role="combobox" aria-label="Produto"
+           aria-expanded="false" aria-haspopup="listbox" tabindex="0">
+        <span class="select2-selection__rendered" id="produto-rendered">
+          Selecione um produto
+        </span>
+        <span class="select2-selection__arrow">▼</span>
+      </div>
+    </div>
+    <div class="select2-dropdown" id="produto-dropdown" role="listbox" aria-label="Produto">
+      <div class="select2-results__option" role="option" data-value="">Selecione um produto</div>
+      <div class="select2-results__option" role="option" data-value="notebook">Notebook</div>
+      <div class="select2-results__option" role="option" data-value="tablet">Tablet</div>
+      <div class="select2-results__option" role="option" data-value="smartphone">Smartphone</div>
+      <div class="select2-results__option" role="option" data-value="monitor">Monitor</div>
+    </div>
+
+    <div style="margin-top: 1em;">
+      <label for="quantidade-input">Quantidade</label>
+      <input type="number" id="quantidade-input" name="quantidade" placeholder="1" value="1"
+             style="width:100%;padding:.5em;margin-top:.25em;box-sizing:border-box;">
+    </div>
+
+    <label for="categoria-select">Categoria</label>
+    <select id="categoria-select" name="categoria" class="select2-hidden-accessible" style="display:none">
+      <option value="">Selecione</option>
+      <option value="eletronicos">Eletrônicos</option>
+      <option value="escritorio">Escritório</option>
+      <option value="games">Games</option>
+    </select>
+    <div class="select2-container" id="s2id_categoria">
+      <div class="select2-selection" role="combobox" aria-label="Categoria"
+           aria-expanded="false" aria-haspopup="listbox" tabindex="0">
+        <span class="select2-selection__rendered" id="categoria-rendered">Selecione</span>
+        <span class="select2-selection__arrow">▼</span>
+      </div>
+    </div>
+    <div class="select2-dropdown" id="categoria-dropdown" role="listbox" aria-label="Categoria">
+      <div class="select2-results__option" role="option" data-value="">Selecione</div>
+      <div class="select2-results__option" role="option" data-value="eletronicos">Eletrônicos</div>
+      <div class="select2-results__option" role="option" data-value="escritorio">Escritório</div>
+      <div class="select2-results__option" role="option" data-value="games">Games</div>
+    </div>
+
+    <button type="submit" id="btn-enviar">Calcular</button>
+  </form>
+
+  <div class="result" id="resultado">
+    <p>✅ Pedido calculado!</p>
+    <p id="result-text"></p>
+  </div>
+
+  <script>
+    // Select2-like plugin behavior
+    function initSelect2(selectId, containerId, dropdownId, renderedId) {
+      var selectEl = document.getElementById(selectId);
+      var container = document.getElementById(containerId);
+      var dropdown = document.getElementById(dropdownId);
+      var rendered = document.getElementById(renderedId);
+      var selection = container.querySelector('.select2-selection');
+
+      // Open/close dropdown
+      selection.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var isOpen = dropdown.classList.toggle('open');
+        selection.setAttribute('aria-expanded', isOpen);
+      });
+
+      // Select option
+      dropdown.querySelectorAll('.select2-results__option').forEach(function(opt) {
+        opt.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var value = this.getAttribute('data-value');
+          var text = this.textContent;
+
+          // Update rendered text
+          rendered.textContent = text;
+
+          // Update native select (hidden)
+          selectEl.value = value;
+
+          // Update visual selection
+          dropdown.querySelectorAll('.select2-results__option').forEach(function(o) {
+            o.classList.remove('select2-results__option--selected');
+          });
+          this.classList.add('select2-results__option--selected');
+
+          // Close dropdown
+          dropdown.classList.remove('open');
+          selection.setAttribute('aria-expanded', 'false');
+        });
+      });
+
+      // Close on outside click
+      document.addEventListener('click', function(e) {
+        if (!container.contains(e.target) && !dropdown.contains(e.target)) {
+          dropdown.classList.remove('open');
+          selection.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+
+    initSelect2('produto-select', 's2id_produto', 'produto-dropdown', 'produto-rendered');
+    initSelect2('categoria-select', 's2id_categoria', 'categoria-dropdown', 'categoria-rendered');
+
+    // Form submit
+    document.getElementById('mainForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var produto = document.getElementById('produto-select').value;
+      var quantidade = document.getElementById('quantidade-input').value || '1';
+      var categoria = document.getElementById('categoria-select').value;
+      document.getElementById('result-text').textContent =
+        quantidade + 'x ' + (produto || 'Nenhum') + ' (' + (categoria || 'Nenhuma') + ')';
+      document.getElementById('resultado').style.display = 'block';
+    });
+  </script>
+</body>
+</html>
