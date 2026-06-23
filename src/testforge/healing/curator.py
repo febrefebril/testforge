@@ -125,11 +125,13 @@ class CuradorAutomatico:
         self,
         catalog: Optional[HealingCatalog] = None,
         step_runner: Optional[Callable] = None,
+        debug_healing: bool = False,
     ):
         self._catalog = catalog or HealingCatalog()
         self._step_runner = step_runner
         self._classifier = FailureClassifier()
         self._failure_tracker = FailureTracker()
+        self._debug_healing = debug_healing
 
         # Auto-activate healer: real LLM if keys configured, mock otherwise
         from .llm_client import is_available
@@ -302,7 +304,25 @@ class CuradorAutomatico:
             )
 
         # Call LLM (or Mock)
+        if self._debug_healing:
+            import sys
+            print(f"\n[DEBUG:HEALING] LLM payload:", file=sys.stderr)
+            print(f"  Error: {error_message[:200]}", file=sys.stderr)
+            print(f"  Family: {family}", file=sys.stderr)
+            print(f"  Evidence: {evidence.step_context}", file=sys.stderr)
+
         proposal = self._healer.heal_or_unresolved(evidence, error_message, family=family)
+
+        if self._debug_healing:
+            import sys
+            print(f"[DEBUG:HEALING] LLM response:", file=sys.stderr)
+            print(f"  Taxonomy: {proposal.taxonomy_id}/{proposal.family}", file=sys.stderr)
+            print(f"  Strategy: {proposal.strategy}", file=sys.stderr)
+            print(f"  Confidence: {proposal.confidence:.2f}", file=sys.stderr)
+            print(f"  Locator: {proposal.new_locator[:60]}", file=sys.stderr)
+            if proposal.raw_response:
+                print(f"  Raw: {proposal.raw_response[:150]}", file=sys.stderr)
+
         outcome = CurationOutcome(proposal=proposal, evidence=evidence, layer_used="L3")
 
         # Confidence gate

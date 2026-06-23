@@ -133,12 +133,16 @@ class StepExecutor:
             return ""
 
         if action == "click":
+            from ..healing import MaterialComponentDetector
+            detector = MaterialComponentDetector()
+
             tag = (step.target.tag or "").lower() if step.target else ""
             # Radio buttons (Angular Material mat-radio-button) must be clicked, not filled.
             # Detected by element_id prefix or top candidate selector containing mat-radio-button.
+            # No candidates guard needed — detector checks both element_id and selector.
             _el_id = (getattr(step.target, "element_id", "") or "") if step.target else ""
             _top_sel = (step.target.candidates[0].selector if step.target and step.target.candidates else "")
-            _is_radio = _el_id.startswith("mat-radio-") or "mat-radio-button" in _top_sel
+            _is_radio = detector.is_material_radio_button(_el_id, _top_sel)
             if tag in ("input", "textarea") and not _is_radio:
                 ctx = getattr(step, "context", {}) or {}
 
@@ -314,12 +318,17 @@ class StepExecutor:
     def _execute_click(self, step, selectors):
         if not selectors:
             raise ValueError(f"click sem selector (step {step.action})")
+
+        from ..healing import MaterialComponentDetector
+        detector = MaterialComponentDetector()
+
         last_error = None
         for sel in selectors:
             if not sel:
                 continue
             try:
-                if "mat-radio-button" in sel:
+                # Check if this is a Material radio button (no candidates guard needed)
+                if detector.is_material_radio_button("", sel):
                     loc = self.page.locator(sel).first
                     loc.dispatch_event("click")
                     self.page.wait_for_timeout(300)

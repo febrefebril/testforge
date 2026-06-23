@@ -1004,6 +1004,7 @@ def cmd_run(args):
                     outcome = _heal_step(
                         page, step, error_msg, base_url, step_num,
                         recording_id or "", app_name,
+                        debug_healing=getattr(args, 'debug_healing', False),
                     )
                     # BUG-016: capture full healing details (untruncated)
                     if outcome is not None:
@@ -1100,7 +1101,7 @@ def cmd_run(args):
 
 
 def _heal_step(page, step, error_msg: str, base_url: str, step_num: int,
-               recording_id: str, app_name: str):
+               recording_id: str, app_name: str, debug_healing: bool = False):
     """Tenta curar um step falho usando o pipeline L0→L3.
 
     Returns:
@@ -1161,6 +1162,7 @@ def _heal_step(page, step, error_msg: str, base_url: str, step_num: int,
     curator = CuradorAutomatico(
         catalog=HealingCatalog(),
         step_runner=step_runner,
+        debug_healing=debug_healing,
     )
 
     print(f"    Healer: {curator._healer_type}")
@@ -1627,6 +1629,8 @@ def main():
                      help="Modo CAIXA: abre Edge/Chrome corporativo via CDP")
     run.add_argument("--cdp-browser", choices=["edge", "chrome", "auto"], default=None,
                      help="Browser CDP: edge, chrome ou auto")
+    run.add_argument("--debug-healing", action="store_true",
+                     help="Log payloads LLM + respostas brutas + validacao")
     run.set_defaults(func=cmd_run)
 
     # pipeline
