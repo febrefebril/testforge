@@ -65,7 +65,7 @@ def detect_handler(step) -> ComponentHandler | None:
 - [x] Sprint 2 — mat-autocomplete + keypress→fill collapse
 - [x] Sprint 3 — mat-dialog + mat-tab-group + mat-slide-toggle
 - [x] Sprint 4 — Normalizer migration (replace _dedup_datepicker_sequences)
-- [ ] Sprint 5 — PrimeFaces handler skeleton
+- [x] Sprint 5 — PrimeFaces handler skeleton
 - [ ] Sprint 6 — React MUI handler skeleton
 
 ---

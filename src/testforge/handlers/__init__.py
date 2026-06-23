@@ -3,8 +3,14 @@ from __future__ import annotations
 from .component_handler import ComponentHandler
 from .cdk_overlay import CDKOverlayHandler
 from .angular_material import AngularMaterialHandler
+from .primeFaces import PrimeFacesHandler
 
-HANDLERS: list[ComponentHandler] = [AngularMaterialHandler()]
+# Order matters: more specific handlers first.
+# AngularMaterial before PrimeFaces — both may match generic role/class patterns.
+HANDLERS: list[ComponentHandler] = [
+    AngularMaterialHandler(),
+    PrimeFacesHandler(),
+]
 
 
 def detect_handler(step) -> "ComponentHandler | None":
@@ -25,6 +31,7 @@ __all__ = [
     "ComponentHandler",
     "CDKOverlayHandler",
     "AngularMaterialHandler",
+    "PrimeFacesHandler",
     "HANDLERS",
     "detect_handler",
 ]

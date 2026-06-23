@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LAB-15: PrimeFaces SelectOneMenu simulation</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 24px; background: #f4f4f4; }
+    h2 { margin-bottom: 16px; }
+
+    /* PrimeFaces SelectOneMenu DOM simulation */
+    .ui-selectonemenu {
+      display: inline-block;
+      position: relative;
+      border: 1px solid #aaa;
+      background: #fff;
+      border-radius: 3px;
+      min-width: 200px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .ui-selectonemenu .ui-selectonemenu-label {
+      display: block;
+      padding: 6px 32px 6px 10px;
+      font-size: 14px;
+      color: #333;
+      min-height: 32px;
+      line-height: 20px;
+    }
+    .ui-selectonemenu .ui-selectonemenu-trigger {
+      position: absolute;
+      right: 0; top: 0; bottom: 0;
+      width: 28px;
+      display: flex; align-items: center; justify-content: center;
+      border-left: 1px solid #aaa;
+      color: #666;
+    }
+    .ui-selectonemenu-panel {
+      display: none;
+      position: absolute;
+      z-index: 1000;
+      background: #fff;
+      border: 1px solid #aaa;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      min-width: 200px;
+    }
+    .ui-selectonemenu-panel.ui-overlay-visible { display: block; }
+    .ui-selectonemenu-items { list-style: none; margin: 0; padding: 4px 0; }
+    .ui-selectonemenu-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #333;
+    }
+    .ui-selectonemenu-item:hover,
+    .ui-selectonemenu-item.ui-state-highlight { background: #007ad9; color: #fff; }
+    .ui-selectonemenu-item.ui-state-disabled { color: #aaa; cursor: default; }
+
+    /* Hidden native select (how PrimeFaces actually works) */
+    select.ui-pf-hidden { display: none; }
+
+    .result { margin-top: 20px; font-size: 13px; color: #555; }
+    #selected-value { font-weight: bold; color: #007ad9; }
+    label { display: block; margin-bottom: 6px; font-size: 13px; color: #444; }
+  </style>
+</head>
+<body>
+  <h2>LAB-15: PrimeFaces SelectOneMenu</h2>
+
+  <label for="ui-selectonemenu-1">Estado civil</label>
+  <!-- Hidden native select (PrimeFaces pattern) -->
+  <select id="form:estadoCivil" class="ui-pf-hidden" name="estadoCivil">
+    <option value="">Selecione</option>
+    <option value="solteiro">Solteiro(a)</option>
+    <option value="casado">Casado(a)</option>
+    <option value="divorciado">Divorciado(a)</option>
+    <option value="viuvo">Viúvo(a)</option>
+  </select>
+
+  <!-- Rendered PrimeFaces widget -->
+  <div id="ui-selectonemenu-1"
+       class="ui-selectonemenu ui-widget ui-state-default ui-corner-all"
+       role="combobox"
+       aria-haspopup="listbox"
+       aria-expanded="false"
+       tabindex="0">
+    <span class="ui-selectonemenu-label ui-inputfield">Selecione</span>
+    <div class="ui-selectonemenu-trigger" aria-hidden="true">&#9660;</div>
+    <div class="ui-selectonemenu-panel ui-widget-content ui-corner-all ui-shadow" id="ui-selectonemenu-1-panel">
+      <ul class="ui-selectonemenu-items ui-selectonemenu-list ui-widget-content ui-widget ui-corner-all ui-helper-reset"
+          role="listbox">
+        <li class="ui-selectonemenu-item ui-selectonemenu-list-item ui-corner-all"
+            role="option" data-label="Selecione" data-value="">Selecione</li>
+        <li class="ui-selectonemenu-item ui-selectonemenu-list-item ui-corner-all"
+            role="option" data-label="Solteiro(a)" data-value="solteiro">Solteiro(a)</li>
+        <li class="ui-selectonemenu-item ui-selectonemenu-list-item ui-corner-all"
+            role="option" data-label="Casado(a)" data-value="casado">Casado(a)</li>
+        <li class="ui-selectonemenu-item ui-selectonemenu-list-item ui-corner-all ui-state-disabled"
+            role="option" data-label="Divorciado(a)" data-value="divorciado" aria-disabled="true">Divorciado(a)</li>
+        <li class="ui-selectonemenu-item ui-selectonemenu-list-item ui-corner-all"
+            role="option" data-label="Viúvo(a)" data-value="viuvo">Viúvo(a)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="result">
+    Selecionado: <span id="selected-value">—</span>
+  </div>
+
+  <script>
+    (function () {
+      const widget = document.getElementById('ui-selectonemenu-1');
+      const panel = document.getElementById('ui-selectonemenu-1-panel');
+      const label = widget.querySelector('.ui-selectonemenu-label');
+      const nativeSelect = document.getElementById('form:estadoCivil');
+      const display = document.getElementById('selected-value');
+
+      function openPanel() {
+        panel.classList.add('ui-overlay-visible');
+        widget.setAttribute('aria-expanded', 'true');
+      }
+
+      function closePanel() {
+        panel.classList.remove('ui-overlay-visible');
+        widget.setAttribute('aria-expanded', 'false');
+      }
+
+      function selectItem(item) {
+        if (item.classList.contains('ui-state-disabled')) return;
+        const value = item.getAttribute('data-value');
+        const text = item.getAttribute('data-label');
+        label.textContent = text;
+        nativeSelect.value = value;
+        display.textContent = text + ' (' + value + ')';
+        // highlight selected
+        panel.querySelectorAll('.ui-selectonemenu-item').forEach(i => i.classList.remove('ui-state-highlight'));
+        item.classList.add('ui-state-highlight');
+        closePanel();
+      }
+
+      widget.addEventListener('click', function (e) {
+        if (panel.classList.contains('ui-overlay-visible')) {
+          closePanel();
+        } else {
+          openPanel();
+        }
+      });
+
+      panel.querySelectorAll('.ui-selectonemenu-item').forEach(function (item) {
+        item.addEventListener('click', function (e) {
+          e.stopPropagation();
+          selectItem(item);
+        });
+      });
+
+      document.addEventListener('click', function (e) {
+        if (!widget.contains(e.target)) closePanel();
+      });
+    })();
+  </script>
+</body>
+</html>
