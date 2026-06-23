@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>LAB-11 — Angular Material mat-select (Simulated)</title>
+<style>
+  body { font-family: Roboto, sans-serif; max-width: 600px; margin: 2em auto; padding: 0 1em; background: #fafafa; }
+  h1 { font-size: 1.4em; color: #333; border-bottom: 2px solid #673ab7; padding-bottom: .5em; }
+  .mat-form-field { margin: 1.2em 0; }
+  label { display: block; font-size: .85em; color: #555; margin-bottom: .25em; }
+  mat-select {
+    display: block; border: 1px solid #bbb; border-radius: 4px; padding: .6em .8em;
+    background: #fff; cursor: pointer; position: relative; user-select: none;
+    font-size: 1em; outline: none;
+  }
+  mat-select:focus { border-color: #673ab7; }
+  mat-select[disabled] { background: #eee; cursor: not-allowed; color: #999; }
+  .mat-select-value { pointer-events: none; }
+  /* CDK overlay simulation */
+  .cdk-overlay-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1000; }
+  .cdk-overlay-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: auto; z-index: 999; display: none; }
+  .cdk-overlay-pane { position: fixed; pointer-events: auto; z-index: 1001; display: none; }
+  .mat-select-panel {
+    background: #fff; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    min-width: 180px; max-height: 250px; overflow-y: auto; padding: 4px 0;
+  }
+  mat-option {
+    display: block; padding: .6em 1em; cursor: pointer; font-size: .95em;
+  }
+  mat-option:hover { background: #ede7f6; }
+  mat-option.mat-option-selected { background: #d1c4e9; font-weight: bold; }
+  mat-option[aria-disabled="true"] { color: #bbb; cursor: not-allowed; pointer-events: none; }
+  .mat-optgroup-label { font-size: .8em; color: #888; padding: .4em 1em; font-weight: bold; text-transform: uppercase; }
+  button[type="submit"] {
+    margin-top: 1.5em; padding: .7em 2em; background: #673ab7; color: #fff;
+    border: none; border-radius: 4px; font-size: 1em; cursor: pointer;
+  }
+  #result { margin-top: 1.5em; padding: 1em; background: #e8f5e9; border-radius: 4px; display: none; font-family: monospace; }
+</style>
+</head>
+<body>
+  <h1>LAB-11 — mat-select Simulated</h1>
+
+  <!-- Single select -->
+  <div class="mat-form-field">
+    <label for="estado-select">Estado</label>
+    <mat-select id="mat-select-0" role="combobox" aria-label="Estado"
+                aria-haspopup="listbox" aria-expanded="false" tabindex="0"
+                formcontrolname="estado">
+      <span class="mat-select-value" id="mat-select-value-0">Selecione...</span>
+    </mat-select>
+    <div class="cdk-overlay-container" id="overlay-estado" style="display:none;">
+      <div class="cdk-overlay-backdrop" id="backdrop-estado"></div>
+      <div class="cdk-overlay-pane" id="pane-estado">
+        <div class="mat-select-panel" role="listbox" aria-label="Estado">
+          <mat-option role="option" data-value="SP" tabindex="0">São Paulo</mat-option>
+          <mat-option role="option" data-value="RJ" tabindex="0">Rio de Janeiro</mat-option>
+          <mat-option role="option" data-value="MG" tabindex="0">Minas Gerais</mat-option>
+          <mat-option role="option" data-value="RS" tabindex="0" aria-disabled="true">Rio Grande do Sul</mat-option>
+          <mat-option role="option" data-value="BA" tabindex="0">Bahia</mat-option>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Multiple select -->
+  <div class="mat-form-field">
+    <label for="categorias-select">Categorias (múltiplo)</label>
+    <mat-select id="mat-select-1" role="combobox" aria-label="Categorias"
+                aria-haspopup="listbox" aria-expanded="false" aria-multiselectable="true"
+                tabindex="0" formcontrolname="categorias">
+      <span class="mat-select-value" id="mat-select-value-1">Selecione...</span>
+    </mat-select>
+    <div class="cdk-overlay-container" id="overlay-cat" style="display:none;">
+      <div class="cdk-overlay-backdrop" id="backdrop-cat"></div>
+      <div class="cdk-overlay-pane" id="pane-cat">
+        <div class="mat-select-panel" role="listbox" aria-multiselectable="true" aria-label="Categorias">
+          <mat-option role="option" data-value="A" tabindex="0">Alimentação</mat-option>
+          <mat-option role="option" data-value="T" tabindex="0">Transporte</mat-option>
+          <mat-option role="option" data-value="S" tabindex="0">Saúde</mat-option>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grouped options -->
+  <div class="mat-form-field">
+    <label for="banco-select">Banco</label>
+    <mat-select id="mat-select-2" role="combobox" aria-label="Banco"
+                aria-haspopup="listbox" aria-expanded="false" tabindex="0"
+                formcontrolname="banco">
+      <span class="mat-select-value" id="mat-select-value-2">Selecione...</span>
+    </mat-select>
+    <div class="cdk-overlay-container" id="overlay-banco" style="display:none;">
+      <div class="cdk-overlay-backdrop" id="backdrop-banco"></div>
+      <div class="cdk-overlay-pane" id="pane-banco">
+        <div class="mat-select-panel" role="listbox" aria-label="Banco">
+          <div class="mat-optgroup-label">Público</div>
+          <mat-option role="option" data-value="BB" tabindex="0">Banco do Brasil</mat-option>
+          <mat-option role="option" data-value="CEF" tabindex="0">Caixa Econômica Federal</mat-option>
+          <div class="mat-optgroup-label">Privado</div>
+          <mat-option role="option" data-value="ITU" tabindex="0">Itaú</mat-option>
+          <mat-option role="option" data-value="BRA" tabindex="0">Bradesco</mat-option>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button type="submit" id="enviar" onclick="showResult()">Enviar</button>
+  <div id="result"></div>
+
+<script>
+  // Track selected values per select
+  var selected = {};
+
+  function openOverlay(selectEl, overlayId, backdropId, paneId, selectId) {
+    document.getElementById(overlayId).style.display = 'block';
+    document.getElementById(paneId).style.display = 'block';
+    selectEl.setAttribute('aria-expanded', 'true');
+
+    var rect = selectEl.getBoundingClientRect();
+    var pane = document.getElementById(paneId);
+    pane.style.top = (rect.bottom + window.scrollY) + 'px';
+    pane.style.left = rect.left + 'px';
+    pane.style.minWidth = rect.width + 'px';
+
+    document.getElementById(backdropId).addEventListener('click', function() {
+      closeOverlay(selectEl, overlayId, backdropId, paneId);
+    }, { once: true });
+  }
+
+  function closeOverlay(selectEl, overlayId, backdropId, paneId) {
+    document.getElementById(overlayId).style.display = 'none';
+    document.getElementById(paneId).style.display = 'none';
+    selectEl.setAttribute('aria-expanded', 'false');
+  }
+
+  function setupSelect(selectId, overlayId, backdropId, paneId, valueId, multi) {
+    var selectEl = document.getElementById(selectId);
+    selectEl.addEventListener('click', function() {
+      if (selectEl.hasAttribute('disabled')) return;
+      openOverlay(selectEl, overlayId, backdropId, paneId, selectId);
+    });
+    selectEl.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openOverlay(selectEl, overlayId, backdropId, paneId, selectId);
+      }
+    });
+
+    var pane = document.getElementById(paneId);
+    pane.querySelectorAll('mat-option').forEach(function(opt) {
+      opt.addEventListener('click', function() {
+        if (opt.getAttribute('aria-disabled') === 'true') return;
+        var val = opt.getAttribute('data-value');
+        var text = opt.textContent.trim();
+        if (!multi) {
+          selected[selectId] = { value: val, text: text };
+          document.getElementById(valueId).textContent = text;
+          pane.querySelectorAll('mat-option').forEach(function(o) {
+            o.classList.remove('mat-option-selected');
+            o.setAttribute('aria-selected', 'false');
+          });
+          opt.classList.add('mat-option-selected');
+          opt.setAttribute('aria-selected', 'true');
+          closeOverlay(selectEl, overlayId, backdropId, paneId);
+        } else {
+          // Multiple: toggle
+          if (!selected[selectId]) selected[selectId] = [];
+          var idx = selected[selectId].findIndex(function(s) { return s.value === val; });
+          if (idx >= 0) {
+            selected[selectId].splice(idx, 1);
+            opt.classList.remove('mat-option-selected');
+            opt.setAttribute('aria-selected', 'false');
+          } else {
+            selected[selectId].push({ value: val, text: text });
+            opt.classList.add('mat-option-selected');
+            opt.setAttribute('aria-selected', 'true');
+          }
+          var texts = selected[selectId].map(function(s) { return s.text; });
+          document.getElementById(valueId).textContent = texts.join(', ') || 'Selecione...';
+        }
+      });
+    });
+  }
+
+  setupSelect('mat-select-0', 'overlay-estado', 'backdrop-estado', 'pane-estado', 'mat-select-value-0', false);
+  setupSelect('mat-select-1', 'overlay-cat', 'backdrop-cat', 'pane-cat', 'mat-select-value-1', true);
+  setupSelect('mat-select-2', 'overlay-banco', 'backdrop-banco', 'pane-banco', 'mat-select-value-2', false);
+
+  function showResult() {
+    var out = JSON.stringify(selected, null, 2);
+    var el = document.getElementById('result');
+    el.textContent = out;
+    el.style.display = 'block';
+  }
+</script>
+</body>
+</html>

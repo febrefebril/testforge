@@ -125,6 +125,14 @@ class StepExecutor:
         selectors = self._all_selectors(step)
         selector = selectors[0] if selectors else ""
 
+        # Delegate to registered component handler when the step targets a known framework component.
+        # Handlers declare ownership via detect() — only the first matching handler is used.
+        if action == "click":
+            from ..handlers import detect_handler
+            _handler = detect_handler(step)
+            if _handler is not None:
+                return _handler.execute(self.page, step)
+
         if action == "navigation":
             url = step.url or base_url
             if url and url != self.page.url:
