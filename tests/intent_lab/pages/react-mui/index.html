@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>React MUI — Simulated DOM Pattern</title>
+  <style>
+    body { font-family: Roboto, sans-serif; max-width: 600px; margin: 2em auto; padding: 0 1em; background: #fafafa; }
+    h1 { font-size: 1.5em; color: #1976d2; border-bottom: 2px solid #1976d2; padding-bottom: .5em; }
+    .MuiFormControl-root { display: block; margin: 1em 0; }
+    .MuiInputBase-root { border: 1px solid #ccc; border-radius: 4px; padding: .5em; background: #fff; display: flex; }
+    .MuiInputBase-input { border: none; outline: none; flex: 1; padding: .25em 0; font-size: 1em; background: none; }
+    .MuiFormLabel-root { font-size: .85em; color: #666; margin-bottom: .25em; display: block; }
+    .MuiRadio-group { display: flex; flex-direction: column; gap: .5em; margin: 1em 0; }
+    .MuiFormControlLabel { display: flex; align-items: center; gap: .5em; cursor: pointer; padding: .25em 0; }
+    .MuiRadio-root { width: 20px; height: 20px; border: 2px solid #666; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .MuiRadio-root.checked { border-color: #1976d2; }
+    .MuiRadio-root .MuiRadio-circle { width: 10px; height: 10px; border-radius: 50%; }
+    .MuiRadio-root.checked .MuiRadio-circle { background: #1976d2; }
+    .MuiRadio-root input { display: none; }
+    .MuiCheckbox-root { width: 18px; height: 18px; border: 2px solid #666; border-radius: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .MuiCheckbox-root.checked { background: #1976d2; border-color: #1976d2; }
+    .MuiCheckbox-root input { display: none; }
+    .MuiSelect-root { border: 1px solid #ccc; border-radius: 4px; padding: .5em; background: #fff; cursor: pointer; position: relative; min-height: 1.5em; }
+    .MuiSelect-icon { position: absolute; right: .5em; top: 50%; transform: translateY(-50%); }
+    .MuiPaper-root { display: none; border: 1px solid #ccc; border-radius: 4px; background: #fff; max-height: 200px; overflow-y: auto; margin-top: 2px; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+    .MuiPaper-root.open { display: block; }
+    .MuiMenuItem-root { padding: .5em; cursor: pointer; }
+    .MuiMenuItem-root:hover { background: #e3f2fd; }
+    .MuiMenuItem-root.selected { background: #bbdefb; font-weight: bold; }
+    button.MuiButton-root { background: #1976d2; color: #fff; border: none; padding: .75em 2em; border-radius: 4px; font-size: 1em; cursor: pointer; margin-top: 1.5em; }
+    button.MuiButton-root:hover { background: #1565c0; }
+    .result { margin-top: 1.5em; padding: 1em; background: #e3f2fd; border-radius: 4px; display: none; }
+  </style>
+</head>
+<body>
+  <h1>React MUI — Simulated</h1>
+  <p>DOM structure matching Material-UI patterns. No React loaded.</p>
+
+  <form id="mainForm">
+    <!-- MUI TextField -->
+    <div class="MuiFormControl-root">
+      <label class="MuiFormLabel-root" for="nome-input">Nome completo</label>
+      <div class="MuiInputBase-root">
+        <input id="nome-input" name="nome" class="MuiInputBase-input" placeholder="Digite seu nome">
+      </div>
+    </div>
+
+    <div class="MuiFormControl-root">
+      <label class="MuiFormLabel-root" for="telefone-input">Telefone</label>
+      <div class="MuiInputBase-root">
+        <input id="telefone-input" name="telefone" class="MuiInputBase-input" placeholder="(11) 99999-9999">
+      </div>
+    </div>
+
+    <!-- MUI RadioGroup -->
+    <div class="MuiFormControl-root">
+      <span class="MuiFormLabel-root">Estado Civil</span>
+      <div class="MuiRadio-group" role="radiogroup" aria-label="Estado Civil">
+        <label class="MuiFormControlLabel">
+          <span class="MuiRadio-root">
+            <input type="radio" name="estadoCivil" value="solteiro">
+            <span class="MuiRadio-circle"></span>
+          </span>
+          <span class="MuiFormControlLabel-label">Solteiro</span>
+        </label>
+        <label class="MuiFormControlLabel">
+          <span class="MuiRadio-root">
+            <input type="radio" name="estadoCivil" value="casado">
+            <span class="MuiRadio-circle"></span>
+          </span>
+          <span class="MuiFormControlLabel-label">Casado</span>
+        </label>
+        <label class="MuiFormControlLabel">
+          <span class="MuiRadio-root">
+            <input type="radio" name="estadoCivil" value="divorciado">
+            <span class="MuiRadio-circle"></span>
+          </span>
+          <span class="MuiFormControlLabel-label">Divorciado</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- MUI Checkbox -->
+    <label class="MuiFormControlLabel">
+      <span class="MuiCheckbox-root">
+        <input type="checkbox" name="aceite" value="sim">
+        <span class="MuiCheckbox-checkmark"></span>
+      </span>
+      <span class="MuiFormControlLabel-label">Aceito receber comunicações</span>
+    </label>
+
+    <!-- MUI Select -->
+    <div class="MuiFormControl-root">
+      <span class="MuiFormLabel-root">Profissão</span>
+      <div class="MuiSelect-root" id="profissao-select" role="combobox"
+           aria-label="Profissão" aria-expanded="false" aria-haspopup="listbox"
+           tabindex="0">
+        <span id="profissao-value">Selecione</span>
+        <span class="MuiSelect-icon">▼</span>
+      </div>
+      <div class="MuiPaper-root" id="profissao-panel" role="listbox" aria-label="Profissão">
+        <div class="MuiMenuItem-root" role="option" data-value="engenheiro">Engenheiro</div>
+        <div class="MuiMenuItem-root" role="option" data-value="medico">Médico</div>
+        <div class="MuiMenuItem-root" role="option" data-value="professor">Professor</div>
+        <div class="MuiMenuItem-root" role="option" data-value="advogado">Advogado</div>
+      </div>
+    </div>
+
+    <button type="submit" class="MuiButton-root">Enviar</button>
+  </form>
+
+  <div class="result" id="resultado">
+    <p>✅ Formulário enviado!</p>
+    <p id="result-text"></p>
+  </div>
+
+  <script>
+    // MUI Select behavior
+    const selectEl = document.getElementById('profissao-select');
+    const panel = document.getElementById('profissao-panel');
+    const valueSpan = document.getElementById('profissao-value');
+
+    selectEl.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var isOpen = panel.classList.toggle('open');
+      this.setAttribute('aria-expanded', isOpen);
+    });
+
+    document.querySelectorAll('.MuiMenuItem-root').forEach(function(item) {
+      item.addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.querySelectorAll('.MuiMenuItem-root').forEach(function(i) { i.classList.remove('selected'); });
+        this.classList.add('selected');
+        valueSpan.textContent = this.textContent;
+        panel.classList.remove('open');
+        selectEl.setAttribute('aria-expanded', 'false');
+      });
+    });
+
+    document.addEventListener('click', function() {
+      panel.classList.remove('open');
+      selectEl.setAttribute('aria-expanded', 'false');
+    });
+
+    // Radio visual toggle
+    document.querySelectorAll('.MuiRadio-root').forEach(function(radio) {
+      radio.addEventListener('click', function(e) {
+        var input = this.querySelector('input[type="radio"]');
+        if (input) {
+          document.querySelectorAll('input[name="' + input.name + '"]').forEach(function(inp) {
+            inp.checked = false;
+          });
+          document.querySelectorAll('.MuiRadio-root').forEach(function(r) { r.classList.remove('checked'); });
+          input.checked = true;
+          this.classList.add('checked');
+        }
+      });
+    });
+
+    // Checkbox visual toggle
+    document.querySelectorAll('.MuiCheckbox-root').forEach(function(cb) {
+      cb.addEventListener('click', function() {
+        var input = this.querySelector('input[type="checkbox"]');
+        if (input) {
+          input.checked = !input.checked;
+          this.classList.toggle('checked', input.checked);
+        }
+      });
+    });
+
+    // Form submit
+    document.getElementById('mainForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var nome = document.getElementById('nome-input').value;
+      var telefone = document.getElementById('telefone-input').value;
+      var ec = document.querySelector('input[name="estadoCivil"]:checked');
+      var ecVal = ec ? ec.value : 'não selecionado';
+      var aceite = document.querySelector('input[name="aceite"]:checked') ? 'Sim' : 'Não';
+      document.getElementById('result-text').textContent =
+        'Nome: ' + nome + ' | Tel: ' + telefone + ' | Estado Civil: ' + ecVal + ' | Aceite: ' + aceite +
+        ' | Profissão: ' + valueSpan.textContent;
+      document.getElementById('resultado').style.display = 'block';
+    });
+  </script>
+</body>
+</html>
