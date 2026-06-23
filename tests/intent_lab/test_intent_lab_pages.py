@@ -39,6 +39,7 @@ REQUIRED_PAGES = {
     "select2-plugin",
     # Component handler LABs (Sprint 1+)
     "lab-11-mat-select",
+    "lab-12-mat-autocomplete",
 }
 
 

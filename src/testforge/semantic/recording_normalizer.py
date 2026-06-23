@@ -230,6 +230,10 @@ class RecordingNormalizer:
         # (e.g. radio button spam) so consecutive fills on the same field
         # become adjacent and get properly collapsed.
         raw_events = self._remove_snapshot_duplicates(raw_events)
+        # Collapse individual-key keypress sequences before fill compaction.
+        # mat-autocomplete may emit one keypress per character instead of
+        # accumulated fill events — rebuild the full typed string first.
+        raw_events = self._compact_keypress_sequences(raw_events)
         raw_events = self._compact_fill_events(raw_events)
 
         recording_id = os.path.basename(recording_dir)
@@ -847,6 +851,90 @@ class RecordingNormalizer:
             parts.append(f"on {tag}")
         parts.append(f"step {step_index + 1}")
         return " ".join(parts)
+
+    def _compact_keypress_sequences(self, raw_events: list) -> list:
+        """Convert sequences of single-char keypress events into one accumulated fill event.
+
+        Some recorders emit individual key events (value = single char or empty, key = single
+        char) rather than accumulated fill events. This method detects such sequences and
+        rebuilds the full value by concatenating individual keys.
+
+        - Backspace: removes last accumulated character.
+        - Enter / Tab: terminates the sequence (creates the fill then stops).
+        - Accumulated fill events (value length > 1): passed through unchanged so that
+          _compact_fill_events can handle them normally.
+
+        Must run BEFORE _compact_fill_events.
+        """
+        if not raw_events:
+            return raw_events
+
+        def _is_individual_keypress(event: dict) -> bool:
+            if event.get("type") != "keypress":
+                return False
+            value = event.get("value") or ""
+            key = event.get("key") or ""
+            # Accumulated fill: value > 1 char — not an individual keypress
+            if len(value) > 1:
+                return False
+            return True
+
+        def _target_key(t) -> tuple:
+            if not t:
+                return ("__none__",)
+            return (t.get("tag", ""), t.get("id", ""), t.get("name", ""), t.get("placeholder", ""))
+
+        result: list = []
+        i = 0
+        while i < len(raw_events):
+            event = raw_events[i]
+
+            if not _is_individual_keypress(event):
+                result.append(event)
+                i += 1
+                continue
+
+            current_target = _target_key(event.get("target"))
+            accumulated = ""
+            j = i
+            last_event = event
+
+            while j < len(raw_events):
+                ev = raw_events[j]
+                if not _is_individual_keypress(ev):
+                    break
+                if _target_key(ev.get("target")) != current_target:
+                    break
+
+                value = ev.get("value") or ""
+                key = ev.get("key") or ""
+                char = value if value else key
+
+                if char in ("Backspace", "\b"):
+                    accumulated = accumulated[:-1]
+                elif char in ("Enter", "Tab", "\r", "\n", "\t"):
+                    last_event = ev
+                    j += 1
+                    break
+                elif len(char) == 1:
+                    accumulated += char
+
+                last_event = ev
+                j += 1
+
+            # Only synthesize a fill event when 2+ events were consumed AND
+            # we built a non-empty string. Otherwise pass through unchanged.
+            if j > i + 1 and accumulated:
+                synthetic = dict(last_event)
+                synthetic["type"] = "fill"
+                synthetic["value"] = accumulated
+                result.append(synthetic)
+                i = j
+            else:
+                result.append(event)
+                i += 1
+
+        return result
 
     def _compact_fill_events(self, raw_events: list) -> list:
         """Compact sequential fill events on same element.

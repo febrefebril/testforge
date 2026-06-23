@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>LAB-12 — Angular Material mat-autocomplete (Simulated)</title>
+<style>
+  body { font-family: Roboto, sans-serif; max-width: 600px; margin: 2em auto; padding: 0 1em; background: #fafafa; }
+  h1 { font-size: 1.4em; color: #333; border-bottom: 2px solid #673ab7; padding-bottom: .5em; }
+  .mat-form-field { margin: 1.2em 0; }
+  label { display: block; font-size: .85em; color: #555; margin-bottom: .25em; }
+  input.mat-autocomplete-input {
+    width: 100%; padding: .6em .8em; border: 1px solid #bbb; border-radius: 4px;
+    font-size: 1em; box-sizing: border-box; outline: none;
+  }
+  input.mat-autocomplete-input:focus { border-color: #673ab7; }
+  /* CDK overlay simulation */
+  .cdk-overlay-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1000; }
+  .cdk-overlay-pane { position: fixed; pointer-events: auto; z-index: 1001; display: none; }
+  .mat-autocomplete-panel {
+    background: #fff; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    min-width: 200px; max-height: 250px; overflow-y: auto; padding: 4px 0;
+  }
+  mat-option {
+    display: block; padding: .6em 1em; cursor: pointer; font-size: .95em;
+  }
+  mat-option:hover { background: #ede7f6; }
+  mat-option.highlighted { background: #d1c4e9; }
+  button[type="submit"] {
+    margin-top: 1.5em; padding: .7em 2em; background: #673ab7; color: #fff;
+    border: none; border-radius: 4px; font-size: 1em; cursor: pointer;
+  }
+  #result { margin-top: 1.5em; padding: 1em; background: #e8f5e9; border-radius: 4px; display: none; font-family: monospace; }
+</style>
+</head>
+<body>
+  <h1>LAB-12 — mat-autocomplete Simulated</h1>
+
+  <!-- Cidade autocomplete -->
+  <div class="mat-form-field">
+    <label for="cidade-input">Cidade</label>
+    <input id="cidade-input"
+           class="mat-autocomplete-input"
+           aria-autocomplete="list"
+           aria-owns="mat-autocomplete-0"
+           aria-label="Cidade"
+           placeholder="Digite a cidade..."
+           autocomplete="off">
+    <div class="cdk-overlay-container" id="overlay-cidade" style="display:none;">
+      <div class="cdk-overlay-pane" id="pane-cidade">
+        <div class="mat-autocomplete-panel" id="mat-autocomplete-0" role="listbox">
+          <!-- options injected by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Banco autocomplete (another instance) -->
+  <div class="mat-form-field">
+    <label for="banco-input">Banco</label>
+    <input id="banco-input"
+           class="mat-autocomplete-input"
+           aria-autocomplete="list"
+           aria-owns="mat-autocomplete-1"
+           aria-label="Banco"
+           placeholder="Digite o banco..."
+           autocomplete="off">
+    <div class="cdk-overlay-container" id="overlay-banco" style="display:none;">
+      <div class="cdk-overlay-pane" id="pane-banco">
+        <div class="mat-autocomplete-panel" id="mat-autocomplete-1" role="listbox">
+          <!-- options injected by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button type="submit" id="enviar" onclick="showResult()">Enviar</button>
+  <div id="result"></div>
+
+<script>
+  var CIDADES = [
+    "São Paulo", "Rio de Janeiro", "Belo Horizonte", "Salvador",
+    "Fortaleza", "Curitiba", "Manaus", "Recife", "Porto Alegre", "Belém"
+  ];
+
+  var BANCOS = [
+    "Banco do Brasil", "Caixa Econômica Federal", "Itaú", "Bradesco",
+    "Santander", "Nubank", "Inter", "C6 Bank"
+  ];
+
+  var selected = {};
+
+  function setupAutocomplete(inputId, paneId, overlayId, panelId, options, fieldKey) {
+    var input = document.getElementById(inputId);
+    var panel = document.getElementById(panelId);
+    var overlay = document.getElementById(overlayId);
+    var pane = document.getElementById(paneId);
+
+    function showOptions(filtered) {
+      panel.innerHTML = '';
+      if (!filtered.length) {
+        overlay.style.display = 'none';
+        pane.style.display = 'none';
+        return;
+      }
+      filtered.forEach(function(opt) {
+        var el = document.createElement('mat-option');
+        el.setAttribute('role', 'option');
+        el.setAttribute('data-value', opt);
+        el.textContent = opt;
+        el.addEventListener('click', function() {
+          input.value = opt;
+          selected[fieldKey] = opt;
+          overlay.style.display = 'none';
+          pane.style.display = 'none';
+          input.setAttribute('aria-expanded', 'false');
+        });
+        panel.appendChild(el);
+      });
+      var rect = input.getBoundingClientRect();
+      overlay.style.display = 'block';
+      pane.style.display = 'block';
+      pane.style.top = (rect.bottom + window.scrollY) + 'px';
+      pane.style.left = rect.left + 'px';
+      pane.style.minWidth = rect.width + 'px';
+      input.setAttribute('aria-expanded', 'true');
+    }
+
+    input.addEventListener('input', function() {
+      var val = input.value.toLowerCase();
+      if (!val) {
+        overlay.style.display = 'none';
+        pane.style.display = 'none';
+        return;
+      }
+      var filtered = options.filter(function(o) {
+        return o.toLowerCase().includes(val);
+      });
+      showOptions(filtered);
+    });
+
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Tab' || e.key === 'Escape') {
+        overlay.style.display = 'none';
+        pane.style.display = 'none';
+        input.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // Close overlay on outside click
+    document.addEventListener('click', function(e) {
+      if (!input.contains(e.target) && !panel.contains(e.target)) {
+        overlay.style.display = 'none';
+        pane.style.display = 'none';
+        input.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  setupAutocomplete('cidade-input', 'pane-cidade', 'overlay-cidade', 'mat-autocomplete-0', CIDADES, 'cidade');
+  setupAutocomplete('banco-input', 'pane-banco', 'overlay-banco', 'mat-autocomplete-1', BANCOS, 'banco');
+
+  function showResult() {
+    var el = document.getElementById('result');
+    el.textContent = JSON.stringify(selected, null, 2);
+    el.style.display = 'block';
+  }
+</script>
+</body>
+</html>
