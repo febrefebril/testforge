@@ -1,6 +1,6 @@
 # TestForge — Visão Geral Executiva
 
-**Versão:** 0.4.0  
+**Versão:** 0.4.1  
 **Leia em:** 5 minutos
 
 ---
@@ -131,7 +131,14 @@ cat recordings/meu_primeiro_teste/script.py
 - Captura cliques, preenchimentos, navegações
 - Coleta evidência visual (screenshots, DOM, logs)
 - Detecta intenção mesmo em campos com máscara JS
-- Suporta SPA (React, Angular, Vue)
+- Suporta SPA (React, Angular, Vue, PrimeFaces)
+
+### ✅ Component Handler System (Novo v0.4.1)
+
+- Handlers específicos por framework (Angular Material, PrimeFaces, React MUI)
+- `detect_handler()` → delega execução para handler correto
+- Normalização automática de componentes (mat-select, autocomplete, dialog, tabs)
+- Healing especializado por componente (ex: mat-option não encontrado → scroll + retry)
 
 ### ✅ Compilação para Playwright
 
@@ -193,7 +200,9 @@ Métricas
 
 **Fase C (⏳ Em Progresso)** — Compiler integrado, data file support
 
-**Fase D (🎯 Planejada)** — Executor com healing L0-L3 completo
+**Fase D (⏳ Em Progresso)** — Executor com healing L0-L3 completo
+
+**🎯 ComponentHandler System (✅ v0.4.1)** — Sprints 1-6: Angular Material completo + PrimeFaces/React MUI skeletons
 
 ---
 
@@ -226,5 +235,5 @@ R: Não! TestForge gera o código. Mas saber Playwright ajuda a entender o outpu
 
 ---
 
-**Última atualização:** 2026-06-20  
-**Versão:** v0.4.0
+**Última atualização:** 2026-06-23  
+**Versão:** v0.4.1

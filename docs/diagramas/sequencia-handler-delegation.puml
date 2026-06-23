@@ -1,0 +1,121 @@
+@startuml
+title TestForge v0.4.1 — Sequência: Handler Delegation (detect → execute → heal)
+
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 12
+skinparam BoxPadding 8
+
+actor "QA" as QA
+participant "StepExecutor" as EXEC
+participant "detect_handler()\nRegistry" as DET
+participant "AngularMaterial\nHandler" as AMH
+participant "PrimeFaces\nHandler" as PFH
+participant "ReactMUI\nHandler" as RWH
+participant "CDKOverlay\nHandler" as COH
+participant "Browser\n(Playwright)" as BRO
+
+== 1. Handler Detection ==
+
+QA -> EXEC: inicia execucao de step
+EXEC -> DET: detect_handler(step)
+activate DET
+DET -> DET: itera HANDLERS registrados\nem ordem de especificidade
+note right: AngularMaterial > PrimeFaces > ReactMUI
+
+DET -> AMH: detect(candidates, element_id, tag)
+alt Angular Material (mat-select, mat-autocomplete, etc)
+  AMH --> DET: True
+  DET --> EXEC: AngularMaterialHandler
+  deactivate DET
+
+  == 2a. Angular Material Execute ==
+
+  EXEC -> AMH: execute(page, step)
+  activate AMH
+
+  alt mat-select
+    AMH -> COH: wait_for_open(timeout=3000)
+    activate COH
+    COH -> BRO: overlay pane visivel?
+    BRO --> COH: sim
+    deactivate COH
+    AMH -> COH: find_option(text)
+    activate COH
+    COH -> BRO: busca mat-option
+    BRO --> COH: option locator
+    deactivate COH
+    AMH -> BRO: click na opcao
+    AMH -> COH: wait_for_close(timeout=3000)
+    AMH --> EXEC: selector=mat-select-X
+  else mat-autocomplete
+    AMH -> BRO: fill input com texto
+    AMH -> COH: wait_for_open(timeout=3000)
+    AMH -> COH: find_option(text)
+    AMH -> BRO: click na opcao
+    AMH --> EXEC: selector=autocomplete-Y
+  else mat-dialog
+    AMH -> BRO: click botao abrir dialog
+    AMH -> COH: wait_for_open(timeout=3000)
+    AMH -> BRO: preenche campos no dialog
+    AMH --> EXEC: selector=dialog-Z
+  end
+
+  AMH --> EXEC: PASSED_STEP
+  deactivate AMH
+
+else PrimeFaces detect
+  PFH --> DET: True (skeleton — NotImplementedError)
+  DET --> EXEC: PrimeFacesHandler (stub)
+  deactivate DET
+  EXEC -> PFH: execute(page, step)
+  PFH --> EXEC: NotImplementedError → fallback padrao
+
+else React MUI detect
+  RWH --> DET: True (skeleton — NotImplementedError)
+  DET --> EXEC: ReactMUIHandler (stub)
+  deactivate DET
+  EXEC -> RWH: execute(page, step)
+  RWH --> EXEC: NotImplementedError → fallback padrao
+
+else nenhum handler
+  DET --> EXEC: None
+  deactivate DET
+  EXEC -> BRO: fallback padrao Playwright\n(fill, click, assert)
+  BRO --> EXEC: resultado
+end
+
+== 3. Handler Healing (se step falhou) ==
+
+EXEC -> DET: detect_handler(step)
+activate DET
+DET --> EXEC: AngularMaterialHandler
+deactivate DET
+
+EXEC -> AMH: heal(evidence, error)
+activate AMH
+
+alt mat-option nao encontrado
+  AMH -> COH: wait_for_open()
+  AMH -> COH: scroll option into view
+  AMH -> BRO: click na opcao
+  AMH --> EXEC: LLMHealingProposal\n(confidence=0.85)
+else overlay ja aberto
+  AMH -> COH: wait_for_close()
+  AMH -> BRO: re-open + select
+  AMH --> EXEC: LLMHealingProposal\n(confidence=0.9)
+else handler nao sabe curar
+  AMH --> EXEC: None → L3 LLM
+end
+
+deactivate AMH
+
+== 4. Normalization (dedup/collapse) ==
+
+EXEC -> AMH: normalize(steps)
+activate AMH
+AMH -> AMH: colapsa keypress→fill\nremove overlay_nav_noise\ndedup datepicker sequences
+AMH --> EXEC: steps modificados in-place
+deactivate AMH
+
+@enduml

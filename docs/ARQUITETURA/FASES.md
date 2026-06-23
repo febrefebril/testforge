@@ -1,8 +1,8 @@
 # TestForge — Visão Geral das Fases A-D
 
-**Versão:** 0.4.0  
-**Última atualização:** 2026-06-20  
-**Status:** Fase A concluída, Fase B implementada, Fase C/D planejadas
+**Versão:** 0.4.1  
+**Última atualização:** 2026-06-23  
+**Status:** Fase A concluída, Fase B implementada, Fase C/D em progresso, ComponentHandler system implementado (Sprints 1-6)
 
 ---
 
@@ -323,6 +323,73 @@ Healing Metrics
    - DOM diffs antes/depois
    - Logs de healing por step
 
+### 🧩 ComponentHandler System (Novo v0.4.1)
+
+Sistema de handlers para componentes de UI framework-specific (Angular Material, PrimeFaces, React MUI).
+
+#### Arquitetura
+
+```
+src/testforge/handlers/
+├── __init__.py              # Registry + detect_handler()
+├── component_handler.py     # Abstract base class (ABC)
+├── cdk_overlay.py           # Shared CDK overlay utilities
+├── angular_material.py      # mat-select, mat-autocomplete, mat-dialog,
+│                            # mat-tab-group, mat-slide-toggle
+├── primeFaces.py            # Skeleton (detect only)
+└── react_mui.py             # Skeleton (detect only)
+```
+
+#### Interface ComponentHandler
+
+| Método | Quando chamado | Retorno |
+|--------|---------------|---------|
+| `detect(candidates, element_id, tag)` | Antes de cada step | `bool` — handler é dono deste step? |
+| `normalize(steps)` | Durante normalização (in-place) | `None` — colapsa/dedup steps |
+| `execute(page, step)` | Durante execução | `str` — selector usado |
+| `heal(evidence, error)` | Se step falhou | `Optional[LLMHealingProposal]` |
+
+#### Registry (ordem importa)
+
+```python
+HANDLERS: list[ComponentHandler] = [
+    AngularMaterialHandler(),  # mat-* selectors sao unambiguous
+    PrimeFacesHandler(),       # ui-* class names sao PF-specific
+    ReactMUIHandler(),
+]
+
+def detect_handler(step) -> ComponentHandler | None:
+    """Primeiro handler que reivindica ownership do step target."""
+```
+
+#### Sprints Implementados
+
+| Sprint | Componente | Status |
+|--------|-----------|--------|
+| **Sprint 1** | Foundation + mat-select (LAB-11) | ✅ |
+| **Sprint 2** | mat-autocomplete + keypress→fill collapse (LAB-12) | ✅ |
+| **Sprint 3** | mat-dialog + mat-tab-group + mat-slide-toggle (LAB-13, LAB-14) | ✅ |
+| **Sprint 4** | Normalizer migration — `_dedup_datepicker_sequences` → `handler.normalize()` | ✅ |
+| **Sprint 5** | PrimeFaces handler skeleton (LAB-15) | ✅ |
+| **Sprint 6** | React MUI handler skeleton (LAB-16) | ✅ |
+
+#### Fluxo de Delegacao
+
+```
+Step
+  ↓
+detect_handler(step)
+  ├─ AngularMaterialHandler → handler.execute()
+  │   ├─ mat-select: click → wait overlay → find option → click → close
+  │   ├─ mat-autocomplete: fill → wait options → select match
+  │   ├─ mat-dialog: detect dialog context → scope selectors
+  │   ├─ mat-tab: click tab → wait panel
+  │   └─ mat-slide-toggle: click → read aria-checked
+  ├─ PrimeFacesHandler → stub (NotImplementedError → fallback)
+  ├─ ReactMUIHandler → stub (NotImplementedError → fallback)
+  └─ None → fallback Playwright padrao
+```
+
 ### Estratégias de Healing
 
 | Estratégia | Quando usar | Status |
@@ -345,6 +412,14 @@ Healing Metrics
 ```
 testforge/
 ├── src/testforge/
+│   ├── handlers/               # [v0.4.1] ComponentHandler system
+│   │   ├── __init__.py         # Registry + detect_handler()
+│   │   ├── component_handler.py   # ABC
+│   │   ├── cdk_overlay.py      # CDK overlay utilities
+│   │   ├── angular_material.py # mat-select, autocomplete, dialog, etc
+│   │   ├── primeFaces.py       # Skeleton
+│   │   └── react_mui.py        # Skeleton
+│   │
 │   ├── recorder/
 │   │   ├── __init__.py
 │   │   ├── event_capture.py       # [Fase A] Captura de eventos
@@ -354,6 +429,7 @@ testforge/
 │   ├── semantic/
 │   │   ├── __init__.py
 │   │   ├── intent_reconstructor.py   # [Fase B] 5 estratégias
+│   │   ├── recording_normalizer.py   # [Fase B] + handler.normalize()
 │   │   ├── compiler.py               # [Fase C] Playwright code gen
 │   │   └── ...
 │   │
@@ -391,6 +467,9 @@ testforge/
 │       └── ...
 │
 ├── tests/
+│   ├── intent_lab/
+│   │   ├── pages/              # 21 LAB pages (LAB-01 a LAB-16)
+│   │   └── test_lab*.py        # Testes por LAB page
 │   ├── test_phase_a_*.py
 │   ├── test_phase_b_*.py
 │   ├── test_phase_c_*.py
@@ -446,6 +525,6 @@ Este documento consolida:
 
 ---
 
-**Última atualização:** 2026-06-20  
-**Próxima review:** Após Fase C concluída  
+**Última atualização:** 2026-06-23  
+**Próxima review:** Após Sprints 7-8 (ComponentHandler execute completo)  
 **Responsável:** André PN

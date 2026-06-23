@@ -1,7 +1,7 @@
 # Versionamento e Sincronização de Diagramas
 
-**Versão**: v0.4.0 (2026-06-20)  
-**Status**: Fase A congelada (Recorder) — Fases B/C planejadas
+**Versão**: v0.4.1 (2026-06-23)  
+**Status**: Fase A congelada — Fase B/D em progresso — ComponentHandler system implementado (Sprints 1-6)
 
 ## 🎯 Objetivo
 
@@ -11,17 +11,18 @@ Manter diagramas PlantUML sincronizados com código durante evolução do projet
 - Fase C: Validação piloto com 5 gravações CAIXA
 - Fase D: Distribuição ao time de testers
 
-## 📊 Diagramas Atuais (14)
+## 📊 Diagramas Atuais (15)
 
 | Categoria | Diagramas | Última Atualização | Status |
 |-----------|-----------|-------------------|--------|
-| **C4 Architecture** | c4-context.puml, c4-container.puml, c4-context-v1.puml | 2026-06-20 | ✅ Aligned |
-| **Componentes** | componentes-v1.puml, componentes-llm-healing.puml | 2026-06-20 | ✅ Aligned |
-| **Classes** | classes-llm-healing.puml | 2026-06-20 | ✅ Aligned |
-| **Deploy** | deploy-llm-healing.puml | 2026-06-20 | ✅ Aligned |
-| **Estados** | estados-recording-session.puml, estados-curacao-outcome.puml | 2026-06-20 | ✅ Aligned |
-| **Fluxogramas** | fluxograma-pipeline-v1.puml | 2026-06-20 | ✅ Aligned |
-| **Sequências** | sequencia-curadoria-l0-l3.puml, sequencia-data-driven.puml, sequencia-fluxo-completo.puml, sequencia-integracao-cmd-run.puml | 2026-06-20 | ✅ Aligned |
+| **C4 Architecture** | c4-context.puml, c4-container.puml, c4-context-v1.puml | 2026-06-23 | ✅ Aligned |
+| **Componentes** | componentes-v1.puml, componentes-llm-healing.puml | 2026-06-23 | ✅ Aligned |
+| **Classes** | classes-llm-healing.puml | 2026-06-23 | ✅ Aligned |
+| **Deploy** | deploy-llm-healing.puml | 2026-06-23 | ✅ Aligned |
+| **Estados** | estados-recording-session.puml, estados-curacao-outcome.puml | 2026-06-23 | ✅ Aligned |
+| **Fluxogramas** | fluxograma-pipeline-v1.puml | 2026-06-23 | ✅ Aligned |
+| **Sequências** | sequencia-curadoria-l0-l3.puml, sequencia-data-driven.puml, sequencia-fluxo-completo.puml, sequencia-integracao-cmd-run.puml | 2026-06-23 | ✅ Aligned |
+| **Handlers** | sequencia-handler-delegation.puml **(NOVO)** | 2026-06-23 | ✅ Aligned |
 
 ## 🔄 Sincronização por Fase
 
@@ -34,23 +35,15 @@ Manter diagramas PlantUML sincronizados com código durante evolução do projet
 
 **Mudança de código? Não atualiza diagramas.** Fase A está congelada.
 
-### Fase B (Planejada)
+### Fase B (Concluída ✅)
 **Escopo**: Consumo em módulos downstream (normalizer, reconstructor, evidence)  
-**Diagramas a atualizar**:
-- `c4-container.puml` — Adicionar fluxo de normalização/reconstrução
-- `sequencia-fluxo-completo.puml` — Adicionar Intent Completeness Checker
-- **NOVO**: `sequencia-fase-b-normalizacao.puml` — Detalhe de normalização
-- **NOVO**: `sequencia-fase-b-reconstrucao.puml` — Detalhe de reconstrução com 3 estratégias
-
 **Checklist**:
-- [ ] Código implementado em `src/testforge/semantic/`
-- [ ] Testes em `tests/test_sprint4_*.py`
-- [ ] Atualizar `c4-container.puml`
-- [ ] Gerar `sequencia-fase-b-*.puml` (2 novos)
-- [ ] Regenerar PNGs: `java -jar ~/.emacs.d/lib/plantuml-lgpl-1.2026.2.jar -tpng docs/diagramas/*.puml -o png/`
-- [ ] Commit: `docs: atualizar diagramas Fase B — normalização + reconstrução`
+- [x] Código implementado em `src/testforge/semantic/`
+- [x] Testes em `tests/test_sprint4_*.py`
+- [x] Atualizar `c4-container.puml`
+- [x] Regenerar PNGs
 
-### Fase C (Planejada)
+### Fase C (Em Progresso)
 **Escopo**: Validação piloto (intent completeness, readiness gate)  
 **Diagramas a atualizar**:
 - `c4-container.puml` — Adicionar Validation layer
@@ -66,11 +59,17 @@ Manter diagramas PlantUML sincronizados com código durante evolução do projet
 - [ ] Regenerar PNGs
 - [ ] Commit: `docs: atualizar diagramas Fase C — validação incremental + readiness`
 
-### Fase D (Planejada)
-**Escopo**: Distribuição ao time de testers  
+### Fase D (Em Progresso)
+**Escopo**: Executor + Healer + Component Handlers  
 **Diagramas a atualizar**:
 - `deploy-llm-healing.puml` — Adicionar CI/CD pipeline de distribuição
-- **NOVO**: `sequencia-fase-d-distribuicao.puml` — Fluxo de packaging e release
+- `c4-container.puml` ✅ — Add handlers/ namespace, bump v0.4.1
+- `componentes-llm-healing.puml` ✅ — Add handlers package, L2 agents atualizados
+- `sequencia-fluxo-completo.puml` ✅ — Add handler delegation step
+- `sequencia-integracao-cmd-run.puml` ✅ — Add handler detection
+- `sequencia-curadoria-l0-l3.puml` ✅ — Add handler.heal() no pipeline
+- `fluxograma-pipeline-v1.puml` ✅ — Add handler detect branch
+- **NOVO**: `sequencia-handler-delegation.puml` ✅ — Detalhe de deteccao → execucao → healing por handler
 
 ## 🚀 Regenerar PNGs
 
@@ -122,10 +121,16 @@ grep -r "class.*State\|@enum\|Enum\)" src/testforge/ | grep -v test
 
 ## 📝 Versionamento por Milestone
 
-Cada milestone (v0.4.0, v0.5.0, etc.) deve:
+Cada milestone (v0.4.0, v0.4.1, v0.5.0, etc.) deve:
 1. Atualizar versão em todos os `.puml` (título)
 2. Regenerar PNGs
-3. Committar com tag: `git tag -a v0.5.0-diagrams -m "Diagrams v0.5.0"`
+3. Committar com tag: `git tag -a v0.4.1-diagrams -m "Diagrams v0.4.1"`
+
+### v0.4.1 (2026-06-23) — Diagramas atualizados
+- 6 PUML existentes atualizados com handlers/ namespace + fluxo de delegacao
+- 1 novo PUML: `sequencia-handler-delegation.puml`
+- 15 PNGs regenerados
+- Bump de v0.4.0 para v0.4.1 em titulos
 
 ## 🎓 Convenções PlantUML
 

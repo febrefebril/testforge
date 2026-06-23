@@ -1,4 +1,4 @@
-# Documentação TestForge v0.4.0
+# Documentação TestForge v0.4.1
 
 Índice navegável com links e descrições. Comece pela seção que se aplica a você.
 
@@ -35,8 +35,9 @@ Aprenda com exemplos práticos:
 Entenda como o TestForge funciona internamente:
 
 - [Fases A-D](ARQUITETURA/FASES.md) — Visão geral do pipeline: Recorder, Intent Reconstructor, Compiler, Executor+Healer
-- [Diagramas PlantUML](diagramas/) — 14 diagramas C4, componentes, classes, estados, sequências (`.puml` + `.png`)
+- [Diagramas PlantUML](diagramas/) — 15 diagramas C4, componentes, classes, estados, sequências, handlers (`.puml` + `.png`)
 - [Versionamento de Diagramas](DIAGRAMAS/DIAGRAMA-VERSIONING.md) — Política de versionamento e sincronização código-diagrama
+- **NOVO:** [Handler Delegation](diagramas/sequencia-handler-delegation.puml) — Fluxo de detecção → execução → healing por handler de componente
 
 ---
 
@@ -83,5 +84,5 @@ Documentação de planejamento e sprints anteriores:
 
 Este índice contém apenas links para arquivos que existem. Se encontrar um link quebrado, abra uma issue.
 
-**Última atualização:** 2026-06-22
-**Versão:** v0.4.0
+**Última atualização:** 2026-06-23
+**Versão:** v0.4.1
