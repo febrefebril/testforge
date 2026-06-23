@@ -322,16 +322,21 @@ class RecordingNormalizer:
             if step.skip_reason or step.action != "click":
                 i += 1
                 continue
-            sel = step.target.candidates[0].selector if step.target and step.target.candidates else ""
+            all_sels = [c.selector for c in step.target.candidates if c.selector] if step.target and step.target.candidates else []
             element_id = (step.target.element_id or "") if step.target else ""
 
-            # Detect datepicker toggle open — check both primary selector AND element_id.
-            # element_id contains mat-datepicker-toggle-N even when candidates[0] is generic
-            # span[contenteditable=""] (the contenteditable span inside the toggle).
-            _DP_MARKERS = ("mat-datepicker-toggle", "mat-calendar", "cdk-overlay")
-            has_dp_marker_sel = any(m in sel for m in _DP_MARKERS)
+            # Detect datepicker toggle open — check ALL candidates + element_id.
+            # CAIXA uses data-mat-calendar on candidates[1] when candidates[0] is the input itself.
+            # Some sites put mat-datepicker-toggle on element_id (e.g. mat-datepicker-toggle-0).
+            _DP_MARKERS = ("mat-datepicker-toggle", "mat-calendar", "cdk-overlay", "data-mat-calendar")
+            has_dp_marker_sel = any(m in sel for sel in all_sels for m in _DP_MARKERS)
             has_dp_marker_path = any(m in element_id for m in _DP_MARKERS)
-            if not has_dp_marker_sel and not has_dp_marker_path:
+            # Also detect by date placeholder on any candidate — CAIXA pattern
+            has_date_placeholder = any(
+                "DD/MM" in sel or "MM/DD" in sel or "AAAA" in sel
+                for sel in all_sels
+            )
+            if not has_dp_marker_sel and not has_dp_marker_path and not has_date_placeholder:
                 i += 1
                 continue
 

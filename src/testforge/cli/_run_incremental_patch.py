@@ -26,6 +26,7 @@ def cmd_run_incremental(args):
         no_healing=args.no_healing,
         shadow=args.shadow,
         capture=args.capture,
+        debug_healing=getattr(args, 'debug_healing', False),
     )
     try:
         report = runner.run()
@@ -62,5 +63,7 @@ def register(sub):
                      help="Modo CAIXA: abre Edge/Chrome corporativo via CDP")
     inc.add_argument("--cdp-browser", choices=["edge", "chrome", "auto"], default=None,
                      help="Browser CDP: edge, chrome ou auto")
+    inc.add_argument("--debug-healing", dest="debug_healing", action="store_true",
+                     help="Log payloads LLM + respostas brutas em stderr")
     inc.set_defaults(func=cmd_run_incremental)
     return inc

@@ -51,6 +51,7 @@ class IncrementalRunner:
         shadow: bool = False,
         output_root: str = "runs",
         capture: bool = True,
+        debug_healing: bool = False,
     ):
         self.script_path = script_path
         self.headless = headless
@@ -64,6 +65,7 @@ class IncrementalRunner:
         self.shadow_mode = shadow
         self.output_root = output_root
         self.capture_enabled = capture
+        self.debug_healing = debug_healing
         self.replay_recorder = None
 
         self.page = None
@@ -226,6 +228,7 @@ class IncrementalRunner:
         return CuradorAutomatico(
             catalog=catalog or HealingCatalog(),
             step_runner=step_runner,
+            debug_healing=getattr(self, 'debug_healing', False),
         )
 
     def _primary_selector(self, step):
