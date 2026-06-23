@@ -1,67 +1,81 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.2.0
-milestone_name: milestone
-status: unknown
-stopped_at: context exhaustion at 75% (2026-06-22)
-last_updated: "2026-06-22T20:11:10.651Z"
+milestone: v0.4.1
+milestone_name: ComponentHandler System
+status: completed
+stopped_at: Sprints 1-6 concluídos (2026-06-23)
+last_updated: "2026-06-23T20:38:00.000Z"
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 3
-  completed_plans: 2
-  percent: 33
+  completed_phases: 6
+  total_plans: 6
+  completed_plans: 6
+  percent: 100
 ---
 
 # TestForge — Estado do Projeto
 
 **Inicio:** 2026-06-13
-**Versao:** 0.3.1
-**Fase:** Shipada — LLM Self-Healing completo, 5 bugs corrigidos, 162 testes
-**Ultimo commit:** `a9ecbd2` docs: BUGS.md — todos 5 bugs corrigidos
+**Versao:** 0.4.1
+**Fase:** ComponentHandler System — Sprints 1-6 completos
+**Ultimo commit:** `36ff621` docs(readme): v0.4.1 — add ComponentHandler system
 
 ## Metricas
 
-- **100 commits** no main
-- **162 testes** passando (100%)
-- **28 modulos** Python
-- **14 diagramas** PlantUML
-- **12 paginas** de teste de curadoria
-- **88 falhas** catalogadas (11 familias)
+- **344 commits** no main
+- **800+ testes** (813 pass, 1 fail, 174 erro browser-dependent)
+- **40+ modulos** Python
+- **15 diagramas** PlantUML (14 existentes + 1 novo handler delegation)
+- **5 ComponentHandlers** (Angular Material, PrimeFaces, React MUI, CDK Overlay, ABC)
+- **21 LAB pages** (LAB-01 a LAB-16)
+- **11 familias** de falhas catalogadas (88 codigos)
 - **6 agentes** especialistas L2
 - **10 estrategias** de healing no SmartStepRunner
-- **11 prompts** familia-especificos (EN)
-- **LLM real validado:** Azure GPT-4.1-mini curou `change_id` (conf 0.90)
+- **LLM real validado:** Azure GPT-4.1-mini
 
 ## Milestones Concluidos
 
 - [x] M1-M7 (v0.1.0): Fundacao + Recorder + Evidence + MIS + Oracle + Taxonomia + Metricas
 - [x] M8 (v0.2.0): CLI + Pipeline + Data-Driven Testing
 - [x] M9 (v0.3.0): LLM Self-Healing L0→L3 completo
-  - Taxonomia 11 familias, 88 codigos, keyword+group classifier
-  - EvidencePayload + EvidenceCollector.build_llm_payload()
-  - LLMClient (Azure/OpenAI) + retry + imagens base64
-  - LLMHealer + MockLLMHealer + 11 family prompts (EN)
-  - CuradorAutomatico (pipeline L0→L1→L2→L3) + failure tracker
-  - 6 L2 Specialist Agents (Selector, Timing, Context, State, DOM, Input)
-  - SmartStepRunner: 10 estrategias de healing implementadas
-  - cmd_run inline execution com healing L0→L3
-  - Data-driven testing: massa JSON externa (--data, --scenarios)
-- [x] M10 (v0.3.1): Debug + Robustez
-  - 5 bugs corrigidos: overlay_dismiss, press_sequentially, visibility_wait, stale DOM, classification
-  - 12 paginas de teste de curadoria (uma por familia)
-  - 162/162 testes passando (0 falhas)
-  - BUGS.md documentado
+- [x] M10 (v0.3.1): Debug + Robustez — 5 bugs corrigidos
+- [x] M11 (v0.4.0): Fase B — Intent Reconstructor + Compiler + Validacao
+- [x] **M12 (v0.4.1): ComponentHandler System — Sprints 1-6**
+  - Sprint 1: Foundation + mat-select (LAB-11)
+  - Sprint 2: mat-autocomplete + keypress→fill collapse (LAB-12)
+  - Sprint 3: mat-dialog + mat-tab-group + mat-slide-toggle (LAB-13, LAB-14)
+  - Sprint 4: Normalizer migration — dedup_datepicker → handler.normalize()
+  - Sprint 5: PrimeFaces handler skeleton (LAB-15)
+  - Sprint 6: React MUI handler skeleton (LAB-16)
+  - 5 bug fixes: normalizer, executor, assert, dedup, runner
+  - 7 new LAB pages (LAB-10 a LAB-16)
+  - docs + diagramas atualizados (15 PUML)
+
+## ComponentHandler System
+
+```
+src/testforge/handlers/
+├── __init__.py              # Registry + detect_handler()
+├── component_handler.py     # Abstract base class (ABC)
+├── cdk_overlay.py           # Shared CDK overlay utilities
+├── angular_material.py      # mat-select, autocomplete, dialog, tabs, toggle
+├── primeFaces.py            # Skeleton (detect only)
+└── react_mui.py             # Skeleton (detect only)
+```
+
+Interface: detect() → normalize() → execute() → heal()
+Registry: HANDLERS list com ordem de precedencia (AngularMaterial > PrimeFaces > ReactMUI)
 
 ## Proximo
 
+- Sprints 7-8: ComponentHandler execute() completo para PrimeFaces e React MUI
 - Pipeline CI (GitHub Actions / Azure DevOps)
 - Dashboard web de metricas
-- Suporte a mais frameworks (PrimeFaces SelectOneMenu, autocomplete, datepicker)
-- Mascaramento automatico de dados sensiveis (alem de alert_only)
+- Mascaramento automatico de dados sensiveis
+- Healing oracle improvements
 
 ## Session
 
-**Last session:** 2026-06-22T20:11:10.644Z
-**Stopped at:** context exhaustion at 75% (2026-06-22)
-**Resume file:** None
+**Last session:** 2026-06-23T20:38:00.000Z
+**Stopped at:** Sprints 1-6 concluidos
+**Resume file:** `.planning/ANGULAR_COMPONENT_PLAN.md`
