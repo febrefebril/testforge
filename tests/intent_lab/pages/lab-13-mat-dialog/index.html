@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>LAB-13 — Angular Material mat-dialog (Simulated)</title>
+<style>
+  body { font-family: Roboto, sans-serif; max-width: 600px; margin: 2em auto; padding: 0 1em; background: #fafafa; }
+  h1 { font-size: 1.4em; color: #333; border-bottom: 2px solid #673ab7; padding-bottom: .5em; }
+  button.open-dialog {
+    padding: .7em 2em; background: #673ab7; color: #fff;
+    border: none; border-radius: 4px; font-size: 1em; cursor: pointer; margin: 1em 0;
+  }
+  /* CDK overlay simulation */
+  .cdk-overlay-backdrop {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,.4); z-index: 900; display: none;
+  }
+  .cdk-overlay-container {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 1000;
+  }
+  .mat-dialog-container {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: #fff; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.2);
+    padding: 24px; width: 400px; z-index: 1001; pointer-events: auto; display: none;
+  }
+  .mat-dialog-title { font-size: 1.2em; font-weight: bold; color: #333; margin-bottom: 1em; }
+  .mat-form-field { margin: .8em 0; }
+  .mat-form-field label { display: block; font-size: .85em; color: #555; margin-bottom: .3em; }
+  .mat-form-field input, .mat-form-field select {
+    width: 100%; padding: .5em .7em; border: 1px solid #bbb; border-radius: 4px;
+    font-size: .95em; box-sizing: border-box;
+  }
+  .mat-dialog-actions {
+    display: flex; justify-content: flex-end; gap: .5em; margin-top: 1.5em;
+  }
+  .mat-dialog-actions button {
+    padding: .5em 1.5em; border: none; border-radius: 4px; font-size: .95em; cursor: pointer;
+  }
+  .mat-dialog-actions button[mat-dialog-close] { background: #eee; color: #333; }
+  .mat-dialog-actions button.confirm { background: #673ab7; color: #fff; }
+  #result { margin-top: 1.5em; padding: 1em; background: #e8f5e9; border-radius: 4px; display: none; font-family: monospace; }
+</style>
+</head>
+<body>
+  <h1>LAB-13 — mat-dialog Simulated</h1>
+  <p>Click button to open dialog with form fields.</p>
+
+  <button class="open-dialog" id="btn-abrir" onclick="openDialog()">Abrir Formulário</button>
+
+  <!-- CDK overlay -->
+  <div class="cdk-overlay-backdrop" id="backdrop" onclick="closeDialog()"></div>
+  <div class="cdk-overlay-container">
+    <div class="mat-dialog-container" id="mat-dialog-0" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+      <div class="mat-dialog-title" id="dialog-title">Cadastro de Beneficiário</div>
+      <div class="mat-dialog-content">
+        <div class="mat-form-field">
+          <label for="dialog-nome">Nome completo</label>
+          <input id="dialog-nome" aria-label="Nome completo" placeholder="Digite o nome" autocomplete="off">
+        </div>
+        <div class="mat-form-field">
+          <label for="dialog-cpf">CPF</label>
+          <input id="dialog-cpf" aria-label="CPF" placeholder="000.000.000-00" autocomplete="off">
+        </div>
+        <div class="mat-form-field">
+          <label for="dialog-tipo">Tipo de conta</label>
+          <select id="dialog-tipo" aria-label="Tipo de conta">
+            <option value="">Selecione...</option>
+            <option value="CC">Conta Corrente</option>
+            <option value="CP">Conta Poupança</option>
+          </select>
+        </div>
+      </div>
+      <div class="mat-dialog-actions">
+        <button mat-dialog-close id="btn-cancelar" onclick="closeDialog()">Cancelar</button>
+        <button class="confirm" id="btn-confirmar" onclick="confirmDialog()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="result"></div>
+
+<script>
+  var dialogData = {};
+
+  function openDialog() {
+    document.getElementById('backdrop').style.display = 'block';
+    document.getElementById('mat-dialog-0').style.display = 'block';
+  }
+
+  function closeDialog() {
+    document.getElementById('backdrop').style.display = 'none';
+    document.getElementById('mat-dialog-0').style.display = 'none';
+  }
+
+  function confirmDialog() {
+    dialogData = {
+      nome: document.getElementById('dialog-nome').value,
+      cpf: document.getElementById('dialog-cpf').value,
+      tipo: document.getElementById('dialog-tipo').value,
+    };
+    closeDialog();
+    var el = document.getElementById('result');
+    el.textContent = JSON.stringify(dialogData, null, 2);
+    el.style.display = 'block';
+  }
+</script>
+</body>
+</html>

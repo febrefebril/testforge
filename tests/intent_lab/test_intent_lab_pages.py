@@ -40,6 +40,8 @@ REQUIRED_PAGES = {
     # Component handler LABs (Sprint 1+)
     "lab-11-mat-select",
     "lab-12-mat-autocomplete",
+    "lab-13-mat-dialog",
+    "lab-14-mat-tabs",
 }
 
 
