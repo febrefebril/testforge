@@ -744,7 +744,7 @@ class IncrementalRunner:
 
         with sync_playwright() as pw:
             browser = launch_browser(pw, self.browser_type, headless=self.headless)
-            _vp = {"width": 1280, "height": 720}
+            _vp = {"width": 1280, "height": 720} if self.headless else None
             ctx = browser.new_context(viewport=_vp)
             self.page = ctx.new_page()
 

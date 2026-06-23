@@ -679,7 +679,7 @@ def cmd_run(args):
             print(f"  Data: {len(_data_values)} valores carregados de {data_file}")
         with sync_playwright() as pw:
             browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
-            _vp = {"width": 1280, "height": 720}
+            _vp = {"width": 1280, "height": 720} if args.headless else None
             page = browser.new_context(viewport=_vp).new_page()
 
             # Navegar
@@ -1194,7 +1194,7 @@ def _try_heal_inline(base_url: str, headless: bool, error_text: str,
     try:
         with sync_playwright() as pw:
             browser = launch_browser(pw, browser_type, headless=headless)
-            _vp = {"width": 1280, "height": 720}
+            _vp = {"width": 1280, "height": 720} if headless else None
             page = browser.new_context(viewport=_vp).new_page()
             page.goto(base_url)
             page.wait_for_timeout(500)
@@ -1293,7 +1293,7 @@ def cmd_pipeline(args):
 
         # Step 3: Run
         print("\n▶ Fase 3: Execucao + Healing")
-        _vp2 = {"width": 1280, "height": 720}
+        _vp2 = {"width": 1280, "height": 720} if args.headless else None
         page2 = browser.new_context(viewport=_vp2).new_page()
 
         page2.goto(args.url)
@@ -1389,7 +1389,7 @@ def cmd_demo_heal(args):
 
     with sync_playwright() as pw:
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
-        _vp = {"width": 1280, "height": 720}
+        _vp = {"width": 1280, "height": 720} if args.headless else None
         page = browser.new_context(viewport=_vp).new_page()
         recorder = RecorderController(page)
 
@@ -1429,7 +1429,7 @@ def cmd_demo_heal(args):
     # Abrir pagina com mutacao
     with sync_playwright() as pw:
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
-        _vp = {"width": 1280, "height": 720}
+        _vp = {"width": 1280, "height": 720} if args.headless else None
         page = browser.new_context(viewport=_vp).new_page()
 
         mutation_url = "http://localhost:8765/?mutation=change_id"
