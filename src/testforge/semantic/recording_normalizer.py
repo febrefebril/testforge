@@ -1116,8 +1116,16 @@ class RecordingNormalizer:
                     text_score -= 0.05
                 # Always include tag when available — bare :has-text() clicks on child elements
                 # instead of the link/button itself, breaking SPA navigation.
+                # When element has an interactive role, add role constraint: parent containers
+                # also have-text the same string, so div:has-text() matches them and clicks
+                # the wrong sibling (e.g. center card of 3). div[role="button"]:has-text()
+                # is unambiguous because containers do not carry role="button".
                 tag = (target_data.get("tag") or "").lower()
-                if tag:
+                elem_role = (target_data.get("role") or "").lower()
+                _interactive_roles = {"button", "listitem", "option", "menuitem", "tab", "radio", "checkbox", "link", "menuitemcheckbox", "menuitemradio"}
+                if tag and elem_role and elem_role in _interactive_roles:
+                    candidates.append(LocatorCandidate("text", f'{tag}[role="{elem_role}"]:has-text("{text}")', text_score + 0.10, f"role+text in {tag}[role={elem_role}]"))
+                elif tag:
                     candidates.append(LocatorCandidate("text", f"{tag}:has-text(\"{text}\")", text_score, f"text in {tag}"))
                 else:
                     candidates.append(LocatorCandidate("text", f":has-text(\"{text}\")", text_score, "visible text"))
