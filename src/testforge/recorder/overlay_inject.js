@@ -416,11 +416,19 @@
   }, true);
 
   // ---- Fill capture (input / change) ----
+  function _fillKey(el) {
+    var base = el.name || el.getAttribute('aria-label') || el.placeholder || el.id;
+    if (base) return base;
+    var all = document.querySelectorAll(el.tagName);
+    var idx = Array.prototype.indexOf.call(all, el);
+    return el.tagName + ':' + idx;
+  }
+
   window.addEventListener('input', function(e) {
     if (window.__tfAssertWaiting) return;
     var el = e.target;
     if (!el) return;
-    var key = el.name || el.getAttribute('aria-label') || el.placeholder || el.id || el.tagName;
+    var key = _fillKey(el);
     var val = (el.value || el.textContent || '').trim();
     if (window.__tfLastFillValue[key] === val) return;
     window.__tfLastFillValue[key] = val;
@@ -431,7 +439,7 @@
     if (window.__tfAssertWaiting) return;
     var el = e.target;
     if (el && (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA')) {
-      var key = el.name || el.getAttribute('aria-label') || el.placeholder || el.id || el.tagName;
+      var key = _fillKey(el);
       var val = (el.value || '').trim();
       if (window.__tfLastFillValue[key] === val) return;
       window.__tfLastFillValue[key] = val;

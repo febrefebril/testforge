@@ -990,6 +990,10 @@ class RecordingNormalizer:
                 next_type = next_event.get("type", "")
 
                 if next_type not in FILL_TYPES:
+                    # Allow a same-element click (focus) to pass through without breaking
+                    if next_type == "click" and _target_key(next_event.get("target")) == current_key:
+                        j += 1
+                        continue
                     break
 
                 next_key = _target_key(next_event.get("target"))
