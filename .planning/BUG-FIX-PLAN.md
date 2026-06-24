@@ -818,12 +818,12 @@ def test_run_saves_output_file(tmp_path):
 - [ ] Bug 8 — verificar suite após todos os fixes — em andamento
 - [x] Criar commit por bug com teste incluído
 - [x] Push para origin refactor/recorder-playwright — 4f2970f..fb270af
-- [ ] Bug 11 — overlay DOM mutation fecha dropdown de <select> (overlay_inject.js)
-- [ ] Bug 12 — change em <select> gera 'fill' em vez de 'select_option' (overlay_inject.js)
-- [ ] Bug 13 — FallbackRunner.try_fill usa page.fill() em <select> (fallback_runner.py)
-- [ ] Bug 14 — SmartStepRunner sem caso 'select_option' (fallback_runner.py)
-- [ ] Bug 15 — label/role vazio em semantic_steps.jsonl (recording_normalizer.py)
-- [ ] Bug 16 — clicks redundantes em <select> geram steps de ruído (overlay_inject.js + normalizer)
+- [x] Bug 11 — overlay DOM mutation fecha dropdown de <select> (overlay_inject.js) — commit 2b151d5
+- [x] Bug 12 — change em <select> gera 'fill' em vez de 'select_option' (overlay_inject.js) — commit 2b151d5
+- [x] Bug 13 — FallbackRunner.try_fill usa page.fill() em <select> (fallback_runner.py) — commit 2b151d5
+- [x] Bug 14 — SmartStepRunner sem caso 'select_option' (fallback_runner.py) — commit 2b151d5
+- [x] Bug 15 — label/role vazio em semantic_steps.jsonl — confirmado já correto; select_option adicionado ao FILL_TYPES — commit 2b151d5
+- [x] Bug 16 — clicks redundantes em <select> geram steps de ruído (overlay_inject.js + normalizer) — commit 2b151d5
 
 ---
 
