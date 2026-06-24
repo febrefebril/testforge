@@ -30,6 +30,8 @@ else:
 
 
 class RecorderController:
+    _OVERLAY_JS: str = _OVERLAY_JS  # expose module-level for tests
+
     def __init__(self, page: Page, recordings_root: str = "recordings"):
         self._page = page
         self._session_manager = RecordingSessionManager(recordings_root)
