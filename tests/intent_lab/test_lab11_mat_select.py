@@ -12,7 +12,7 @@ from testforge.handlers.angular_material import AngularMaterialHandler
 from tests.helpers.incremental_fakes import FakeCandidate, FakeTarget, FakeStep
 
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+# -- Helpers ------------------------------------------------------------------
 
 def _make_mat_select_step(selector="mat-select[formcontrolname='estado']", value="São Paulo",
                           tag="mat-select", element_id="mat-select-0"):
@@ -36,7 +36,7 @@ def _mock_page_with_option(option_text: str = "São Paulo"):
     return page, option
 
 
-# ── 1. detect() by tag ───────────────────────────────────────────────────────
+# -- 1. detect() by tag -------------------------------------------------------
 
 class TestDetectByTag:
     def test_detect_true_for_mat_select_tag(self):
@@ -52,7 +52,7 @@ class TestDetectByTag:
         assert h.detect(["#email"], "", "input") is False
 
 
-# ── 2. detect() by element_id ────────────────────────────────────────────────
+# -- 2. detect() by element_id ------------------------------------------------
 
 class TestDetectByElementId:
     def test_detect_true_for_mat_select_element_id(self):
@@ -68,7 +68,7 @@ class TestDetectByElementId:
         assert h.detect(["#btn"], "btn-submit", "button") is False
 
 
-# ── 3. detect() by candidate selector ────────────────────────────────────────
+# -- 3. detect() by candidate selector ----------------------------------------
 
 class TestDetectBySelector:
     def test_detect_true_for_mat_select_in_selector(self):
@@ -85,7 +85,7 @@ class TestDetectBySelector:
         assert h.detect(["mat-radio-button[value='A']"], "mat-radio-0", "") is False
 
 
-# ── 4. detect_handler() integration ──────────────────────────────────────────
+# -- 4. detect_handler() integration ------------------------------------------
 
 class TestDetectHandlerIntegration:
     def test_returns_angular_material_handler_for_mat_select_step(self):
@@ -103,7 +103,7 @@ class TestDetectHandlerIntegration:
         assert detect_handler(step) is None
 
 
-# ── 5. execute() happy path ───────────────────────────────────────────────────
+# -- 5. execute() happy path ---------------------------------------------------
 
 class TestExecuteHappyPath:
     def test_execute_clicks_trigger_and_option(self):
@@ -125,7 +125,7 @@ class TestExecuteHappyPath:
         assert "banco" in sel
 
 
-# ── 6. execute() error cases ──────────────────────────────────────────────────
+# -- 6. execute() error cases --------------------------------------------------
 
 class TestExecuteErrors:
     def test_execute_raises_if_no_selector(self):

@@ -110,28 +110,28 @@ class ReadinessReport:
             f"|----------|--------|",
             f"| Verdict | **{self.verdict.value.upper()}** |",
             f"| Recording Status | `{self.status.value}` |",
-            f"| Completeness Passed | {'✅' if self.completeness_passed else '❌'} |",
-            f"| All Steps Passed | {'✅' if self.all_steps_passed else '❌'} |",
-            f"| Blocking Steps Resolved | {'✅' if self.blocking_steps_resolved else '❌'} |",
-            f"| User-Supplied Values Validated | {'✅' if self.user_supplied_values_validated else '❌'} |",
-            f"| Healing Oracles Passed | {'✅' if self.healing_oracles_passed else '❌'} |",
+            f"| Completeness Passed | {'[OK]' if self.completeness_passed else '[FAIL]'} |",
+            f"| All Steps Passed | {'[OK]' if self.all_steps_passed else '[FAIL]'} |",
+            f"| Blocking Steps Resolved | {'[OK]' if self.blocking_steps_resolved else '[FAIL]'} |",
+            f"| User-Supplied Values Validated | {'[OK]' if self.user_supplied_values_validated else '[FAIL]'} |",
+            f"| Healing Oracles Passed | {'[OK]' if self.healing_oracles_passed else '[FAIL]'} |",
             f"",
             f"## Step Summary",
             f"",
             f"| Metric | Value |",
             f"|--------|-------|",
             f"| Total | {self.total_steps} |",
-            f"| ✅ Passed | {self.passed_steps} |",
+            f"| [OK] Passed | {self.passed_steps} |",
             f"| 🔧 Healed | {self.healed_steps} |",
-            f"| ❌ Failed | {self.failed_steps} |",
-            f"| ⛔ Blocked | {self.blocked_steps} |",
-            f"| ⏭ Skipped | {self.skipped_steps} |",
+            f"| [FAIL] Failed | {self.failed_steps} |",
+            f"| [BLOCK] Blocked | {self.blocked_steps} |",
+            f"| [SKIP] Skipped | {self.skipped_steps} |",
             f"",
         ]
 
         if self.missing_fields:
             lines.extend([
-                f"## ❌ Missing Fields",
+                f"## [FAIL] Missing Fields",
                 f"",
                 f"| Field | Label | Reason |",
                 f"|-------|-------|--------|",
@@ -142,7 +142,7 @@ class ReadinessReport:
 
         if self.review_required_fields:
             lines.extend([
-                f"## ⚠ Review Required Fields",
+                f"## [WARN] Review Required Fields",
                 f"",
                 f"| Field | Label | Reason |",
                 f"|-------|-------|--------|",
@@ -156,7 +156,7 @@ class ReadinessReport:
                 f"## Failures",
             ])
             for f in self.failures:
-                lines.append(f"- ❌ {f}")
+                lines.append(f"- [FAIL] {f}")
             lines.append("")
 
         if self.warnings:
@@ -164,12 +164,12 @@ class ReadinessReport:
                 f"## Warnings",
             ])
             for w in self.warnings:
-                lines.append(f"- ⚠ {w}")
+                lines.append(f"- [WARN] {w}")
             lines.append("")
 
         if self.verdict == ReadinessVerdict.PASS:
             lines.extend([
-                f"## ✅ Ready for Team",
+                f"## [OK] Ready for Team",
                 f"",
                 f"This recording passed all readiness criteria and can be used by the team.",
             ])
@@ -182,7 +182,7 @@ class ReadinessReport:
             ])
         else:
             lines.extend([
-                f"## ❌ Not Ready",
+                f"## [FAIL] Not Ready",
                 f"",
                 f"This recording did not pass readiness criteria.",
                 f"Address the failures above before attempting validation again.",

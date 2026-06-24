@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 TEST_PAGE = str(Path(__file__).parent / "pagina-de-teste-completa.html")
 
 
-# ── HTTP Server Fixture ─────────────────────────────────────────────────────
+# -- HTTP Server Fixture -----------------------------------------------------
 
 @pytest.fixture(scope="module")
 def test_server():
@@ -60,7 +60,7 @@ def navigate(page: Page, test_server):
     page.wait_for_timeout(500)
 
 
-# ── FAM-01: Locator Resolution ──────────────────────────────────────────────
+# -- FAM-01: Locator Resolution ----------------------------------------------
 
 class TestFAM01LocatorResolution:
     """SEL-001 to SEL-010: Selector failures."""
@@ -96,7 +96,7 @@ class TestFAM01LocatorResolution:
         assert btn.count() > 0
 
 
-# ── FAM-02: Timing / Synchronization ────────────────────────────────────────
+# -- FAM-02: Timing / Synchronization ----------------------------------------
 
 class TestFAM02Timing:
     """TIM-001 to TIM-007: Async and timing failures."""
@@ -131,7 +131,7 @@ class TestFAM02Timing:
         assert suggestions.count() > 0
 
 
-# ── FAM-03: Context / Scope ─────────────────────────────────────────────────
+# -- FAM-03: Context / Scope -------------------------------------------------
 
 class TestFAM03Context:
     """CTX-001 to CTX-007: Iframe, shadow DOM, popup."""
@@ -161,7 +161,7 @@ class TestFAM03Context:
         assert modal.count() > 0 or box.locator('text=Modal').count() > 0
 
 
-# ── FAM-04: Application State ───────────────────────────────────────────────
+# -- FAM-04: Application State -----------------------------------------------
 
 class TestFAM04State:
     """STA-001 to STA-006: Overlay, disabled, session."""
@@ -185,7 +185,7 @@ class TestFAM04State:
         assert btn.count() > 0
 
 
-# ── FAM-05: Dynamic DOM ─────────────────────────────────────────────────────
+# -- FAM-05: Dynamic DOM -----------------------------------------------------
 
 class TestFAM05DynamicDOM:
     """DOM-001 to DOM-005: Stale, reorder, lazy load."""
@@ -211,7 +211,7 @@ class TestFAM05DynamicDOM:
         assert img.count() > 0
 
 
-# ── FAM-06: Input / Interaction ─────────────────────────────────────────────
+# -- FAM-06: Input / Interaction ---------------------------------------------
 
 class TestFAM06Input:
     """INP-001 to INP-010: Fill, masked, datepicker."""
@@ -232,7 +232,7 @@ class TestFAM06Input:
         assert inp.count() > 0
 
 
-# ── FAM-07: File ────────────────────────────────────────────────────────────
+# -- FAM-07: File ------------------------------------------------------------
 
 class TestFAM07File:
     """FILE-001 to FILE-006: Upload/download."""
@@ -244,7 +244,7 @@ class TestFAM07File:
         assert inp.count() > 0
 
 
-# ── FAM-08: Assert ──────────────────────────────────────────────────────────
+# -- FAM-08: Assert ----------------------------------------------------------
 
 class TestFAM08Assert:
     """AST-001 to AST-010: Assertion validation."""
@@ -262,7 +262,7 @@ class TestFAM08Assert:
         assert error.count() == 0
 
 
-# ── FAM-09: Recorder ────────────────────────────────────────────────────────
+# -- FAM-09: Recorder --------------------------------------------------------
 
 class TestFAM09Recorder:
     """REC-001 to REC-006: Recording-related."""
@@ -273,7 +273,7 @@ class TestFAM09Recorder:
         assert page.evaluate("window.__tfOverlayVisible") is True
 
 
-# ── FAM-10: Execution ───────────────────────────────────────────────────────
+# -- FAM-10: Execution -------------------------------------------------------
 
 class TestFAM10Execution:
     """OBS-001 to OBS-006: Execution/observability."""
@@ -293,7 +293,7 @@ class TestFAM10Execution:
         assert btn.count() > 0
 
 
-# ── FAM-11: Browser Limits ──────────────────────────────────────────────────
+# -- FAM-11: Browser Limits --------------------------------------------------
 
 class TestFAM11BrowserLimits:
     """LIM-001 to LIM-005: Technical limits."""
@@ -305,7 +305,7 @@ class TestFAM11BrowserLimits:
         assert captcha.count() > 0
 
 
-# ── Healing Integration Tests ────────────────────────────────────────────────
+# -- Healing Integration Tests ------------------------------------------------
 
 class TestHealingIntegration:
     """Test that healing pipeline works end-to-end for key scenarios."""

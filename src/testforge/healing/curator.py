@@ -30,7 +30,7 @@ STALE_DAYS = 90
 REVIEW_THRESHOLD = int(os.environ.get("TF_REVIEW_THRESHOLD", "5"))
 
 
-# ── ProgressResult ──────────────────────────────────────────────────────────
+# -- ProgressResult ----------------------------------------------------------
 
 class ProgressResult:
     """Resultado da execução de um passo curado."""
@@ -52,7 +52,7 @@ def classify_step_result(original_error: str, new_error: str, passed: bool) -> s
     return ProgressResult.ERROR_CHANGED
 
 
-# ── CurationOutcome ─────────────────────────────────────────────────────────
+# -- CurationOutcome ---------------------------------------------------------
 
 @dataclass
 class CurationOutcome:
@@ -68,7 +68,7 @@ class CurationOutcome:
     taxonomy_id: str = ""
 
 
-# ── Failure Count Tracker ───────────────────────────────────────────────────
+# -- Failure Count Tracker ---------------------------------------------------
 
 class FailureTracker:
     """Rastreia falhas consecutivas por taxonomy_id para limiar de review."""
@@ -106,7 +106,7 @@ class FailureTracker:
         return self._counts.get(taxonomy_id, 0)
 
 
-# ── CuradorAutomatico ───────────────────────────────────────────────────────
+# -- CuradorAutomatico -------------------------------------------------------
 
 class CuradorAutomatico:
     """Orchestrates 4-layer healing: L0→L1→L2→L3.
@@ -144,7 +144,7 @@ class CuradorAutomatico:
             self._healer_type = "MockLLMHealer (deterministico)"
             logger.info("MockLLMHealer ativado (deterministico) — configure AZURE_OPENAI_KEY para LLM real")
 
-    # ── Public API ──────────────────────────────────────────────────────
+    # -- Public API ------------------------------------------------------
 
     def cure(
         self,
@@ -188,7 +188,7 @@ class CuradorAutomatico:
 
         return outcome
 
-    # ── L0: Recipe Catalog ──────────────────────────────────────────────
+    # -- L0: Recipe Catalog ----------------------------------------------
 
     def _try_layer0_catalog(
         self, family: str, step_data: dict, error_message: str,
@@ -224,7 +224,7 @@ class CuradorAutomatico:
 
         return None  # Fall through to L1
 
-    # ── L1: Ranked Candidates (MIS fallback) ──────────────────────────
+    # -- L1: Ranked Candidates (MIS fallback) --------------------------
 
     _DANGEROUS_SELS = {"body", "html", "div", "span", "*", "a", "button", "input"}
 
@@ -269,7 +269,7 @@ class CuradorAutomatico:
                 )
         return None
 
-    # ── L2: Specialist Agents ──────────────────────────────────────────
+    # -- L2: Specialist Agents ------------------------------------------
 
     def _try_layer2_agents(
         self, family: str, step_data: dict, error_message: str, evidence: EvidencePayload,
@@ -326,7 +326,7 @@ class CuradorAutomatico:
 
         return None  # Fall through to L3
 
-    # ── L3: LLM Healer ──────────────────────────────────────────────────
+    # -- L3: LLM Healer --------------------------------------------------
 
     def _run_healing_cycle(
         self,
@@ -411,7 +411,7 @@ class CuradorAutomatico:
         outcome.status = ProgressResult.UNRESOLVED
         return outcome
 
-    # ── Helpers ─────────────────────────────────────────────────────────
+    # -- Helpers ---------------------------------------------------------
 
     def _build_step_copy(self, step_data: dict, new_locator: str, strategy: str = "") -> dict:
         """Clone step_data with replaced selector and strategy."""

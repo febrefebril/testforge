@@ -16,7 +16,7 @@ except ModuleNotFoundError:
     )
 
 
-# ── Palette ──────────────────────────────────────────────────────────────────
+# -- Palette ------------------------------------------------------------------
 BG        = "#1e1e2e"
 BG_CARD   = "#2a2a3e"
 BG_INPUT  = "#313149"
@@ -30,7 +30,7 @@ BTN_CLEAR = "#585b70"
 BORDER    = "#45475a"
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# -- Helpers -------------------------------------------------------------------
 
 def _entry(parent, textvariable, width=40, show=None):
     kw = {}
@@ -83,7 +83,7 @@ def _row(grid, row, label, widget, req=False):
     widget.grid(row=row, column=1, sticky="ew", pady=2)
 
 
-# ── Main window ───────────────────────────────────────────────────────────────
+# -- Main window ---------------------------------------------------------------
 
 class RecorderLauncher(tk.Tk):
     def __init__(self):
@@ -99,7 +99,7 @@ class RecorderLauncher(tk.Tk):
         self._build_ui()
         self._center()
 
-    # ── layout ────────────────────────────────────────────────────────────────
+    # -- layout ----------------------------------------------------------------
 
     def _build_ui(self):
         # header bar
@@ -139,7 +139,7 @@ class RecorderLauncher(tk.Tk):
     def _build_form(self, parent):
         pad = {"padx": 12, "pady": (0, 6)}
 
-        # ── Identificação ─────────────────────────────────────────────────────
+        # -- Identificação -----------------------------------------------------
         card1 = tk.Frame(parent, bg=BG_CARD, padx=16, pady=12)
         card1.pack(fill="x", **pad)
         _section_title(card1, "Identificação da Gravação").pack(fill="x")
@@ -162,7 +162,7 @@ class RecorderLauncher(tk.Tk):
         _row(grid1, 4, "Suite",         _entry(grid1, self.var_suite))
         _row(grid1, 5, "Caso de Teste", _entry(grid1, self.var_tc))
 
-        # ── Configurações ─────────────────────────────────────────────────────
+        # -- Configurações -----------------------------------------------------
         card2 = tk.Frame(parent, bg=BG_CARD, padx=16, pady=12)
         card2.pack(fill="x", **pad)
         _section_title(card2, "Configurações").pack(fill="x")
@@ -185,7 +185,7 @@ class RecorderLauncher(tk.Tk):
         _combo(cfg, self.var_evidence, ["light", "full"],
                width=8).grid(row=0, column=3, sticky="w", pady=2)
 
-        # ── Opções ────────────────────────────────────────────────────────────
+        # -- Opções ------------------------------------------------------------
         card3 = tk.Frame(parent, bg=BG_CARD, padx=16, pady=12)
         card3.pack(fill="x", **pad)
         _section_title(card3, "Opções").pack(fill="x")
@@ -218,7 +218,7 @@ class RecorderLauncher(tk.Tk):
         for text, var in checks_right:
             _check(col1, text, var).pack(anchor="w", pady=1)
 
-        # ── Publicação Git ────────────────────────────────────────────────────
+        # -- Publicação Git ----------------------------------------------------
         card4 = tk.Frame(parent, bg=BG_CARD, padx=16, pady=12)
         card4.pack(fill="x", **pad)
         _section_title(card4, "Publicação Git (opcional)").pack(fill="x")
@@ -243,12 +243,12 @@ class RecorderLauncher(tk.Tk):
         _row(git_grid, 2, "Branch",
              _entry(git_grid, self.var_git_branch, width=20))
 
-        # ── Botões ────────────────────────────────────────────────────────────
+        # -- Botões ------------------------------------------------------------
         btn_frame = tk.Frame(parent, bg=BG, pady=6)
         btn_frame.pack(fill="x", padx=12)
 
         self.btn_start = tk.Button(
-            btn_frame, text="▶  Iniciar Gravação",
+            btn_frame, text="[PLAY]  Iniciar Gravação",
             bg=BTN_START, fg=BG, font=("Segoe UI", 10, "bold"),
             relief="flat", padx=16, pady=6, cursor="hand2",
             activebackground=ACCENT2, activeforeground=BG,
@@ -257,7 +257,7 @@ class RecorderLauncher(tk.Tk):
         self.btn_start.pack(side="left", padx=(0, 8))
 
         tk.Button(
-            btn_frame, text="⏹  Parar",
+            btn_frame, text="[STOP]  Parar",
             bg=BTN_CLEAR, fg=FG, font=("Segoe UI", 10),
             relief="flat", padx=12, pady=6, cursor="hand2",
             activebackground=BORDER, activeforeground=FG,
@@ -278,7 +278,7 @@ class RecorderLauncher(tk.Tk):
                  font=("Courier New", 8), anchor="w", wraplength=590,
                  justify="left").pack(fill="x", padx=14, pady=(0, 2))
 
-        # ── Log ──────────────────────────────────────────────────────────────
+        # -- Log --------------------------------------------------------------
         log_frame = tk.Frame(parent, bg=BG)
         log_frame.pack(fill="both", expand=True, padx=12, pady=(0, 10))
 
@@ -293,7 +293,7 @@ class RecorderLauncher(tk.Tk):
         )
         self.log.pack(fill="both", expand=True)
 
-    # ── Logic ─────────────────────────────────────────────────────────────────
+    # -- Logic -----------------------------------------------------------------
 
     def _build_cmd(self):
         cmd = [sys.executable, "-m", "testforge.cli.app", "record"]
@@ -377,7 +377,7 @@ class RecorderLauncher(tk.Tk):
         env = self._build_env()
         self._cmd_var.set("$ " + " ".join(cmd))
         self._log_clear()
-        self._log(f"Iniciando: {' '.join(cmd)}\n{'─'*60}\n")
+        self._log(f"Iniciando: {' '.join(cmd)}\n{'-'*60}\n")
 
         self._running = True
         self.btn_start.configure(state="disabled")
@@ -399,7 +399,7 @@ class RecorderLauncher(tk.Tk):
                 self._log(line)
             self._proc.wait()
             rc = self._proc.returncode
-            self._log(f"\n{'─'*60}\nProcesso encerrado (código {rc})\n")
+            self._log(f"\n{'-'*60}\nProcesso encerrado (código {rc})\n")
         except FileNotFoundError:
             self._log("[ERRO] testforge não encontrado no PATH. "
                       "Execute 'source activate.sh' e tente novamente.\n")
@@ -431,7 +431,7 @@ class RecorderLauncher(tk.Tk):
         self._cmd_var.set("")
         self._log_clear()
 
-    # ── Log helpers ───────────────────────────────────────────────────────────
+    # -- Log helpers -----------------------------------------------------------
 
     def _log(self, text):
         def _do():
@@ -446,7 +446,7 @@ class RecorderLauncher(tk.Tk):
         self.log.delete("1.0", "end")
         self.log.configure(state="disabled")
 
-    # ── Misc ──────────────────────────────────────────────────────────────────
+    # -- Misc ------------------------------------------------------------------
 
     def _center(self):
         self.update_idletasks()

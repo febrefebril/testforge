@@ -14,7 +14,7 @@ from testforge.semantic.recording_normalizer import RecordingNormalizer
 from tests.helpers.incremental_fakes import FakeCandidate, FakeTarget, FakeStep
 
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+# -- Helpers ------------------------------------------------------------------
 
 def _make_mat_option_step(value="São Paulo", tag="mat-option", element_id="mat-option-0",
                            selector="mat-option[data-value='SP']"):
@@ -52,7 +52,7 @@ def _make_keypress_event(char: str, target: dict = None, key: str = None) -> dic
     return {"type": "keypress", "target": target, "value": char, "key": key or char}
 
 
-# ── 1. detect() for mat-option by tag ────────────────────────────────────────
+# -- 1. detect() for mat-option by tag ----------------------------------------
 
 class TestDetectMatOption:
     def test_detect_true_for_mat_option_tag(self):
@@ -72,7 +72,7 @@ class TestDetectMatOption:
         assert h.detect(["#submit-btn"], "", "button") is False
 
 
-# ── 2. detect() for autocomplete input ───────────────────────────────────────
+# -- 2. detect() for autocomplete input ---------------------------------------
 
 class TestDetectAutocomplete:
     def test_detect_true_for_aria_autocomplete_selector(self):
@@ -89,7 +89,7 @@ class TestDetectAutocomplete:
         assert isinstance(handler, AngularMaterialHandler)
 
 
-# ── 3. execute() for mat-option — happy path ─────────────────────────────────
+# -- 3. execute() for mat-option — happy path ---------------------------------
 
 class TestExecuteMatOption:
     def test_execute_clicks_option_by_text(self):
@@ -122,7 +122,7 @@ class TestExecuteMatOption:
             h.execute(page, step)
 
 
-# ── 4. _compact_keypress_sequences ───────────────────────────────────────────
+# -- 4. _compact_keypress_sequences -------------------------------------------
 
 class TestCompactKeypressSequences:
     def _normalizer(self):

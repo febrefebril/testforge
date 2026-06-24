@@ -17,7 +17,7 @@ from testforge.semantic.model import SemanticAction, SemanticTarget
 from testforge.semantic.recording_normalizer import RecordingNormalizer
 
 
-# ── Fixtures ───────────────────────────────────────────────────────────────────
+# -- Fixtures -------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -99,7 +99,7 @@ def _make_network_entry(method="POST", url="http://localhost:8765/api/save",
     }
 
 
-# ── CT-AUTO-4.1: Fill reconstructed by snapshot_diff ─────────────────────────
+# -- CT-AUTO-4.1: Fill reconstructed by snapshot_diff -------------------------
 
 
 class TestCT_AUTO_4_1:
@@ -218,7 +218,7 @@ class TestCT_AUTO_4_1:
         assert len(stc.steps) >= 1
 
 
-# ── CT-AUTO-4.2: Fill reconstructed by form_values ────────────────────────────
+# -- CT-AUTO-4.2: Fill reconstructed by form_values ----------------------------
 
 
 class TestCT_AUTO_4_2:
@@ -272,7 +272,7 @@ class TestCT_AUTO_4_2:
         assert entries[0]["identifiers"].get("form_name") == "telefone"
 
 
-# ── CT-AUTO-4.3: Value reconstructed by network_payload ───────────────────────
+# -- CT-AUTO-4.3: Value reconstructed by network_payload -----------------------
 
 
 class TestCT_AUTO_4_3:
@@ -366,7 +366,7 @@ class TestCT_AUTO_4_3:
         assert "idade" in keys
 
 
-# ── Integration tests ─────────────────────────────────────────────────────────
+# -- Integration tests ---------------------------------------------------------
 
 
 class TestIntentReconstructorIntegration:
@@ -442,7 +442,7 @@ class TestIntentReconstructorIntegration:
         assert len(entries) >= 1
 
 
-# ── Edge cases ────────────────────────────────────────────────────────────────
+# -- Edge cases ----------------------------------------------------------------
 
 
 class TestIntentReconstructorEdgeCases:

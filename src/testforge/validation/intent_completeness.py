@@ -124,17 +124,17 @@ class CompletenessReport:
             f"| Metric | Value |",
             f"|--------|-------|",
             f"| Total Fields | {self.total_fields} |",
-            f"| ✅ Resolved | {self.resolved_count} |",
-            f"| ⚠ Resolved (Warning) | {self.resolved_with_warning_count} |",
+            f"| [OK] Resolved | {self.resolved_count} |",
+            f"| [WARN] Resolved (Warning) | {self.resolved_with_warning_count} |",
             f"| 🔍 Review Required | {self.review_required_count} |",
-            f"| ❌ Missing | {self.missing_count} |",
-            f"| **Complete** | **{'✅ Yes' if self.is_complete else '❌ No'}** |",
+            f"| [FAIL] Missing | {self.missing_count} |",
+            f"| **Complete** | **{'[OK] Yes' if self.is_complete else '[FAIL] No'}** |",
             f"",
         ]
 
         if self.captured_fields:
             lines.extend([
-                f"## ✅ Captured Fields",
+                f"## [OK] Captured Fields",
                 f"",
                 f"| Field | Value | Source | Step |",
                 f"|-------|-------|--------|------|",
@@ -148,7 +148,7 @@ class CompletenessReport:
 
         if self.synthesized_fields:
             lines.extend([
-                f"## ⚠ Synthesized Fields",
+                f"## [WARN] Synthesized Fields",
                 f"",
                 f"| Field | Value | Source | Reason | Step |",
                 f"|-------|-------|--------|--------|------|",
@@ -162,7 +162,7 @@ class CompletenessReport:
 
         if self.pending_fields:
             lines.extend([
-                f"## ❌ Pending Fields",
+                f"## [FAIL] Pending Fields",
                 f"",
                 f"| Field | Status | Label | ID | Selector | Reason | Step |",
                 f"|-------|--------|-------|----|----------|--------|------|",

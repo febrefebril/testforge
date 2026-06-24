@@ -180,7 +180,7 @@ class AngularMaterialHandler(ComponentHandler):
         return None
 
 
-# ── type predicates ───────────────────────────────────────────────────────────
+# -- type predicates -----------------------------------------------------------
 
 def _is_mat_option(tag: str, element_id: str, candidates: list[str]) -> bool:
     if tag == _MAT_OPTION_TAG:
@@ -214,7 +214,7 @@ def _is_mat_toggle(tag: str, candidates: list[str]) -> bool:
     return False
 
 
-# ── execute helpers ───────────────────────────────────────────────────────────
+# -- execute helpers -----------------------------------------------------------
 
 def _execute_mat_option(page, step, candidates: list[str]) -> str:
     """Click a mat-option by text match, then candidate selectors as fallback."""

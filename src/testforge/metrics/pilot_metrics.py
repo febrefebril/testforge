@@ -171,8 +171,8 @@ class PilotMetrics:
             f"| Metric | Value |",
             f"|--------|-------|",
             f"| Total Recordings | {s['total_recordings']} |",
-            f"| ✅ Ready for Team | {s['ready_for_team']} |",
-            f"| ⚠ Incomplete Intent | {s['incomplete_intent']} |",
+            f"| [OK] Ready for Team | {s['ready_for_team']} |",
+            f"| [WARN] Incomplete Intent | {s['incomplete_intent']} |",
             f"| 🔍 Needs Review | {s['needs_review']} |",
             f"| Completion Rate | {s['completion_rate']:.1%} |",
             f"",
@@ -188,8 +188,8 @@ class PilotMetrics:
             f"",
             f"| Outcome | Count |",
             f"|---------|-------|",
-            f"| ✅ Passed | {d['incremental_validation']['passed']} |",
-            f"| ❌ Failed | {d['incremental_validation']['failed']} |",
+            f"| [OK] Passed | {d['incremental_validation']['passed']} |",
+            f"| [FAIL] Failed | {d['incremental_validation']['failed']} |",
             f"",
         ]
 

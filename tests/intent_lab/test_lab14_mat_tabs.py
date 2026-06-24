@@ -11,7 +11,7 @@ from testforge.handlers.angular_material import AngularMaterialHandler
 from tests.helpers.incremental_fakes import FakeCandidate, FakeTarget, FakeStep
 
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+# -- Helpers ------------------------------------------------------------------
 
 def _make_tab_step(text="Endereço", selector="[role=\"tab\"]:has-text('Endereço')"):
     cands = [FakeCandidate(selector=selector)]
@@ -47,7 +47,7 @@ def _mock_page_for_toggle(initial_checked: str = "false"):
     return page, loc
 
 
-# ── 1. detect() for mat-tab ──────────────────────────────────────────────────
+# -- 1. detect() for mat-tab --------------------------------------------------
 
 class TestDetectTab:
     def test_detect_true_for_role_tab_selector(self):
@@ -71,7 +71,7 @@ class TestDetectTab:
         assert isinstance(detect_handler(step), AngularMaterialHandler)
 
 
-# ── 2. detect() for mat-slide-toggle ─────────────────────────────────────────
+# -- 2. detect() for mat-slide-toggle -----------------------------------------
 
 class TestDetectToggle:
     def test_detect_true_for_mat_slide_toggle_tag(self):
@@ -91,7 +91,7 @@ class TestDetectToggle:
         assert isinstance(detect_handler(step), AngularMaterialHandler)
 
 
-# ── 3. execute() for mat-tab ─────────────────────────────────────────────────
+# -- 3. execute() for mat-tab -------------------------------------------------
 
 class TestExecuteTab:
     def test_execute_clicks_role_tab_by_text(self):
@@ -123,7 +123,7 @@ class TestExecuteTab:
             h.execute(page, step)
 
 
-# ── 4. execute() for mat-slide-toggle ────────────────────────────────────────
+# -- 4. execute() for mat-slide-toggle ----------------------------------------
 
 class TestExecuteToggle:
     def test_execute_toggle_clicks_element(self):
@@ -162,7 +162,7 @@ class TestExecuteToggle:
             h.execute(MagicMock(), step)
 
 
-# ── 5. normalize() for tabs ───────────────────────────────────────────────────
+# -- 5. normalize() for tabs ---------------------------------------------------
 
 class TestNormalizeTab:
     def test_normalize_marks_tab_click_as_navigation(self):

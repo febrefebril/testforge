@@ -19,7 +19,7 @@ from testforge.metrics.pilot_metrics import (
 )
 
 
-# ── Fixtures ───────────────────────────────────────────────────────────────
+# -- Fixtures ---------------------------------------------------------------
 
 @pytest.fixture
 def recordings_dir():
@@ -148,7 +148,7 @@ def _make_needs_review_recording(base_dir: str, rec_id: str):
         json.dump(report, f)
 
 
-# ── CT-AUTO-8.1: Metrics reflect results ───────────────────────────────────
+# -- CT-AUTO-8.1: Metrics reflect results -----------------------------------
 
 class TestMetricsReflectResults:
     """CT-AUTO-8.1: Metrics accurately reflect recording outcomes."""
@@ -182,7 +182,7 @@ class TestMetricsReflectResults:
         assert abs(d["summary"]["completion_rate"] - 1/3) < 0.001
 
 
-# ── CT-AUTO-8.2: Consolidated report ───────────────────────────────────────
+# -- CT-AUTO-8.2: Consolidated report ---------------------------------------
 
 class TestConsolidatedReport:
     """CT-AUTO-8.2: Consolidated report generates correct files and content."""
@@ -236,7 +236,7 @@ class TestConsolidatedReport:
             assert len(metrics.recordings) == 0
 
 
-# ── CLI argument parsing ───────────────────────────────────────────────────
+# -- CLI argument parsing ---------------------------------------------------
 
 class TestPilotReportCLI:
     """Verify the CLI correctly parses pilot-report arguments."""

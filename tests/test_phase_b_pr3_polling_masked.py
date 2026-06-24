@@ -14,7 +14,7 @@ from testforge.semantic.intent_reconstructor import IntentReconstructor
 from testforge.semantic.model import SemanticAction, SemanticTarget
 
 
-# ── Fixtures ──────────────────────────────────────────────────────────────────
+# -- Fixtures ------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -96,7 +96,7 @@ def _make_mutation_line(fingerprint="input#valor[name=valor]", name="valor",
     })
 
 
-# ── Story 2.1: Polling Strategy ───────────────────────────────────────────────
+# -- Story 2.1: Polling Strategy -----------------------------------------------
 
 
 class TestPollingStrategy:
@@ -275,7 +275,7 @@ class TestPollingStrategy:
         assert valor_entries[0]["source"] == "snapshot_diff"
 
 
-# ── Story 2.2: Masked Field Detection ─────────────────────────────────────────
+# -- Story 2.2: Masked Field Detection -----------------------------------------
 
 
 class TestMaskedFieldDetection:

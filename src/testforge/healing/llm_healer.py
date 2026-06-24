@@ -16,7 +16,7 @@ from .evidence_payload import EvidencePayload
 from .llm_prompts import CURATION_PROMPT_TEMPLATE, FAMILY_PROMPTS
 
 
-# ── Allowed Strategies ──────────────────────────────────────────────────────
+# -- Allowed Strategies ------------------------------------------------------
 
 ALLOWED_STRATEGIES = {
     "semantic_locator_conversion",
@@ -32,7 +32,7 @@ ALLOWED_STRATEGIES = {
 }
 
 
-# ── LLMHealingProposal ──────────────────────────────────────────────────────
+# -- LLMHealingProposal ------------------------------------------------------
 
 @dataclass
 class LLMHealingProposal:
@@ -46,7 +46,7 @@ class LLMHealingProposal:
     raw_response: str = ""
 
 
-# ── Prompt Builder ──────────────────────────────────────────────────────────
+# -- Prompt Builder ----------------------------------------------------------
 
 def _build_taxonomy_hint() -> str:
     """Constrói referência de taxonomia condensada para contexto de prompt LLM."""
@@ -107,7 +107,7 @@ def _build_prompt(payload: EvidencePayload, error_message: str, family: str = ""
     return prompt
 
 
-# ── JSON Parser ─────────────────────────────────────────────────────────────
+# -- JSON Parser -------------------------------------------------------------
 
 def _extract_json(text: str) -> Optional[str]:
     """Extract first complete JSON object from LLM response using bracket matching."""
@@ -187,7 +187,7 @@ def _parse_response(text: str) -> Optional[LLMHealingProposal]:
     return proposal
 
 
-# ── LLMHealer ───────────────────────────────────────────────────────────────
+# -- LLMHealer ---------------------------------------------------------------
 
 class LLMHealer:
     """Healer that calls LLM API with family-specific prompts.
@@ -276,7 +276,7 @@ class LLMHealer:
             )
 
 
-# ── MockLLMHealer ───────────────────────────────────────────────────────────
+# -- MockLLMHealer -----------------------------------------------------------
 
 class MockLLMHealer(LLMHealer):
     """Deterministic healer — no API call, always returns a generic proposal.

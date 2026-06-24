@@ -12,7 +12,7 @@ from testforge.handlers.angular_material import AngularMaterialHandler
 from tests.helpers.incremental_fakes import FakeCandidate, FakeTarget, FakeStep
 
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+# -- Helpers ------------------------------------------------------------------
 
 def _make_dialog_step(selector=".mat-dialog-container button[mat-dialog-close]",
                        text="Confirmar", tag="button", element_id="btn-confirmar"):
@@ -37,7 +37,7 @@ def _make_dialog_content_step(selector=".mat-dialog-container input[aria-label='
     return FakeStep(action="click", value="", target=target)
 
 
-# ── 1. detect() ───────────────────────────────────────────────────────────────
+# -- 1. detect() ---------------------------------------------------------------
 
 class TestDetectDialog:
     def test_detect_true_for_mat_dialog_in_selector(self):
@@ -64,7 +64,7 @@ class TestDetectDialog:
         assert isinstance(handler, AngularMaterialHandler)
 
 
-# ── 2. execute() for mat-dialog ───────────────────────────────────────────────
+# -- 2. execute() for mat-dialog -----------------------------------------------
 
 class TestExecuteDialog:
     def test_execute_tries_scoped_selector_first(self):
@@ -96,7 +96,7 @@ class TestExecuteDialog:
             h.execute(page, step)
 
 
-# ── 3. normalize() dialog trigger detection ───────────────────────────────────
+# -- 3. normalize() dialog trigger detection -----------------------------------
 
 class TestNormalizeDialog:
     def test_normalize_marks_trigger_before_dialog_step(self):

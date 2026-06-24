@@ -52,7 +52,7 @@ def prompt_missing_fields(
         reason = field.reason or "campo sem valor capturado"
         selector_hint = field.selector or ""
 
-        print(f"  ── Campo #{field.step_index}: {label} ──")
+        print(f"  -- Campo #{field.step_index}: {label} --")
         print(f"     Motivo: {reason}")
         if selector_hint:
             print(f"     Seletor: {selector_hint}")
@@ -117,13 +117,13 @@ def prompt_missing_fields(
             print(f"[TestForge] ✓ Todos os campos resolvidos — intencao COMPLETA")
             _update_recording_metadata(rec_dir, RecordingStatus.intent_complete)
         else:
-            print(f"[TestForge] ⚠ {new_report.missing_count} campo(s) ainda pendente(s)")
+            print(f"[TestForge] [WARN] {new_report.missing_count} campo(s) ainda pendente(s)")
             print(f"  Relatorio: {md_path}")
             print(f"  Para completar: testforge compile --check {recording_id}")
             _update_recording_metadata(rec_dir, RecordingStatus.incomplete_intent)
         return new_report.is_complete
     except Exception as e:
-        print(f"[TestForge] ⚠ Erro ao re-verificar completude: {e}")
+        print(f"[TestForge] [WARN] Erro ao re-verificar completude: {e}")
         # Fallback: simple count-based check
         resolved = len(values_provided)
         pending = len(report.pending_fields) - resolved
@@ -132,7 +132,7 @@ def prompt_missing_fields(
             _update_recording_metadata(rec_dir, RecordingStatus.intent_complete)
             return True
         else:
-            print(f"[TestForge] ⚠ {pending} campo(s) ainda pendente(s) (contagem simples)")
+            print(f"[TestForge] [WARN] {pending} campo(s) ainda pendente(s) (contagem simples)")
             print(f"  Dados salvos: {test_data_path}")
             _update_recording_metadata(rec_dir, RecordingStatus.incomplete_intent)
             return False
@@ -286,7 +286,7 @@ def _save_test_data(rec_dir: str, values: dict, recording_id: str) -> str:
     for key in values:
         for pattern in _sensitive_patterns:
             if re.search(pattern, key):
-                print(f"  ⚠ ALERTA: Campo sensivel '{key}' teve valor informado via CLI")
+                print(f"  [WARN] ALERTA: Campo sensivel '{key}' teve valor informado via CLI")
                 print(f"    Revise antes de versionar os artefatos")
                 if "sensitive_alerts" not in existing:
                     existing["sensitive_alerts"] = []

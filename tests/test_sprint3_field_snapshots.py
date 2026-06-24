@@ -21,7 +21,7 @@ from testforge.recorder.recording_session import RecordingSessionManager
 from testforge.recorder.raw_recording_store import RawRecordingStore
 
 
-# ── Fixtures ───────────────────────────────────────────────────────────────────
+# -- Fixtures -------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -50,7 +50,7 @@ def mock_store(controller):
     return ctrl._store, tmpdir, page, ctrl
 
 
-# ── Helper factories ──────────────────────────────────────────────────────────
+# -- Helper factories ----------------------------------------------------------
 
 
 def _make_snapshot(fingerprint="input#campo1[name=campo1]", value="ABC",
@@ -100,7 +100,7 @@ def _make_final_state(reason="user_stop", fields=None):
     }
 
 
-# ── CT-AUTO-3.1: Field with preventDefault ────────────────────────────────────
+# -- CT-AUTO-3.1: Field with preventDefault ------------------------------------
 
 
 class TestCT_AUTO_3_1:
@@ -241,7 +241,7 @@ class TestCT_AUTO_3_1:
         assert "height" in data["bounding_box"]
 
 
-# ── CT-AUTO-3.2: Currency mask ────────────────────────────────────────────────
+# -- CT-AUTO-3.2: Currency mask ------------------------------------------------
 
 
 class TestCT_AUTO_3_2:
@@ -320,7 +320,7 @@ class TestCT_AUTO_3_2:
         assert data["fields"][0]["value"] == "1.234,56"
 
 
-# ── CT-AUTO-3.3: Contenteditable ──────────────────────────────────────────────
+# -- CT-AUTO-3.3: Contenteditable ----------------------------------------------
 
 
 class TestCT_AUTO_3_3:
@@ -385,7 +385,7 @@ class TestCT_AUTO_3_3:
         assert data["fingerprint"] == "contenteditable#conteudo"
 
 
-# ── CT-AUTO-3.4: Native select ────────────────────────────────────────────────
+# -- CT-AUTO-3.4: Native select ------------------------------------------------
 
 
 class TestCT_AUTO_3_4:
@@ -445,7 +445,7 @@ class TestCT_AUTO_3_4:
         assert data["new_value"] == "RJ"
 
 
-# ── Épico 3.2: final_state_snapshot.json ──────────────────────────────────────
+# -- Épico 3.2: final_state_snapshot.json --------------------------------------
 
 
 class TestFinalStateSnapshot:
@@ -509,7 +509,7 @@ class TestFinalStateSnapshot:
         assert not os.path.exists(path)
 
 
-# ── Overlay JS syntax checks ──────────────────────────────────────────────────
+# -- Overlay JS syntax checks --------------------------------------------------
 
 
 class TestOverlayJS:
@@ -568,7 +568,7 @@ class TestOverlayJS:
         assert "_tf_captureFinalState('beforeunload')" in js or '_tf_captureFinalState("beforeunload")' in js
 
 
-# ── Edge cases ────────────────────────────────────────────────────────────────
+# -- Edge cases ----------------------------------------------------------------
 
 
 class TestSprint3EdgeCases:

@@ -467,7 +467,7 @@ class RecordingNormalizer:
         stc.blind_spots = blind_spots
         if blind_spots:
             import sys
-            print(f"[TestForge] ⚠ {len(blind_spots)} blind spot(s) detectado(s):", file=sys.stderr)
+            print(f"[TestForge] [WARN] {len(blind_spots)} blind spot(s) detectado(s):", file=sys.stderr)
             for bs in blind_spots:
                 print(f"  Step {bs['step']}: {bs['pattern']} ({bs.get('label', bs.get('gap_seconds', ''))}) → {bs['resolution']}", file=sys.stderr)
 
@@ -773,7 +773,7 @@ class RecordingNormalizer:
         if stc.field_values:
             import sys
             source_icons = {
-                "form_values": "✓", "fill_event": "○", "missing_fill": "⚠",
+                "form_values": "✓", "fill_event": "○", "missing_fill": "[WARN]",
                 "setter_hook": "⚡", "checked_transition": "◈",
                 "snapshot_diff": "◉", "network_payload": "◎", "final_state": "◇",
             }

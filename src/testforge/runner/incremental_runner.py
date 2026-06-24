@@ -127,7 +127,7 @@ class IncrementalRunner:
                 print(f"    {key}: {val_display} ({fvm.intention})")
             if missing:
                 template = {k: "<valor>" for k in missing}
-                print(f"  ⚠ {len(missing)} campo(s) sem valor na gravação (currencymask)")
+                print(f"  [WARN] {len(missing)} campo(s) sem valor na gravação (currencymask)")
                 print(f"  💡 Crie um data file: --data dados.json")
                 print(f"  📋 Template: {json.dumps(template, indent=2, ensure_ascii=False)}")
 
@@ -193,7 +193,7 @@ class IncrementalRunner:
                 cap_dir = self.replay_recorder.start()
                 print(f"  📹 Captura: {cap_dir}")
             except Exception as exc:
-                print(f"  ⚠ ReplayRecorder: {exc}")
+                print(f"  [WARN] ReplayRecorder: {exc}")
                 self.replay_recorder = None
 
         try:

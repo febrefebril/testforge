@@ -57,7 +57,7 @@ def _read_page(page_name: str) -> str:
         return f.read()
 
 
-# ── All pages exist ───────────────────────────────────────────────────────
+# -- All pages exist -------------------------------------------------------
 
 class TestAllPagesExist:
     """All 21 required Intent Lab pages must be present."""
@@ -78,7 +78,7 @@ class TestAllPagesExist:
         assert not missing, f"Missing required pages: {missing}"
 
 
-# ── Page structure tests ──────────────────────────────────────────────────
+# -- Page structure tests --------------------------------------------------
 
 class TestPageStructure:
     """Each page must have basic HTML structure."""
@@ -110,7 +110,7 @@ class TestPageStructure:
             f"No interactive elements found in {page_name}"
 
 
-# ── Page-specific tests ───────────────────────────────────────────────────
+# -- Page-specific tests ---------------------------------------------------
 
 class TestReadyFlow:
     PAGES_DIR = PAGES_DIR
@@ -236,7 +236,7 @@ class TestBlockingStepFailure:
         assert "disabled" in html
 
 
-# ── New technology LAB pages ────────────────────────────────────────────
+# -- New technology LAB pages --------------------------------------------
 
 class TestAngularMaterial:
     def test_has_mat_input(self):

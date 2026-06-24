@@ -29,7 +29,7 @@ from testforge.validation.intent_completeness import (
 from testforge.recorder.recording_status import RecordingStatus
 
 
-# ── Helpers ────────────────────────────────────────────────────────────────
+# -- Helpers ----------------------------------------------------------------
 
 @dataclass
 class MockStepResult:
@@ -111,7 +111,7 @@ def _make_passing_steps(count: int = 3) -> list:
     return results
 
 
-# ── Fixtures ───────────────────────────────────────────────────────────────
+# -- Fixtures ---------------------------------------------------------------
 
 @pytest.fixture
 def gate():
@@ -134,7 +134,7 @@ def passing_step_results():
     return _make_passing_steps(3)
 
 
-# ── CT-AUTO-5.1: Gravação completa → ready_for_team ──────────────────────
+# -- CT-AUTO-5.1: Gravação completa → ready_for_team ----------------------
 
 class TestCT_AUTO_5_1:
     """Complete recording passes all criteria → ready_for_team."""
@@ -216,7 +216,7 @@ class TestCT_AUTO_5_1:
         assert report.healing_oracles_passed is True
 
 
-# ── CT-AUTO-5.2: Valor user_supplied_cli no campo errado → needs_review ───
+# -- CT-AUTO-5.2: Valor user_supplied_cli no campo errado → needs_review ---
 
 class TestCT_AUTO_5_2:
     """User-supplied values not validated or misapplied → needs_review."""
@@ -264,7 +264,7 @@ class TestCT_AUTO_5_2:
         assert any("user-supplied" in w.lower() for w in report.warnings)
 
 
-# ── CT-AUTO-5.3: Currency mask → press_sequentially strategy ──────────────
+# -- CT-AUTO-5.3: Currency mask → press_sequentially strategy --------------
 
 class TestCT_AUTO_5_3:
     """Currency mask validation — strategy matters for execution."""
@@ -303,7 +303,7 @@ class TestCT_AUTO_5_3:
         assert len(report.failures) >= 1
 
 
-# ── CT-AUTO-5.4: Falha bloqueante impede READY ────────────────────────────
+# -- CT-AUTO-5.4: Falha bloqueante impede READY ----------------------------
 
 class TestCT_AUTO_5_4:
     """Blocking step failure prevents READY."""

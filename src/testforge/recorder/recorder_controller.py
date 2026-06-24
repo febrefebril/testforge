@@ -751,7 +751,7 @@ class RecorderController:
             try {
                 if (!el || el === document.body || el === document.documentElement ||
                         (el.tagName && (el.tagName === 'BODY' || el.tagName === 'HTML'))) {
-                    _tf_showToast('⚠ Selecione um elemento específico, não a página inteira');
+                    _tf_showToast('[WARN] Selecione um elemento específico, não a página inteira');
                     window.__tfAssertWaiting = false;
                     var dot = document.getElementById('tf-rec-dot');
                     var status = document.getElementById('tf-status');
@@ -1154,7 +1154,7 @@ class RecorderController:
                     }
                     var target = window.__tfAssertElement;
                     if (!target) {
-                        _tf_showToast('⚠ Elemento perdido — clique novamente');
+                        _tf_showToast('[WARN] Elemento perdido — clique novamente');
                         window._tf_cancelAssertMode();
                         return;
                     }
@@ -1242,7 +1242,7 @@ class RecorderController:
                     'z-index:999999;background:#1e293b;color:#fff;padding:20px 24px;border-radius:12px;' +
                     'box-shadow:0 8px 32px rgba(0,0,0,0.6);font:14px sans-serif;text-align:center;max-width:360px';
                 dlg.innerHTML =
-                    '<div style="font-size:24px;margin-bottom:12px">⚠️</div>' +
+                    '<div style="font-size:24px;margin-bottom:12px">[WARN]️</div>' +
                     '<div style="margin-bottom:16px">O teste gravado <strong>não terá nenhum assert</strong>.<br>' +
                     '<span style="color:#94a3b8;font-size:12px">Sem assert, o TestForge não verifica resultado esperado.</span></div>' +
                     '<div style="display:flex;gap:10px;justify-content:center">' +

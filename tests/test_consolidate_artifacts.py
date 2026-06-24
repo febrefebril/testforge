@@ -22,7 +22,7 @@ from consolidate_artifacts import (
 )
 
 
-# ── Helpers ─────────────────────────────────────────────────────
+# -- Helpers -----------------------------------------------------
 
 
 def _make_recording(tmp_path: Path, rec_id: str, status: str = "completed") -> Path:
@@ -67,7 +67,7 @@ def _make_semantic_test(tmp_path: Path, st_id: str) -> Path:
     return st_dir
 
 
-# ── Scan tests ──────────────────────────────────────────────────
+# -- Scan tests --------------------------------------------------
 
 
 class TestScanRecordings:
@@ -173,7 +173,7 @@ class TestScanSemanticTests:
         assert results[0]["test_data"] == {"cpf": "123"}
 
 
-# ── Normalize ───────────────────────────────────────────────────
+# -- Normalize ---------------------------------------------------
 
 
 class TestNormalize:
@@ -191,7 +191,7 @@ class TestNormalize:
         assert _normalize("") == ""
 
 
-# ── Pairing ─────────────────────────────────────────────────────
+# -- Pairing -----------------------------------------------------
 
 
 class TestPairArtifacts:
@@ -241,7 +241,7 @@ class TestPairArtifacts:
         assert pair_artifacts([], st) == [{"recording": None, "semantic_test": st[0]}]
 
 
-# ── Output ──────────────────────────────────────────────────────
+# -- Output ------------------------------------------------------
 
 
 class TestOutputJsonl:
@@ -327,7 +327,7 @@ class TestOutputMarkdown:
         assert "**Paired:** 0" in text
 
 
-# ── CLI ─────────────────────────────────────────────────────────
+# -- CLI ---------------------------------------------------------
 
 
 class TestCLI:

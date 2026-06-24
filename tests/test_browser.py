@@ -13,7 +13,7 @@ from testforge.browser import (
 )
 
 
-# ── _reorder_chain tests ──────────────────────────────────────────────
+# -- _reorder_chain tests ----------------------------------------------
 
 
 class TestReorderChain:
@@ -70,7 +70,7 @@ class TestReorderChain:
         assert len(result) == 3
 
 
-# ── launch_browser tests ──────────────────────────────────────────────
+# -- launch_browser tests ----------------------------------------------
 
 
 class TestLaunchBrowser:
@@ -192,7 +192,7 @@ class TestLaunchBrowser:
         assert valid in ("chromium", "chrome", "edge")
 
 
-# ── Fallback chain structure ──────────────────────────────────────────
+# -- Fallback chain structure ------------------------------------------
 
 
 class TestFallbackChainStructure:

@@ -33,7 +33,7 @@ from testforge.cli._interactive_completion import (
 from testforge.recorder.recording_status import RecordingStatus
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# -- Helpers -------------------------------------------------------------------
 
 
 def _make_report(recording_id="REC-001", pending=None, resolved=None):
@@ -73,7 +73,7 @@ def _make_resolved_field(field_key="nome", label="Nome", value="João"):
     )
 
 
-# ── CT-AUTO-2.1: Prompt resolves missing_fill field ──────────────────────────
+# -- CT-AUTO-2.1: Prompt resolves missing_fill field --------------------------
 
 
 class TestCT_AUTO_2_1:
@@ -190,7 +190,7 @@ class TestCT_AUTO_2_1:
             assert entry["step_index"] == 3
 
 
-# ── CT-AUTO-2.2: User skips pending field ─────────────────────────────────────
+# -- CT-AUTO-2.2: User skips pending field -------------------------------------
 
 
 class TestCT_AUTO_2_2:
@@ -250,7 +250,7 @@ class TestCT_AUTO_2_2:
             assert data["fields"]["nome"]["value"] == "João"  # resolved included
 
 
-# ── CT-AUTO-2.3: --no-interactive mode ────────────────────────────────────────
+# -- CT-AUTO-2.3: --no-interactive mode ----------------------------------------
 
 
 class TestCT_AUTO_2_3:
@@ -287,7 +287,7 @@ class TestCT_AUTO_2_3:
             assert data["metadata"]["status"] == "incomplete_intent"
 
 
-# ── Edge cases ────────────────────────────────────────────────────────────────
+# -- Edge cases ----------------------------------------------------------------
 
 
 class TestInteractiveEdgeCases:

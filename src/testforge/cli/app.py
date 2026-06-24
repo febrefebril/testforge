@@ -48,7 +48,7 @@ def _validate_and_warn_url(url: str) -> bool:
         return False
     has_critical = False
     for w in warnings:
-        prefix = "⚠ CRITICAL" if w.is_critical else "⚠ Warning"
+        prefix = "[WARN] CRITICAL" if w.is_critical else "[WARN] Warning"
         print(f"[TestForge] {prefix}: {w.message}", file=sys.stderr)
         if w.is_critical:
             has_critical = True
@@ -119,7 +119,7 @@ def _run_post_recording_completion(rec_dir: str, rid: str, args,
             _update_recording_status(rec_dir, rid, RecordingStatus.intent_complete)
             return stc, report
 
-        print(f"[TestForge] ⚠ Intencao INCOMPLETA — {report.missing_count} pendente(s)")
+        print(f"[TestForge] [WARN] Intencao INCOMPLETA — {report.missing_count} pendente(s)")
 
         if no_interactive:
             # Non-interactive mode: create template
@@ -147,10 +147,10 @@ def _run_post_recording_completion(rec_dir: str, rid: str, args,
                 except Exception:
                     pass
             if all_resolved:
-                print(f"[TestForge] ✅ Gravacao pronta para compilacao!")
+                print(f"[TestForge] [OK] Gravacao pronta para compilacao!")
                 print(f"  Use: testforge compile {rid}")
             else:
-                print(f"[TestForge] ⚠ Campos pendentes — compile bloqueado ate completar")
+                print(f"[TestForge] [WARN] Campos pendentes — compile bloqueado ate completar")
                 print(f"  Use: testforge compile --check {rid}")
             return stc, report
 
@@ -160,9 +160,9 @@ def _run_post_recording_completion(rec_dir: str, rid: str, args,
         return stc, report
 
     except FileNotFoundError as e:
-        print(f"[TestForge] ⚠ Normalizacao nao disponivel: {e}")
+        print(f"[TestForge] [WARN] Normalizacao nao disponivel: {e}")
     except Exception as e:
-        print(f"[TestForge] ⚠ Erro na verificacao de completude: {e}")
+        print(f"[TestForge] [WARN] Erro na verificacao de completude: {e}")
     return None, None
 
 
@@ -183,7 +183,7 @@ def _run_post_recording_validation(rec_dir: str, rid: str, args,
     print(f"\n[TestForge] 🔍 Validando gravacao antes de marcar como pronta...")
 
     if completeness_report is None:
-        print(f"[TestForge] ⚠ Relatorio de completude nao disponivel")
+        print(f"[TestForge] [WARN] Relatorio de completude nao disponivel")
         return
 
     # Build field_values dict from the stc
@@ -210,7 +210,7 @@ def _run_post_recording_validation(rec_dir: str, rid: str, args,
             runner.run()
             step_results = runner.step_results
         except Exception as exc:
-            print(f"[TestForge] ⚠ Pilot run falhou: {exc}")
+            print(f"[TestForge] [WARN] Pilot run falhou: {exc}")
 
     # Evaluate readiness gate
     gate = RecordingReadinessGate()
@@ -230,26 +230,26 @@ def _run_post_recording_validation(rec_dir: str, rid: str, args,
 
     # Update recording status based on verdict
     if readiness_report.verdict.value == "pass":
-        print(f"[TestForge] ✅ Validacao PASSOU — gravacao pronta para o time!")
+        print(f"[TestForge] [OK] Validacao PASSOU — gravacao pronta para o time!")
         _update_recording_status(rec_dir, rid, RecordingStatus.ready_for_team)
     elif readiness_report.verdict.value == "needs_review":
         print(f"[TestForge] 🔍 Validacao com RESSALVAS — revise o relatorio")
         _update_recording_status(rec_dir, rid, RecordingStatus.needs_review)
     else:
-        print(f"[TestForge] ❌ Validacao FALHOU — corrija os problemas e tente novamente")
+        print(f"[TestForge] [FAIL] Validacao FALHOU — corrija os problemas e tente novamente")
         _update_recording_status(rec_dir, rid, RecordingStatus.incomplete_intent)
 
     # Print summary
     r = readiness_report
     print(f"\n  Resumo da validacao:")
     print(f"  Verdicto: {r.verdict.value.upper()}")
-    print(f"  Completude: {'✅' if r.completeness_passed else '❌'}")
+    print(f"  Completude: {'[OK]' if r.completeness_passed else '[FAIL]'}")
     print(f"  Steps: {r.passed_steps} ok, {r.failed_steps} falha(s), {r.healed_steps} curado(s)")
     print(f"  Total campos: {r.total_steps} ({len(r.missing_fields)} pendentes)")
     if r.warnings:
         print(f"  Avisos: {len(r.warnings)}")
         for w in r.warnings:
-            print(f"    ⚠ {w}")
+            print(f"    [WARN] {w}")
     print(f"\n  Relatorio completo: {md_path}")
 
 
@@ -291,7 +291,7 @@ def _auto_publish_recording(rid: str, rec_dir: str):
                 _meta = json.load(_f)
             if not _meta.get("system") and (_os.getenv("TESTFORGE_GIT_URL") or publisher._local_mode):
                 print(
-                    "[TestForge] ⚠ Aviso: --system e --suite nao informados. "
+                    "[TestForge] [WARN] Aviso: --system e --suite nao informados. "
                     "Gravacao publicada em 'uncategorized'.",
                     file=sys.stderr,
                 )
@@ -303,9 +303,9 @@ def _auto_publish_recording(rid: str, rec_dir: str):
             sha_short = result.commit_sha[:8] if result.commit_sha else "sem-commit"
             print(f"[TestForge] ✓ Publicado: {result.remote_path} ({sha_short})")
         else:
-            print(f"[TestForge] ⚠ Publicacao falhou: {result.error}", file=sys.stderr)
+            print(f"[TestForge] [WARN] Publicacao falhou: {result.error}", file=sys.stderr)
     except Exception as exc:
-        print(f"[TestForge] ⚠ Erro de publicacao (nao-bloqueante): {exc}", file=sys.stderr)
+        print(f"[TestForge] [WARN] Erro de publicacao (nao-bloqueante): {exc}", file=sys.stderr)
 
 
 def cmd_record(args):
@@ -388,7 +388,7 @@ def cmd_record(args):
                         print(f"[TestForge] ✓ {step_count} passos gravados")
 
                 if result == "stop":
-                    print("[TestForge] ⏹ Finalizado (Shift+S)")
+                    print("[TestForge] [STOP] Finalizado (Shift+S)")
                     break
                 elif result == "paused":
                     sys.stdout.write("\r[TestForge] ⏸ Pausado... (Shift+P retoma)  ")
@@ -520,7 +520,7 @@ def cmd_compile(args):
             _update_recording_status(rec_dir, rec_id,
                                       RecordingStatus.intent_complete)
         else:
-            print(f"[TestForge] ⚠ Intent Completeness: INCOMPLETE")
+            print(f"[TestForge] [WARN] Intent Completeness: INCOMPLETE")
             print(f"  Resolvidos: {report.resolved_count} | Warning: {report.resolved_with_warning_count}")
             print(f"  Revisao: {report.review_required_count} | Pendentes: {report.missing_count}")
             print(f"  Relatorio: {md_path}")
@@ -623,9 +623,9 @@ def cmd_run(args):
             app_name = stc.application or "web"
             print(f"  Carregados {len(steps)} passos da gravacao")
         else:
-            print(f"  ⚠ Recording nao encontrado: {rec_dir} — executando via pytest")
+            print(f"  [WARN] Recording nao encontrado: {rec_dir} — executando via pytest")
     else:
-        print(f"  ⚠ Sem recording_id — executando via pytest")
+        print(f"  [WARN] Sem recording_id — executando via pytest")
 
     healed = False
     layer_used = ""
@@ -653,12 +653,12 @@ def cmd_run(args):
                 capture_output=True, text=True, timeout=args.timeout or 60
             )
         except subprocess.TimeoutExpired:
-            print(f"[TestForge] ⚠ Timeout ({args.timeout or 60}s)")
+            print(f"[TestForge] [WARN] Timeout ({args.timeout or 60}s)")
             result = None
 
         if result is None or result.returncode != 0:
             error_text = (result.stderr or result.stdout) if result else "timeout"
-            print(f"[TestForge] ⚠ Script falhou — tentando healing...")
+            print(f"[TestForge] [WARN] Script falhou — tentando healing...")
             # Tenta curar inline
             healed = _try_heal_inline(base_url, args.headless, error_text, script_path, recording_id,
                                       getattr(args, 'browser', 'chromium'))
@@ -1284,7 +1284,7 @@ def cmd_pipeline(args):
         print(f"  ✓ {len(stc.steps)} steps → {script_path}")
 
         # Step 3: Run
-        print("\n▶ Fase 3: Execucao + Healing")
+        print("\n[PLAY] Fase 3: Execucao + Healing")
         _vp2 = {"width": 1280, "height": 720} if args.headless else None
         page2 = browser.new_context(viewport=_vp2).new_page()
 
@@ -1326,7 +1326,7 @@ def cmd_pipeline(args):
         if healed:
             print(f"  ✓ Pipeline concluida — Gate: {decision.state.value}")
         else:
-            print(f"  ⚠ Gate bloqueou: {decision.blocks}")
+            print(f"  [WARN] Gate bloqueou: {decision.blocks}")
             # Auto-aprender: registra receita para este padrao de falha
             catalog = HealingCatalog()
             recipe = HealingRecipe(
@@ -1473,10 +1473,10 @@ def cmd_demo_heal(args):
         print()
         print("=" * 60)
         if healed:
-            print("  ✅ HEALING FUNCIONOU!")
+            print("  [OK] HEALING FUNCIONOU!")
             print(f"  Gate: {decision.state.value}")
         else:
-            print(f"  ⚠ HEALING NAO PROMOVIDO: {decision.blocks}")
+            print(f"  [WARN] HEALING NAO PROMOVIDO: {decision.blocks}")
             _auto_learn("locator not found after id change",
                         "fallback button:has-text('Pesquisar')",
                         "angular")
@@ -1497,13 +1497,13 @@ def cmd_pilot_report(args):
     metrics = collect_pilot_metrics(recordings_dir)
 
     if metrics.total_recordings == 0:
-        print(f"[TestForge] ⚠ Nenhuma gravacao com relatorio de readiness encontrada em:")
+        print(f"[TestForge] [WARN] Nenhuma gravacao com relatorio de readiness encontrada em:")
         print(f"  {recordings_dir}")
         print(f"[TestForge] Certifique-se de que as gravacoes foram validadas com --validate-before-ready")
         return
 
     json_path, md_path = save_pilot_report(metrics, output_dir)
-    print(f"[TestForge] ✅ Relatorio consolidado do piloto gerado:")
+    print(f"[TestForge] [OK] Relatorio consolidado do piloto gerado:")
     print(f"  JSON: {json_path}")
     print(f"  MD:   {md_path}")
     print()
@@ -1512,8 +1512,8 @@ def cmd_pilot_report(args):
     s = metrics.to_dict()["summary"]
     print(f"  Resumo:")
     print(f"  Total gravacoes: {s['total_recordings']}")
-    print(f"  ✅ Prontas: {s['ready_for_team']}")
-    print(f"  ⚠ Incompletas: {s['incomplete_intent']}")
+    print(f"  [OK] Prontas: {s['ready_for_team']}")
+    print(f"  [WARN] Incompletas: {s['incomplete_intent']}")
     print(f"  🔍 Revisao: {s['needs_review']}")
     print(f"  Taxa de completude: {s['completion_rate']:.1%}")
 

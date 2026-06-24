@@ -20,7 +20,7 @@ class SelectorAgent:
     def __init__(self, llm_healer: Optional[LLMHealer] = None):
         self._llm = llm_healer or MockLLMHealer()
 
-    # ── CSS attribute selector escaping ───────────────────────────────────────
+    # -- CSS attribute selector escaping ---------------------------------------
 
     @staticmethod
     def _build_css_attr_selector(attr_name: str, value: str) -> str:
@@ -39,7 +39,7 @@ class SelectorAgent:
         escaped = value.replace("'", "\\'")
         return f"[{attr_name}='{escaped}']"
 
-    # ── Attribute value extraction (handles quotes in values) ─────────────────
+    # -- Attribute value extraction (handles quotes in values) -----------------
 
     @staticmethod
     def _extract_attr_value(dom: str, attr_name: str) -> Optional[str]:

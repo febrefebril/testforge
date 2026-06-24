@@ -32,7 +32,7 @@ from testforge.validation.intent_completeness import (
 from testforge.recorder.recording_status import RecordingStatus
 
 
-# ── Fixtures ───────────────────────────────────────────────────────────────
+# -- Fixtures ---------------------------------------------------------------
 
 @pytest.fixture
 def temp_rec_dir():
@@ -106,7 +106,7 @@ def incomplete_report():
     return report
 
 
-# ── CT-AUTO-7.1: validate-before-ready flag ────────────────────────────────
+# -- CT-AUTO-7.1: validate-before-ready flag --------------------------------
 
 class TestValidateBeforeReadyFlag:
     """History 8.1: --validate-before-ready flag runs completeness + gate."""
@@ -206,7 +206,7 @@ class TestValidateBeforeReadyFlag:
         assert len(md_content) > 100  # Not empty, has substance
 
 
-# ── CT-AUTO-7.2: --no-interactive mode ─────────────────────────────────────
+# -- CT-AUTO-7.2: --no-interactive mode -------------------------------------
 
 class TestNoInteractiveMode:
     """History 8.1/8.2: --no-interactive creates template, does not block."""
@@ -282,7 +282,7 @@ class TestNoInteractiveMode:
         assert meta.get("recording_status") != "ready_for_team"
 
 
-# ── CT-AUTO-7.3: failing validation ────────────────────────────────────────
+# -- CT-AUTO-7.3: failing validation ----------------------------------------
 
 class TestFailingValidation:
     """History 8.1/8.3: Failing validation produces needs_review with coherent errors."""
@@ -342,7 +342,7 @@ class TestFailingValidation:
         assert fail_report.verdict != ReadinessVerdict.PASS  # FAIL != success
 
 
-# ── CLI argument parsing tests ─────────────────────────────────────────────
+# -- CLI argument parsing tests ---------------------------------------------
 
 class TestCLIArgumentParsing:
     """Verify the CLI correctly parses new flags."""

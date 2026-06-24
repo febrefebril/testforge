@@ -9,7 +9,7 @@ from enum import Enum
 from typing import Optional
 
 
-# ── Families ──────────────────────────────────────────────────────────────
+# -- Families --------------------------------------------------------------
 
 class FailureFamily(str, Enum):
     LOCATOR_RESOLUTION = "locator_resolution"
@@ -54,7 +54,7 @@ FAMILIES: dict[str, str] = {
 }
 
 
-# ── Taxonomy Codes ────────────────────────────────────────────────────────
+# -- Taxonomy Codes --------------------------------------------------------
 
 TAXONOMIES: dict[str, list[str]] = {
     "FAM-01": ["SEL-001", "SEL-002", "SEL-003", "SEL-004", "SEL-005",
@@ -80,7 +80,7 @@ TAXONOMIES: dict[str, list[str]] = {
 }
 
 
-# ── Failure Classification ────────────────────────────────────────────────
+# -- Failure Classification ------------------------------------------------
 
 @dataclass
 class FailureClassification:
@@ -98,7 +98,7 @@ class FailureClassification:
         return FAMILY_MAP.get(self.family.value, "")
 
 
-# ── Known Failures Catalog ────────────────────────────────────────────────
+# -- Known Failures Catalog ------------------------------------------------
 
 KNOWN_FAILURES: dict[str, FailureClassification] = {
     # FAM-01: Locator Resolution
@@ -568,7 +568,7 @@ KNOWN_FAILURES: dict[str, FailureClassification] = {
 }
 
 
-# ── Keyword Patterns (ordered longest-first, word-boundary) ───────────────
+# -- Keyword Patterns (ordered longest-first, word-boundary) ---------------
 
 def _wboundary(msg: str, pos: int, end: int) -> bool:
     """True se o match esta em fronteira de palavra."""
@@ -652,7 +652,7 @@ KEYWORD_PATTERNS: list[tuple[str, str, str]] = [
 ]
 
 
-# ── Group Fallback Patterns ───────────────────────────────────────────────
+# -- Group Fallback Patterns -----------------------------------------------
 
 GROUP_PATTERNS: list[tuple[str, str, str]] = [
     # (regex pattern, family_code, taxonomy_id)
@@ -689,7 +689,7 @@ GROUP_PATTERNS: list[tuple[str, str, str]] = [
 ]
 
 
-# ── Failure Classifier ────────────────────────────────────────────────────
+# -- Failure Classifier ----------------------------------------------------
 
 class FailureClassifier:
     """Classifica falhas com keyword matching → group fallback → unknown.

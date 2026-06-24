@@ -12,7 +12,7 @@ from testforge.actionability import ActionabilityValidator, ActionabilityResult
 class TestActionabilityValidator:
     """Test element actionability validation."""
 
-    # ── Happy path ─────────────────────────────────────────────────────
+    # -- Happy path -----------------------------------------------------
 
     def test_element_actionable(self, page: Page):
         """Visible, enabled, positive area → passes."""
@@ -42,7 +42,7 @@ class TestActionabilityValidator:
         validator = ActionabilityValidator(page)
         assert validator.check("#btn") is True
 
-    # ── Not visible ────────────────────────────────────────────────────
+    # -- Not visible ----------------------------------------------------
 
     def test_element_not_visible_display_none(self, page: Page):
         """display:none element → fails not_visible."""
@@ -89,7 +89,7 @@ class TestActionabilityValidator:
         assert result.bounding_box["height"] > 0
         assert "not_visible" not in result.failures
 
-    # ── Not enabled ────────────────────────────────────────────────────
+    # -- Not enabled ----------------------------------------------------
 
     def test_element_disabled(self, page: Page):
         """disabled button → fails not_enabled."""
@@ -117,7 +117,7 @@ class TestActionabilityValidator:
         assert result.enabled is True
         assert result.actionable is True
 
-    # ── Zero area (bb width=height=0) ──────────────────────────────────
+    # -- Zero area (bb width=height=0) ----------------------------------
 
     def test_element_zero_width(self, page: Page):
         """0 width element → fails zero_area."""
@@ -161,7 +161,7 @@ class TestActionabilityValidator:
         # Should have both not_visible and no_bounding_box
         assert "not_visible" in result.failures
 
-    # ── Not in DOM ─────────────────────────────────────────────────────
+    # -- Not in DOM -----------------------------------------------------
 
     def test_element_not_in_dom(self, page: Page):
         """Selector not in DOM → fails not_found."""
@@ -201,7 +201,7 @@ class TestActionabilityValidator:
         validator = ActionabilityValidator(page)
         assert validator.check("#btn") is False
 
-    # ── Combined failures ──────────────────────────────────────────────
+    # -- Combined failures ----------------------------------------------
 
     def test_multiple_failures_aggregated(self, page: Page):
         """Element hidden and disabled → both failures listed."""
@@ -216,7 +216,7 @@ class TestActionabilityValidator:
         # The message should list failures
         assert len(result.failures) >= 1
 
-    # ── Status property ────────────────────────────────────────────────
+    # -- Status property ------------------------------------------------
 
     def test_status_passed(self, page: Page):
         page.set_content('<button id="ok">OK</button>')
@@ -230,7 +230,7 @@ class TestActionabilityValidator:
         result = validator.validate("#nope")
         assert result.status == "failed"
 
-    # ── Selector variants ──────────────────────────────────────────────
+    # -- Selector variants ----------------------------------------------
 
     def test_text_selector(self, page: Page):
         """Text selector (non-standard Playwright selector)."""
@@ -246,7 +246,7 @@ class TestActionabilityValidator:
         result = validator.validate(".primary-btn")
         assert result.actionable is True
 
-    # ── Edge cases ──────────────────────────────────────────────────────
+    # -- Edge cases ------------------------------------------------------
 
     def test_zero_width_zero_height_rejected(self, page: Page):
         """Explicit requirement: reject bb width=height=0."""

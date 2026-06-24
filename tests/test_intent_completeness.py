@@ -26,7 +26,7 @@ from testforge.validation.intent_completeness import (
 )
 
 
-# ── Fixtures ──────────────────────────────────────────────────────────────────
+# -- Fixtures ------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -228,7 +228,7 @@ def select_no_capture_steps():
     return steps
 
 
-# ── CT-AUTO-1.1: Recording without missing fields ────────────────────────────
+# -- CT-AUTO-1.1: Recording without missing fields ----------------------------
 
 
 class TestCT_AUTO_1_1:
@@ -281,7 +281,7 @@ class TestCT_AUTO_1_1:
         assert d["summary"]["total_fields"] == 3
 
         md = report.to_markdown()
-        assert "✅ Yes" in md
+        assert "[OK] Yes" in md
         assert "Captured Fields" in md
 
     def test_complete_report_persistence(self, checker, complete_steps,
@@ -303,7 +303,7 @@ class TestCT_AUTO_1_1:
             assert data["summary"]["is_complete"] is True
 
 
-# ── CT-AUTO-1.2: Input with focus/gap but no fill ────────────────────────────
+# -- CT-AUTO-1.2: Input with focus/gap but no fill ----------------------------
 
 
 class TestCT_AUTO_1_2:
@@ -346,7 +346,7 @@ class TestCT_AUTO_1_2:
         assert d["summary"]["missing"] >= 1
 
 
-# ── CT-AUTO-1.3: Select without captured value ───────────────────────────────
+# -- CT-AUTO-1.3: Select without captured value -------------------------------
 
 
 class TestCT_AUTO_1_3:
@@ -388,7 +388,7 @@ class TestCT_AUTO_1_3:
         assert "produto" in md or "Produto" in md
 
 
-# ── Edge cases ────────────────────────────────────────────────────────────────
+# -- Edge cases ----------------------------------------------------------------
 
 
 class TestEdgeCases:
@@ -453,7 +453,7 @@ class TestEdgeCases:
         assert valor_field.reason == "user_supplied_cli_not_validated"
 
 
-# ── Report serialization tests ───────────────────────────────────────────────
+# -- Report serialization tests -----------------------------------------------
 
 
 class TestCompletenessReport:
@@ -506,5 +506,5 @@ class TestCompletenessReport:
         ]
 
         md = report.to_markdown()
-        assert "Pending Fields" in md or "❌" in md
+        assert "Pending Fields" in md or "[FAIL]" in md
         assert "typing_not_captured" in md

@@ -332,7 +332,7 @@ class IncrementalRecordingValidator:
 
         # 2. Normalize
         if not self._normalize():
-            print("[TestForge] ❌ Normalizacao falhou — impossivel validar", file=sys.stderr)
+            print("[TestForge] [FAIL] Normalizacao falhou — impossivel validar", file=sys.stderr)
             return self._make_failed_report("Normalizacao falhou")
 
         # 3. Check completeness
@@ -346,7 +346,7 @@ class IncrementalRecordingValidator:
         missing = completeness.missing_count
         print(
             f"[TestForge] 📋 Completude: {total} campo(s), "
-            f"{'✅ completo' if completeness.is_complete else f'❌ {missing} ausente(s)'}",
+            f"{'[OK] completo' if completeness.is_complete else f'[FAIL] {missing} ausente(s)'}",
             file=sys.stderr,
         )
 

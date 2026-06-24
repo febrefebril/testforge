@@ -15,7 +15,7 @@ from testforge.validation.intent_completeness import (
 from testforge.recorder.recording_status import RecordingStatus
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────
+# -- Helpers ---------------------------------------------------------------
 
 def _mock_step(step_num, action, status, blocking=False, healing=None, error_message=""):
     from dataclasses import dataclass
@@ -61,7 +61,7 @@ def _ok_report():
     return r
 
 
-# ── Tests: validate → gate flow ──────────────────────────────────────────
+# -- Tests: validate → gate flow ------------------------------------------
 
 class TestValidationPipeline:
     """Simulates the full validate() flow without browser."""

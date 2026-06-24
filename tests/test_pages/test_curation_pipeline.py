@@ -23,7 +23,7 @@ from testforge.healing.agents import route_to_agent
 from testforge.runner.fallback_runner import SmartStepRunner
 
 
-# ── Test Parameters ──────────────────────────────────────────────────────────
+# -- Test Parameters ----------------------------------------------------------
 
 FAMILY_TESTS = [
     # (family_dir, fam_code, taxonomy_id, action, selector, expected_family)
@@ -41,7 +41,7 @@ FAMILY_TESTS = [
 ]
 
 
-# ── Helper ───────────────────────────────────────────────────────────────────
+# -- Helper -------------------------------------------------------------------
 
 def navigate(page: Page, test_server: str, family_dir: str, error: bool = False):
     """Navigate to a test page, optionally with error mode."""
@@ -52,7 +52,7 @@ def navigate(page: Page, test_server: str, family_dir: str, error: bool = False)
     page.wait_for_timeout(300)
 
 
-# ── Classification Tests ─────────────────────────────────────────────────────
+# -- Classification Tests -----------------------------------------------------
 
 class TestClassification:
     """Test that FailureClassifier correctly identifies each family."""
@@ -89,7 +89,7 @@ class TestClassification:
                 f"Expected {fam_code} for '{msg[:60]}...', got {result.family_code} ({result.matched_by})"
 
 
-# ── Evidence Collection Tests ────────────────────────────────────────────────
+# -- Evidence Collection Tests ------------------------------------------------
 
 class TestEvidenceCollection:
     """Test that EvidenceCollector works on each family's page."""
@@ -121,7 +121,7 @@ class TestEvidenceCollection:
             f"DOM too short for {fam_code}: {len(payload.dom_snapshot)} chars"
 
 
-# ── Agent Routing Tests ──────────────────────────────────────────────────────
+# -- Agent Routing Tests ------------------------------------------------------
 
 class TestAgentRouting:
     """Test that each family routes to the correct L2 agent."""
@@ -138,7 +138,7 @@ class TestAgentRouting:
             assert agent is not None, f"{fam_code} should have an L2 agent"
 
 
-# ── Healing Pipeline Tests ───────────────────────────────────────────────────
+# -- Healing Pipeline Tests ---------------------------------------------------
 
 class TestHealingPipeline:
     """Test the full healing pipeline L0→L3 for each family."""
@@ -199,7 +199,7 @@ class TestHealingPipeline:
             f"Healing failed for {fam_code}: {outcome.status} — {outcome.error_message}"
 
 
-# ── Statistics Summary ───────────────────────────────────────────────────────
+# -- Statistics Summary -------------------------------------------------------
 
 class TestStatistics:
     """Collect healing statistics across all families."""

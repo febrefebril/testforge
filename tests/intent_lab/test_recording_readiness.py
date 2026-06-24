@@ -16,7 +16,7 @@ from testforge.validation.incremental_validator import IncrementalRecordingValid
 from testforge.recorder.recording_status import RecordingStatus
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────
+# -- Helpers ---------------------------------------------------------------
 
 def _mock_step(step_num, action, status, blocking=False, healing=None, error_message=""):
     from dataclasses import dataclass, field
@@ -70,7 +70,7 @@ def _complete_report(**overrides):
     return r
 
 
-# ── Tests ─────────────────────────────────────────────────────────────────
+# -- Tests -----------------------------------------------------------------
 
 class TestReadyFlowScenario:
     """ready-flow page: normal input + select + checkbox → passes all."""

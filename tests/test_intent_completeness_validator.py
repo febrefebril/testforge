@@ -17,7 +17,7 @@ from testforge.semantic.model import (
 from testforge.validation.intent_completeness import IntentCompletenessValidator
 
 
-# ── Fixture base ───────────────────────────────────────────────────────────────
+# -- Fixture base ---------------------------------------------------------------
 
 
 @pytest.fixture
@@ -45,7 +45,7 @@ def _fvm(chave: str, valor: str, source: str = "fill_event") -> FieldValueMap:
     )
 
 
-# ── (a) Score 1.0 — todos os campos preenchidos ───────────────────────────────
+# -- (a) Score 1.0 — todos os campos preenchidos -------------------------------
 
 
 class TestCompletenessAllFields:
@@ -106,7 +106,7 @@ class TestCompletenessAllFields:
         }
 
 
-# ── (b) Score < 0.70 — campos ausentes reprovam gate ─────────────────────────
+# -- (b) Score < 0.70 — campos ausentes reprovam gate -------------------------
 
 
 class TestCompletenessMissingFields:
@@ -175,7 +175,7 @@ class TestCompletenessMissingFields:
         assert "reprovado" in resultado["reason"].lower() or "gate" in resultado["reason"].lower()
 
 
-# ── (c) blind_spots contam como missing ──────────────────────────────────────
+# -- (c) blind_spots contam como missing --------------------------------------
 
 
 class TestCompletenessBlindSpots:
@@ -278,7 +278,7 @@ class TestCompletenessBlindSpots:
         assert resultado["passes_gate"] is False  # 1 de 2 = 50%
 
 
-# ── (d) Boundary exato de 0.70 ────────────────────────────────────────────────
+# -- (d) Boundary exato de 0.70 ------------------------------------------------
 
 
 class TestCompletenessThresholdBoundary:
@@ -334,7 +334,7 @@ class TestCompletenessThresholdBoundary:
         assert resultado["completeness_score"] >= 0.70
 
 
-# ── (e) SemanticTestCase sem steps ────────────────────────────────────────────
+# -- (e) SemanticTestCase sem steps --------------------------------------------
 
 
 class TestCompletenessEmptySTC:

@@ -52,7 +52,7 @@ class IntentReconstructor:
 
         return self._dedupe_entries(entries)
 
-    # ── Story 2.1: Polling strategy ───────────────────────────────────────────
+    # -- Story 2.1: Polling strategy -------------------------------------------
 
     def _reconstruct_from_polling(self, recording_dir: str, steps: list) -> list[dict]:
         """Extrai valores de field_snapshots.jsonl com source=polling ou interval_ms>0.
@@ -149,7 +149,7 @@ class IntentReconstructor:
 
         return entries
 
-    # ── Story 2.2: Masked field detection ─────────────────────────────────────
+    # -- Story 2.2: Masked field detection -------------------------------------
 
     @staticmethod
     def _detect_masked_field(value: str, raw_value: str = "") -> bool:
@@ -206,7 +206,7 @@ class IntentReconstructor:
                 best[key] = entry
         return list(best.values())
 
-    # ── Phase B: value_mutations.jsonl (setter hooks) ─────────────────────────
+    # -- Phase B: value_mutations.jsonl (setter hooks) -------------------------
 
     def _reconstruct_from_value_mutations(self, recording_dir: str, steps: list) -> list[dict]:
         """Read value_mutations.jsonl — programmatic value changes (currency mask, etc.)."""
@@ -279,7 +279,7 @@ class IntentReconstructor:
 
         return entries
 
-    # ── Story 5.1: Snapshot diff + checked transitions ───────────────────────
+    # -- Story 5.1: Snapshot diff + checked transitions -----------------------
 
     def _reconstruct_from_snapshots(self, recording_dir: str, steps: list) -> list[dict]:
         """Detect value/checked changes between field snapshots."""
@@ -398,7 +398,7 @@ class IntentReconstructor:
             "fingerprint": fp,
         }
 
-    # ── Phase B: final_state_snapshot.json ───────────────────────────────────
+    # -- Phase B: final_state_snapshot.json -----------------------------------
 
     def _reconstruct_from_final_state(self, recording_dir: str, steps: list) -> list[dict]:
         """Read final_state_snapshot.json as fallback for unresolved fields."""
@@ -461,7 +461,7 @@ class IntentReconstructor:
 
         return entries
 
-    # ── Story 5.2: Form values reconstruction ──────────────────────────────────
+    # -- Story 5.2: Form values reconstruction ----------------------------------
 
     def _reconstruct_from_form_values(self, steps: list) -> list[dict]:
         """Extract form_values from submit step contexts."""
@@ -487,7 +487,7 @@ class IntentReconstructor:
 
         return entries
 
-    # ── Story 5.3: Network payload reconstruction ──────────────────────────────
+    # -- Story 5.3: Network payload reconstruction ------------------------------
 
     def _reconstruct_from_network(self, recording_dir: str, steps: list) -> list[dict]:
         """Parse POST/PUT request payloads for form field values."""
@@ -559,7 +559,7 @@ class IntentReconstructor:
 
         return entries
 
-    # ── Helpers ────────────────────────────────────────────────────────────────
+    # -- Helpers ----------------------------------------------------------------
 
     @staticmethod
     def _find_nearest_step_index(steps: list, timestamp: str) -> int:
