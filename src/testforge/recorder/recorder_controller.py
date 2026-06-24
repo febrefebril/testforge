@@ -55,6 +55,7 @@ class RecorderController:
 
         self._page.on("request", self._on_request)
         self._page.on("response", self._on_response)
+        self._page.on("framenavigated", self._on_framenavigated)
 
         self._page.add_init_script(_OVERLAY_JS)
         self._store.save_metadata("recording_config", {
@@ -127,14 +128,11 @@ class RecorderController:
     def stop(self) -> RecordingSession:
         self._capture_final_state_snapshot("recording_stopped")
         self.flush_events()
-        try:
-            self._page.remove_listener("request", self._on_request)
-        except Exception:
-            pass
-        try:
-            self._page.remove_listener("response", self._on_response)
-        except Exception:
-            pass
+        for event_name in ("request", "response", "framenavigated"):
+            try:
+                self._page.remove_listener(event_name, getattr(self, f"_on_{event_name}"))
+            except Exception:
+                pass
         session = self._session_manager.stop()
         self._store.save_network_log(self._network_entries)
         if self._sensitive_alerts:
@@ -270,6 +268,29 @@ class RecorderController:
             "status": response.status,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
+
+    def _on_framenavigated(self, frame):
+        """Track main-frame navigation from Python side."""
+        if frame != self._page.main_frame:
+            return
+        try:
+            current_url = self._page.url
+            page_title = self._page.title()
+        except Exception:
+            current_url = frame.url
+            page_title = ""
+        self._event_counter += 1
+        nav_event = RawRecordedEvent(
+            event_id=f"evt_{self._event_counter:05d}",
+            event_type="navigation",
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            url=current_url,
+            page_title=page_title,
+            target=None,
+            value=None,
+        )
+        self._store.append_event(nav_event)
+        logger.info("Navigation detected: %s — %s", current_url, page_title[:60])
 
     # ---- Sprint 3: Field snapshot & value mutation persistence ----
 
