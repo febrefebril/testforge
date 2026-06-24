@@ -165,6 +165,7 @@ class PlaywrightCompiler:
         lines.append('"""Teste gerado pelo TestForge — fonte de verdade: SemanticTestCase."""')
         lines.append("from playwright.sync_api import Page, expect")
         lines.append("import json, os, re")
+        lines.append("from testforge.runtime.healer import resolve_selector")
 
         if data_file:
             # Data-driven: carrega JSON externo no script gerado
@@ -395,6 +396,66 @@ class PlaywrightCompiler:
         """
         return self._l0_5_role_expr(target)
 
+    def _fingerprint_to_code(self, fingerprint: dict) -> str:
+        """Serialize fingerprint dict to inline Python dict literal."""
+        if not fingerprint:
+            return "None"
+        items = []
+        for k, v in fingerprint.items():
+            if isinstance(v, str):
+                escaped = v.replace("\\", "\\\\").replace("'", "\\'")
+                items.append(f"'{k}': '{escaped}'")
+            elif isinstance(v, (int, float)):
+                items.append(f"'{k}': {v}")
+            elif isinstance(v, list):
+                items.append(f"'{k}': {v}")
+            else:
+                items.append(f"'{k}': {v}")
+        return "{" + ", ".join(items) + "}"
+
+    def _gen_healer_loop(
+        self,
+        target: SemanticTarget | None,
+        css_sels: list[str],
+        step_idx: int,
+        indent: str,
+        action_code: str,
+        wait_code: str = "",
+    ) -> list[str]:
+        """Generate CSS fallback lines: resolve_selector (healer) or legacy for-loop.
+
+        Args:
+            action_code: Single-line template with {sel} placeholder,
+                         e.g. ``page.fill({sel}, "abc")``.
+            wait_code: Optional wait line, e.g. ``page.wait_for_timeout(200)``.
+        """
+        lines: list[str] = []
+        sels_str = ", ".join(self._esc(s) for s in css_sels)
+        has_fp = bool(target and target.fingerprint)
+
+        lines.append(f"{indent}_sels = [{sels_str}]")
+        if has_fp:
+            fp_code = self._fingerprint_to_code(target.fingerprint)
+            lines.append(f"{indent}_fp = {fp_code}")
+            lines.append(f"{indent}_best = resolve_selector(page, _sels, _fp)")
+            lines.append(f"{indent}if _best:")
+            lines.append(f"{indent}    {action_code.replace('{sel}', '_best')}")
+            if wait_code:
+                lines.append(f"{indent}    {wait_code}")
+            lines.append(f"{indent}else:")
+            lines.append(f'{indent}    raise AssertionError(f"step {step_idx} falhou '
+                          f'— nenhum candidato corresponde ao fingerprint")')
+        else:
+            lines.append(f"{indent}for _sel in _sels:")
+            lines.append(f"{indent}    try:")
+            lines.append(f"{indent}        {action_code.replace('{sel}', '_sel')}")
+            if wait_code:
+                lines.append(f"{indent}        {wait_code}")
+            lines.append(f"{indent}        break")
+            lines.append(f"{indent}    except Exception:")
+            lines.append(f"{indent}        continue")
+        return lines
+
     def _gen_select(
         self,
         action: SemanticAction,
@@ -410,55 +471,44 @@ class PlaywrightCompiler:
         lines = [f"    # Step {idx}: select ({self._data_field_name(action) or action.value})"]
 
         l0_5_expr = self._l0_5_role_expr(action.target)
+
+        def _sel_call(sel: str) -> str:
+            return f"page.select_option({sel}, {value})"
+
         if pw_expr:
             lines.append("    try:")
             lines.append(f"        {pw_expr}.select_option({value})")
             lines.append("        page.wait_for_timeout(200)")
             if css_sels:
-                sels_str = ", ".join(self._esc(s) for s in css_sels)
+                action_tpl = _sel_call("{sel}")
                 lines.append("    except Exception:")
                 if l0_5_expr:
                     lines.append("        try:")
                     lines.append(f"            {l0_5_expr}.select_option({value})")
                     lines.append("            page.wait_for_timeout(200)")
                     lines.append("        except Exception:")
-                    lines.append(f"            _sels = [{sels_str}]")
-                    lines.append("            for _sel in _sels:")
-                    lines.append("                try:")
-                    lines.append(f"                    page.select_option(_sel, {value})")
-                    lines.append("                    page.wait_for_timeout(200)")
-                    lines.append("                    break")
-                    lines.append("                except Exception:")
-                    lines.append("                    continue")
+                    lines.extend(self._gen_healer_loop(
+                        action.target, css_sels, idx, "            ",
+                        action_tpl, "page.wait_for_timeout(200)",
+                    ))
                 else:
-                    lines.append(f"        _sels = [{sels_str}]")
-                    lines.append("        for _sel in _sels:")
-                    lines.append("            try:")
-                    lines.append(f"                page.select_option(_sel, {value})")
-                    lines.append("                page.wait_for_timeout(200)")
-                    lines.append("                break")
-                    lines.append("            except Exception:")
-                    lines.append("                continue")
+                    lines.extend(self._gen_healer_loop(
+                        action.target, css_sels, idx, "        ",
+                        action_tpl, "page.wait_for_timeout(200)",
+                    ))
             else:
                 fallback = self._fallback_selector(action)
                 lines.append("    except Exception:")
                 lines.append(f"        page.select_option({self._esc(fallback)}, {value})")
                 lines.append("        page.wait_for_timeout(200)")
         else:
-            # CSS-only loop
+            # CSS-only fallback
             if css_sels:
-                sels_str = ", ".join(self._esc(s) for s in css_sels)
-                lines.append(f"    _sels = [{sels_str}]")
-                lines.append("    for _sel in _sels:")
-                lines.append("        try:")
-                lines.append(f"            page.select_option(_sel, {value})")
-                lines.append("            page.wait_for_timeout(200)")
-                lines.append("            break")
-                lines.append("        except Exception:")
-                lines.append("            continue")
-                lines.append("    else:")
-                lines.append(f"        raise AssertionError(f\"select step {idx} falhou "
-                              f"— selectors tried: {{_sels}}\")")
+                action_tpl = _sel_call("{sel}")
+                lines.extend(self._gen_healer_loop(
+                    action.target, css_sels, idx, "    ",
+                    action_tpl, "page.wait_for_timeout(200)",
+                ))
             else:
                 sel = self._fallback_selector(action)
                 lines.append(f"    page.select_option({self._esc(sel)}, {value})")
@@ -481,55 +531,44 @@ class PlaywrightCompiler:
         lines = [f"    # Step {idx}: fill ({self._data_field_name(action) or action.value})"]
 
         l0_5_expr = self._l0_5_role_expr(action.target)
+
+        def _fill_call(sel: str) -> str:
+            return f"page.fill({sel}, {value})"
+
         if pw_expr:
             lines.append("    try:")
             lines.append(f"        {pw_expr}.fill({value})")
             lines.append("        page.wait_for_timeout(200)")
             if css_sels:
-                sels_str = ", ".join(self._esc(s) for s in css_sels)
+                action_tpl = _fill_call("{sel}")
                 lines.append("    except Exception:")
                 if l0_5_expr:
                     lines.append("        try:")
                     lines.append(f"            {l0_5_expr}.fill({value})")
                     lines.append("            page.wait_for_timeout(200)")
                     lines.append("        except Exception:")
-                    lines.append(f"            _sels = [{sels_str}]")
-                    lines.append("            for _sel in _sels:")
-                    lines.append("                try:")
-                    lines.append(f"                    page.fill(_sel, {value})")
-                    lines.append("                    page.wait_for_timeout(200)")
-                    lines.append("                    break")
-                    lines.append("                except Exception:")
-                    lines.append("                    continue")
+                    lines.extend(self._gen_healer_loop(
+                        action.target, css_sels, idx, "            ",
+                        action_tpl, "page.wait_for_timeout(200)",
+                    ))
                 else:
-                    lines.append(f"        _sels = [{sels_str}]")
-                    lines.append("        for _sel in _sels:")
-                    lines.append("            try:")
-                    lines.append(f"                page.fill(_sel, {value})")
-                    lines.append("                page.wait_for_timeout(200)")
-                    lines.append("                break")
-                    lines.append("            except Exception:")
-                    lines.append("                continue")
+                    lines.extend(self._gen_healer_loop(
+                        action.target, css_sels, idx, "        ",
+                        action_tpl, "page.wait_for_timeout(200)",
+                    ))
             else:
                 fallback = self._fallback_selector(action)
                 lines.append("    except Exception:")
                 lines.append(f"        page.fill({self._esc(fallback)}, {value})")
                 lines.append("        page.wait_for_timeout(200)")
         else:
-            # CSS-only fallback loop
+            # CSS-only fallback
             if css_sels:
-                sels_str = ", ".join(self._esc(s) for s in css_sels)
-                lines.append(f"    _sels = [{sels_str}]")
-                lines.append("    for _sel in _sels:")
-                lines.append("        try:")
-                lines.append(f"            page.fill(_sel, {value})")
-                lines.append("            page.wait_for_timeout(200)")
-                lines.append("            break")
-                lines.append("        except Exception:")
-                lines.append("            continue")
-                lines.append("    else:")
-                lines.append(f"        raise AssertionError(f\"fill step {idx} falhou "
-                              f"— selectors tried: {{_sels}}\")")
+                action_tpl = _fill_call("{sel}")
+                lines.extend(self._gen_healer_loop(
+                    action.target, css_sels, idx, "    ",
+                    action_tpl, "page.wait_for_timeout(200)",
+                ))
             else:
                 sel = self._fallback_selector(action)
                 lines.append(f"    page.fill({self._esc(sel)}, {value})")
@@ -570,6 +609,38 @@ class PlaywrightCompiler:
                 return f"{indent}page.wait_for_timeout(3000)  # SPA navigation"
             return f"{indent}page.wait_for_timeout(800)  # wait for DOM render"
 
+        def _gen_click_resolve(
+            sels: list[str], step_idx: int, indent: str,
+        ) -> list[str]:
+            """CSS fallback block — healer or legacy for-loop for click."""
+            clines: list[str] = []
+            sels_str = ", ".join(self._esc(s) for s in sels)
+            has_fp = bool(action.target and action.target.fingerprint)
+            clines.append(f"{indent}_sels = [{sels_str}]")
+            if has_fp:
+                fp_code = self._fingerprint_to_code(action.target.fingerprint)
+                clines.append(f"{indent}_fp = {fp_code}")
+                clines.append(f"{indent}_best = resolve_selector(page, _sels, _fp)")
+                clines.append(f"{indent}if _best:")
+                clines.extend(_gen_click_css("_best", f"{indent}    "))
+                wl = _gen_wait(f"{indent}    ")
+                if wl:
+                    clines.append(wl)
+                clines.append(f"{indent}else:")
+                clines.append(f'{indent}    raise AssertionError(f"click step {step_idx} falhou '
+                              f'— nenhum candidato corresponde ao fingerprint")')
+            else:
+                clines.append(f"{indent}for _sel in _sels:")
+                clines.append(f"{indent}    try:")
+                clines.extend(_gen_click_css("_sel", f"{indent}        "))
+                wl = _gen_wait(f"{indent}        ")
+                if wl:
+                    clines.append(wl)
+                clines.append(f"{indent}        break")
+                clines.append(f"{indent}    except Exception:")
+                clines.append(f"{indent}        continue")
+            return clines
+
         l0_5_expr = self._l0_5_role_expr(action.target)
         if pw_expr:
             lines.append("    try:")
@@ -578,7 +649,6 @@ class PlaywrightCompiler:
             if wl:
                 lines.append(wl)
             if css_sels:
-                sels_str = ", ".join(self._esc(s) for s in css_sels)
                 lines.append("    except Exception:")
                 if l0_5_expr:
                     lines.append("        try:")
@@ -587,27 +657,9 @@ class PlaywrightCompiler:
                     if wl_l0:
                         lines.append(wl_l0)
                     lines.append("        except Exception:")
-                    lines.append(f"            _sels = [{sels_str}]")
-                    lines.append("            for _sel in _sels:")
-                    lines.append("                try:")
-                    lines.extend(_gen_click_css("_sel", "                    "))
-                    wl2 = _gen_wait("                    ")
-                    if wl2:
-                        lines.append(wl2)
-                    lines.append("                    break")
-                    lines.append("                except Exception:")
-                    lines.append("                    continue")
+                    lines.extend(_gen_click_resolve(css_sels, idx, "            "))
                 else:
-                    lines.append(f"        _sels = [{sels_str}]")
-                    lines.append("        for _sel in _sels:")
-                    lines.append("            try:")
-                    lines.extend(_gen_click_css("_sel", "                "))
-                    wl2 = _gen_wait("                ")
-                    if wl2:
-                        lines.append(wl2)
-                    lines.append("                break")
-                    lines.append("            except Exception:")
-                    lines.append("                continue")
+                    lines.extend(_gen_click_resolve(css_sels, idx, "        "))
             else:
                 fallback_sel = self._fallback_selector(action)
                 lines.append("    except Exception:")
@@ -618,24 +670,7 @@ class PlaywrightCompiler:
         else:
             # CSS-only
             if css_sels:
-                sels_str = ", ".join(self._esc(s) for s in css_sels)
-                lines.append(f"    _sels = [{sels_str}]")
-                lines.append("    for _sel in _sels:")
-                lines.append("        try:")
-                if is_submit:
-                    lines.append("            with page.expect_navigation(wait_until='load'):")
-                    lines.append("                page.click(_sel)")
-                else:
-                    lines.append("            page.click(_sel)")
-                    wl4 = _gen_wait("            ")
-                    if wl4:
-                        lines.append(wl4)
-                lines.append("            break")
-                lines.append("        except Exception:")
-                lines.append("            continue")
-                lines.append("    else:")
-                lines.append(f"        raise AssertionError(f\"click step {idx} falhou "
-                              f"— selectors tried: {{_sels}}\")")
+                lines.extend(_gen_click_resolve(css_sels, idx, "    "))
             else:
                 text = (action.target.text or "")[:30] if action.target else ""
                 if is_submit:
