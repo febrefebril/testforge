@@ -105,6 +105,115 @@ def _is_generic_text(text: str) -> bool:
     return False
 
 
+def _attr_css_variants(attr_name: str, value: str, tag: str,
+                       exact_score: float, reason: str) -> list:
+    """Generate CSS attribute variant selectors for locator healing.
+
+    Produces starts-with (^=), ends-with ($=), and contains (*=, case-insensitive)
+    variants for a single attribute. These handle minor DOM changes between
+    recording and execution: dynamic suffixes, case differences, partial updates.
+
+    Only generates variants when value length is sufficient to avoid
+    over-broad matching (min 4 chars for starts-with, 3 for ends-with, 5 for contains).
+    Scores degrade progressively from exact_score.
+    """
+    variants = []
+    if not value or len(value) < 3:
+        return variants
+
+    _CSS_ATTR_MAP = {
+        "test_id": "data-testid",
+        "aria_label": "aria-label",
+    }
+    css_attr = _CSS_ATTR_MAP.get(attr_name, attr_name)
+
+    # Build selector prefix: tag[attr  or just [attr
+    if attr_name == "test_id":
+        sel_prefix = "[data-testid"
+    elif tag and attr_name != "id":
+        sel_prefix = f"{tag}[{css_attr}"
+    elif attr_name == "id":
+        sel_prefix = "[id"
+    else:
+        sel_prefix = f"[{css_attr}"
+
+    v = value
+
+    # starts-with: tag[attr^="value"]
+    if len(v) >= 4:
+        # Skip auto-generated angular/react id prefixes
+        if attr_name == "id" and (v.startswith("mat-") or v.startswith("ng-")):
+            pass
+        elif attr_name == "test_id" and len(v) < 6:
+            pass  # short test_ids already unique
+        else:
+            sel = f'{sel_prefix}^="{v}"]'
+            score = max(0.20, round(exact_score - 0.15, 2))
+            variants.append(LocatorCandidate(
+                f"{attr_name}_starts", sel, score, f"{reason} (starts-with)"
+            ))
+
+    # ends-with: tag[attr$="value"]
+    if len(v) >= 3:
+        sel = f'{sel_prefix}$="{v}"]'
+        score = max(0.20, round(exact_score - 0.20, 2))
+        variants.append(LocatorCandidate(
+            f"{attr_name}_ends", sel, score, f"{reason} (ends-with)"
+        ))
+
+    # contains (case-insensitive): tag[attr*="value" i]
+    if len(v) >= 5:
+        sel = f'{sel_prefix}*="{v}" i]'
+        score = max(0.20, round(exact_score - 0.25, 2))
+        variants.append(LocatorCandidate(
+            f"{attr_name}_contains", sel, score, f"{reason} (contains)"
+        ))
+
+    return variants
+
+
+def _compound_candidates(target_data: dict, tag: str) -> list:
+    """Generate compound attribute selectors combining 2 attributes.
+
+    Compound selectors (input[placeholder="X"][aria-label="Y"]) have higher
+    specificity than single-attribute selectors. Score = min(score1, score2) + 0.05.
+
+    Pairs generated when both attributes exist:
+      - placeholder + aria_label  (most common form pattern)
+      - placeholder + name
+      - aria_label + name
+    """
+    variants = []
+    ph = target_data.get("placeholder") or ""
+    name_val = target_data.get("name") or ""
+
+    # Resolve aria-label from multiple possible sources
+    aria_label = (target_data.get("accessible_name") or ""
+                  or (target_data.get("aria_attrs") or {}).get("aria-label", "")
+                  or (target_data.get("all_attributes") or {}).get("aria-label", "")
+                  or "")
+
+    if not tag:
+        tag = (target_data.get("tag") or "").lower()
+
+    pairs = []
+    if ph and aria_label and len(ph) >= 3 and len(aria_label) >= 3:
+        pairs.append(("placeholder", ph, "aria-label", aria_label, 0.90))
+    if ph and name_val and len(ph) >= 3 and len(name_val) >= 2:
+        pairs.append(("placeholder", ph, "name", name_val, 0.75))
+    if aria_label and name_val and len(aria_label) >= 3 and len(name_val) >= 2:
+        pairs.append(("aria-label", aria_label, "name", name_val, 0.75))
+
+    for attr1, val1, attr2, val2, score in pairs:
+        # Build compound selector: tag[attr1="val1"][attr2="val2"]
+        if tag:
+            sel = f'{tag}[{attr1}="{val1}"][{attr2}="{val2}"]'
+        else:
+            sel = f'[{attr1}="{val1}"][{attr2}="{val2}"]'
+        reason = f"compound {attr1}={val1} + {attr2}={val2}"
+        variants.append(LocatorCandidate("compound", sel, score, reason))
+
+    return variants
 
 
 class RecordingNormalizer:
@@ -1074,6 +1183,7 @@ class RecordingNormalizer:
         if target_data.get("test_id"):
             tid = target_data["test_id"]
             candidates.append(LocatorCandidate("test_id", f"[data-testid=\"{tid}\"]", 0.80, f"test_id={tid}"))
+            candidates.extend(_attr_css_variants("test_id", tid, tag, 0.80, "test_id"))
 
         # 0.1 data-* attributes (generic)
         data_attrs = target_data.get("data_attrs") or {}
@@ -1088,6 +1198,7 @@ class RecordingNormalizer:
             if _href and not _href.startswith("javascript:") and not _href.startswith("#") and len(_href) < 200:
                 _href_score = 0.87 if (_href.startswith("/") or _href.startswith("http")) else 0.65
                 candidates.append(LocatorCandidate("href", f'a[href="{_href}"]', _href_score, f"href={_href}"))
+                candidates.extend(_attr_css_variants("href", _href, "a", _href_score, "href"))
 
         # For <select> elements: prefer name/id, NEVER use label + input
         if tag == "select":
@@ -1141,23 +1252,26 @@ class RecordingNormalizer:
 
         if target_data.get("placeholder"):
             ph = target_data["placeholder"]
-            tag = (target_data.get("tag") or "").lower()
+            ptag = (target_data.get("tag") or "").lower()
             # Prefer input[placeholder] over bare [placeholder] — Angular wrappers
             # (dsc-input-currency) share placeholders with native inputs, causing
             # strict mode violations and fill() failures on non-input elements.
-            if tag in ("input", "textarea", "select"):
-                sel = f"{tag}[placeholder=\"{ph}\"]"
+            if ptag in ("input", "textarea", "select"):
+                sel = f"{ptag}[placeholder=\"{ph}\"]"
             else:
                 sel = f"[placeholder=\"{ph}\"]"
             candidates.append(LocatorCandidate("placeholder", sel, 0.85, f"placeholder={ph}"))
+            candidates.extend(_attr_css_variants("placeholder", ph, ptag, 0.85, "placeholder"))
 
         if target_data.get("id") and target_data["id"] not in ("mat-input-0", "mat-input-1"):
             el_id = target_data["id"]
             candidates.append(LocatorCandidate("id", f"#{el_id}", 0.75, f"id={el_id}"))
+            candidates.extend(_attr_css_variants("id", el_id, tag, 0.75, "id"))
 
         if target_data.get("name"):
-            name = target_data["name"]
-            candidates.append(LocatorCandidate("name", f"[name=\"{name}\"]", 0.70, f"name={name}"))
+            name_val = target_data["name"]
+            candidates.append(LocatorCandidate("name", f"[name=\"{name_val}\"]", 0.70, f"name={name_val}"))
+            candidates.extend(_attr_css_variants("name", name_val, tag, 0.70, "name"))
 
         if target_data.get("text"):
             text = _clean_text(target_data["text"])
@@ -1236,10 +1350,14 @@ class RecordingNormalizer:
                          (target_data.get("all_attributes") or {}).get("aria-label", "") or
                          target_data.get("accessible_name", "") or "")
             if aria_label and len(aria_label) < 60:
-                t = (target_data.get("tag") or "").lower()
-                if t in ("input", "textarea"):
-                    sel = f'{t}[aria-label="{aria_label}"]'
-                    candidates.append(LocatorCandidate("aria_label", sel, 0.90, f"{t} aria-label={aria_label}"))
+                al_tag = (target_data.get("tag") or "").lower()
+                if al_tag in ("input", "textarea"):
+                    sel = f'{al_tag}[aria-label="{aria_label}"]'
+                    candidates.append(LocatorCandidate("aria_label", sel, 0.90, f"{al_tag} aria-label={aria_label}"))
+                    candidates.extend(_attr_css_variants("aria_label", aria_label, al_tag, 0.90, "aria-label"))
+
+        # Compound selectors: combine 2 attributes for higher specificity
+        candidates.extend(_compound_candidates(target_data, tag))
 
         # Sort candidates by score (descending) for deterministic ordering
         candidates.sort(key=lambda c: c.score, reverse=True)
