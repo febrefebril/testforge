@@ -10,7 +10,7 @@ import textwrap
 import json as _json
 from typing import Optional
 
-from .model import SemanticTestCase, SemanticAction, FieldValueMap
+from .model import SemanticTestCase, SemanticAction, SemanticTarget, FieldValueMap
 from .data_extractor import _best_field_name
 
 logger = logging.getLogger(__name__)
@@ -307,6 +307,50 @@ class PlaywrightCompiler:
         """Escapa seletor para string Python segura (usa aspas simples)."""
         return "'" + sel.replace("\\", "\\\\").replace("'", "\\'") + "'"
 
+    def _playwright_locator_expr(self, target: SemanticTarget | None) -> str | None:
+        """Generate Playwright-native locator expression from target info.
+
+        Returns e.g. \"page.get_by_role('button', name='Submit')\" or None.
+        Priority: role+name > test_id > label > placeholder > role > text.
+        """
+        if not target:
+            return None
+        t = target
+
+        # 1. get_by_role + name (most semantic, accessible)
+        if t.role and t.accessible_name:
+            role = self._esc(t.role)
+            name = self._esc(t.accessible_name)
+            return f"page.get_by_role({role}, name={name})"
+
+        # 2. get_by_test_id
+        if t.test_id:
+            return f"page.get_by_test_id({self._esc(t.test_id)})"
+
+        # 3. get_by_label (for input/textarea/select)
+        if t.label:
+            return f"page.get_by_label({self._esc(t.label)})"
+
+        # 4. get_by_placeholder
+        if t.placeholder:
+            return f"page.get_by_placeholder({self._esc(t.placeholder)})"
+
+        # 5. get_by_role without name
+        if t.role:
+            return f"page.get_by_role({self._esc(t.role)})"
+
+        # 6. get_by_text for clickable elements
+        if t.text and t.tag in ("button", "a", "span", "div", "label"):
+            return f"page.get_by_text({self._esc(t.text[:60])})"
+
+        return None
+
+    def _top_css_selectors(self, target: SemanticTarget | None, limit: int = 5) -> list[str]:
+        """Return top N CSS selector strings from candidates."""
+        candidates = target.candidates if target else []
+        sorted_c = sorted(candidates, key=lambda c: c.score, reverse=True)
+        return [c.selector for c in sorted_c[:limit]]
+
     def _fallback_selector(self, action: SemanticAction) -> str:
         t = action.target
         tag = (t.tag or "").lower() if t else ""
@@ -334,34 +378,51 @@ class PlaywrightCompiler:
         field_values: Optional[dict[str, FieldValueMap]] = None,
         data_file_dict: Optional[dict] = None,
     ) -> list[str]:
-        """Gera page.select_option() para elementos <select>."""
+        """Gera page.select_option() com Playwright locator + fallback."""
         value = self._resolved_value(action, idx, data_file, field_values, data_file_dict)
-        candidates = action.target.candidates if action.target else []
-        sorted_candidates = sorted(candidates, key=lambda c: c.score, reverse=True)
-
-        if not sorted_candidates:
-            sel = self._fallback_selector(action)
-            lines = [
-                f"    # Step {idx}: select {action.target.label if action.target else 'select'}",
-                f"    page.select_option({self._esc(sel)}, {value})",
-                f"    page.wait_for_timeout(200)",
-                "",
-            ]
-            return lines
-
-        selectors = [self._esc(c.selector) for c in sorted_candidates[:5]]
+        pw_expr = self._playwright_locator_expr(action.target)
+        css_sels = self._top_css_selectors(action.target)
         lines = [f"    # Step {idx}: select ({self._data_field_name(action) or action.value})"]
-        lines.append(f"    _sels = [{', '.join(selectors)}]")
-        lines.append("    for _sel in _sels:")
-        lines.append("        try:")
-        lines.append(f"            page.select_option(_sel, {value})")
-        lines.append("            page.wait_for_timeout(200)")
-        lines.append("            break")
-        lines.append("        except Exception:")
-        lines.append("            continue")
-        lines.append("    else:")
-        lines.append(f"        raise AssertionError(f\"select step {idx} falhou "
-                      f"— selectors tried: {{_sels}}\")")
+
+        if pw_expr:
+            lines.append("    try:")
+            lines.append(f"        {pw_expr}.select_option({value})")
+            lines.append("        page.wait_for_timeout(200)")
+            if css_sels:
+                sels_str = ", ".join(self._esc(s) for s in css_sels)
+                lines.append("    except Exception:")
+                lines.append(f"        _sels = [{sels_str}]")
+                lines.append("        for _sel in _sels:")
+                lines.append("            try:")
+                lines.append(f"                page.select_option(_sel, {value})")
+                lines.append("                page.wait_for_timeout(200)")
+                lines.append("                break")
+                lines.append("            except Exception:")
+                lines.append("                continue")
+            else:
+                fallback = self._fallback_selector(action)
+                lines.append("    except Exception:")
+                lines.append(f"        page.select_option({self._esc(fallback)}, {value})")
+                lines.append("        page.wait_for_timeout(200)")
+        else:
+            # CSS-only loop
+            if css_sels:
+                sels_str = ", ".join(self._esc(s) for s in css_sels)
+                lines.append(f"    _sels = [{sels_str}]")
+                lines.append("    for _sel in _sels:")
+                lines.append("        try:")
+                lines.append(f"            page.select_option(_sel, {value})")
+                lines.append("            page.wait_for_timeout(200)")
+                lines.append("            break")
+                lines.append("        except Exception:")
+                lines.append("            continue")
+                lines.append("    else:")
+                lines.append(f"        raise AssertionError(f\"select step {idx} falhou "
+                              f"— selectors tried: {{_sels}}\")")
+            else:
+                sel = self._fallback_selector(action)
+                lines.append(f"    page.select_option({self._esc(sel)}, {value})")
+                lines.append(f"    page.wait_for_timeout(200)")
         lines.append("")
         return lines
 
@@ -373,110 +434,181 @@ class PlaywrightCompiler:
         field_values: Optional[dict[str, FieldValueMap]] = None,
         data_file_dict: Optional[dict] = None,
     ) -> list[str]:
-        """Gera page.fill() com fallback loop de seletores."""
+        """Gera page.fill() com Playwright locator + fallback loop CSS."""
         value = self._resolved_value(action, idx, data_file, field_values, data_file_dict)
-        candidates = action.target.candidates if action.target else []
-
-        # Ordena por score decrescente
-        sorted_candidates = sorted(candidates, key=lambda c: c.score, reverse=True)
-
-        if not sorted_candidates:
-            sel = self._fallback_selector(action)
-            lines = [
-                f"    # Step {idx}: fill {action.target.label if action.target else 'input'}",
-                f"    page.fill({self._esc(sel)}, {value})",
-                f"    page.wait_for_timeout(200)",
-                "",
-            ]
-            return lines
-
+        pw_expr = self._playwright_locator_expr(action.target)
+        css_sels = self._top_css_selectors(action.target)
         lines = [f"    # Step {idx}: fill ({self._data_field_name(action) or action.value})"]
-        selectors = [self._esc(c.selector) for c in sorted_candidates[:5]]
 
-        lines.append(f"    _sels = [{', '.join(selectors)}]")
-        lines.append("    for _sel in _sels:")
-        lines.append("        try:")
-        lines.append(f"            page.fill(_sel, {value})")
-        lines.append("            page.wait_for_timeout(200)")
-        lines.append("            break")
-        lines.append("        except Exception:")
-        lines.append("            continue")
-        lines.append("    else:")
-        lines.append(f"        raise AssertionError(f\"fill step {idx} falhou "
-                      f"— selectors tried: {{_sels}}\")")
+        if pw_expr:
+            lines.append("    try:")
+            lines.append(f"        {pw_expr}.fill({value})")
+            lines.append("        page.wait_for_timeout(200)")
+            if css_sels:
+                sels_str = ", ".join(self._esc(s) for s in css_sels)
+                lines.append("    except Exception:")
+                lines.append(f"        _sels = [{sels_str}]")
+                lines.append("        for _sel in _sels:")
+                lines.append("            try:")
+                lines.append(f"                page.fill(_sel, {value})")
+                lines.append("                page.wait_for_timeout(200)")
+                lines.append("                break")
+                lines.append("            except Exception:")
+                lines.append("                continue")
+            else:
+                fallback = self._fallback_selector(action)
+                lines.append("    except Exception:")
+                lines.append(f"        page.fill({self._esc(fallback)}, {value})")
+                lines.append("        page.wait_for_timeout(200)")
+        else:
+            # CSS-only fallback loop
+            if css_sels:
+                sels_str = ", ".join(self._esc(s) for s in css_sels)
+                lines.append(f"    _sels = [{sels_str}]")
+                lines.append("    for _sel in _sels:")
+                lines.append("        try:")
+                lines.append(f"            page.fill(_sel, {value})")
+                lines.append("            page.wait_for_timeout(200)")
+                lines.append("            break")
+                lines.append("        except Exception:")
+                lines.append("            continue")
+                lines.append("    else:")
+                lines.append(f"        raise AssertionError(f\"fill step {idx} falhou "
+                              f"— selectors tried: {{_sels}}\")")
+            else:
+                sel = self._fallback_selector(action)
+                lines.append(f"    page.fill({self._esc(sel)}, {value})")
+                lines.append(f"    page.wait_for_timeout(200)")
         lines.append("")
         return lines
 
     def _gen_click(self, action: SemanticAction, idx: int, is_submit: bool = False) -> list[str]:
-        candidates = action.target.candidates if action.target else []
-        sorted_candidates = sorted(candidates, key=lambda c: c.score, reverse=True)
+        pw_expr = self._playwright_locator_expr(action.target)
+        css_sels = self._top_css_selectors(action.target)
         causes_navigation = action.context.get("causes_navigation", False) if action.context else False
-
-        if not sorted_candidates:
-            text = (action.target.text or "")[:30]
-            lines = [f"    # Step {idx}: click"]
-            if is_submit:
-                lines.append(f"    with page.expect_navigation(wait_until='load'):")
-                lines.append(f"        page.click({self._esc(text)})")
-            else:
-                lines.append(f"    page.click({self._esc(text)})")
-                if causes_navigation:
-                    lines.append(f"    page.wait_for_timeout(3000)  # SPA navigation — wait for client-side route change")
-                else:
-                    lines.append(f"    page.wait_for_timeout(800)  # wait for DOM render")
-            lines.append("")
-            return lines
-
         lines = [f"    # Step {idx}: click"]
-        selectors = [self._esc(c.selector) for c in sorted_candidates[:5]]
 
-        lines.append(f"    _sels = [{', '.join(selectors)}]")
-        lines.append("    for _sel in _sels:")
-        lines.append("        try:")
-        if is_submit:
-            lines.append("            with page.expect_navigation(wait_until='load'):")
-            lines.append("                page.click(_sel)")
-        else:
-            lines.append("            page.click(_sel)")
-            if causes_navigation:
-                lines.append("            page.wait_for_timeout(3000)  # SPA navigation — wait for client-side route change")
+        def _gen_click_pw(pw_expr: str, indent: str = "") -> list[str]:
+            """Generate click via Playwright locator."""
+            clines = []
+            if is_submit:
+                clines.append(f"{indent}with page.expect_navigation(wait_until='load'):")
+                clines.append(f"{indent}    {pw_expr}.click()")
             else:
-                lines.append("            page.wait_for_timeout(800)  # wait for DOM render")
-        lines.append("            break")
-        lines.append("        except Exception:")
-        lines.append("            continue")
-        lines.append("    else:")
-        lines.append(f"        raise AssertionError(f\"click step {idx} falhou "
-                      f"— selectors tried: {{_sels}}\")")
+                clines.append(f"{indent}{pw_expr}.click()")
+            return clines
+
+        def _gen_click_css(sel: str, indent: str = "") -> list[str]:
+            """Generate click via CSS selector."""
+            clines = []
+            if is_submit:
+                clines.append(f"{indent}with page.expect_navigation(wait_until='load'):")
+                clines.append(f"{indent}    page.click({sel})")
+            else:
+                clines.append(f"{indent}page.click({sel})")
+            return clines
+
+        def _gen_wait(indent: str = "") -> str:
+            if is_submit:
+                return ""  # expect_navigation waits for load
+            if causes_navigation:
+                return f"{indent}page.wait_for_timeout(3000)  # SPA navigation"
+            return f"{indent}page.wait_for_timeout(800)  # wait for DOM render"
+
+        if pw_expr:
+            lines.append("    try:")
+            lines.extend(_gen_click_pw(pw_expr, "        "))
+            wl = _gen_wait("        ")
+            if wl:
+                lines.append(wl)
+            if css_sels:
+                sels_str = ", ".join(self._esc(s) for s in css_sels)
+                lines.append("    except Exception:")
+                lines.append(f"        _sels = [{sels_str}]")
+                lines.append("        for _sel in _sels:")
+                lines.append("            try:")
+                lines.extend(_gen_click_css("_sel", "                "))
+                wl2 = _gen_wait("                ")
+                if wl2:
+                    lines.append(wl2)
+                lines.append("                break")
+                lines.append("            except Exception:")
+                lines.append("                continue")
+            else:
+                fallback_sel = self._fallback_selector(action)
+                lines.append("    except Exception:")
+                lines.extend(_gen_click_css(self._esc(fallback_sel), "        "))
+                wl3 = _gen_wait("        ")
+                if wl3:
+                    lines.append(wl3)
+        else:
+            # CSS-only
+            if css_sels:
+                sels_str = ", ".join(self._esc(s) for s in css_sels)
+                lines.append(f"    _sels = [{sels_str}]")
+                lines.append("    for _sel in _sels:")
+                lines.append("        try:")
+                if is_submit:
+                    lines.append("            with page.expect_navigation(wait_until='load'):")
+                    lines.append("                page.click(_sel)")
+                else:
+                    lines.append("            page.click(_sel)")
+                    wl4 = _gen_wait("            ")
+                    if wl4:
+                        lines.append(wl4)
+                lines.append("            break")
+                lines.append("        except Exception:")
+                lines.append("            continue")
+                lines.append("    else:")
+                lines.append(f"        raise AssertionError(f\"click step {idx} falhou "
+                              f"— selectors tried: {{_sels}}\")")
+            else:
+                text = (action.target.text or "")[:30] if action.target else ""
+                if is_submit:
+                    lines.append(f"    with page.expect_navigation(wait_until='load'):")
+                    lines.append(f"        page.click({self._esc(text)})")
+                else:
+                    lines.append(f"    page.click({self._esc(text)})")
+                    wl5 = _gen_wait("    ")
+                    if wl5:
+                        lines.append(wl5)
         lines.append("")
         return lines
 
-    _BAD_ASSERT_SELECTORS = {"#body", "body", "html", "#html", "body > ", "html > "}
+    _BAD_ASSERT_EXPRS = {"body", "html"}
 
     def _gen_assert(self, action: SemanticAction, idx: int) -> list[str]:
         assert_type = action.context.get("assert_type", "textual") if action.context else "textual"
         expected = action.value or ""
         lines = [f"    # Step {idx}: assert ({assert_type})"]
 
-        candidates = action.target.candidates if action.target else []
-        sorted_candidates = sorted(candidates, key=lambda c: c.score, reverse=True)
-
-        if sorted_candidates:
-            sel = sorted_candidates[0].selector
-        elif action.target and action.target.element_id:
-            sel = f"#{action.target.element_id}"
-        elif action.target and action.target.text:
-            sel = f"text={action.target.text[:30]}"
+        # Try Playwright locator first, fallback to CSS
+        pw_expr = self._playwright_locator_expr(action.target)
+        if pw_expr:
+            locator_expr = pw_expr
         else:
-            sel = "body"
+            css_sels = self._top_css_selectors(action.target)
+            if css_sels:
+                locator_expr = f"page.locator({self._esc(css_sels[0])})"
+            elif action.target and action.target.element_id:
+                locator_expr = f"page.locator({self._esc('#' + action.target.element_id)})"
+            elif action.target and action.target.text:
+                locator_expr = f"page.get_by_text({self._esc(action.target.text[:60])})"
+            else:
+                lines.append(f"    # SKIP: assert on unknown element — re-record with Shift+A")
+                return lines
 
-        # Skip bad asserts captured on page body — no meaningful assertion possible
-        if sel.strip().lower() in self._BAD_ASSERT_SELECTORS or sel.strip().lower().startswith("body"):
-            lines.append(f"    # SKIP: assert on body/page (no element selected) — re-record with Shift+A")
-            return lines
+        # Extract raw locator string from pw_expr for bad-check
+        raw = locator_expr.lower()
+        if any(bad in raw for bad in self._BAD_ASSERT_EXPRS):
+            if "get_by" in raw or "locator" in raw:
+                pass  # Playwright locators with body/html are fine (e.g. get_by_role)
+            else:
+                lines.append(f"    # SKIP: assert on body/page (no element selected) — re-record with Shift+A")
+                return lines
 
         if assert_type == "textual" or assert_type == "automatico":
-            lines.append(f"    expect(page.locator({self._esc(sel)})).to_contain_text({self._esc(expected)})")
+            lines.append(f"    expect({locator_expr}).to_contain_text({self._esc(expected)})")
         elif assert_type == "estado":
             state = action.context.get("assert_state", "enabled") if action.context else "enabled"
             state_map = {
@@ -486,9 +618,9 @@ class PlaywrightCompiler:
                 "enabled": "to_be_enabled",
             }
             method = state_map.get(state, "to_be_enabled")
-            lines.append(f"    expect(page.locator({self._esc(sel)})).{method}()")
+            lines.append(f"    expect({locator_expr}).{method}()")
         elif assert_type == "visivel":
-            lines.append(f"    expect(page.locator({self._esc(sel)})).to_be_visible()")
+            lines.append(f"    expect({locator_expr}).to_be_visible()")
 
         lines.append("")
         return lines
