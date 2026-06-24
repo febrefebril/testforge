@@ -18,9 +18,12 @@ from testforge.recorder.recorder_controller import RecorderController
 # Helpers
 # ---------------------------------------------------------------------------
 
+_EMPTY_PAYLOAD = {"events": [], "steps": [], "commands": [], "fieldSnapshots": [], "valueMutations": []}
+
+
 def _make_ctrl(tmp_path, evaluate_return=None):
     page = MagicMock()
-    page.evaluate.return_value = evaluate_return
+    page.evaluate.return_value = evaluate_return if evaluate_return is not None else dict(_EMPTY_PAYLOAD)
     page.url = "http://localhost"
     page.title.return_value = "Page"
     ctrl = RecorderController(page, recordings_root=str(tmp_path))
@@ -34,34 +37,30 @@ def _make_ctrl(tmp_path, evaluate_return=None):
 # ---------------------------------------------------------------------------
 
 class TestFlushEventsIntegration:
-    """flush_events() must call field/mutation flush regardless of JS event outcome."""
+    """flush_events() reads all JS queues in a single CDP call."""
 
-    def test_flush_calls_field_snapshot_flush(self, tmp_path):
-        ctrl, page = _make_ctrl(tmp_path, evaluate_return={"events": [], "steps": []})
-        with patch.object(ctrl, "_flush_field_snapshots", return_value=0) as mock_fsnap:
-            with patch.object(ctrl, "_flush_value_mutations", return_value=0):
-                ctrl.flush_events()
-        mock_fsnap.assert_called_once()
+    def test_flush_persists_field_snapshots_from_payload(self, tmp_path):
+        snapshot = {"timestamp": "2026-01-01T00:00:00Z", "fingerprint": "input#x[name=x]",
+                    "identifiers": {}, "tag": "input", "type": "text", "value": "v",
+                    "visibility": "visible", "enabled": True, "bounding_box": {}}
+        payload = {**_EMPTY_PAYLOAD, "fieldSnapshots": [snapshot]}
+        ctrl, page = _make_ctrl(tmp_path, evaluate_return=payload)
+        ctrl.flush_events()
+        path = tmp_path / "field_snapshots.jsonl"
+        assert path.exists()
 
-    def test_flush_calls_value_mutation_flush(self, tmp_path):
-        ctrl, page = _make_ctrl(tmp_path, evaluate_return={"events": [], "steps": []})
-        with patch.object(ctrl, "_flush_field_snapshots", return_value=0):
-            with patch.object(ctrl, "_flush_value_mutations", return_value=0) as mock_vmut:
-                ctrl.flush_events()
-        mock_vmut.assert_called_once()
+    def test_flush_persists_value_mutations_from_payload(self, tmp_path):
+        mutation = {"field": "x", "old_value": "", "new_value": "abc", "ts": "2026-01-01T00:00:00Z"}
+        payload = {**_EMPTY_PAYLOAD, "valueMutations": [mutation]}
+        ctrl, page = _make_ctrl(tmp_path, evaluate_return=payload)
+        ctrl.flush_events()
+        path = tmp_path / "value_mutations.jsonl"
+        assert path.exists()
 
     def test_flush_events_js_exception_does_not_crash(self, tmp_path):
         ctrl, page = _make_ctrl(tmp_path)
         page.evaluate.side_effect = Exception("page closed")
         ctrl.flush_events()  # must not raise
-
-    def test_flush_events_js_exception_still_runs_field_flush(self, tmp_path):
-        ctrl, page = _make_ctrl(tmp_path)
-        page.evaluate.side_effect = Exception("page closed")
-        with patch.object(ctrl, "_flush_field_snapshots", return_value=0) as mock_fsnap:
-            with patch.object(ctrl, "_flush_value_mutations", return_value=0):
-                ctrl.flush_events()
-        mock_fsnap.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -69,46 +68,37 @@ class TestFlushEventsIntegration:
 # ---------------------------------------------------------------------------
 
 class TestFieldSnapshotFlushing:
-    """_flush_field_snapshots() reads JS queue, persists, and returns count."""
+    """flush_events() persists field snapshots received in the batched payload."""
 
     def test_happy_path_persists_to_file(self, tmp_path):
-        ctrl, page = _make_ctrl(tmp_path)
         snapshot = {"field": "cpf", "value": "123", "ts": "2026-01-01T00:00:00Z"}
-        page.evaluate.return_value = [snapshot]
-
-        count = ctrl._flush_field_snapshots()
-
-        assert count == 1
+        payload = {**_EMPTY_PAYLOAD, "fieldSnapshots": [snapshot]}
+        ctrl, page = _make_ctrl(tmp_path, evaluate_return=payload)
+        ctrl.flush_events()
         path = tmp_path / "field_snapshots.jsonl"
         assert path.exists()
         data = json.loads(path.read_text())
         assert data["field"] == "cpf"
 
     def test_multiple_snapshots_written_as_separate_lines(self, tmp_path):
-        ctrl, page = _make_ctrl(tmp_path)
-        page.evaluate.return_value = [
+        payload = {**_EMPTY_PAYLOAD, "fieldSnapshots": [
             {"field": "cpf", "value": "1"},
             {"field": "nome", "value": "2"},
-        ]
-        count = ctrl._flush_field_snapshots()
-        assert count == 2
+        ]}
+        ctrl, page = _make_ctrl(tmp_path, evaluate_return=payload)
+        ctrl.flush_events()
         lines = (tmp_path / "field_snapshots.jsonl").read_text().splitlines()
         assert len(lines) == 2
 
-    def test_empty_queue_returns_zero(self, tmp_path):
+    def test_empty_snapshots_writes_nothing(self, tmp_path):
         ctrl, page = _make_ctrl(tmp_path)
-        page.evaluate.return_value = []
-        assert ctrl._flush_field_snapshots() == 0
+        ctrl.flush_events()
+        assert not (tmp_path / "field_snapshots.jsonl").exists()
 
-    def test_none_queue_returns_zero(self, tmp_path):
-        ctrl, page = _make_ctrl(tmp_path)
-        page.evaluate.return_value = None
-        assert ctrl._flush_field_snapshots() == 0
-
-    def test_js_exception_returns_zero(self, tmp_path):
+    def test_js_exception_does_not_crash(self, tmp_path):
         ctrl, page = _make_ctrl(tmp_path)
         page.evaluate.side_effect = Exception("detached")
-        assert ctrl._flush_field_snapshots() == 0
+        ctrl.flush_events()  # must not raise
 
 
 # ---------------------------------------------------------------------------
@@ -116,40 +106,37 @@ class TestFieldSnapshotFlushing:
 # ---------------------------------------------------------------------------
 
 class TestValueMutationFlushing:
-    """_flush_value_mutations() reads JS queue, persists, and returns count."""
+    """flush_events() persists value mutations received in the batched payload."""
 
     def test_happy_path_persists_to_file(self, tmp_path):
-        ctrl, page = _make_ctrl(tmp_path)
         mutation = {"field": "senha", "old": "", "new": "abc", "ts": "2026-01-01T00:00:00Z"}
-        page.evaluate.return_value = [mutation]
-
-        count = ctrl._flush_value_mutations()
-
-        assert count == 1
+        payload = {**_EMPTY_PAYLOAD, "valueMutations": [mutation]}
+        ctrl, page = _make_ctrl(tmp_path, evaluate_return=payload)
+        ctrl.flush_events()
         path = tmp_path / "value_mutations.jsonl"
         assert path.exists()
         data = json.loads(path.read_text())
         assert data["field"] == "senha"
 
     def test_multiple_mutations_appended(self, tmp_path):
-        ctrl, page = _make_ctrl(tmp_path)
-        page.evaluate.return_value = [
+        payload = {**_EMPTY_PAYLOAD, "valueMutations": [
             {"field": "a", "old": "", "new": "1"},
             {"field": "b", "old": "", "new": "2"},
-        ]
-        ctrl._flush_value_mutations()
+        ]}
+        ctrl, page = _make_ctrl(tmp_path, evaluate_return=payload)
+        ctrl.flush_events()
         lines = (tmp_path / "value_mutations.jsonl").read_text().splitlines()
         assert len(lines) == 2
 
-    def test_empty_queue_returns_zero(self, tmp_path):
+    def test_empty_mutations_writes_nothing(self, tmp_path):
         ctrl, page = _make_ctrl(tmp_path)
-        page.evaluate.return_value = []
-        assert ctrl._flush_value_mutations() == 0
+        ctrl.flush_events()
+        assert not (tmp_path / "value_mutations.jsonl").exists()
 
-    def test_js_exception_returns_zero(self, tmp_path):
+    def test_js_exception_does_not_crash(self, tmp_path):
         ctrl, page = _make_ctrl(tmp_path)
         page.evaluate.side_effect = Exception("closed")
-        assert ctrl._flush_value_mutations() == 0
+        ctrl.flush_events()  # must not raise
 
 
 # ---------------------------------------------------------------------------

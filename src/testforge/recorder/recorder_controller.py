@@ -89,32 +89,29 @@ class RecorderController:
         return session
 
     def wait_for_command(self, timeout_ms: int = 500) -> list[str]:
-        """Polls JS command queue and returns pending commands."""
-        try:
-            cmds = self._page.evaluate("""() => {
-                const q = window.__tfCommandQueue || [];
-                window.__tfCommandQueue = [];
-                return q;
-            }""")
-            if cmds:
-                self._command_queue.extend(cmds)
-            return [self._command_queue.pop(0) for _ in range(len(self._command_queue))]
-        except Exception:
-            return []
+        """Return cached commands drained from last flush_events call."""
+        return [self._command_queue.pop(0) for _ in range(len(self._command_queue))]
 
     def flush_events(self):
-        """Read pending events and steps from JS."""
+        """Read all pending JS queues in a single CDP call to minimise V8 pauses."""
         try:
-            events = self._page.evaluate("""() => {
-                const evts = window.__tfEventQueue || [];
-                window.__tfEventQueue = [];
-                const steps = window.__tfStepQueue || [];
-                window.__tfStepQueue = [];
-                return {events: evts, steps: steps};
+            payload = self._page.evaluate("""() => {
+                const evts  = window.__tfEventQueue         || []; window.__tfEventQueue         = [];
+                const steps = window.__tfStepQueue          || []; window.__tfStepQueue          = [];
+                const cmds  = window.__tfCommandQueue       || []; window.__tfCommandQueue       = [];
+                const fsnap = window.__tfFieldSnapshotQueue || []; window.__tfFieldSnapshotQueue = [];
+                const vmuts = window.__tfValueMutationQueue || []; window.__tfValueMutationQueue = [];
+                return {events: evts, steps: steps, commands: cmds, fieldSnapshots: fsnap, valueMutations: vmuts};
             }""")
-            raw_events = events.get("events", [])
-            raw_steps = events.get("steps", [])
-            # Log per-type counts for audit
+            raw_events   = payload.get("events", [])
+            raw_steps    = payload.get("steps", [])
+            raw_commands = payload.get("commands", [])
+            raw_fsnaps   = payload.get("fieldSnapshots", [])
+            raw_vmuts    = payload.get("valueMutations", [])
+
+            if raw_commands:
+                self._command_queue.extend(raw_commands)
+
             type_counts = {}
             for data in raw_events:
                 et = data.get("type", "unknown")
@@ -122,16 +119,20 @@ class RecorderController:
                 self._persist_raw_event(data)
             if type_counts:
                 logger.debug("Flushed %d events: %s", len(raw_events), type_counts)
+
             for step_data in raw_steps:
                 self._persist_step(step_data)
             if raw_steps:
                 logger.debug("Flushed %d steps", len(raw_steps))
+
+            for batch in raw_fsnaps:
+                self._save_field_snapshot(batch)
+            for mut in raw_vmuts:
+                self._save_value_mutation(mut)
+            if raw_fsnaps or raw_vmuts:
+                logger.debug("Flushed %d field snapshots, %d value mutations", len(raw_fsnaps), len(raw_vmuts))
         except Exception as exc:
             logger.error("flush_events failed: %s", exc, exc_info=True)
-        fsnap_count = self._flush_field_snapshots()
-        vmut_count = self._flush_value_mutations()
-        if fsnap_count or vmut_count:
-            logger.debug("Flushed %d field snapshots, %d value mutations", fsnap_count, vmut_count)
 
     def handle_commands(self) -> str:
         """Process pending commands. Returns 'stop' if recording should end."""
@@ -340,38 +341,6 @@ class RecorderController:
         path = os.path.join(self._store._session_dir, "value_mutations.jsonl")
         with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(mutation_data, default=str) + "\n")
-
-    def _flush_field_snapshots(self) -> int:
-        """Read pending field snapshot batches from JS and persist. Returns count."""
-        try:
-            batches = self._page.evaluate("""() => {
-                const q = window.__tfFieldSnapshotQueue || [];
-                window.__tfFieldSnapshotQueue = [];
-                return q;
-            }""")
-            count = len(batches or [])
-            for batch in (batches or []):
-                self._save_field_snapshot(batch)
-            return count
-        except Exception as exc:
-            logger.warning("_flush_field_snapshots failed: %s", exc)
-            return 0
-
-    def _flush_value_mutations(self) -> int:
-        """Read pending value mutations from JS and persist. Returns count."""
-        try:
-            mutations = self._page.evaluate("""() => {
-                const q = window.__tfValueMutationQueue || [];
-                window.__tfValueMutationQueue = [];
-                return q;
-            }""")
-            count = len(mutations or [])
-            for mut in (mutations or []):
-                self._save_value_mutation(mut)
-            return count
-        except Exception as exc:
-            logger.warning("_flush_value_mutations failed: %s", exc)
-            return 0
 
     def _capture_final_state_snapshot(self, reason: str = "unknown"):
         """Read final state from JS sessionStorage and save to final_state_snapshot.json."""

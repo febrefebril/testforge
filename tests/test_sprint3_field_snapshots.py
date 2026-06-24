@@ -138,16 +138,19 @@ class TestCT_AUTO_3_1:
         assert data["old_value"] == ""
 
     def test_flush_field_snapshots_reads_js_queue(self, mock_store):
-        """_flush_field_snapshots reads JS queue and persists."""
+        """flush_events batched payload persists field snapshots."""
         store, tmpdir, page, ctrl = mock_store
-        snapshot = _make_snapshot(value="Capturado")
-        page.evaluate = MagicMock(return_value=[{
+        snapshot_batch = {
             "timestamp": "2026-06-18T10:00:00Z",
-            "snapshots": [snapshot],
+            "snapshots": [_make_snapshot(value="Capturado")],
             "count": 1,
-        }])
+        }
+        page.evaluate = MagicMock(return_value={
+            "events": [], "steps": [], "commands": [],
+            "fieldSnapshots": [snapshot_batch], "valueMutations": [],
+        })
 
-        ctrl._flush_field_snapshots()
+        ctrl.flush_events()
 
         path = os.path.join(store._session_dir, "field_snapshots.jsonl")
         assert os.path.exists(path)
@@ -159,12 +162,15 @@ class TestCT_AUTO_3_1:
         assert data["snapshots"][0]["value"] == "Capturado"
 
     def test_flush_value_mutations_reads_js_queue(self, mock_store):
-        """_flush_value_mutations reads JS queue and persists."""
+        """flush_events batched payload persists value mutations."""
         store, tmpdir, page, ctrl = mock_store
         mutation = _make_value_mutation(old="", new="ValorProgramatico")
-        page.evaluate = MagicMock(return_value=[mutation])
+        page.evaluate = MagicMock(return_value={
+            "events": [], "steps": [], "commands": [],
+            "fieldSnapshots": [], "valueMutations": [mutation],
+        })
 
-        ctrl._flush_value_mutations()
+        ctrl.flush_events()
 
         path = os.path.join(store._session_dir, "value_mutations.jsonl")
         assert os.path.exists(path)
@@ -175,7 +181,7 @@ class TestCT_AUTO_3_1:
         assert data["new_value"] == "ValorProgramatico"
 
     def test_flush_events_also_flushes_snapshots_and_mutations(self, controller):
-        """flush_events() calls both snapshot and mutation flush."""
+        """flush_events() reads snapshots and mutations in a single batched CDP call."""
         ctrl, tmpdir, page = controller
         snapshot_batch = {
             "timestamp": "2026-06-18T10:00:00Z",
@@ -184,16 +190,11 @@ class TestCT_AUTO_3_1:
         }
         mutation = _make_value_mutation(new="flush_mut")
 
-        def evaluate_side_effect(js_code):
-            if "__tfFieldSnapshotQueue" in js_code:
-                return [snapshot_batch]
-            if "__tfValueMutationQueue" in js_code:
-                return [mutation]
-            if "__tfEventQueue" in js_code or "__tfStepQueue" in js_code:
-                return {"events": [], "steps": []}
-            return []
-
-        page.evaluate = MagicMock(side_effect=evaluate_side_effect)
+        page.evaluate = MagicMock(return_value={
+            "events": [], "steps": [], "commands": [],
+            "fieldSnapshots": [snapshot_batch],
+            "valueMutations": [mutation],
+        })
 
         ctrl.flush_events()
 
@@ -575,16 +576,18 @@ class TestSprint3EdgeCases:
     """Edge cases for field snapshots."""
 
     def test_empty_field_snapshot_queue(self, mock_store):
-        """Empty JS queue returns empty list — no crash."""
+        """Empty fieldSnapshots in payload — no crash, no file."""
         store, tmpdir, page, ctrl = mock_store
-        page.evaluate = MagicMock(return_value=[])
-        ctrl._flush_field_snapshots()  # Should not raise
+        page.evaluate = MagicMock(return_value={
+            "events": [], "steps": [], "commands": [], "fieldSnapshots": [], "valueMutations": [],
+        })
+        ctrl.flush_events()  # Should not raise
 
     def test_none_field_snapshot_queue(self, mock_store):
-        """JS queue returns None — no crash."""
+        """evaluate() exception — no crash."""
         store, tmpdir, page, ctrl = mock_store
-        page.evaluate = MagicMock(return_value=None)
-        ctrl._flush_field_snapshots()  # Should not raise
+        page.evaluate = MagicMock(side_effect=Exception("detached"))
+        ctrl.flush_events()  # Should not raise
 
     def test_malformed_snapshot_data(self, mock_store):
         """Malformed snapshot data does not crash."""
