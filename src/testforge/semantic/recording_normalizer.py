@@ -217,7 +217,21 @@ def _compound_candidates(target_data: dict, tag: str) -> list:
 
 
 class RecordingNormalizer:
-    """Converte raw events em SemanticTestCase."""
+    """Converte raw events em SemanticTestCase.
+
+    Phase 2: optional `use_v2_locator` flag enables the modern
+    super-selector extractor (`semantic.locator.LocatorExtractor`)
+    in parallel with the legacy `_build_target` heuristics. When on,
+    v2 candidates are appended after legacy candidates; downstream
+    code that ignores the new fields keeps working unchanged.
+    """
+
+    def __init__(self, use_v2_locator: bool = False) -> None:
+        self._use_v2 = bool(use_v2_locator)
+        self._v2_extractor = None
+        if self._use_v2:
+            from .locator import LocatorExtractor
+            self._v2_extractor = LocatorExtractor()
 
     def normalize(self, recording_dir: str, test_id: str = "",
                   application: str = "", base_url: str = "") -> SemanticTestCase:
@@ -1392,6 +1406,19 @@ class RecordingNormalizer:
         # Sort candidates by score (descending) for deterministic ordering
         candidates.sort(key=lambda c: c.score, reverse=True)
 
+        # Phase 2: append v2 super-selector candidates when enabled.
+        # v2 candidates carry intent_text + per-attribute stability;
+        # legacy candidates remain first to preserve current selection.
+        intent_text = None
+        if self._use_v2 and self._v2_extractor is not None:
+            try:
+                v2 = self._v2_extractor.extract(target_data)
+                candidates.extend(v2)
+                if v2 and v2[0].intent_text:
+                    intent_text = v2[0].intent_text
+            except Exception as exc:
+                logger.warning("v2 locator extractor failed: %s", exc)
+
         return SemanticTarget(
             role=target_data.get("role"),
             accessible_name=target_data.get("accessible_name"),
@@ -1404,6 +1431,7 @@ class RecordingNormalizer:
             name=target_data.get("name"),
             candidates=candidates,
             fingerprint=fingerprint,
+            intent_text=intent_text,
         )
 
     def _steps_identical(self, a: SemanticAction, b: SemanticAction) -> bool:
