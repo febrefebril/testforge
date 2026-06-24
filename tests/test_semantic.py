@@ -837,6 +837,77 @@ class TestL0_5AccessibilityResolution:
             assert "re.compile" not in code, f"Unexpected re.compile in:\n{code}"
 
 
+class TestCompoundSelectors:
+    """Tests for compound attribute selectors (2-attribute combination)."""
+
+    def _run_compound_test(self, target_data: dict, expected_count: int = 0):
+        """Helper: run _build_target and count compound candidates."""
+        normalizer = RecordingNormalizer()
+        target = normalizer._build_target(target_data)
+        compounds = [c for c in target.candidates if c.strategy == "compound"]
+        return compounds
+
+    def test_compound_placeholder_aria_label(self):
+        """Compound generated when placeholder + accessible_name exist."""
+        compounds = self._run_compound_test({
+            "tag": "input", "placeholder": "R$0,00",
+            "accessible_name": "Renda mensal *",
+            "name": "renda",
+        })
+        assert len(compounds) >= 1
+        compound = [c for c in compounds if "placeholder" in c.selector and "aria-label" in c.selector]
+        assert compound, f"No placeholder+aria-label compound found among: {[c.selector for c in compounds]}"
+        assert compound[0].score >= 0.85
+
+    def test_compound_placeholder_name(self):
+        """Compound generated when placeholder + name exist."""
+        compounds = self._run_compound_test({
+            "tag": "input", "placeholder": "R$0,00",
+            "name": "renda",
+        })
+        compound = [c for c in compounds if "placeholder" in c.selector and "[name=" in c.selector]
+        assert compound, f"No placeholder+name compound found among: {[c.selector for c in compounds]}"
+        assert compound[0].score >= 0.70
+
+    def test_compound_aria_label_name(self):
+        """Compound generated when accessible_name + name exist."""
+        compounds = self._run_compound_test({
+            "tag": "input", "accessible_name": "Renda mensal *",
+            "name": "renda",
+        })
+        compound = [c for c in compounds if "aria-label" in c.selector and "[name=" in c.selector]
+        assert compound, f"No aria-label+name compound found among: {[c.selector for c in compounds]}"
+
+    def test_compound_no_overlap_produces_none(self):
+        """No compound generated when no paired attributes exist."""
+        compounds = self._run_compound_test({
+            "tag": "input", "placeholder": "R$0,00",
+        })
+        assert len(compounds) == 0
+
+    def test_compound_selector_has_correct_tag(self):
+        """Compound selector includes tag prefix."""
+        compounds = self._run_compound_test({
+            "tag": "input", "placeholder": "R$0,00",
+            "accessible_name": "Renda mensal *",
+            "name": "renda",
+        })
+        assert compounds
+        for c in compounds:
+            assert c.selector.startswith("input["), f"Compound missing tag prefix: {c.selector}"
+
+    def test_compound_score_is_higher_than_single(self):
+        """Compound score is higher than min single-attribute score."""
+        compounds = self._run_compound_test({
+            "tag": "input", "placeholder": "R$0,00",
+            "accessible_name": "Renda mensal *",
+        })
+        assert compounds
+        # placeholder single = 0.85, aria-label single = 0.90
+        # compound should be min(0.85, 0.90) + 0.05 = 0.90
+        assert any(c.score >= 0.88 for c in compounds), f"Scores too low: {[c.score for c in compounds]}"
+
+
 class TestSemanticStepsJsonl:
     """Tests for semantic_steps.jsonl generation alongside compiled script."""
 
