@@ -164,7 +164,7 @@ class PlaywrightCompiler:
         lines = []
         lines.append('"""Teste gerado pelo TestForge — fonte de verdade: SemanticTestCase."""')
         lines.append("from playwright.sync_api import Page, expect")
-        lines.append("import json, os")
+        lines.append("import json, os, re")
 
         if data_file:
             # Data-driven: carrega JSON externo no script gerado
@@ -370,6 +370,31 @@ class PlaywrightCompiler:
             return f"#{t.element_id}"
         return "input"
 
+    def _l0_5_role_expr(self, target: SemanticTarget | None) -> str | None:
+        """Generate L0.5 get_by_role with regex fuzzy name matching.
+
+        Returns e.g. \"page.get_by_role('button', name=re.compile(re.escape('Enviar'), re.I))\"
+        or None when role/accessible_name unavailable.
+        Tried AFTER primary PW locator fails, BEFORE CSS fallback loop.
+        """
+        if not target or not target.role:
+            return None
+        name = target.accessible_name or ""
+        if not name or len(name) < 2:
+            return None
+        role = self._esc(target.role)
+        escaped_name = self._esc(name[:40])
+        return (f"page.get_by_role({role}, "
+                f"name=re.compile(re.escape({escaped_name}), re.I))")
+
+    def _l0_5_role_expr_str(self, target: SemanticTarget | None) -> str | None:
+        """Like _l0_5_role_expr but returns raw string for expect() usage.
+
+        Returns e.g. \"page.get_by_role('button', name=re.compile(...))\"
+        without wrapping in ..._str — used when the expr is passed to expect().
+        """
+        return self._l0_5_role_expr(target)
+
     def _gen_select(
         self,
         action: SemanticAction,
@@ -384,6 +409,7 @@ class PlaywrightCompiler:
         css_sels = self._top_css_selectors(action.target)
         lines = [f"    # Step {idx}: select ({self._data_field_name(action) or action.value})"]
 
+        l0_5_expr = self._l0_5_role_expr(action.target)
         if pw_expr:
             lines.append("    try:")
             lines.append(f"        {pw_expr}.select_option({value})")
@@ -391,14 +417,28 @@ class PlaywrightCompiler:
             if css_sels:
                 sels_str = ", ".join(self._esc(s) for s in css_sels)
                 lines.append("    except Exception:")
-                lines.append(f"        _sels = [{sels_str}]")
-                lines.append("        for _sel in _sels:")
-                lines.append("            try:")
-                lines.append(f"                page.select_option(_sel, {value})")
-                lines.append("                page.wait_for_timeout(200)")
-                lines.append("                break")
-                lines.append("            except Exception:")
-                lines.append("                continue")
+                if l0_5_expr:
+                    lines.append("        try:")
+                    lines.append(f"            {l0_5_expr}.select_option({value})")
+                    lines.append("            page.wait_for_timeout(200)")
+                    lines.append("        except Exception:")
+                    lines.append(f"            _sels = [{sels_str}]")
+                    lines.append("            for _sel in _sels:")
+                    lines.append("                try:")
+                    lines.append(f"                    page.select_option(_sel, {value})")
+                    lines.append("                    page.wait_for_timeout(200)")
+                    lines.append("                    break")
+                    lines.append("                except Exception:")
+                    lines.append("                    continue")
+                else:
+                    lines.append(f"        _sels = [{sels_str}]")
+                    lines.append("        for _sel in _sels:")
+                    lines.append("            try:")
+                    lines.append(f"                page.select_option(_sel, {value})")
+                    lines.append("                page.wait_for_timeout(200)")
+                    lines.append("                break")
+                    lines.append("            except Exception:")
+                    lines.append("                continue")
             else:
                 fallback = self._fallback_selector(action)
                 lines.append("    except Exception:")
@@ -440,6 +480,7 @@ class PlaywrightCompiler:
         css_sels = self._top_css_selectors(action.target)
         lines = [f"    # Step {idx}: fill ({self._data_field_name(action) or action.value})"]
 
+        l0_5_expr = self._l0_5_role_expr(action.target)
         if pw_expr:
             lines.append("    try:")
             lines.append(f"        {pw_expr}.fill({value})")
@@ -447,14 +488,28 @@ class PlaywrightCompiler:
             if css_sels:
                 sels_str = ", ".join(self._esc(s) for s in css_sels)
                 lines.append("    except Exception:")
-                lines.append(f"        _sels = [{sels_str}]")
-                lines.append("        for _sel in _sels:")
-                lines.append("            try:")
-                lines.append(f"                page.fill(_sel, {value})")
-                lines.append("                page.wait_for_timeout(200)")
-                lines.append("                break")
-                lines.append("            except Exception:")
-                lines.append("                continue")
+                if l0_5_expr:
+                    lines.append("        try:")
+                    lines.append(f"            {l0_5_expr}.fill({value})")
+                    lines.append("            page.wait_for_timeout(200)")
+                    lines.append("        except Exception:")
+                    lines.append(f"            _sels = [{sels_str}]")
+                    lines.append("            for _sel in _sels:")
+                    lines.append("                try:")
+                    lines.append(f"                    page.fill(_sel, {value})")
+                    lines.append("                    page.wait_for_timeout(200)")
+                    lines.append("                    break")
+                    lines.append("                except Exception:")
+                    lines.append("                    continue")
+                else:
+                    lines.append(f"        _sels = [{sels_str}]")
+                    lines.append("        for _sel in _sels:")
+                    lines.append("            try:")
+                    lines.append(f"                page.fill(_sel, {value})")
+                    lines.append("                page.wait_for_timeout(200)")
+                    lines.append("                break")
+                    lines.append("            except Exception:")
+                    lines.append("                continue")
             else:
                 fallback = self._fallback_selector(action)
                 lines.append("    except Exception:")
@@ -515,6 +570,7 @@ class PlaywrightCompiler:
                 return f"{indent}page.wait_for_timeout(3000)  # SPA navigation"
             return f"{indent}page.wait_for_timeout(800)  # wait for DOM render"
 
+        l0_5_expr = self._l0_5_role_expr(action.target)
         if pw_expr:
             lines.append("    try:")
             lines.extend(_gen_click_pw(pw_expr, "        "))
@@ -524,16 +580,34 @@ class PlaywrightCompiler:
             if css_sels:
                 sels_str = ", ".join(self._esc(s) for s in css_sels)
                 lines.append("    except Exception:")
-                lines.append(f"        _sels = [{sels_str}]")
-                lines.append("        for _sel in _sels:")
-                lines.append("            try:")
-                lines.extend(_gen_click_css("_sel", "                "))
-                wl2 = _gen_wait("                ")
-                if wl2:
-                    lines.append(wl2)
-                lines.append("                break")
-                lines.append("            except Exception:")
-                lines.append("                continue")
+                if l0_5_expr:
+                    lines.append("        try:")
+                    lines.extend(_gen_click_pw(l0_5_expr, "            "))
+                    wl_l0 = _gen_wait("            ")
+                    if wl_l0:
+                        lines.append(wl_l0)
+                    lines.append("        except Exception:")
+                    lines.append(f"            _sels = [{sels_str}]")
+                    lines.append("            for _sel in _sels:")
+                    lines.append("                try:")
+                    lines.extend(_gen_click_css("_sel", "                    "))
+                    wl2 = _gen_wait("                    ")
+                    if wl2:
+                        lines.append(wl2)
+                    lines.append("                    break")
+                    lines.append("                except Exception:")
+                    lines.append("                    continue")
+                else:
+                    lines.append(f"        _sels = [{sels_str}]")
+                    lines.append("        for _sel in _sels:")
+                    lines.append("            try:")
+                    lines.extend(_gen_click_css("_sel", "                "))
+                    wl2 = _gen_wait("                ")
+                    if wl2:
+                        lines.append(wl2)
+                    lines.append("                break")
+                    lines.append("            except Exception:")
+                    lines.append("                continue")
             else:
                 fallback_sel = self._fallback_selector(action)
                 lines.append("    except Exception:")
@@ -587,16 +661,21 @@ class PlaywrightCompiler:
         if pw_expr:
             locator_expr = pw_expr
         else:
-            css_sels = self._top_css_selectors(action.target)
-            if css_sels:
-                locator_expr = f"page.locator({self._esc(css_sels[0])})"
-            elif action.target and action.target.element_id:
-                locator_expr = f"page.locator({self._esc('#' + action.target.element_id)})"
-            elif action.target and action.target.text:
-                locator_expr = f"page.get_by_text({self._esc(action.target.text[:60])})"
+            # L0.5: fuzzy get_by_role with regex before CSS
+            l0_5_expr = self._l0_5_role_expr(action.target)
+            if l0_5_expr:
+                locator_expr = l0_5_expr
             else:
-                lines.append(f"    # SKIP: assert on unknown element — re-record with Shift+A")
-                return lines
+                css_sels = self._top_css_selectors(action.target)
+                if css_sels:
+                    locator_expr = f"page.locator({self._esc(css_sels[0])})"
+                elif action.target and action.target.element_id:
+                    locator_expr = f"page.locator({self._esc('#' + action.target.element_id)})"
+                elif action.target and action.target.text:
+                    locator_expr = f"page.get_by_text({self._esc(action.target.text[:60])})"
+                else:
+                    lines.append(f"    # SKIP: assert on unknown element — re-record with Shift+A")
+                    return lines
 
         # Extract raw locator string from pw_expr for bad-check
         raw = locator_expr.lower()
