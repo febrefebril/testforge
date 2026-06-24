@@ -449,9 +449,6 @@ def cmd_record(args):
         print(f"[TestForge] Sessao salva: recordings/{rid}/")
         browser.close()
 
-    # Auto-publish if configured
-    _auto_publish_recording(rid, rec_dir)
-
     # Post-recording: intent completeness check + validation
     validate_before_ready = getattr(args, 'validate_before_ready', False)
     pilot_mode = getattr(args, 'pilot_mode', False)
@@ -467,6 +464,9 @@ def cmd_record(args):
 
     if run_validation and completeness_report is not None:
         _run_post_recording_validation(rec_dir, rid, args, stc, completeness_report)
+
+    # Auto-publish after validation so git snapshot includes validated artifacts
+    _auto_publish_recording(rid, rec_dir)
 
 
 def _auto_learn(error_msg: str, solution: str, framework: str = "generic"):
