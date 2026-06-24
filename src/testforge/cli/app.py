@@ -412,27 +412,32 @@ def cmd_record(args):
         step_count = 0
         try:
             while True:
-                time.sleep(0.3)
-                recorder.flush_events()
-                result = recorder.handle_commands()
+                try:
+                    time.sleep(0.3)
+                    recorder.flush_events()
+                    result = recorder.handle_commands()
 
-                # Check for asserts via Python keyboard listener (fallback para sites que bloqueiam JS keydown)
-                _check_python_keyboard(page, recorder)
+                    # Check for asserts via Python keyboard listener (fallback para sites que bloqueiam JS keydown)
+                    _check_python_keyboard(page, recorder)
 
-                steps_file = str(_PROJECT_ROOT / "recordings" / rid / "steps.jsonl")
-                if os.path.exists(steps_file):
-                    with open(steps_file) as f:
-                        current = sum(1 for _ in f)
-                    if current > step_count:
-                        step_count = current
-                        print(f"[TestForge] ✓ {step_count} passos gravados")
+                    steps_file = str(_PROJECT_ROOT / "recordings" / rid / "steps.jsonl")
+                    if os.path.exists(steps_file):
+                        with open(steps_file) as f:
+                            current = sum(1 for _ in f)
+                        if current > step_count:
+                            step_count = current
+                            print(f"[TestForge] OK {step_count} passos gravados")
 
-                if result == "stop":
-                    print("[TestForge] [STOP] Finalizado (Shift+S)")
-                    break
-                elif result == "paused":
-                    sys.stdout.write("\r[TestForge] ⏸ Pausado... (Shift+P retoma)  ")
-                    sys.stdout.flush()
+                    if result == "stop":
+                        print("[TestForge] [STOP] Finalizado (Shift+S)")
+                        break
+                    elif result == "paused":
+                        sys.stdout.write("\r[TestForge] [PAUSED] Pausado... (Shift+P retoma)  ")
+                        sys.stdout.flush()
+                except KeyboardInterrupt:
+                    raise
+                except Exception as _loop_exc:
+                    logger.error("Recording loop error: %s", _loop_exc, exc_info=True)
         except KeyboardInterrupt:
             print("\n[TestForge] Interrompido")
 
@@ -1676,6 +1681,18 @@ def _setup_logging(verbose: bool = False):
 
 
 def main():
+    import io
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+    if hasattr(sys.stderr, "reconfigure"):
+        try:
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
     from testforge.updater import check_and_apply_update
     check_and_apply_update(_PROJECT_ROOT)
 
