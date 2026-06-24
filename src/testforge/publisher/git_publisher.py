@@ -427,9 +427,9 @@ class GitPublisher:
         Returns: {prefix}/{system}/{suite}/{test_case}/{recording_id}
         Falls back to {prefix}/uncategorized/{recording_id} if fields missing.
         """
-        system = metadata.get("system", "").strip()
-        suite = metadata.get("suite", "").strip()
-        test_case = metadata.get("test_case", "").strip()
+        system = (metadata.get("system") or "").strip()
+        suite = (metadata.get("suite") or "").strip()
+        test_case = (metadata.get("test_case") or "").strip()
         if system and suite:
             parts = [self._path_prefix, system, suite]
             if test_case and test_case != recording_id:

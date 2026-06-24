@@ -380,6 +380,10 @@ def cmd_record(args):
         if _system or _suite:
             _ctx = " / ".join(filter(None, [_system, _suite, _test_case_arg or rid]))
             print(f"  Contexto: {_ctx}")
+        else:
+            print(f"  AVISO: --system e --suite nao informados.")
+            print(f"    A gravacao sera publicada em recordings/uncategorized/{rid}")
+            print(f"    Use: testforge record <url> --system SISTEMA --suite SUITE")
         print(f"  Viewport: {'1280x720 (headless)' if args.headless else 'janela real (headed)'}")
         print(f"  Shift+P=pausar | Shift+S=parar | Shift+A=assert")
         print()
@@ -1655,6 +1659,24 @@ def cmd_send(args):
     if not os.path.isdir(rec_dir):
         print(f"[TestForge] Gravacao nao encontrada: {rec_dir}")
         return
+
+    # Apply --system/--suite/--test-case overrides from args or config defaults
+    _override_system = getattr(args, 'system', None) or ""
+    _override_suite = getattr(args, 'suite', None) or ""
+    _override_test_case = getattr(args, 'test_case', None) or ""
+    if _override_system or _override_suite or _override_test_case:
+        _meta_path = os.path.join(rec_dir, "recording_metadata.json")
+        if os.path.exists(_meta_path):
+            with open(_meta_path) as _f:
+                _meta = json.load(_f)
+            if _override_system:
+                _meta["system"] = _override_system
+            if _override_suite:
+                _meta["suite"] = _override_suite
+            if _override_test_case:
+                _meta["test_case"] = _override_test_case
+            with open(_meta_path, "w", encoding="utf-8") as _f:
+                json.dump(_meta, _f, indent=2, default=str)
 
     print(f"[TestForge] Enviando {rid} (modo {mode})...")
     result = publisher.publish(rid, str(_PROJECT_ROOT / "recordings"), str(_PROJECT_ROOT / "semantic_tests"))
