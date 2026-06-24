@@ -73,13 +73,14 @@ class TestListenerLifecycle:
         ctrl.stop()
         page.remove_listener.assert_any_call("response", ctrl._on_response)
 
-    def test_second_start_registers_exactly_two_listeners(self):
+    def test_second_start_registers_exactly_three_listeners(self):
         ctrl, page = self._make_ctrl()
         self._start(ctrl, "REC-001")
         ctrl.stop()
         page.on.reset_mock()
         self._start(ctrl, "REC-002")
-        assert page.on.call_count == 2
+        # request + response + framenavigated
+        assert page.on.call_count == 3
 
     def test_stop_with_remove_listener_exception_does_not_raise(self):
         ctrl, page = self._make_ctrl()

@@ -1,0 +1,9 @@
+# TestForge Auto-Update Configuration
+# Versionado no repo — configure uma vez, funciona para toda a equipe.
+# Em emergência: altere 'branch' para um hotfix branch e faça push.
+# O gravador se atualiza automaticamente na próxima execução.
+
+enabled: true
+remote: origin
+branch: main
+quiet: false
