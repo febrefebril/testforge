@@ -908,6 +908,74 @@ class TestCompoundSelectors:
         assert any(c.score >= 0.88 for c in compounds), f"Scores too low: {[c.score for c in compounds]}"
 
 
+class TestFingerprint:
+    """Tests for multi-attribute fingerprint in SemanticTarget."""
+
+    def test_fingerprint_populated_in_build_target(self):
+        """_build_target returns SemanticTarget with fingerprint dict."""
+        normalizer = RecordingNormalizer()
+        target = normalizer._build_target({
+            "tag": "input", "placeholder": "R$0,00",
+            "accessible_name": "Renda mensal *", "name": "renda",
+            "role": "textbox", "label": "Renda mensal",
+        })
+        assert hasattr(target, "fingerprint")
+        assert isinstance(target.fingerprint, dict)
+        assert len(target.fingerprint) > 0
+
+    def test_fingerprint_contains_key_attributes(self):
+        """Fingerprint includes tag, role, accessible_name, placeholder."""
+        normalizer = RecordingNormalizer()
+        target = normalizer._build_target({
+            "tag": "input", "role": "textbox",
+            "accessible_name": "Renda mensal *",
+            "placeholder": "R$0,00", "name": "renda",
+        })
+        fp = target.fingerprint
+        assert fp.get("tag") == "input"
+        assert fp.get("role") == "textbox"
+        assert fp.get("accessible_name") == "Renda mensal *"
+        assert fp.get("placeholder") == "R$0,00"
+        assert fp.get("name") == "renda"
+
+    def test_fingerprint_empty_values_filtered(self):
+        """Empty values are filtered from fingerprint to keep it compact."""
+        normalizer = RecordingNormalizer()
+        target = normalizer._build_target({
+            "tag": "input", "placeholder": "R$0,00",
+        })
+        fp = target.fingerprint
+        assert "tag" in fp
+        assert "placeholder" in fp
+        # role, accessible_name, label, test_id, name should be absent (empty)
+        for key in ("role", "accessible_name", "label", "test_id", "name"):
+            assert key not in fp, f"Key '{key}' should be filtered out"
+
+    def test_fingerprint_in_to_dict(self):
+        """Fingerprint is serialized in SemanticTestCase.to_dict()."""
+        tc = SemanticTestCase(test_id="ST-FP", source_recording_id="REC-FP",
+                              application="test", base_url="http://localhost")
+        target = SemanticTarget(role="button", accessible_name="Submit",
+                                fingerprint={"tag": "button", "role": "button"})
+        target.candidates = [LocatorCandidate("role", "role=button", 0.95)]
+        tc.steps.append(SemanticAction(action="click", target=target))
+        d = tc.to_dict()
+        steps = d["semantic_test_case"]["steps"]
+        assert len(steps) == 1
+        assert "fingerprint" in steps[0]["target"]
+        assert steps[0]["target"]["fingerprint"]["tag"] == "button"
+
+    def test_fingerprint_nth_child_preserved(self):
+        """Fingerprint includes nth_child when > 0."""
+        normalizer = RecordingNormalizer()
+        target = normalizer._build_target({
+            "tag": "button", "text": "OK",
+            "nth_child": 3,
+        })
+        fp = target.fingerprint
+        assert fp.get("nth_child") == 3
+
+
 class TestSemanticStepsJsonl:
     """Tests for semantic_steps.jsonl generation alongside compiled script."""
 
