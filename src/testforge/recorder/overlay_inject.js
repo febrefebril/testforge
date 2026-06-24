@@ -382,6 +382,12 @@
       try { sessionStorage.setItem('__tfPendingSubmit', JSON.stringify(pending)); } catch(_e) {}
       _captureFinalState('form_submit');
       _pushEvent('submit', el);
+      var _scS = document.getElementById('tf-step-count');
+      if (_scS) {
+        var _nS = parseInt(_scS.textContent || 0) + 1;
+        _scS.textContent = _nS;
+        try { sessionStorage.setItem('__tfStepCount', _nS); } catch(_e) {}
+      }
       // Capture form field values at submit time
       try {
         var formInputs = (form || document).querySelectorAll('input, textarea, select');
@@ -401,6 +407,12 @@
       return;
     }
     _pushEvent('click', el);
+    var _sc = document.getElementById('tf-step-count');
+    if (_sc) {
+      var _n = parseInt(_sc.textContent || 0) + 1;
+      _sc.textContent = _n;
+      try { sessionStorage.setItem('__tfStepCount', _n); } catch(_e) {}
+    }
   }, true);
 
   // ---- Fill capture (input / change) ----
