@@ -266,23 +266,22 @@ class RecorderController:
 
     def _capture_snapshots(self, event: RawRecordedEvent):
         eid = event.event_id
-        # Screenshot only in full evidence mode (avoids flick, reduces disk I/O)
         if self._evidence_level == "full":
             try:
                 data = self._page.screenshot(type="png", full_page=False)
                 event.screenshot_path = self._store.save_screenshot(eid, data)
             except Exception:
                 pass
-        # DOM snapshot always (needed for normalizer / locator scoring)
-        try:
-            self._page.wait_for_load_state("domcontentloaded", timeout=3000)
-        except Exception:
-            pass
-        try:
-            dom = self._page.content()
-            event.dom_snapshot_path = self._store.save_dom(eid, dom)
-        except Exception:
-            pass
+            # DOM snapshot only in full mode — not consumed by normalizer/validation
+            try:
+                self._page.wait_for_load_state("domcontentloaded", timeout=2000)
+            except Exception:
+                pass
+            try:
+                dom = self._page.content()
+                event.dom_snapshot_path = self._store.save_dom(eid, dom)
+            except Exception:
+                pass
 
     def _on_request(self, request: Request):
         post_data = None

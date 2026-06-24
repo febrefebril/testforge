@@ -897,7 +897,7 @@ def cmd_run(args):
                     step_report.skip_reason = step.skip_reason
                     step_report.success = True
                     step_report.error_message = ""
-                    print(f"  - Step {step_num}: {action} skipped — {step.skip_reason}")
+                    print(f"  - Passo {step_num}: {action} ignorado — {step.skip_reason}")
                     run_report.add_step(step_report)
                     continue
 
@@ -919,9 +919,9 @@ def cmd_run(args):
                         if step_url and step_url != current_url:
                             page.goto(step_url)
                             page.wait_for_timeout(500)
-                            print(f"  ✓ Step {step_num}: navigation → {step_url}")
+                            print(f"  OK Passo {step_num}: navegacao → {step_url}")
                         else:
-                            print(f"  ✓ Step {step_num}: navigation (already at {current_url})")
+                            print(f"  OK Passo {step_num}: navegacao (ja em {current_url})")
 
                     elif action == "fill" and step.target and (step.target.tag or "").lower() == "select":
                         # Select element: use select_option
@@ -929,32 +929,32 @@ def cmd_run(args):
                             fallback = FallbackRunner(page)
                             ok = fallback.try_fill(candidates, value)
                             if ok:
-                                print(f"  ✓ Step {step_num}: select {value[:20]}")
+                                print(f"  OK Passo {step_num}: selecao {value[:20]}")
                             else:
-                                raise Exception(f"select step {step_num} falhou — candidates: {[c['selector'][:40] for c in candidates[:3]]}")
+                                raise Exception(f"selecao passo {step_num} falhou — candidates: {[c['selector'][:40] for c in candidates[:3]]}")
                         elif sel:
                             page.select_option(sel, value, timeout=5000)
                             page.wait_for_timeout(200)
-                            print(f"  ✓ Step {step_num}: select {value[:20]}")
+                            print(f"  OK Passo {step_num}: selecao {value[:20]}")
                         else:
                             step_report.skip_reason = "sem seletor"
-                            print(f"  - Step {step_num}: select skip (sem seletor)")
+                            print(f"  - Passo {step_num}: selecao ignorada (sem seletor)")
 
                     elif action == "fill":
                         if candidates:
                             fallback = FallbackRunner(page)
                             ok = fallback.try_fill(candidates, value)
                             if ok:
-                                print(f"  ✓ Step {step_num}: fill {value[:20]}")
+                                print(f"  OK Passo {step_num}: preenchimento {value[:20]}")
                             else:
-                                raise Exception(f"fill step {step_num} falhou")
+                                raise Exception(f"preenchimento passo {step_num} falhou")
                         elif sel:
                             page.fill(sel, value, timeout=5000)
                             page.wait_for_timeout(200)
-                            print(f"  ✓ Step {step_num}: fill {value[:20]}")
+                            print(f"  OK Passo {step_num}: preenchimento {value[:20]}")
                         else:
                             step_report.skip_reason = "sem seletor"
-                            print(f"  - Step {step_num}: fill skip (sem seletor)")
+                            print(f"  - Passo {step_num}: preenchimento ignorado (sem seletor)")
 
                     elif action == "click":
                         # Data-driven fill: if clicking an input and we have a data value, fill it first
@@ -1012,17 +1012,17 @@ def cmd_run(args):
                                 page, candidates, step, step_num, is_submit, causes_navigation
                             )
                             if ok:
-                                print(f"  ✓ Step {step_num}: click (via {used_sel[:50]})")
+                                print(f"  OK Passo {step_num}: clique (via {used_sel[:50]})")
                             else:
                                 page.wait_for_timeout(1500)
                                 ok, used_sel = _click_with_validation(
                                     page, candidates, step, step_num, is_submit, causes_navigation
                                 )
                                 if ok:
-                                    print(f"  ✓ Step {step_num}: click (after wait, via {used_sel[:50]})")
+                                    print(f"  OK Passo {step_num}: clique (apos espera, via {used_sel[:50]})")
                                 else:
                                     tried = ', '.join([c['selector'][:40] for c in candidates[:3]])
-                                    raise Exception(f"click step {step_num} falhou — all candidates exhausted: [{tried}]")
+                                    raise Exception(f"clique passo {step_num} falhou — todos candidatos esgotados: [{tried}]")
                         elif sel:
                             url_before = page.url
                             try:
@@ -1033,9 +1033,9 @@ def cmd_run(args):
                                     page.click(sel, timeout=5000)
                                 valid, reason = _validate_click(page, url_before, step, step_num)
                                 if not valid:
-                                    raise Exception(f"validation failed: {reason}")
+                                    raise Exception(f"validacao falhou: {reason}")
                                 _wait_for_consequence(page, step, step_num, causes_navigation)
-                                print(f"  ✓ Step {step_num}: click (url={page.url[:60]})")
+                                print(f"  OK Passo {step_num}: clique (url={page.url[:60]})")
                             except Exception:
                                 page.wait_for_timeout(1000)
                                 url_before2 = page.url
@@ -1047,11 +1047,11 @@ def cmd_run(args):
                                         page.click(sel, timeout=5000)
                                     valid2, reason2 = _validate_click(page, url_before2, step, step_num)
                                     if not valid2:
-                                        raise Exception(f"retry validation failed: {reason2}")
+                                        raise Exception(f"validacao (retry) falhou: {reason2}")
                                     _wait_for_consequence(page, step, step_num, causes_navigation)
-                                    print(f"  ✓ Step {step_num}: click (after wait)")
+                                    print(f"  OK Passo {step_num}: clique (apos espera)")
                                 except Exception as e2:
-                                    raise Exception(f"click step {step_num} falhou — selector '{sel[:80]}' not found") from e2
+                                    raise Exception(f"clique passo {step_num} falhou — seletor '{sel[:80]}' nao encontrado") from e2
 
                     elif action == "assert":
                         assert_type = step.context.get("assert_type", "textual") if step.context else "textual"
@@ -1062,14 +1062,14 @@ def cmd_run(args):
                             step_report.assert_expected = expected
                             step_report.assert_actual = (text or "")
                             if expected.lower() in (text or "").lower():
-                                print(f"  ✓ Step {step_num}: assert \"{expected[:30]}\"")
+                                print(f"  OK Passo {step_num}: verificacao \"{expected[:30]}\"")
                                 step_report.success = True
                             else:
-                                print(f"  ✗ Step {step_num}: assert FAILED — got \"{(text or '')[:30]}\"")
-                                step_report.error_message = f"assert FAILED: expected '{expected}', got '{(text or '')[:100]}'"
+                                print(f"  FALHOU Passo {step_num}: verificacao FALHOU — obtido \"{(text or '')[:30]}\"")
+                                step_report.error_message = f"verificacao FALHOU: esperado '{expected}', obtido '{(text or '')[:100]}'"
                                 failed_steps += 1
                         else:
-                            print(f"  - Step {step_num}: assert skip (sem seletor/expected)")
+                            print(f"  - Passo {step_num}: verificacao ignorada (sem seletor/expected)")
                             step_report.skip_reason = "sem seletor/expected"
                             step_report.success = True
 
@@ -1084,13 +1084,13 @@ def cmd_run(args):
                     step_report.error_message = str(e)
                     # Include selector info for better classification
                     if sel:
-                        error_msg = f"Step {step_num}: {action} failed — selector '{sel[:80]}' not found. {error_msg}"
+                        error_msg = f"Passo {step_num}: {action} falhou — seletor '{sel[:80]}' nao encontrado. {error_msg}"
                     elif candidates:
                         tried = ', '.join([c['selector'][:40] for c in candidates[:3]])
-                        error_msg = f"Step {step_num}: {action} failed — candidates [{tried}] all failed. {error_msg}"
+                        error_msg = f"Passo {step_num}: {action} falhou — candidatos [{tried}] todos falharam. {error_msg}"
                     else:
-                        error_msg = f"Step {step_num}: {action} failed — no selector available for target. {error_msg}"
-                    print(f"  ✗ Step {step_num}: {action} FAILED — {error_msg[:100]}")
+                        error_msg = f"Passo {step_num}: {action} falhou — sem seletor disponivel. {error_msg}"
+                    print(f"  FALHOU Passo {step_num}: {action} FALHOU — {error_msg[:100]}")
 
                     # BUG-011: per-step metric — falha detectada
                     metrics.record_step(
