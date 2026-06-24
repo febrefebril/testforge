@@ -815,7 +815,7 @@ def test_run_saves_output_file(tmp_path):
 - [x] Bug 1 — try/except em _persist_step (recorder_controller.py) — commit d027eef
 - [x] Bug 7 — test adicionado; investigação confirmou comportamento já correto — commit 7ea1376
 - [x] Feature 10 — save output --save-output flag (app.py) — commit fb270af
-- [ ] Bug 8 — verificar suite após todos os fixes — em andamento
+- [ ] Bug 8 — verificar suite após todos os fixes — análise completa, ver seção "TEST FAILURES ANALYSIS" abaixo
 - [x] Criar commit por bug com teste incluído
 - [x] Push para origin refactor/recorder-playwright — 4f2970f..fb270af
 - [x] Bug 11 — overlay DOM mutation fecha dropdown de <select> (overlay_inject.js) — commit 2b151d5
@@ -1051,3 +1051,142 @@ Bug 11 → Bug 12 → Bug 14 → Bug 13 → Bug 16 → Bug 15
 **Rationale:** 11 resolve a experiência de gravação (bloqueador para usuário gravar selects); 12 gera tipo correto no overlay → alimenta 14 e 13; 13 corrige pilot runner; 16 limpa ruído (depende 11 resolvido); 15 investigação isolada.
 
 **Prioridade crítica:** 11 + 12 são bloqueadores de usabilidade — sem eles o usuário não consegue gravar aplicações com `<select>`.
+
+---
+
+## TEST FAILURES ANALYSIS — 2026-06-24
+
+**Branch:** refactor/recorder-playwright  
+**Suite:** 54 failed, 1047 passed, 24 errors (pytest tests/ --ignore=test_browser.py)  
+**Pre-existing:** confirmed same count on baseline commit 7257120
+
+### Categoria A — Infra/Browser (NÃO FIXAR — precisam fake bank + display)
+
+~30 failures — todos têm `[chromium]` suffix:
+
+| Arquivo | Count | Motivo |
+|---------|-------|--------|
+| `test_fake_bank_flow.py` | 1 | fake bank server não está rodando |
+| `test_healing_e2e.py` | 18 | idem |
+| `test_mutations.py` | 5 | idem |
+| `test_recorder_e2e.py` | 1 | idem |
+| `test_recorder_submit.py::TestClickVsSubmitIntegration` | 24 ERRORs | idem |
+
+Rodar com: `cd synthetic_lab/fake-react-bank-app && python -m http.server 8765 &` primeiro.
+
+---
+
+### Categoria B — `_tf_` prefix mismatch (23 failures — FIXAR)
+
+**Root cause:** overlay extraído de string Python → `overlay_inject.js` em commit `1c49cae`. Funções internas ao IIFE perderam prefixo público `_tf_`. Testes foram escritos antes e chamam nomes antigos.
+
+**Afetados:**
+- `test_recorder_submit.py::TestIsSubmitTriggerJS` (16 failures) — `page.evaluate("() => _tf_isSubmitTrigger(...)")`
+- `test_sprint3_field_snapshots.py::TestOverlayJS` (7 failures) — `assert "_tf_snapshotFields" in js`
+
+**Funções chamadas nos testes que não existem como globais:**
+
+| Nome antigo (testes) | Nome atual (overlay_inject.js) | Linha |
+|---------------------|-------------------------------|-------|
+| `_tf_isSubmitTrigger` | `_isSubmitTrigger` | 105 |
+| `_tf_extractTarget` | `_extractTarget` | 55 |
+| `_tf_showOverlay` | `_showOverlay` | 556 |
+| `_tf_snapshotFields` | `_snapshotFields` | 137 |
+| `_tf_captureFinalState` | `_captureFinalState` | 203 |
+
+**Fix:** adicionar aliases `window._tf_*` no final do IIFE em `overlay_inject.js`:
+
+```js
+// Public aliases for testing and external access
+window._tf_isSubmitTrigger  = _isSubmitTrigger;
+window._tf_extractTarget    = _extractTarget;
+window._tf_showOverlay      = _showOverlay;
+window._tf_snapshotFields   = _snapshotFields;
+window._tf_captureFinalState = _captureFinalState;
+```
+
+Adicionar logo antes do `})();` final (linha ~730).
+
+**Para sprint3 string checks** — os testes verificam que as strings literais `"_tf_snapshotFields"` e `"_tf_captureFinalState"` aparecem no JS. Com os aliases adicionados, essas strings estarão presentes e os testes passarão.
+
+**Calls no JS que devem aparecer no source após fix:**
+- `_tf_captureFinalState('user_stop')` → não aparece como string literal, mas `_captureFinalState('user_stop')` aparece. Testes checam:
+  - `"_tf_captureFinalState('user_stop')" in js` → FALHA
+  - `"_tf_captureFinalState('form_submit')" in js` → FALHA
+  - `"_tf_captureFinalState('beforeunload')" in js` → FALHA
+
+Para esses (call-site checks), **atualizar os testes** para checar `_captureFinalState(...)` sem prefixo:
+```python
+# test_sprint3_field_snapshots.py linhas 557-569
+assert "_captureFinalState('user_stop')" in js or "_captureFinalState(\"user_stop\")" in js
+assert "_captureFinalState('form_submit')" in js or "_captureFinalState(\"form_submit\")" in js
+assert "_captureFinalState('beforeunload')" in js or "_captureFinalState(\"beforeunload\")" in js
+```
+
+---
+
+### Categoria C — Arquitetura: batching (1 failure — FIXAR)
+
+**Arquivo:** `tests/test_recorder_stability.py:124` — `test_js_commands_processed`
+
+**Root cause:** commit `359fedc` moveu `page.evaluate` de `wait_for_command` → `flush_events`. Teste mockava `page.evaluate=["STOP"]` esperando que `handle_commands()` chamasse evaluate diretamente, mas agora a cadeia é:
+
+```
+flush_events() → page.evaluate(batch_js) → popula _command_queue
+handle_commands() → wait_for_command() → drena _command_queue
+```
+
+**Fix:** atualizar o teste:
+```python
+def test_js_commands_processed(self):
+    page = _make_page()
+    page.evaluate.return_value = {
+        "events": [], "steps": [],
+        "commands": ["STOP"],
+        "fieldSnapshots": [], "valueMutations": [],
+    }
+    ctrl = RecorderController(page)
+    ctrl.flush_events()  # popula _command_queue via JS batch
+    assert ctrl.handle_commands() == "stop"
+```
+
+**Arquivo:** `tests/test_recorder_stability.py` linha ~124
+
+---
+
+### Categoria D — Comportamento alterado (2 failures — INVESTIGAR)
+
+**D1:** `test_recorder_stability.py::TestEvidenceLevel::test_both_levels_capture_dom` (linha 280)
+
+Teste: `ctrl._capture_snapshots(event)` → `ctrl._store.save_dom.assert_called_once()`
+Falha: `save_dom` chamado 0 vezes
+
+`_capture_snapshots` em `recorder_controller.py:269` só chama `save_dom` quando `self._evidence_level == "full"`. Teste espera que ambos os níveis ("light" e "full") chamem `save_dom`. O comportamento mudou — agora "light" não captura DOM.
+
+**Fix opções:**
+- A) Corrigir teste para esperar `save_dom` só em `"full"` mode
+- B) Restaurar `save_dom` em modo `"light"` (regressão?)
+
+Checar intenção original: `"light"` deveria capturar DOM? Se não, fix A.
+
+**D2:** `test_sprint5_readiness_gate.py::TestCT_AUTO_5_1::test_zero_steps_is_valid` (linha 197)
+
+Teste: `assert report.verdict != ReadinessVerdict.PASS` para recording com 0 steps
+Falha: gate retorna PASS para 0 steps
+
+Gate mudou — 0 steps agora é PASS (talvez intencionalmente — recording vazia não é falha fatal).
+
+**Fix opções:**
+- A) Atualizar teste para refletir novo comportamento (PASS é aceitável para 0 steps)
+- B) Restaurar falha em 0 steps no gate
+
+---
+
+### Ordem de execução
+
+```
+B (overlay aliases + sprint3 string fixes) → C (test update) → D (investigar + fix)
+```
+
+**Estimativa:** B = 15min, C = 5min, D = 10min
+
