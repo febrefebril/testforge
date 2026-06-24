@@ -224,29 +224,42 @@ class RecorderController:
         """Persist a user-intended step (click, fill, or assert)."""
         self._step_counter += 1
         path = os.path.join(self._store._session_dir, "steps.jsonl")
-        step = {
-            "step_id": f"step_{self._step_counter:04d}",
-            "timestamp": data.get("timestamp", datetime.now(timezone.utc).isoformat()),
-            "action": data.get("action"),
-            "selector": data.get("selector", ""),
-            "tag_name": data.get("tagName", ""),
-            "text": data.get("text", ""),
-            "value": data.get("value", ""),
-            "url": self._page.url,
-            "page_title": self._page.title(),
-            "assert_type": data.get("assert_type", ""),
-            "assert_state": data.get("assert_state", ""),
-            "expected_value": data.get("expected_value", ""),
-            "attrs": data.get("attrs", {}),
-            "fallbacks": data.get("fallbacks", []),
-            "element_id": data.get("element_id", ""),
-            "aria_label": data.get("aria_label", ""),
-            "role": data.get("role", ""),
-            "css_path": data.get("css_path", ""),
-            "accessible_name": data.get("accessible_name", ""),
-        }
-        with open(path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(step, default=str) + "\n")
+        try:
+            try:
+                page_title = self._page.title()
+            except Exception:
+                page_title = ""
+            try:
+                page_url = self._page.url
+            except Exception:
+                page_url = ""
+            step = {
+                "step_id": f"step_{self._step_counter:04d}",
+                "timestamp": data.get("timestamp", datetime.now(timezone.utc).isoformat()),
+                "action": data.get("action"),
+                "selector": data.get("selector", ""),
+                "tag_name": data.get("tagName", ""),
+                "text": data.get("text", ""),
+                "value": data.get("value", ""),
+                "url": page_url,
+                "page_title": page_title,
+                "assert_type": data.get("assert_type", ""),
+                "assert_state": data.get("assert_state", ""),
+                "expected_value": data.get("expected_value", ""),
+                "attrs": data.get("attrs", {}),
+                "fallbacks": data.get("fallbacks", []),
+                "element_id": data.get("element_id", ""),
+                "aria_label": data.get("aria_label", ""),
+                "role": data.get("role", ""),
+                "css_path": data.get("css_path", ""),
+                "accessible_name": data.get("accessible_name", ""),
+            }
+            with open(path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(step, default=str) + "\n")
+        except Exception as exc:
+            logger.error("[TestForge] Falha ao salvar step: %s", exc)
+            import sys
+            print(f"[TestForge] AVISO: step nao salvo — {exc}", file=sys.stderr)
 
     def _capture_snapshots(self, event: RawRecordedEvent):
         eid = event.event_id
