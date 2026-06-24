@@ -42,6 +42,13 @@ def _sanitize_name(name: str) -> str:
     return sanitized or "unnamed"
 
 
+def _make_context_kwargs(headless: bool) -> dict:
+    """Return browser.new_context kwargs: fixed viewport in headless, no_viewport=True in headed."""
+    if headless:
+        return {"viewport": {"width": 1280, "height": 720}}
+    return {"no_viewport": True}
+
+
 def _validate_and_warn_url(url: str) -> bool:
     """Valida URL e imprime avisos. Retorna True se houver avisos críticos."""
     if not url:
@@ -355,9 +362,7 @@ def cmd_record(args):
         _validate_and_warn_url(args.url)
     with sync_playwright() as pw:
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
-        # Only force viewport in headless mode — headed mode respects user's window size
-        viewport = {"width": 1280, "height": 720} if args.headless else None
-        context = browser.new_context(viewport=viewport)
+        context = browser.new_context(**_make_context_kwargs(args.headless))
         page = context.new_page()
         recorder = RecorderController(page)
 
@@ -767,8 +772,8 @@ def cmd_run(args):
             print(f"  Data: {len(_data_values)} valores carregados de {data_file}")
         with sync_playwright() as pw:
             browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
-            _vp = {"width": 1280, "height": 720} if args.headless else None
-            page = browser.new_context(viewport=_vp).new_page()
+            _vp_kw = _make_context_kwargs(args.headless)
+            page = browser.new_context(**_vp_kw).new_page()
 
             # Navegar
             page.goto(base_url)
@@ -1282,8 +1287,8 @@ def _try_heal_inline(base_url: str, headless: bool, error_text: str,
     try:
         with sync_playwright() as pw:
             browser = launch_browser(pw, browser_type, headless=headless)
-            _vp = {"width": 1280, "height": 720} if headless else None
-            page = browser.new_context(viewport=_vp).new_page()
+            _vp_kw = _make_context_kwargs(headless)
+            page = browser.new_context(**_vp_kw).new_page()
             page.goto(base_url)
             page.wait_for_timeout(500)
 
@@ -1332,8 +1337,8 @@ def cmd_pipeline(args):
 
     with sync_playwright() as pw:
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
-        _vp = {"width": 1280, "height": 720} if args.headless else None
-        page = browser.new_context(viewport=_vp).new_page()
+        _vp_kw = _make_context_kwargs(args.headless)
+        page = browser.new_context(**_vp_kw).new_page()
         recorder = RecorderController(page)
 
         recorder.start(recording_id=rid, application="pipeline", base_url=args.url)
@@ -1375,8 +1380,8 @@ def cmd_pipeline(args):
 
         # Step 3: Run
         print("\n[PLAY] Fase 3: Execucao + Healing")
-        _vp2 = {"width": 1280, "height": 720} if args.headless else None
-        page2 = browser.new_context(viewport=_vp2).new_page()
+        _vp_kw2 = _make_context_kwargs(args.headless)
+        page2 = browser.new_context(**_vp_kw2).new_page()
 
         page2.goto(args.url)
         page2.wait_for_timeout(300)
@@ -1465,8 +1470,8 @@ def cmd_demo_heal(args):
 
     with sync_playwright() as pw:
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
-        _vp = {"width": 1280, "height": 720} if args.headless else None
-        page = browser.new_context(viewport=_vp).new_page()
+        _vp_kw = _make_context_kwargs(args.headless)
+        page = browser.new_context(**_vp_kw).new_page()
         recorder = RecorderController(page)
 
         # Fase 1: Gravar fluxo normal
@@ -1505,8 +1510,8 @@ def cmd_demo_heal(args):
     # Abrir pagina com mutacao
     with sync_playwright() as pw:
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
-        _vp = {"width": 1280, "height": 720} if args.headless else None
-        page = browser.new_context(viewport=_vp).new_page()
+        _vp_kw = _make_context_kwargs(args.headless)
+        page = browser.new_context(**_vp_kw).new_page()
 
         mutation_url = "http://localhost:8765/?mutation=change_id"
         page.goto(mutation_url)
