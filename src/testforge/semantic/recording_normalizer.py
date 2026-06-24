@@ -4,6 +4,7 @@ Converte RawRecordedSession (JSONL) em SemanticTestCase (YAML).
 Gera múltiplos candidatos de localizador ordenados por score determinístico.
 """
 import json
+import logging
 import os
 import re as _re
 from datetime import datetime
@@ -12,6 +13,8 @@ from urllib.parse import urlparse, urlunparse
 
 from .model import LocatorCandidate, SemanticAction, SemanticTarget, SemanticTestCase
 from testforge.handlers import HANDLERS
+
+logger = logging.getLogger(__name__)
 
 
 def _is_hash_class(cls: str) -> bool:
@@ -229,15 +232,32 @@ class RecordingNormalizer:
         with open(events_path) as f:
             raw_events = [json.loads(line) for line in f if line.strip()]
 
+        logger.info("Normalizing recording_dir=%s raw_events=%d",
+                     os.path.basename(recording_dir), len(raw_events))
+        # Log per-type breakdown before dedup
+        type_counts = {}
+        for ev in raw_events:
+            et = ev.get("type", "unknown")
+            type_counts[et] = type_counts.get(et, 0) + 1
+        logger.debug("Raw event types: %s", type_counts)
+
         # Run dedup BEFORE compaction: removes periodic DOM snapshot cycles
         # (e.g. radio button spam) so consecutive fills on the same field
         # become adjacent and get properly collapsed.
+        pre_dedup = len(raw_events)
         raw_events = self._remove_snapshot_duplicates(raw_events)
+        after_dedup = len(raw_events)
+        logger.debug("After _remove_snapshot_duplicates: %d → %d (-%d)",
+                      pre_dedup, after_dedup, pre_dedup - after_dedup)
         # Collapse individual-key keypress sequences before fill compaction.
         # mat-autocomplete may emit one keypress per character instead of
         # accumulated fill events — rebuild the full typed string first.
         raw_events = self._compact_keypress_sequences(raw_events)
         raw_events = self._compact_fill_events(raw_events)
+        after_compact = len(raw_events)
+        logger.info("After compaction: %d events (reduced %d%%)",
+                     after_compact,
+                     int((1 - after_compact / max(pre_dedup, 1)) * 100))
 
         recording_id = os.path.basename(recording_dir)
         stc = SemanticTestCase(
@@ -247,18 +267,29 @@ class RecordingNormalizer:
             base_url=base_url,
         )
 
+        converted = 0
         for raw in raw_events:
-            action = self._convert_event(raw)
-            if action:
-                stc.steps.append(action)
+            try:
+                action = self._convert_event(raw)
+                if action:
+                    stc.steps.append(action)
+                    converted += 1
+            except Exception as exc:
+                logger.error("Failed to convert event id=%s: %s",
+                              raw.get("event_id", "?"), exc, exc_info=True)
+
+        logger.debug("Converted %d/%d raw events to semantic actions", converted, after_compact)
 
         # Carrega steps (asserts) se existirem
         steps_path = os.path.join(recording_dir, "steps.jsonl")
         if os.path.exists(steps_path):
             with open(steps_path) as f:
+                steps_count = 0
                 for line in f:
                     step = json.loads(line)
                     stc.steps.append(self._convert_step(step))
+                    steps_count += 1
+                logger.debug("Loaded %d steps (asserts) from steps.jsonl", steps_count)
 
         # Post-process: detect and mark skipped steps
         # Detect overlays FIRST — deduplication excludes overlay steps
@@ -276,6 +307,16 @@ class RecordingNormalizer:
             handler.normalize(stc.steps)
         self._eliminate_prefill_clicks(stc.steps)
         self._audit_blind_spots(stc)
+
+        # Log final step breakdown
+        action_types = {}
+        skipped = 0
+        for s in stc.steps:
+            action_types[s.action] = action_types.get(s.action, 0) + 1
+            if s.skip_reason:
+                skipped += 1
+        logger.info("Normalization complete: %d steps actions=%s skipped=%d",
+                     len(stc.steps), action_types, skipped)
         return stc
 
     def _eliminate_prefill_clicks(self, steps: list) -> None:

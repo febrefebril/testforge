@@ -3,6 +3,7 @@
 Le SemanticTestCase e gera script Python executavel com fallback loop.
 Suporte a data-driven testing: extrai valores para JSON externo.
 """
+import logging
 import os
 import re
 import textwrap
@@ -11,6 +12,8 @@ from typing import Optional
 
 from .model import SemanticTestCase, SemanticAction, FieldValueMap
 from .data_extractor import _best_field_name
+
+logger = logging.getLogger(__name__)
 
 
 class PlaywrightCompiler:
@@ -43,15 +46,25 @@ class PlaywrightCompiler:
         filename = f"test_{test_name}.py"
         path = os.path.join(output_dir, filename)
 
-        code = self._generate(
-            test_case,
-            data_file=data_file,
-            field_values=field_values,
-            data_file_dict=data_file_dict,
-        )
+        step_count = len(test_case.steps)
+        logger.info("Compiling test_id=%s steps=%d output=%s",
+                     test_case.test_id, step_count, path)
+        try:
+            code = self._generate(
+                test_case,
+                data_file=data_file,
+                field_values=field_values,
+                data_file_dict=data_file_dict,
+            )
+        except Exception as exc:
+            logger.error("Compilation FAILED test_id=%s: %s",
+                          test_case.test_id, exc, exc_info=True)
+            raise
+        code_len = len(code)
         with open(path, "w") as f:
             f.write(code)
-
+        logger.info("Compilation OK test_id=%s lines=%d bytes=%d",
+                     test_case.test_id, code.count('\n'), code_len)
         return path
 
     def compile_semantic_steps(

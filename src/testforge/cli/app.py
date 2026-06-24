@@ -1,11 +1,14 @@
 """TestForge CLI — Comandos: record, compile, run, pipeline, demo-heal."""
 import argparse
 import json
+import logging
 import os
 import sys
 import time
 
 from playwright.sync_api import sync_playwright
+
+logger = logging.getLogger(__name__)
 
 from testforge.browser import launch_browser
 from testforge.recorder import RecorderController
@@ -500,8 +503,29 @@ def cmd_compile(args):
             print(f"  Ou:  testforge compile --check {rec_id}  (gera relatorio de completude)")
             return
 
-    normalizer = RecordingNormalizer()
-    stc = normalizer.normalize(rec_dir, f"ST-{rec_id}", app or "app", base_url or "http://localhost")
+    # --audit: run recording auditor (always runs in background if available)
+    audit_report = None
+    if getattr(args, 'audit', False) or True:  # default: always generate audit
+        try:
+            from testforge.recorder.recording_auditor import RecordingAuditor
+            auditor = RecordingAuditor()
+            audit_report = auditor.audit(rec_dir)
+            auditor.print_report(audit_report)
+        except Exception as exc:
+            logger.warning("Audit failed (non-fatal): %s", exc)
+
+    try:
+        normalizer = RecordingNormalizer()
+        stc = normalizer.normalize(rec_dir, f"ST-{rec_id}", app or "app", base_url or "http://localhost")
+    except Exception as exc:
+        logger.error("Normalization FAILED: %s", exc, exc_info=True)
+        print(f"[TestForge] ✗ Normalizacao falhou: {exc}")
+        if audit_report:
+            audit_report.setdefault("errors", []).append({
+                "phase": "normalize",
+                "error": str(exc),
+            })
+        return
 
     # Output directory (sanitized)
     safe_rec_id = _sanitize_name(rec_id)
@@ -547,11 +571,25 @@ def cmd_compile(args):
         data_file = data_path
         print(f"[TestForge] ✓ Massa de dados: {data_file}")
 
-    compiler = PlaywrightCompiler()
-    path = compiler.compile(stc, out_dir, data_file=data_file)
+    try:
+        compiler = PlaywrightCompiler()
+        path = compiler.compile(stc, out_dir, data_file=data_file)
+    except Exception as exc:
+        logger.error("Compilation FAILED: %s", exc, exc_info=True)
+        print(f"[TestForge] ✗ Compilacao falhou: {exc}")
+        if audit_report:
+            audit_report.setdefault("errors", []).append({
+                "phase": "compile",
+                "error": str(exc),
+            })
+        return
 
     # Generate semantic_steps.jsonl for audit trail
-    semantic_path = compiler.compile_semantic_steps(stc, out_dir)
+    try:
+        semantic_path = compiler.compile_semantic_steps(stc, out_dir)
+    except Exception as exc:
+        logger.warning("Semantic steps generation failed (non-fatal): %s", exc)
+        semantic_path = ""
 
     print(f"[TestForge] ✓ SemanticTestCase: {len(stc.steps)} steps")
     # Breakdown
@@ -559,7 +597,8 @@ def cmd_compile(args):
     asserts = sum(1 for s in stc.steps if s.action == "assert")
     print(f"[TestForge]   Interacoes: {interactions} | Asserts: {asserts}")
     print(f"[TestForge] ✓ Script gerado: {path}")
-    print(f"[TestForge] ✓ Semantic steps: {semantic_path}")
+    if semantic_path:
+        print(f"[TestForge] ✓ Semantic steps: {semantic_path}")
     if data_file:
         print(f"[TestForge] ✓ Script data-driven (le {os.path.basename(data_file)})")
 
@@ -569,7 +608,26 @@ def cmd_compile(args):
         compile(code, path, "exec")
         print("[TestForge] ✓ Script compila sem erros")
     except SyntaxError as e:
+        logger.error("Syntax error in compiled script: %s", e)
         print(f"[TestForge] ✗ Erro de sintaxe: {e}")
+
+
+def cmd_audit(args):
+    """Audit a recording: quality metrics, event analysis, compilation status."""
+    rec_id = args.recording
+    if rec_id.startswith("recordings/"):
+        rec_id = rec_id[len("recordings/"):]
+    rec_dir = str(_PROJECT_ROOT / "recordings" / rec_id)
+    if not os.path.isdir(rec_dir) and os.path.isdir(args.recording):
+        rec_dir = os.path.abspath(args.recording)
+        rec_id = os.path.basename(rec_dir)
+    if not os.path.isdir(rec_dir):
+        print(f"[TestForge] Recording not found: {rec_dir}")
+        return
+    from testforge.recorder.recording_auditor import RecordingAuditor
+    auditor = RecordingAuditor()
+    report = auditor.audit(rec_dir)
+    auditor.print_report(report)
 
 
 def cmd_run(args):
@@ -1554,11 +1612,24 @@ def cmd_send(args):
         print(f"[TestForge] ✗ Falha: {result.error}", file=sys.stderr)
 
 
+def _setup_logging(verbose: bool = False):
+    """Configure structured logging for TestForge components."""
+    level = logging.DEBUG if verbose else logging.INFO
+    fmt = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    # Only configure if no handlers exist (don't clobber pytest config)
+    if not logging.getLogger().handlers:
+        logging.basicConfig(level=level, format=fmt, datefmt="%H:%M:%S")
+    # Ensure our components log at the right level
+    for name in ("testforge.recorder", "testforge.semantic", "testforge.cli"):
+        logging.getLogger(name).setLevel(level)
+
+
 def main():
     from testforge.updater import check_and_apply_update
     check_and_apply_update(_PROJECT_ROOT)
 
     parser = argparse.ArgumentParser(description="TestForge CLI — Gravacao inteligente de testes E2E")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Log detalhado (DEBUG)")
     sub = parser.add_subparsers(dest="command")
 
     # record
@@ -1596,6 +1667,7 @@ def main():
     comp.add_argument("--data", action="store_true", help="Extrair massa de dados para JSON externo")
     comp.add_argument("--scenarios", action="store_true", help="Gerar JSON com suporte a multiplos cenarios")
     comp.add_argument("--check", action="store_true", help="Verificar completude da intencao antes de compilar")
+    comp.add_argument("--audit", action="store_true", help="Gerar relatorio de auditoria da gravacao (metricas, qualidade, issues)")
     comp.set_defaults(func=cmd_compile)
 
     # run
@@ -1640,6 +1712,11 @@ def main():
                     help="Diretorio de saida para o relatorio (default: reports/)")
     pr.set_defaults(func=cmd_pilot_report)
 
+    # audit
+    audit_cmd = sub.add_parser("audit", help="Auditar gravacao: metricas de qualidade, eventos, compilacao")
+    audit_cmd.add_argument("recording", help="ID da gravacao (ex: REC-20260613) ou caminho")
+    audit_cmd.set_defaults(func=cmd_audit)
+
     # send (Git publisher)
     send = sub.add_parser("send", help="Re-enviar gravacao existente para repositorio Git (config em .testforge/config.yml)")
     send.add_argument("recording_id", help="ID da gravacao (ex: REC-20260619)")
@@ -1649,6 +1726,8 @@ def main():
     send.set_defaults(func=cmd_send)
 
     args = parser.parse_args()
+    # Setup logging before running command
+    _setup_logging(verbose=getattr(args, 'verbose', False))
     if args.command:
         args.func(args)
     else:

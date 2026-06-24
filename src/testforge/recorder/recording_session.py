@@ -1,11 +1,14 @@
 """TestForge — Gerenciamento de Sessão de Gravação."""
 import json
+import logging
 import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
 from .recording_status import RecordingStatus, RecordingStatusHistory
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -103,6 +106,8 @@ class RecordingSessionManager:
 
         session.metadata_path = metadata_path
         self._active_session = session
+        logger.info("Session started id=%s app=%s url=%s dir=%s",
+                     recording_id, application, base_url, session_dir)
         return session
 
     def stop(self) -> RecordingSession:
@@ -116,6 +121,15 @@ class RecordingSessionManager:
             reason="Recording stopped by user",
         )
         self._update_metadata(session)
+        elapsed = ""
+        if session.started_at and session.finished_at:
+            try:
+                from datetime import datetime
+                s = datetime.fromisoformat(session.started_at)
+                f = datetime.fromisoformat(session.finished_at)
+                elapsed = f" duration={(f-s).total_seconds():.1f}s"
+            except: pass
+        logger.info("Session stopped id=%s%s", session.recording_id, elapsed)
         return session
 
     def finalize(self, recording_status: Optional[RecordingStatus] = None) -> RecordingSession:

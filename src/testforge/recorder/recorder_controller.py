@@ -4,6 +4,7 @@ Keyboard shortcuts: Shift+P pause, Shift+S stop, Shift+A assert mode
 Assert types: textual, estado, visivel, automatico
 """
 import json
+import logging
 import os
 import re
 import time
@@ -14,6 +15,8 @@ from playwright.sync_api import Page, Request, Response
 from .raw_event import RawRecordedEvent, TargetInfo
 from .raw_recording_store import RawRecordingStore
 from .recording_session import RecordingSession, RecordingSessionManager
+
+logger = logging.getLogger(__name__)
 
 
 class RecorderController:
@@ -48,6 +51,8 @@ class RecorderController:
             "evidence_level": self._evidence_level,
             "headless": self._headless,
         })
+        logger.info("Recording started id=%s app=%s url=%s headless=%s evidence=%s",
+                     recording_id, application, base_url, headless, evidence_level)
         return session
 
     def wait_for_command(self, timeout_ms: int = 500) -> list[str]:
@@ -74,23 +79,39 @@ class RecorderController:
                 window.__tfStepQueue = [];
                 return {events: evts, steps: steps};
             }""")
-            for data in events.get("events", []):
+            raw_events = events.get("events", [])
+            raw_steps = events.get("steps", [])
+            # Log per-type counts for audit
+            type_counts = {}
+            for data in raw_events:
+                et = data.get("type", "unknown")
+                type_counts[et] = type_counts.get(et, 0) + 1
                 self._persist_raw_event(data)
-            for step_data in events.get("steps", []):
+            if type_counts:
+                logger.debug("Flushed %d events: %s", len(raw_events), type_counts)
+            for step_data in raw_steps:
                 self._persist_step(step_data)
-        except Exception:
-            pass
-        self._flush_field_snapshots()
-        self._flush_value_mutations()
+            if raw_steps:
+                logger.debug("Flushed %d steps", len(raw_steps))
+        except Exception as exc:
+            logger.error("flush_events failed: %s", exc, exc_info=True)
+        fsnap_count = self._flush_field_snapshots()
+        vmut_count = self._flush_value_mutations()
+        if fsnap_count or vmut_count:
+            logger.debug("Flushed %d field snapshots, %d value mutations", fsnap_count, vmut_count)
 
     def handle_commands(self) -> str:
         """Process pending commands. Returns 'stop' if recording should end."""
         pending = self.wait_for_command()
         for cmd in pending:
             if cmd == "STOP":
+                logger.info("Recording stop command received")
                 return "stop"
             elif cmd == "TOGGLE_PAUSE":
                 self._paused = not self._paused
+                logger.info("Recording %s", "paused" if self._paused else "resumed")
+            elif cmd == "ASSERT":
+                logger.info("Assert mode activated by keyboard shortcut")
         return "continue" if not self._paused else "paused"
 
     def stop(self) -> RecordingSession:
@@ -108,6 +129,10 @@ class RecorderController:
         self._store.save_network_log(self._network_entries)
         if self._sensitive_alerts:
             self._store.save_sensitive_data_alert(self._sensitive_alerts)
+        evt_count = self._store.event_count() if hasattr(self._store, 'event_count') else 0
+        logger.info("Recording stopped id=%s events=%d network=%d alerts=%d",
+                     session.recording_id if session else "?",
+                     evt_count, len(self._network_entries), len(self._sensitive_alerts))
         return session
 
     def finalize(self) -> RecordingSession:
@@ -250,31 +275,37 @@ class RecorderController:
         with open(path, "a") as f:
             f.write(json.dumps(mutation_data, default=str) + "\n")
 
-    def _flush_field_snapshots(self):
-        """Read pending field snapshot batches from JS and persist."""
+    def _flush_field_snapshots(self) -> int:
+        """Read pending field snapshot batches from JS and persist. Returns count."""
         try:
             batches = self._page.evaluate("""() => {
                 const q = window.__tfFieldSnapshotQueue || [];
                 window.__tfFieldSnapshotQueue = [];
                 return q;
             }""")
+            count = len(batches or [])
             for batch in (batches or []):
                 self._save_field_snapshot(batch)
-        except Exception:
-            pass
+            return count
+        except Exception as exc:
+            logger.warning("_flush_field_snapshots failed: %s", exc)
+            return 0
 
-    def _flush_value_mutations(self):
-        """Read pending value mutations from JS and persist."""
+    def _flush_value_mutations(self) -> int:
+        """Read pending value mutations from JS and persist. Returns count."""
         try:
             mutations = self._page.evaluate("""() => {
                 const q = window.__tfValueMutationQueue || [];
                 window.__tfValueMutationQueue = [];
                 return q;
             }""")
+            count = len(mutations or [])
             for mut in (mutations or []):
                 self._save_value_mutation(mut)
-        except Exception:
-            pass
+            return count
+        except Exception as exc:
+            logger.warning("_flush_value_mutations failed: %s", exc)
+            return 0
 
     def _capture_final_state_snapshot(self, reason: str = "unknown"):
         """Read final state from JS sessionStorage and save to final_state_snapshot.json."""
@@ -303,6 +334,7 @@ class RecorderController:
         window.__tfDragMode  = false;
         window.__tfDragState = null;
         window.__tfPendingSubmit = null;  // { url, method, timestamp } or null — restored from sessionStorage
+        window.__tfLastFillValue = {};  // key → last pushed value for dedup
 
         // Restore pending submit flag from sessionStorage (survives page navigation).
         // This tells us the page load is a form postback (ASP classic / ASP.NET).
@@ -897,13 +929,24 @@ class RecorderController:
 
         window.addEventListener('input', function(e) {
             if (window.__tfAssertWaiting) return;
-            _tf_pushEvent('fill', e.target);
+            var el = e.target;
+            if (!el) return;
+            var key = el.name || el.getAttribute('aria-label') || el.placeholder || el.id || el.tagName;
+            var val = (el.value || el.textContent || '').trim();
+            // Dedup: skip if same value already pushed
+            if (window.__tfLastFillValue[key] === val) return;
+            window.__tfLastFillValue[key] = val;
+            _tf_pushEvent('fill', el);
         }, true);
 
         window.addEventListener('change', function(e) {
             if (window.__tfAssertWaiting) return;
             var el = e.target;
             if (el && (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA')) {
+                var key = el.name || el.getAttribute('aria-label') || el.placeholder || el.id || el.tagName;
+                var val = (el.value || '').trim();
+                if (window.__tfLastFillValue[key] === val) return;
+                window.__tfLastFillValue[key] = val;
                 _tf_pushEvent('fill', el);
             }
         }, true);
@@ -912,7 +955,8 @@ class RecorderController:
         // Frameworks (Angular currencymask, React controlled inputs) can
         // prevent native 'input' events. Polling catches ALL value changes
         // regardless of mechanism: keyboard, paste, autofill, setAttribute.
-        window.__tfLastValues = {};
+        // Dedup via __tfLastFillValue: only pushes if value changed since
+        // the LAST push (input, change, or poll). Prevents 3-way duplication.
         window.__tfPollInterval = setInterval(function() {
             if (window.__tfAssertWaiting) return;
             try {
@@ -920,8 +964,8 @@ class RecorderController:
                     var key = el.name || el.getAttribute('aria-label') || el.placeholder || el.id;
                     if (!key) return;
                     var val = (el.value || '').trim();
-                    if (val && val !== window.__tfLastValues[key]) {
-                        window.__tfLastValues[key] = val;
+                    if (val && val !== window.__tfLastFillValue[key]) {
+                        window.__tfLastFillValue[key] = val;
                         _tf_pushEvent('fill', el);
                     }
                 });
