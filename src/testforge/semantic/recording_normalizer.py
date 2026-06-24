@@ -17,21 +17,6 @@ from testforge.handlers import HANDLERS
 logger = logging.getLogger(__name__)
 
 
-def _is_hash_class(cls: str) -> bool:
-    """Detecta classes CSS que parecem hashes gerados automaticamente (ex: 'css-1a2b3c4')."""
-    if not cls:
-        return True
-    # Hashes usually have numbers mixed with letters and hyphens
-    if _re.match(r'^[a-z]+-\d+[a-z0-9-]*$', cls):
-        return True
-    # Very short classes
-    if len(cls) <= 1:
-        return True
-    # Namespaced hash-like: ng-star-inserted, mat-focus-indicator, etc.
-    if _re.match(r'^(ng|mat|cdk|agm|leaflet|gm)-', cls):
-        return False  # Framework classes are stable
-    return False
-
 
 # Material icon ligatures that appear in text content but are not real text
 _MATERIAL_ICONS = {
@@ -85,9 +70,6 @@ def _clean_text(text: str, max_len: int = 60) -> str:
 
 # Generic UI text that produces poor, brittle locators.
 # Scored at 0.10 to deprioritize below all structural strategies.
-# Angular Material auto-generates IDs like mat-mdc-error-1, mat-input-3, mat-hint-0.
-# These change between runs when the number of form fields changes.
-_ANGULAR_AUTOID_RE = _re.compile(r'^mat-[\w]+-[\w]+-\d+$|^mat-[\w]+-\d+$')
 
 _GENERIC_TEXT_SET = {
     "ok", "cancel", "cancelar", "submit", "enviar", "search", "buscar",
@@ -123,101 +105,6 @@ def _is_generic_text(text: str) -> bool:
     return False
 
 
-# Transient CSS classes that change between recording and playback.
-# Angular/Material state classes: focus, form validity, animations.
-_TRANSIENT_CLASS_PATTERNS = [
-    # Angular CDK focus/blur states
-    r'cdk-(mouse-)?focused',
-    r'cdk-program-focused',
-    r'cdk-keyboard-focused',
-    # Angular form control states (ng-untouched/ng-touched, ng-pristine/ng-dirty, ng-valid/ng-invalid)
-    r'ng-(un)?touched',
-    r'ng-(pristine|dirty)',
-    r'ng-(valid|invalid|pending)',
-    r'ng-star-inserted',
-    # Angular Material animation state
-    r'mat-(mdc-)?form-field-animations-enabled',
-    r'mat-(mdc-)?form-field--empty',
-    r'mat-unthemed',
-    # Playwright/Material state attributes (transient identifiers)
-    r'mat-ripple-loader-(uninitialized|centered|disabled|class-name)',
-    r'mat-mdc-button-ripple',
-    r'mat-(mdc-)?form-field--standard',  # variant can change
-]
-
-
-def _strip_transient_classes(css_path: str) -> str:
-    """Remove Angular transient state classes from CSS path selector.
-
-    Classes like cdk-focused, ng-untouched, ng-valid change between
-    recording and playback. Stripping them makes CSS paths reusable.
-
-    Preserves original CSS selector syntax (space-separated classes,
-    special chars like Tailwind ':' in md:p-12).
-    """
-    if not css_path:
-        return css_path
-
-    import re
-    _transient_re = re.compile(
-        r'^(?:' + '|'.join(_TRANSIENT_CLASS_PATTERNS) + r')$'
-    )
-
-    # CSS path: "tag.class1 class2 > tag2.class3 class4 > ..."
-    segments = css_path.split(' > ')
-    cleaned_segments = []
-
-    for seg in segments:
-        # Split into tokens: "tag.class1", "class2", "class3"
-        tokens = seg.split()
-        if not tokens:
-            cleaned_segments.append(seg)
-            continue
-
-        # First token: "tag.class1" or just "tag"
-        first = tokens[0]
-        # Rest: standalone class names
-        rest = tokens[1:]
-
-        # Filter transient classes from rest
-        kept_rest = [c for c in rest if not _transient_re.match(c)]
-
-        # Also check if first token has transient classes after dot
-        if '.' in first:
-            dot_parts = first.split('.')
-            tag = dot_parts[0]
-            tag_classes = dot_parts[1:]
-            kept_tag_classes = [c for c in tag_classes if not _transient_re.match(c)]
-            if kept_tag_classes:
-                first_clean = tag + '.' + '.'.join(kept_tag_classes)
-            else:
-                first_clean = tag
-        else:
-            first_clean = first
-
-        # Reconstruct: "tag.class1 class2 class3"
-        if kept_rest:
-            cleaned_segments.append(first_clean + ' ' + ' '.join(kept_rest))
-        else:
-            cleaned_segments.append(first_clean)
-
-    return ' > '.join(cleaned_segments)
-
-
-def _is_dynamic_aria_attr(attr_name: str, attr_value: str) -> bool:
-    """Check if an aria attribute value contains dynamic/Angular-generated IDs.
-
-    Angular Material generates IDs like 'mat-mdc-hint-1', 'numeric-field-desc-abc123'
-    that change on every page load. These are useless as selectors.
-    """
-    if attr_name == "aria-describedby":
-        # Angular Material hint IDs: mat-mdc-hint-N
-        if "mat-mdc-hint-" in attr_value:
-            return True
-        # Random-suffix field descriptions: numeric-field-desc-<random>
-        if "field-desc-" in attr_value and len(attr_value) > 25:
-            return True
-    return False
 
 
 class RecordingNormalizer:
@@ -1270,9 +1157,7 @@ class RecordingNormalizer:
 
         if target_data.get("id") and target_data["id"] not in ("mat-input-0", "mat-input-1"):
             el_id = target_data["id"]
-            # Angular Material auto-generated IDs are fragile — deprioritize them
-            id_score = 0.15 if _ANGULAR_AUTOID_RE.match(el_id) else 0.75
-            candidates.append(LocatorCandidate("id", f"#{el_id}", id_score, f"id={el_id}"))
+            candidates.append(LocatorCandidate("id", f"#{el_id}", 0.75, f"id={el_id}"))
 
         if target_data.get("name"):
             name = target_data["name"]
@@ -1304,20 +1189,7 @@ class RecordingNormalizer:
                     candidates.append(LocatorCandidate("text", f"{tag}:has-text(\"{text}\")", text_score, f"text in {tag}"))
                 else:
                     candidates.append(LocatorCandidate("text", f":has-text(\"{text}\")", text_score, "visible text"))
-        elif target_data.get("inner_html"):
-            # Fallback: use inner HTML as text source (for elements like datepicker spans)
-            inner = _clean_text(target_data["inner_html"])
-            if inner:
-                tag = (target_data.get("tag") or "").lower()
-                # Skip SVG elements — their "inner text" is path/geometry data,
-                # not meaningful text content. SVG icons are decorative.
-                # Without this filter, <svg><polygon points="0,0 5,5..."></svg>
-                # generates svg:has-text("<polygon points=...">") which never matches.
-                if tag in ("svg", "path", "polygon", "circle", "line", "g"):
-                    pass  # fall through to CSS path / class fallbacks
-                else:
-                    sel = f"{tag}:has-text(\"{inner}\")" if tag else f":has-text(\"{inner}\")"
-                    candidates.append(LocatorCandidate("inner_html", sel, 0.45, "inner HTML text"))
+
 
         # -- Contenteditable detection (GT-08) --
         # When the element has contenteditable=true and no stable locator was found,
@@ -1350,80 +1222,10 @@ class RecordingNormalizer:
                     _ce_text_score, f"contenteditable with text: {ce_text}"
                 ))
 
-        # Fallback: CSS path
+        # Structural CSS path fallback — stable relative path in DOM tree
         css_path = target_data.get("css_path") or ""
-
-        # Angular Material calendar context markers — always add when CSS path reveals calendar
-        # context, regardless of whether other candidates exist. These markers serve dual purpose:
-        # (1) provide a working locator for the element, (2) let _detect_overlay_steps and
-        # _dedup_datepicker_sequences recognise the element as part of a calendar interaction so
-        # the whole sequence can be collapsed into the single fill on the date input.
-        if css_path:
-            if "mat-datepicker-toggle" in css_path:
-                candidates.append(LocatorCandidate(
-                    "material_touch_target", "mat-datepicker-toggle button",
-                    0.50, "Material datepicker toggle button"
-                ))
-            if "mat-calendar-previous-button" in css_path:
-                candidates.append(LocatorCandidate(
-                    "material_nav", "button.mat-calendar-previous-button",
-                    0.50, "Material calendar previous month button"
-                ))
-            if "mat-calendar-next-button" in css_path:
-                candidates.append(LocatorCandidate(
-                    "material_nav", "button.mat-calendar-next-button",
-                    0.50, "Material calendar next month button"
-                ))
-            if "mat-calendar-period-button" in css_path:
-                candidates.append(LocatorCandidate(
-                    "material_nav", "button.mat-calendar-period-button",
-                    0.50, "Material calendar period button"
-                ))
-            if tag == "span" and "mat-calendar-body-cell" in css_path and target_data.get("text"):
-                cell_text = _clean_text(target_data["text"])
-                if cell_text:
-                    candidates.append(LocatorCandidate(
-                        "material_cell", f"button.mat-calendar-body-cell:has-text(\"{cell_text}\")",
-                        0.50, f"Material calendar cell: {cell_text}"
-                    ))
-            if tag == "span" and "mat-mdc-button-touch-target" in css_path and "button" in css_path:
-                parent_text = target_data.get("parent_text") or ""
-                if parent_text:
-                    clean_parent = _clean_text(parent_text)
-                    if clean_parent and not _is_generic_text(clean_parent):
-                        candidates.append(LocatorCandidate(
-                            "material_btn", f"button:has-text(\"{clean_parent}\")",
-                            0.50, f"Material button by text: {clean_parent}"
-                        ))
-
-        if css_path and not candidates:
-            css_clean = _strip_transient_classes(css_path)
-            candidates.append(LocatorCandidate("css_path", css_clean, 0.20, "CSS path fallback"))
-
-            # -- Select2 / combobox heuristic (GT-07) --
-            # Select2 plugin renders a div.select2-selection[role="combobox"].
-            # The native <select> is hidden (display:none) and value is set via JS.
-            # Generate a reliable selector for the combobox div.
-            if tag == "div" and "select2-selection" in css_path:
-                # aria-label on the combobox
-                aria_label = target_data.get("aria_attrs", {}).get("aria-label", "")
-                if aria_label:
-                    candidates.append(LocatorCandidate(
-                        "select2", f'div[role="combobox"][aria-label="{aria_label}"]',
-                        0.60, f"Select2 combobox by aria-label: {aria_label}"
-                    ))
-                # Text-based fallback
-                ce_text = _clean_text(target_data.get("text", ""))[:40]
-                if ce_text and not _is_generic_text(ce_text):
-                    candidates.append(LocatorCandidate(
-                        "select2", f'div.select2-selection:has-text("{ce_text}")',
-                        0.55, f"Select2 combobox by text: {ce_text}"
-                    ))
-
-        # Fallback: XPath (lowest priority)
-        xpath = target_data.get("xpath") or ""
-        if xpath and not candidates:
-            candidates.append(LocatorCandidate("xpath", xpath, 0.10, "XPath fallback"))
+        if css_path and len(css_path) > 4 and ">" in css_path:
+            candidates.append(LocatorCandidate("css_path", css_path, 0.60, "css_path"))
 
         # nth-child for disambiguation — always add when available so healing
         # can use positional fallback for sibling buttons/tabs with similar text
@@ -1432,63 +1234,16 @@ class RecordingNormalizer:
         if nth > 0 and tag:
             candidates.append(LocatorCandidate("nth_child", f"{tag}:nth-child({nth})", 0.35, "nth-child position"))
 
-        # Fallback: CSS classes (stable, non-hash, non-generic)
-        class_list = target_data.get("class_list") or []
-        # Exclude generic framework classes that match too broadly
-        _generic_classes = {"mat-focus-indicator", "mat-ripple", "mat-button-focus-overlay",
-                           "cdk-focused", "cdk-program-focused", "ng-star-inserted", "ng-untouched",
-                           "ng-pristine", "ng-valid", "mat-form-field", "mat-form-field-flex"}
-        stable_classes = [c for c in class_list
-                         if not _is_hash_class(c) and len(c) >= 2
-                         and c not in _generic_classes]
-        if stable_classes and not candidates:
-            cls_sel = ".".join(stable_classes[:3])
-            candidates.append(LocatorCandidate("class", f".{cls_sel}", 0.35, f"CSS classes: {cls_sel}"))
-
-        # Fallback: parent text for context
-        parent_text = target_data.get("parent_text") or ""
-        if parent_text and not candidates:
-            candidates.append(LocatorCandidate("parent_text", f"text={parent_text[:60]}", 0.25, "parent text context"))
-
-        # Fallback: aria attributes
-        aria_attrs = target_data.get("aria_attrs") or {}
-        for attr_name, attr_value in aria_attrs.items():
-            if attr_value and len(attr_value) < 80 and attr_name != "aria-label":
-                # Skip dynamic Angular Material IDs that change every page load
-                if _is_dynamic_aria_attr(attr_name, attr_value):
-                    continue
-                sel = f"[{attr_name}='{attr_value}']"
-                candidates.append(LocatorCandidate("aria_attr", sel, 0.30, f"{attr_name}={attr_value}"))
-
-        # aria-label como seletor para input/textarea quando role nao disponivel.
-        # Role-based selector (acima) é preferivel mas exige target_data["role"].
-        # Sem role, o aria-label nunca vira seletor (excluido do loop acima).
+        # aria-label for input/textarea when role not available
         if not target_data.get("role"):
-            aria_label = (aria_attrs.get("aria-label", "") or
+            aria_label = (target_data.get("aria_attrs", {}).get("aria-label", "") or
                          (target_data.get("all_attributes") or {}).get("aria-label", "") or
                          target_data.get("accessible_name", "") or "")
             if aria_label and len(aria_label) < 60:
-                tag = (target_data.get("tag") or "").lower()
-                if tag in ("input", "textarea"):
-                    sel = f'{tag}[aria-label="{aria_label}"]'
-                    candidates.append(LocatorCandidate("aria_label", sel, 0.90, f"{tag} aria-label={aria_label}"))
-
-        # css_path: stored separately from id — structural fallback for assert steps
-        if target_data.get("css_path"):
-            css_path = target_data["css_path"]
-            # Only add if it's a real CSS path (not just a tag name or empty)
-            if css_path and len(css_path) > 4 and ">" in css_path:
-                candidates.append(LocatorCandidate("css_path", css_path, 0.60, f"css_path"))
-
-        # accessible_name as aria-label selector for any element type (not just input/textarea)
-        # Covers assert on buttons, divs, spans with aria-label
-        if target_data.get("accessible_name") and not target_data.get("role"):
-            acc = target_data["accessible_name"]
-            tag = (target_data.get("tag") or "").lower()
-            if acc and len(acc) < 80:
-                sel = f'{tag}[aria-label="{acc}"]' if tag else f'[aria-label="{acc}"]'
-                if not any(c.selector == sel for c in candidates):
-                    candidates.append(LocatorCandidate("accessible_name", sel, 0.80, f"accessible_name={acc[:40]}"))
+                t = (target_data.get("tag") or "").lower()
+                if t in ("input", "textarea"):
+                    sel = f'{t}[aria-label="{aria_label}"]'
+                    candidates.append(LocatorCandidate("aria_label", sel, 0.90, f"{t} aria-label={aria_label}"))
 
         # Sort candidates by score (descending) for deterministic ordering
         candidates.sort(key=lambda c: c.score, reverse=True)
