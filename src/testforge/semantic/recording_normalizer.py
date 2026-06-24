@@ -332,10 +332,12 @@ class RecordingNormalizer:
                 if not steps[k].skip_reason:
                     nxt = steps[k]
                     break
-            if nxt is None or nxt.action != "fill":
+            if nxt is None or nxt.action not in ("fill", "select_option"):
                 continue
             curr_tag = (curr.target.tag or "").lower() if curr.target else ""
-            if curr_tag not in ("input", "textarea"):
+            if nxt.action == "select_option" and curr_tag != "select":
+                continue
+            if nxt.action == "fill" and curr_tag not in ("input", "textarea"):
                 continue
             # Same element: prefer element_id, then accessible_name, then selector.
             # Selector alone is ambiguous when two distinct fields share the same
@@ -954,7 +956,7 @@ class RecordingNormalizer:
         if not raw_events:
             return raw_events
 
-        FILL_TYPES = {"fill", "keypress"}
+        FILL_TYPES = {"fill", "keypress", "select_option"}
 
         def _target_key(target: dict | None) -> tuple:
             """Derive stable key from target to identify same element."""
@@ -1025,7 +1027,7 @@ class RecordingNormalizer:
         if not raw_events:
             return raw_events
 
-        FILL_TYPES = {"fill", "keypress"}
+        FILL_TYPES = {"fill", "keypress", "select_option"}
         seen: set = set()
         result: list = []
 
@@ -1100,6 +1102,7 @@ class RecordingNormalizer:
             "keypress": "fill",
             "contenteditable": "fill",  # contenteditable div changes mapped to fill
             "submit": "click",  # submit is a click on a submit button
+            "select_option": "select_option",
         }
         action = action_map.get(event_type)
         if not action:

@@ -74,6 +74,10 @@ class SmartStepRunner:
                         pass
                 self._page.wait_for_timeout(400)
 
+            elif action == "select_option":
+                self._page.select_option(sel, value, timeout=self.FILL_TIMEOUT)
+                self._page.wait_for_timeout(300)
+
             elif action == "click":
                 if strat == "label_click":
                     # Try clicking the label first
@@ -211,7 +215,12 @@ class FallbackRunner:
         """Tenta preencher com cada candidato ate funcionar."""
         for c in candidates:
             try:
-                self._page.fill(c["selector"], value, timeout=5000)
+                sel = c["selector"]
+                tag = c.get("tag", "").lower()
+                if tag == "select":
+                    self._page.select_option(sel, value, timeout=5000)
+                else:
+                    self._page.fill(sel, value, timeout=5000)
                 self._page.wait_for_timeout(100)
                 return True
             except Exception:
@@ -229,12 +238,15 @@ class FallbackRunner:
                 continue
         return False
 
-    def try_fill_with_fallback(self, primary: str, fallbacks: list[str], value: str) -> tuple[bool, str]:
+    def try_fill_with_fallback(self, primary: str, fallbacks: list[str], value: str, tag: str = "") -> tuple[bool, str]:
         """Tenta fill com seletor primario e fallbacks."""
         all_selectors = [primary] + fallbacks
         for sel in all_selectors:
             try:
-                self._page.fill(sel, value, timeout=5000)
+                if tag.lower() == "select":
+                    self._page.select_option(sel, value, timeout=5000)
+                else:
+                    self._page.fill(sel, value, timeout=5000)
                 self._page.wait_for_timeout(100)
                 return True, sel
             except Exception:

@@ -213,7 +213,7 @@ class PlaywrightCompiler:
             if action.action == "navigation":
                 # Navegação redundante ignorada — página já carregada via BASE_URL.
                 continue
-            elif action.action == "fill" and action.target and (action.target.tag or "").lower() == "select":
+            elif action.action in ("fill", "select_option") and action.target and (action.target.tag or "").lower() == "select":
                 step_idx += 1
                 lines.extend(self._gen_select(action, step_idx, data_file, field_values, data_file_dict))
             elif action.action == "fill":

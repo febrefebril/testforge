@@ -406,13 +406,16 @@
       } catch(_ignore) {}
       return;
     }
+    if (el && el.tagName === 'SELECT') return;
     _pushEvent('click', el);
-    var _sc = document.getElementById('tf-step-count');
-    if (_sc) {
-      var _n = parseInt(_sc.textContent || 0) + 1;
-      _sc.textContent = _n;
-      try { sessionStorage.setItem('__tfStepCount', _n); } catch(_e) {}
-    }
+    setTimeout(function() {
+      var _sc = document.getElementById('tf-step-count');
+      if (_sc) {
+        var _n = parseInt(_sc.textContent || 0) + 1;
+        _sc.textContent = _n;
+        try { sessionStorage.setItem('__tfStepCount', _n); } catch(_e) {}
+      }
+    }, 0);
   }, true);
 
   // ---- Fill capture (input / change) ----
@@ -443,7 +446,8 @@
       var val = (el.value || '').trim();
       if (window.__tfLastFillValue[key] === val) return;
       window.__tfLastFillValue[key] = val;
-      _pushEvent('fill', el);
+      var evtType = (el.tagName === 'SELECT') ? 'select_option' : 'fill';
+      _pushEvent(evtType, el);
     }
   }, true);
 

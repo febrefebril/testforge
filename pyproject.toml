@@ -25,7 +25,7 @@ testpaths = [
     "tests",
     "bug_lab",
 ]
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 norecursedirs = [
     "docs/conhecimento_ancestral",
     ".venv",

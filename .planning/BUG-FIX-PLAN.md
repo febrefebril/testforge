@@ -818,3 +818,236 @@ def test_run_saves_output_file(tmp_path):
 - [ ] Bug 8 — verificar suite após todos os fixes — em andamento
 - [x] Criar commit por bug com teste incluído
 - [x] Push para origin refactor/recorder-playwright — 4f2970f..fb270af
+- [ ] Bug 11 — overlay DOM mutation fecha dropdown de <select> (overlay_inject.js)
+- [ ] Bug 12 — change em <select> gera 'fill' em vez de 'select_option' (overlay_inject.js)
+- [ ] Bug 13 — FallbackRunner.try_fill usa page.fill() em <select> (fallback_runner.py)
+- [ ] Bug 14 — SmartStepRunner sem caso 'select_option' (fallback_runner.py)
+- [ ] Bug 15 — label/role vazio em semantic_steps.jsonl (recording_normalizer.py)
+- [ ] Bug 16 — clicks redundantes em <select> geram steps de ruído (overlay_inject.js + normalizer)
+
+---
+
+## Bug 11 — Overlay DOM mutation fecha dropdown nativo de `<select>`
+
+**Descoberto em:** 2026-06-24 — análise de gravação `temp-bug/recordings/verificar_tela_simax`  
+**Evidência:** Usuário clicou 4+ vezes no `lstUf` sem conseguir mudar valor de "0"; cada click registrou value="0" até evento `fill` com "DF" aparecer por outro meio.
+
+### Root cause
+
+`overlay_inject.js:410-414` — dentro do click handler (capture phase), o overlay atualiza `textContent` do step counter SINCRONAMENTE:
+
+```js
+_pushEvent('click', el);
+var _sc = document.getElementById('tf-step-count');
+if (_sc) {
+    var _n = parseInt(_sc.textContent || 0) + 1;
+    _sc.textContent = _n;  // ← mutação DOM síncrona durante click event
+    try { sessionStorage.setItem('__tfStepCount', _n); } catch(_e) {}
+}
+```
+
+No Chrome/Linux, `<select>` nativo renderiza dropdown como parte da janela do browser (não widget OS). Mutação DOM síncrona durante o callback do click força reflow/repaint e fecha o dropdown imediatamente.
+
+**Segundo vetor (assert mode):** `overlay_inject.js:342-349` — o handler de `mousedown` chama `preventDefault()` quando `__tfAssertWaiting=true`, impedindo o dropdown de abrir. Se usuário entrar em assert mode (Shift+A) e depois tentar clicar no select antes de cancelar, o dropdown não abre.
+
+### Fix
+
+**1.** Deferir atualização do step counter para fora do call stack:
+
+```js
+// overlay_inject.js — substituir bloco síncrono após _pushEvent('click', el):
+_pushEvent('click', el);
+setTimeout(function() {
+    var _sc = document.getElementById('tf-step-count');
+    if (_sc) {
+        var _n = parseInt(_sc.textContent || 0) + 1;
+        _sc.textContent = _n;
+        try { sessionStorage.setItem('__tfStepCount', _n); } catch(_e) {}
+    }
+}, 0);
+```
+
+**2.** Ignorar clicks em `<select>` completamente no click handler — o evento semântico real é o `change` (Bug 12 captura o valor):
+
+```js
+// No click handler, antes de _pushEvent:
+if (el && el.tagName === 'SELECT') return;  // change event captura a seleção
+```
+
+### Arquivos
+| Arquivo | Linha | Ação |
+|---------|-------|------|
+| `src/testforge/recorder/overlay_inject.js` | 409-416 | `setTimeout` no step counter |
+| `src/testforge/recorder/overlay_inject.js` | ~368 | Skip click em SELECT |
+
+---
+
+## Bug 12 — `change` em `<select>` gera evento `fill` em vez de `select_option`
+
+**Descoberto em:** 2026-06-24 — análise de `semantic_steps.jsonl` de `verificar_tela_simax_2`
+
+### Root cause
+
+`overlay_inject.js:438-448`:
+```js
+window.addEventListener('change', function(e) {
+    ...
+    _pushEvent('fill', el);  // ← sempre 'fill', mesmo para SELECT
+```
+
+`<select>` deveria gerar `select_option`. O compiler (`compiler.py:216`) já contorna isso na compilação, mas o `pilot runner` (SmartStepRunner/FallbackRunner) usa os tipos diretamente do `semantic_steps.jsonl` e executa `page.fill()` em `<select>`, que falha com `"Element is not an <input>..."`.
+
+### Fix
+
+```js
+// overlay_inject.js:441 — change handler
+window.addEventListener('change', function(e) {
+    if (window.__tfAssertWaiting) return;
+    var el = e.target;
+    if (!el) return;
+    var key = _fillKey(el);
+    var val = (el.value || '').trim();
+    if (window.__tfLastFillValue[key] === val) return;
+    window.__tfLastFillValue[key] = val;
+    // SELECT → select_option; outros → fill
+    var evtType = (el.tagName === 'SELECT') ? 'select_option' : 'fill';
+    _pushEvent(evtType, el);
+}, true);
+```
+
+E no normalizer (`recording_normalizer.py`): garantir que eventos `select_option` do raw_events sejam convertidos para `SemanticAction(action="select_option")` nos steps.
+
+### Arquivos
+| Arquivo | Linha | Ação |
+|---------|-------|------|
+| `src/testforge/recorder/overlay_inject.js` | 446 | `evtType = SELECT ? 'select_option' : 'fill'` |
+| `src/testforge/semantic/recording_normalizer.py` | `_normalize_raw_events` | tratar `select_option` como ação nativa |
+
+---
+
+## Bug 13 — `FallbackRunner.try_fill` usa `page.fill()` cegamente em `<select>`
+
+**Descoberto em:** 2026-06-24 — execução_report `verificar_tela_simax_2`; Step 6 (fill): `"Element is not an <input>, <textarea>..."`
+
+### Root cause
+
+`fallback_runner.py:210-218`:
+```python
+def try_fill(self, candidates: list[dict], value: str) -> bool:
+    for c in candidates:
+        try:
+            self._page.fill(c["selector"], value, timeout=5000)  # falha em <select>
+```
+
+Não verifica se o elemento é `<select>` antes de usar `fill`.
+
+### Fix
+
+```python
+def try_fill(self, candidates: list[dict], value: str) -> bool:
+    for c in candidates:
+        try:
+            sel = c["selector"]
+            tag = c.get("tag", "").lower()
+            if tag == "select":
+                self._page.select_option(sel, value, timeout=5000)
+            else:
+                self._page.fill(sel, value, timeout=5000)
+            self._page.wait_for_timeout(100)
+            return True
+        except Exception:
+            continue
+    return False
+```
+
+Mesma correção em `try_fill_with_fallback` (linha 232).
+
+### Arquivos
+| Arquivo | Linha | Ação |
+|---------|-------|------|
+| `src/testforge/runner/fallback_runner.py` | 210-218 | verificar tag antes de fill/select_option |
+| `src/testforge/runner/fallback_runner.py` | 232-242 | idem em try_fill_with_fallback |
+
+---
+
+## Bug 14 — `SmartStepRunner` sem caso para ação `select_option`
+
+**Descoberto em:** 2026-06-24 — `fallback_runner.py:59-95` não tem `elif action == "select_option":`.
+
+### Root cause
+
+Se normalizer gerar steps com `action="select_option"` (após fix do Bug 12), o SmartStepRunner não executa nada para esse tipo e retorna `True` sem agir, ou lança exceção.
+
+### Fix
+
+```python
+# fallback_runner.py — dentro de SmartStepRunner._try_strategy(), após o bloco elif action == "click":
+elif action == "select_option":
+    self._page.select_option(sel, value, timeout=self.FILL_TIMEOUT)
+    self._page.wait_for_timeout(300)
+```
+
+### Arquivo
+| Arquivo | Linha | Ação |
+|---------|-------|------|
+| `src/testforge/runner/fallback_runner.py` | ~88 | adicionar `elif action == "select_option":` |
+
+---
+
+## Bug 15 — Label/role vazios em `semantic_steps.jsonl`
+
+**Descoberto em:** 2026-06-24 — todos os 16 steps de `verificar_tela_simax_2/semantic_steps.jsonl` têm `label=''` e `role=''`.
+
+### Root cause
+
+A investigar em `recording_normalizer.py` — ao serializar `SemanticAction` para `semantic_steps.jsonl`, os campos `label` e `role` do target não estão sendo preservados. Sem label, a resolução de locators no runtime fica cega.
+
+### Investigação necessária
+1. Verificar método de serialização de `SemanticStep` → JSONL em `compiler.py` ou `normalizer.py`
+2. Checar se `SemanticTarget.label` é populado no `_ir_*` methods
+3. Comparar raw_events (têm `label: "UF"`) com o que chega no SemanticAction
+
+### Arquivo suspeito
+`src/testforge/semantic/recording_normalizer.py` — métodos `_ir_fill`, `_ir_click` ou `_build_semantic_action`
+
+---
+
+## Bug 16 — Clicks redundantes em `<select>` viram steps de ruído no teste
+
+**Descoberto em:** 2026-06-24 — `verificar_tela_simax` _pilot_tmp tem 4 click steps redundantes em `lstUf` antes do `select_option`.
+
+### Root cause
+
+Porque Bug 11 impedia o dropdown de funcionar, o usuário clicava múltiplas vezes. Cada click virava um raw_event → normalizador não deduplica clicks consecutivos no mesmo `<select>` antes de um `select_option`.
+
+### Fix (depende de Bug 11 estar resolvido primeiro)
+
+Em `recording_normalizer.py` — expandir `_eliminate_prefill_clicks` para também eliminar clicks redundantes em `<select>` que antecedem um `select_option` no mesmo elemento:
+
+```python
+# recording_normalizer.py:_eliminate_prefill_clicks
+# Padrão atual: elimina click antes de fill no mesmo elemento
+# Adicionar: eliminar múltiplos clicks antes de select_option no mesmo select
+if curr.action == "click" and tag == "select":
+    # Find next non-navigation action on same element
+    nxt = self._next_non_nav_step(steps, i)
+    if nxt and nxt.action in ("select_option", "fill") and _same_element(curr, nxt):
+        curr.skip_reason = "redundant_select_click"
+```
+
+### Arquivo
+| Arquivo | Linha | Ação |
+|---------|-------|------|
+| `src/testforge/semantic/recording_normalizer.py` | `_eliminate_prefill_clicks` | skip clicks redundantes em select |
+
+---
+
+## Ordem de implementação (novos bugs)
+
+```
+Bug 11 → Bug 12 → Bug 14 → Bug 13 → Bug 16 → Bug 15
+```
+
+**Rationale:** 11 resolve a experiência de gravação (bloqueador para usuário gravar selects); 12 gera tipo correto no overlay → alimenta 14 e 13; 13 corrige pilot runner; 16 limpa ruído (depende 11 resolvido); 15 investigação isolada.
+
+**Prioridade crítica:** 11 + 12 são bloqueadores de usabilidade — sem eles o usuário não consegue gravar aplicações com `<select>`.
