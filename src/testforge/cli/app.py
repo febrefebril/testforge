@@ -1192,6 +1192,16 @@ def cmd_run(args):
     report_path = run_report.save(report_dir)
     print(f"\n[TestForge] Full report saved: {report_path}")
 
+    if getattr(args, 'save_output', False):
+        from datetime import datetime as _dt
+        out_path = os.path.join(os.path.dirname(os.path.abspath(script_path)), "run_output.txt")
+        with open(out_path, "w", encoding="utf-8") as _f:
+            _f.write(f"# TestForge run output — {_dt.now().isoformat()}\n")
+            _f.write(f"# Script: {script_path}\n")
+            _f.write(f"steps={len(steps) if steps else 0} failed={failed_steps} healed={healed_steps}\n")
+            _f.write(f"report={report_path}\n")
+        print(f"[TestForge] Output salvo em: {out_path}")
+
 
 def _heal_step(page, step, error_msg: str, base_url: str, step_num: int,
                recording_id: str, app_name: str, debug_healing: bool = False):
@@ -1722,6 +1732,8 @@ def main():
                      help="Browser preferido (default: chromium)")
     run.add_argument("--debug-healing", action="store_true",
                      help="Log payloads LLM + respostas brutas + validacao")
+    run.add_argument("--save-output", action="store_true",
+                     help="Salvar resumo da execucao em run_output.txt no diretorio do script")
     run.set_defaults(func=cmd_run)
 
     # pipeline
