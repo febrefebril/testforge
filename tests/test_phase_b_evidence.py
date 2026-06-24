@@ -10,14 +10,13 @@ import tempfile
 
 import pytest
 
-from testforge.semantic.intent_reconstructor import IntentReconstructor
 from testforge.semantic.model import SemanticAction, SemanticTarget
 from testforge.semantic.recording_normalizer import RecordingNormalizer
 
 
 @pytest.fixture
 def reconstructor():
-    return IntentReconstructor()
+    return RecordingNormalizer()
 
 
 @pytest.fixture
@@ -76,7 +75,7 @@ class TestSetterHookReconstruction:
 
         steps = [_make_step(name="renda", label="Renda", el_id="renda",
                             timestamp="2026-06-18T10:00:00Z")]
-        entries = reconstructor._reconstruct_from_value_mutations(recording_dir, steps)
+        entries = reconstructor._ir_value_mutations(recording_dir, steps)
 
         assert len(entries) == 1
         assert entries[0]["source"] == "setter_hook"
@@ -95,7 +94,7 @@ class TestSetterHookReconstruction:
                     "fingerprint": "input#valor[name=valor]",
                 }) + "\n")
 
-        entries = reconstructor._reconstruct_from_value_mutations(recording_dir, [])
+        entries = reconstructor._ir_value_mutations(recording_dir, [])
         assert entries[0]["value"] == "1.234,56"
 
 
@@ -114,7 +113,7 @@ class TestCheckedTransition:
 
         steps = [_make_step(tag="label", text="Sim, tenho 3 anos ou mais",
                             timestamp="2026-06-18T10:00:01Z")]
-        entries = reconstructor._reconstruct_from_snapshots(recording_dir, steps)
+        entries = reconstructor._ir_snapshots(recording_dir, steps)
 
         assert len(entries) == 1
         assert entries[0]["source"] == "checked_transition"
@@ -131,7 +130,7 @@ class TestCheckedTransition:
                                     name="aceite", label="Aceito os termos",
                                     ts="2026-06-18T10:00:01Z") + "\n")
 
-        entries = reconstructor._reconstruct_from_snapshots(recording_dir, [])
+        entries = reconstructor._ir_snapshots(recording_dir, [])
         assert len(entries) == 1
         assert entries[0]["source"] == "checked_transition"
         assert entries[0]["value"] == "Aceito os termos"
@@ -152,7 +151,7 @@ class TestFinalState:
                 }],
             }, f)
 
-        entries = reconstructor._reconstruct_from_final_state(recording_dir, [])
+        entries = reconstructor._ir_final_state(recording_dir, [])
         assert len(entries) == 1
         assert entries[0]["source"] == "final_state"
         assert entries[0]["value"] == "10.000,00"
@@ -175,7 +174,7 @@ class TestReconstructAllPriority:
         steps = [_make_step(name="telefone", timestamp="2026-06-18T10:00:00Z")]
         steps[0].context["form_values"] = {"telefone": "form_val"}
 
-        entries = reconstructor.reconstruct_all(recording_dir, steps)
+        entries = reconstructor._ir_all(recording_dir, steps)
         tel = [e for e in entries if e["field_key"] == "telefone"]
         assert len(tel) == 1
         assert tel[0]["source"] == "form_values"

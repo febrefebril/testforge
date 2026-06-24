@@ -12,7 +12,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from testforge.semantic.intent_reconstructor import IntentReconstructor
 from testforge.semantic.model import SemanticAction, SemanticTarget
 from testforge.semantic.recording_normalizer import RecordingNormalizer
 
@@ -22,7 +21,7 @@ from testforge.semantic.recording_normalizer import RecordingNormalizer
 
 @pytest.fixture
 def reconstructor():
-    return IntentReconstructor()
+    return RecordingNormalizer()
 
 
 @pytest.fixture
@@ -113,7 +112,7 @@ class TestCT_AUTO_4_1:
             f.write(_make_snapshot_line(fingerprint="input#campo1[name=campo1]", value="ABC", timestamp="2026-06-18T10:00:01Z") + "\n")
 
         steps = [_make_step(action="click", name="campo1", timestamp="2026-06-18T10:00:00Z")]
-        entries = reconstructor._reconstruct_from_snapshots(recording_dir, steps)
+        entries = reconstructor._ir_snapshots(recording_dir, steps)
 
         assert len(entries) >= 1, f"Expected >=1 entries, got {entries}"
         entry = entries[0]
@@ -129,7 +128,7 @@ class TestCT_AUTO_4_1:
             f.write(_make_snapshot_line(fingerprint="input#nome[name=nome]", value="João", timestamp="2026-06-18T10:00:01Z", name="nome", label="Nome") + "\n")
 
         steps = [_make_step(action="click", name="nome", timestamp="2026-06-18T10:00:00Z")]
-        entries = reconstructor._reconstruct_from_snapshots(recording_dir, steps)
+        entries = reconstructor._ir_snapshots(recording_dir, steps)
 
         assert len(entries) >= 1
         ids = entries[0].get("identifiers", {})
@@ -149,7 +148,7 @@ class TestCT_AUTO_4_1:
             _make_step(action="click", name="campo1", timestamp="2026-06-18T10:00:00Z"),
             _make_step(action="click", name="campo2", timestamp="2026-06-18T10:00:03Z"),
         ]
-        entries = reconstructor._reconstruct_from_snapshots(recording_dir, steps)
+        entries = reconstructor._ir_snapshots(recording_dir, steps)
 
         # Should capture the last value transition (most complete for masked inputs)
         assert len(entries) >= 1, f"Got entries: {entries}"
@@ -158,7 +157,7 @@ class TestCT_AUTO_4_1:
 
     def test_no_snapshots_file_returns_empty(self, reconstructor, recording_dir):
         """Missing field_snapshots.jsonl returns empty list."""
-        entries = reconstructor._reconstruct_from_snapshots(recording_dir, [])
+        entries = reconstructor._ir_snapshots(recording_dir, [])
         assert entries == []
 
     def test_empty_snapshots_file_returns_empty(self, reconstructor, recording_dir):
@@ -166,7 +165,7 @@ class TestCT_AUTO_4_1:
         path = os.path.join(recording_dir, "field_snapshots.jsonl")
         with open(path, "w") as f:
             f.write("")
-        entries = reconstructor._reconstruct_from_snapshots(recording_dir, [])
+        entries = reconstructor._ir_snapshots(recording_dir, [])
         assert entries == []
 
     def test_single_snapshot_no_diff(self, reconstructor, recording_dir):
@@ -174,7 +173,7 @@ class TestCT_AUTO_4_1:
         path = os.path.join(recording_dir, "field_snapshots.jsonl")
         with open(path, "w") as f:
             f.write(_make_snapshot_line(fingerprint="input#campo1[name=campo1]", value="ABC", timestamp="10:00:00") + "\n")
-        entries = reconstructor._reconstruct_from_snapshots(recording_dir, [])
+        entries = reconstructor._ir_snapshots(recording_dir, [])
         assert entries == []
 
     def test_no_value_change_returns_empty(self, reconstructor, recording_dir):
@@ -183,7 +182,7 @@ class TestCT_AUTO_4_1:
         with open(path, "w") as f:
             f.write(_make_snapshot_line(fingerprint="input#campo1[name=campo1]", value="ABC", timestamp="10:00:00") + "\n")
             f.write(_make_snapshot_line(fingerprint="input#campo1[name=campo1]", value="ABC", timestamp="10:00:01") + "\n")
-        entries = reconstructor._reconstruct_from_snapshots(recording_dir, [])
+        entries = reconstructor._ir_snapshots(recording_dir, [])
         assert entries == []
 
     def test_snapshot_diff_integration_with_normalizer(self, recording_dir):
@@ -230,7 +229,7 @@ class TestCT_AUTO_4_2:
             _make_step(action="click", name="telefone", label="Telefone",
                        form_values={"telefone": "11999999999", "nome": "João", "email": "joao@test.com"}),
         ]
-        entries = reconstructor._reconstruct_from_form_values(steps)
+        entries = reconstructor._ir_form_values(steps)
 
         assert len(entries) >= 1
         telefone = [e for e in entries if e["field_key"] == "telefone"]
@@ -244,19 +243,19 @@ class TestCT_AUTO_4_2:
             _make_step(action="click", name="campo1",
                        form_values={"campo1": "A", "campo2": "B", "campo3": "C"}),
         ]
-        entries = reconstructor._reconstruct_from_form_values(steps)
+        entries = reconstructor._ir_form_values(steps)
         assert len(entries) == 3
 
     def test_form_values_no_context_returns_empty(self, reconstructor):
         """Step without form_values returns empty."""
         steps = [_make_step(action="click", name="campo1")]
-        entries = reconstructor._reconstruct_from_form_values(steps)
+        entries = reconstructor._ir_form_values(steps)
         assert entries == []
 
     def test_form_values_empty_dict_returns_empty(self, reconstructor):
         """Step with empty form_values returns empty."""
         steps = [_make_step(action="click", name="campo1", form_values={})]
-        entries = reconstructor._reconstruct_from_form_values(steps)
+        entries = reconstructor._ir_form_values(steps)
         assert entries == []
 
     def test_form_values_integration_with_field_value_map(self, reconstructor):
@@ -265,7 +264,7 @@ class TestCT_AUTO_4_2:
             _make_step(action="click", name="telefone",
                        form_values={"telefone": "11999999999"}),
         ]
-        entries = reconstructor._reconstruct_from_form_values(steps)
+        entries = reconstructor._ir_form_values(steps)
 
         assert len(entries) == 1
         assert "telefone" in entries[0]["field_key"]
@@ -285,7 +284,7 @@ class TestCT_AUTO_4_3:
             json.dump([_make_network_entry()], f)
 
         steps = [_make_step(action="click", name="cpf")]
-        entries = reconstructor._reconstruct_from_network(recording_dir, steps)
+        entries = reconstructor._ir_network(recording_dir, steps)
 
         assert len(entries) >= 1
         cpf = [e for e in entries if "cpf" in e["field_key"]]
@@ -301,7 +300,7 @@ class TestCT_AUTO_4_3:
                 post_data='{"cpf": "123.456.789-00", "renda": "5000"}')], f)
 
         steps = [_make_step(action="click", name="cpf")]
-        entries = reconstructor._reconstruct_from_network(recording_dir, steps)
+        entries = reconstructor._ir_network(recording_dir, steps)
         assert len(entries) >= 1
         cpf = [e for e in entries if "cpf" in e["field_key"]]
         assert len(cpf) >= 1
@@ -313,12 +312,12 @@ class TestCT_AUTO_4_3:
         with open(path, "w") as f:
             json.dump([_make_network_entry(post_data=None)], f)
 
-        entries = reconstructor._reconstruct_from_network(recording_dir, [])
+        entries = reconstructor._ir_network(recording_dir, [])
         assert entries == []
 
     def test_network_payload_missing_file_returns_empty(self, reconstructor, recording_dir):
         """Missing network_log.json returns empty list."""
-        entries = reconstructor._reconstruct_from_network(recording_dir, [])
+        entries = reconstructor._ir_network(recording_dir, [])
         assert entries == []
 
     def test_network_payload_has_evidence_metadata(self, reconstructor, recording_dir):
@@ -328,7 +327,7 @@ class TestCT_AUTO_4_3:
             json.dump([_make_network_entry(post_data="cpf=123")], f)
 
         steps = [_make_step(action="click", name="cpf")]
-        entries = reconstructor._reconstruct_from_network(recording_dir, steps)
+        entries = reconstructor._ir_network(recording_dir, steps)
 
         assert len(entries) >= 1
         ev = entries[0].get("evidence", {})
@@ -345,7 +344,7 @@ class TestCT_AUTO_4_3:
                 _make_network_entry(method="POST", post_data="campo1=valor1"),
             ], f)
 
-        entries = reconstructor._reconstruct_from_network(recording_dir, [_make_step()])
+        entries = reconstructor._ir_network(recording_dir, [_make_step()])
         assert len(entries) >= 1
         assert entries[0]["source"] == "network_payload"
 
@@ -359,7 +358,7 @@ class TestCT_AUTO_4_3:
             _make_step(action="click", name="nome", label="Nome"),
             _make_step(action="click", name="idade", label="Idade"),
         ]
-        entries = reconstructor._reconstruct_from_network(recording_dir, steps)
+        entries = reconstructor._ir_network(recording_dir, steps)
 
         keys = {e["field_key"] for e in entries}
         assert "nome" in keys
@@ -392,7 +391,7 @@ class TestIntentReconstructorIntegration:
         # Also add form_values to one step
         steps[1].context["form_values"] = {"campo2": "form_val"}
 
-        entries = reconstructor.reconstruct_all(recording_dir, steps)
+        entries = reconstructor._ir_all(recording_dir, steps)
 
         # Should have entries from snapshot_diff and form_values, possibly network_payload
         sources = {e["source"] for e in entries}
@@ -438,7 +437,7 @@ class TestIntentReconstructorIntegration:
             _make_step(action="click", name="campo1", timestamp="2026-06-18T10:00:00Z"),
             _make_step(action="click", name="campo2", timestamp="2026-06-18T10:00:02Z"),
         ]
-        entries = reconstructor.reconstruct_all(recording_dir, steps)
+        entries = reconstructor._ir_all(recording_dir, steps)
         assert len(entries) >= 1
 
 
@@ -450,31 +449,31 @@ class TestIntentReconstructorEdgeCases:
 
     def test_parse_payload_invalid_json(self, reconstructor):
         """Invalid JSON payload returns empty dict."""
-        result = reconstructor._parse_payload("{invalid json}", "http://test")
+        result = reconstructor._ir_parse_payload("{invalid json}", "http://test")
         assert result == {}
 
     def test_parse_payload_form_urlencoded(self, reconstructor):
         """Form-urlencoded payload is parsed correctly."""
-        result = reconstructor._parse_payload("key1=val1&key2=val2", "http://test")
+        result = reconstructor._ir_parse_payload("key1=val1&key2=val2", "http://test")
         assert result.get("key1") == "val1"
         assert result.get("key2") == "val2"
 
     def test_parse_payload_json(self, reconstructor):
         """JSON payload is parsed correctly."""
-        result = reconstructor._parse_payload('{"key1": "val1", "key2": "val2"}', "http://test")
+        result = reconstructor._ir_parse_payload('{"key1": "val1", "key2": "val2"}', "http://test")
         assert result.get("key1") == "val1"
         assert result.get("key2") == "val2"
 
     def test_parse_payload_empty(self, reconstructor):
         """Empty payload returns empty dict."""
-        assert reconstructor._parse_payload("", "http://test") == {}
-        assert reconstructor._parse_payload(None, "http://test") == {}
+        assert reconstructor._ir_parse_payload("", "http://test") == {}
+        assert reconstructor._ir_parse_payload(None, "http://test") == {}
 
     def test_canonical_key_normalization(self, reconstructor):
         """Canonical key normalizes correctly."""
-        assert reconstructor._canonical_key("Nome Completo") == "nome_completo"
-        assert reconstructor._canonical_key(" input-valor ") == "valor"  # 'input-' prefix stripped
-        assert reconstructor._canonical_key("") == "unknown"
+        assert reconstructor._canonical_field_key("Nome Completo") == "nome_completo"
+        assert reconstructor._canonical_field_key(" input-valor ") == "valor"  # 'input-' prefix stripped
+        assert reconstructor._canonical_field_key("") == "unknown"
 
     def test_find_nearest_step_index(self, reconstructor):
         """Nearest step index is found by timestamp proximity."""
@@ -483,13 +482,13 @@ class TestIntentReconstructorEdgeCases:
             _make_step(timestamp="2026-06-18T10:00:05Z"),
             _make_step(timestamp="2026-06-18T10:00:10Z"),
         ]
-        idx = reconstructor._find_nearest_step_index(steps, "2026-06-18T10:00:06Z")
+        idx = reconstructor._ir_find_nearest_step_index(steps, "2026-06-18T10:00:06Z")
         assert idx == 1  # closest to step at 10:00:05
 
     def test_find_nearest_step_index_empty(self, reconstructor):
         """Empty steps returns 0."""
-        assert reconstructor._find_nearest_step_index([], "2026-06-18T10:00:00Z") == 0
-        assert reconstructor._find_nearest_step_index([_make_step()], "") == 0
+        assert reconstructor._ir_find_nearest_step_index([], "2026-06-18T10:00:00Z") == 0
+        assert reconstructor._ir_find_nearest_step_index([_make_step()], "") == 0
 
     def test_reconstruct_from_snapshots_deduplicates_by_field_key(self, reconstructor, recording_dir):
         """Multiple snapshot entries for same field_key are deduplicated."""
@@ -500,7 +499,7 @@ class TestIntentReconstructorEdgeCases:
             f.write(_make_snapshot_line(fingerprint="input#campo1[name=campo1]", value="AB", timestamp="2026-06-18T10:00:02Z") + "\n")
 
         steps = [_make_step(name="campo1", timestamp="2026-06-18T10:00:00Z")]
-        entries = reconstructor._reconstruct_from_snapshots(recording_dir, steps)
+        entries = reconstructor._ir_snapshots(recording_dir, steps)
 
         # Should only have one entry for campo1
         campo1_entries = [e for e in entries if "campo1" in e["field_key"]]
@@ -508,4 +507,4 @@ class TestIntentReconstructorEdgeCases:
 
     def test_empty_steps_list_returns_empty(self, reconstructor):
         """All methods return empty list when steps is empty."""
-        assert reconstructor._reconstruct_from_form_values([]) == []
+        assert reconstructor._ir_form_values([]) == []

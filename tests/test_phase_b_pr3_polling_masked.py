@@ -10,8 +10,8 @@ import tempfile
 
 import pytest
 
-from testforge.semantic.intent_reconstructor import IntentReconstructor
 from testforge.semantic.model import SemanticAction, SemanticTarget
+from testforge.semantic.recording_normalizer import RecordingNormalizer
 
 
 # -- Fixtures ------------------------------------------------------------------
@@ -19,7 +19,7 @@ from testforge.semantic.model import SemanticAction, SemanticTarget
 
 @pytest.fixture
 def reconstructor():
-    return IntentReconstructor()
+    return RecordingNormalizer()
 
 
 @pytest.fixture
@@ -115,7 +115,7 @@ class TestPollingStrategy:
             ) + "\n")
 
         steps = [_make_step(name="valor", timestamp="2026-06-18T10:00:00Z")]
-        entries = reconstructor._reconstruct_from_polling(recording_dir, steps)
+        entries = reconstructor._ir_polling(recording_dir, steps)
 
         assert len(entries) >= 1, f"Esperava >=1 entrada, obteve: {entries}"
         entry = entries[0]
@@ -124,9 +124,9 @@ class TestPollingStrategy:
 
     def test_polling_source_score_is_50(self, reconstructor):
         """Score/prioridade de 'polling' é 50 (menor que snapshot_diff=70)."""
-        assert IntentReconstructor.SOURCE_PRIORITY["polling"] == 50
-        assert IntentReconstructor.SOURCE_PRIORITY["polling"] < IntentReconstructor.SOURCE_PRIORITY["snapshot_diff"]
-        assert IntentReconstructor.SOURCE_PRIORITY["polling"] < IntentReconstructor.SOURCE_PRIORITY["final_state"]
+        assert RecordingNormalizer.IR_SOURCE_PRIORITY["polling"] == 50
+        assert RecordingNormalizer.IR_SOURCE_PRIORITY["polling"] < RecordingNormalizer.IR_SOURCE_PRIORITY["snapshot_diff"]
+        assert RecordingNormalizer.IR_SOURCE_PRIORITY["polling"] < RecordingNormalizer.IR_SOURCE_PRIORITY["final_state"]
 
     def test_polling_via_interval_ms(self, reconstructor, recording_dir):
         """Entradas com interval_ms>0 (sem source=polling) também são capturadas."""
@@ -153,7 +153,7 @@ class TestPollingStrategy:
             f.write(json.dumps(entry) + "\n")
 
         steps = [_make_step(name="cpf", timestamp="2026-06-18T10:00:00Z")]
-        entries = reconstructor._reconstruct_from_polling(recording_dir, steps)
+        entries = reconstructor._ir_polling(recording_dir, steps)
 
         assert len(entries) >= 1
         assert entries[0]["source"] == "polling"
@@ -161,7 +161,7 @@ class TestPollingStrategy:
 
     def test_polling_missing_file_returns_empty(self, reconstructor, recording_dir):
         """Sem field_snapshots.jsonl retorna lista vazia."""
-        entries = reconstructor._reconstruct_from_polling(recording_dir, [])
+        entries = reconstructor._ir_polling(recording_dir, [])
         assert entries == []
 
     def test_polling_empty_file_returns_empty(self, reconstructor, recording_dir):
@@ -169,7 +169,7 @@ class TestPollingStrategy:
         path = os.path.join(recording_dir, "field_snapshots.jsonl")
         with open(path, "w") as f:
             f.write("")
-        entries = reconstructor._reconstruct_from_polling(recording_dir, [])
+        entries = reconstructor._ir_polling(recording_dir, [])
         assert entries == []
 
     def test_polling_no_polling_entries_returns_empty(self, reconstructor, recording_dir):
@@ -190,7 +190,7 @@ class TestPollingStrategy:
         with open(path, "w") as f:
             f.write(json.dumps(entry) + "\n")
 
-        entries = reconstructor._reconstruct_from_polling(recording_dir, [])
+        entries = reconstructor._ir_polling(recording_dir, [])
         assert entries == []
 
     def test_polling_entry_has_correct_identifiers(self, reconstructor, recording_dir):
@@ -204,7 +204,7 @@ class TestPollingStrategy:
                 label="Renda Mensal",
             ) + "\n")
 
-        entries = reconstructor._reconstruct_from_polling(recording_dir, [])
+        entries = reconstructor._ir_polling(recording_dir, [])
 
         assert len(entries) >= 1
         ids = entries[0]["identifiers"]
@@ -224,7 +224,7 @@ class TestPollingStrategy:
             ) + "\n")
 
         steps = [_make_step(name="prazo")]
-        entries = reconstructor.reconstruct_all(recording_dir, steps)
+        entries = reconstructor._ir_all(recording_dir, steps)
 
         sources = {e["source"] for e in entries}
         assert "polling" in sources, f"Polling não encontrado nas fontes: {sources}"
@@ -267,7 +267,7 @@ class TestPollingStrategy:
             f.write(json.dumps(polling_entry) + "\n")
 
         steps = [_make_step(name="valor")]
-        entries = reconstructor.reconstruct_all(recording_dir, steps)
+        entries = reconstructor._ir_all(recording_dir, steps)
 
         valor_entries = [e for e in entries if "valor" in e["field_key"]]
         assert len(valor_entries) == 1
@@ -283,48 +283,48 @@ class TestMaskedFieldDetection:
 
     def test_masked_field_currency_detected(self, reconstructor):
         """'10.000,00' com padrão de moeda brasileira é detectado como mascarado."""
-        assert reconstructor._detect_masked_field("10.000,00") is True
+        assert reconstructor._ir_detect_masked_field("10.000,00") is True
 
     def test_masked_field_cpf_detected(self, reconstructor):
         """CPF mascarado '123.456.789-00' é detectado como mascarado."""
-        assert reconstructor._detect_masked_field("123.456.789-00") is True
+        assert reconstructor._ir_detect_masked_field("123.456.789-00") is True
 
     def test_masked_field_cnpj_detected(self, reconstructor):
         """CNPJ '12.345.678/0001-99' é detectado como mascarado."""
-        assert reconstructor._detect_masked_field("12.345.678/0001-99") is True
+        assert reconstructor._ir_detect_masked_field("12.345.678/0001-99") is True
 
     def test_masked_field_telefone_detected(self, reconstructor):
         """Telefone '11 99999-9999' é detectado como mascarado."""
-        assert reconstructor._detect_masked_field("11 99999-9999") is True
+        assert reconstructor._ir_detect_masked_field("11 99999-9999") is True
 
     def test_masked_field_data_detected(self, reconstructor):
         """Data '01/06/2026' é detectada como mascarada."""
-        assert reconstructor._detect_masked_field("01/06/2026") is True
+        assert reconstructor._ir_detect_masked_field("01/06/2026") is True
 
     def test_masked_field_plain_text_not_masked(self, reconstructor):
         """Texto simples sem separadores não é mascarado."""
-        assert reconstructor._detect_masked_field("João Silva") is False
-        assert reconstructor._detect_masked_field("abc") is False
+        assert reconstructor._ir_detect_masked_field("João Silva") is False
+        assert reconstructor._ir_detect_masked_field("abc") is False
 
     def test_masked_field_plain_number_not_masked(self, reconstructor):
         """Número sem separadores não é mascarado."""
-        assert reconstructor._detect_masked_field("10000") is False
-        assert reconstructor._detect_masked_field("123") is False
+        assert reconstructor._ir_detect_masked_field("10000") is False
+        assert reconstructor._ir_detect_masked_field("123") is False
 
     def test_masked_field_empty_not_masked(self, reconstructor):
         """Valor vazio retorna False."""
-        assert reconstructor._detect_masked_field("") is False
+        assert reconstructor._ir_detect_masked_field("") is False
 
     def test_masked_field_raw_value_different(self, reconstructor):
         """Se raw_value difere do value mascarado, retorna True."""
-        assert reconstructor._detect_masked_field("10.000,00", raw_value="10000") is True
+        assert reconstructor._ir_detect_masked_field("10.000,00", raw_value="10000") is True
 
     def test_masked_field_raw_value_same_as_value(self, reconstructor):
         """Se raw_value igual ao value com separadores simples, depende do padrão."""
         # Mesmo valor = sem transformação de máscara
         # "1.5" não é padrão de moeda BR nem CPF, mas tem separador
         # O resultado depende se bate num known_mask — não deve bater
-        result = reconstructor._detect_masked_field("1.5", raw_value="1.5")
+        result = reconstructor._ir_detect_masked_field("1.5", raw_value="1.5")
         # Não bate em nenhum KNOWN_MASK → False
         assert result is False
 
@@ -340,7 +340,7 @@ class TestMaskedFieldDetection:
             ) + "\n")
 
         steps = [_make_step(name="valor")]
-        entries = reconstructor._reconstruct_from_value_mutations(recording_dir, steps)
+        entries = reconstructor._ir_value_mutations(recording_dir, steps)
 
         assert len(entries) >= 1, f"Esperava >=1 entrada, obteve: {entries}"
         entry = entries[0]
@@ -360,7 +360,7 @@ class TestMaskedFieldDetection:
             ) + "\n")
 
         steps = [_make_step(name="nome")]
-        entries = reconstructor._reconstruct_from_value_mutations(recording_dir, steps)
+        entries = reconstructor._ir_value_mutations(recording_dir, steps)
 
         assert len(entries) >= 1
         entry = entries[0]
@@ -378,7 +378,7 @@ class TestMaskedFieldDetection:
             ) + "\n")
 
         steps = [_make_step(name="cpf")]
-        entries = reconstructor._reconstruct_from_value_mutations(recording_dir, steps)
+        entries = reconstructor._ir_value_mutations(recording_dir, steps)
 
         assert len(entries) >= 1
         ids = entries[0]["identifiers"]
