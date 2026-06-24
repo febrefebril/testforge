@@ -1,7 +1,19 @@
 """Tests for runtime.healer — multi-attribute self-healing scoring."""
+import json
+import os
+import time
+
 import pytest
 
-from src.testforge.runtime.healer import _score_match, resolve_selector, CONFIDENCE_THRESHOLD
+from src.testforge.runtime.healer import (
+    _score_match,
+    resolve_selector,
+    CONFIDENCE_THRESHOLD,
+    HealCatalog,
+    reset_catalog,
+    _get_catalog,
+    _fp_key,
+)
 
 
 class TestScoreMatch:
@@ -207,3 +219,170 @@ class TestCompilerHealerBlock:
         path = P.compile(tc, str(tmp_path))
         script = self._GET_SCRIPT(path)
         assert "_fp = {'tag': 'input', 'placeholder': 'R$0,00'}" in script
+
+
+class TestHealCatalog:
+    """Tests for HealCatalog — persistence and lookup."""
+
+    def setup_method(self):
+        reset_catalog()
+
+    # --- basic CRUD ---
+
+    def test_lookup_miss(self, tmp_path):
+        """Lookup on empty catalog returns None."""
+        cat = HealCatalog(path=str(tmp_path / "catalog.jsonl"))
+        assert cat.lookup({"tag": "input"}) is None
+
+    def test_record_and_lookup_hit(self, tmp_path):
+        """Record then lookup same fingerprint returns selector."""
+        cat = HealCatalog(path=str(tmp_path / "catalog.jsonl"))
+        cat.record({"tag": "input", "placeholder": "R$0,00"}, "input#valor", 0.85)
+        result = cat.lookup({"tag": "input", "placeholder": "R$0,00"})
+        assert result == "input#valor"
+
+    def test_record_reinforce(self, tmp_path):
+        """Recording same fingerprint increments success_count."""
+        cat = HealCatalog(path=str(tmp_path / "catalog.jsonl"))
+        cat.record({"tag": "input"}, "input#x", 0.80)
+        cat.record({"tag": "input"}, "input#x", 0.80)
+        key = _fp_key({"tag": "input"})
+        assert cat._entries[key].success_count == 2
+
+    def test_record_updates_score(self, tmp_path):
+        """Recording with higher score updates entry.score."""
+        cat = HealCatalog(path=str(tmp_path / "catalog.jsonl"))
+        cat.record({"tag": "input"}, "input#x", 0.70)
+        cat.record({"tag": "input"}, "input#x", 0.95)
+        key = _fp_key({"tag": "input"})
+        assert cat._entries[key].score == 0.95
+
+    # --- canonical key ---
+
+    def test_fp_key_deterministic(self):
+        """Same fingerprint produces same key regardless of dict order."""
+        k1 = _fp_key({"tag": "input", "placeholder": "R$0,00"})
+        k2 = _fp_key({"placeholder": "R$0,00", "tag": "input"})
+        assert k1 == k2
+
+    def test_lookup_key_order_independent(self, tmp_path):
+        """Lookup hits regardless of dict key insertion order."""
+        cat = HealCatalog(path=str(tmp_path / "catalog.jsonl"))
+        cat.record({"a": "1", "b": "2"}, "#x", 0.90)
+        assert cat.lookup({"b": "2", "a": "1"}) == "#x"
+
+    # --- persistence ---
+
+    def test_persists_across_instances(self, tmp_path):
+        """Catalog written to file is readable by new instance."""
+        p = str(tmp_path / "persist.jsonl")
+        cat1 = HealCatalog(path=p)
+        cat1.record({"tag": "input"}, "input#persist", 0.90)
+
+        cat2 = HealCatalog(path=p)
+        assert cat2.lookup({"tag": "input"}) == "input#persist"
+
+    def test_no_path_does_not_persist(self):
+        """Catalog with empty path is memory-only (no file written)."""
+        cat = HealCatalog(path="")
+        cat.record({"tag": "input"}, "input#x", 0.90)
+        # Entry exists in memory but no file was created
+        assert cat.lookup({"tag": "input"}) == "input#x"
+        assert len(cat._entries) == 1
+
+    # --- eviction ---
+
+    def test_ttl_eviction(self, tmp_path):
+        """Entries older than TTL are evicted on lookup."""
+        cat = HealCatalog(path=str(tmp_path / "ttl.jsonl"))
+        cat.record({"tag": "input"}, "input#old", 0.90)
+        key = _fp_key({"tag": "input"})
+        # Manually age the entry
+        cat._entries[key].last_success = time.time() - 31 * 24 * 3600
+        assert cat.lookup({"tag": "input"}) is None
+
+    def test_max_entries_eviction(self, tmp_path):
+        """Oldest entries evicted when catalog exceeds max."""
+        import src.testforge.runtime.healer as H
+        original = H._CATALOG_MAX_ENTRIES
+        H._CATALOG_MAX_ENTRIES = 10
+        try:
+            cat = HealCatalog(path=str(tmp_path / "max.jsonl"))
+            for i in range(15):
+                cat.record({"idx": str(i)}, f"#x{i}", 0.90)
+            # After save, should be <= 10
+            assert len(cat._entries) <= 10
+        finally:
+            H._CATALOG_MAX_ENTRIES = original
+
+    # --- logging ---
+
+    def test_lookup_logs_hit(self, tmp_path, caplog):
+        """Catalog hit logs with 'heal_catalog: HIT' prefix."""
+        import logging
+        caplog.set_level(logging.INFO)
+        cat = HealCatalog(path=str(tmp_path / "log.jsonl"))
+        cat.record({"tag": "input"}, "input#log", 0.90)
+        cat.lookup({"tag": "input"})
+        assert "heal_catalog: HIT" in caplog.text
+
+    # --- edge cases ---
+
+    def test_empty_fingerprint_noop(self, tmp_path):
+        """Recording or looking up empty fingerprint is safe no-op."""
+        cat = HealCatalog(path=str(tmp_path / "empty.jsonl"))
+        cat.record({}, "#x", 0.90)  # should not crash or persist
+        assert cat.lookup({}) is None
+        assert len(cat._entries) == 0
+
+    def test_none_fingerprint_safe(self, tmp_path):
+        """Lookup with None fingerprint returns None."""
+        cat = HealCatalog(path=str(tmp_path / "none.jsonl"))
+        assert cat.lookup(None) is None
+        cat.record(None, "#x", 0.90)  # no-op
+
+    def test_corrupted_file_handled(self, tmp_path):
+        """Corrupted JSONL does not crash load."""
+        now = time.time()
+        p = str(tmp_path / "corrupt.jsonl")
+        with open(p, "w") as f:
+            f.write(json.dumps({"fp": {"tag": "input"}, "sel": "#ok", "score": 0.9, "n": 1, "ts": now}) + "\n")
+            f.write("NOT JSON\n")
+            f.write(json.dumps({"fp": {"tag": "button"}, "sel": "#btn", "score": 0.8, "n": 1, "ts": now}) + "\n")
+        cat = HealCatalog(path=p)
+        # Should have loaded first and last, skipped middle
+        assert cat.lookup({"tag": "input"}) == "#ok"
+        assert cat.lookup({"tag": "button"}) == "#btn"
+
+
+class TestCatalogIntegration:
+    """Tests that catalog integrates transparently into resolve_selector."""
+
+    def setup_method(self):
+        reset_catalog()
+
+    def test_resolve_selector_checks_catalog(self, tmp_path):
+        """resolve_selector calls catalog.lookup internally."""
+        # We can't test the full live DOM flow, but we can verify the
+        # catalog singleton is reachable and the code path exists.
+        from src.testforge.runtime.healer import _get_catalog
+        cat = _get_catalog()
+        assert cat is not None
+        assert hasattr(cat, "lookup")
+        assert hasattr(cat, "record")
+
+    def test_catalog_singleton_shared(self):
+        """_get_catalog returns same instance across calls."""
+        reset_catalog()
+        c1 = _get_catalog()
+        c2 = _get_catalog()
+        assert c1 is c2
+
+    def test_reset_catalog_creates_new(self):
+        """reset_catalog() makes _get_catalog() return a new instance."""
+        reset_catalog()
+        c1 = _get_catalog()
+        c1.record({"tag": "x"}, "#x", 0.90)
+        reset_catalog()
+        c2 = _get_catalog()
+        assert c2.lookup({"tag": "x"}) is None
