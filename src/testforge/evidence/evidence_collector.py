@@ -76,7 +76,7 @@ class EvidenceCollector:
                 return ""
             filename = f"{phase}_{step_id}.html"
             path = os.path.join(self._dom_dir, filename)
-            with open(path, "w") as f:
+            with open(path, "w", encoding="utf-8") as f:
                 f.write(html)
             self._pkg.dom_paths.append(path)
             return path

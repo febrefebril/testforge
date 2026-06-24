@@ -11,12 +11,12 @@ class RawRecordingStore:
         self._quality_alerts: list[str] = []
 
     def append_event(self, event: RawRecordedEvent):
-        with open(self._events_path, "a") as f:
+        with open(self._events_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(event.to_dict(), default=str) + "\n")
 
     def save_metadata(self, key: str, data: dict):
         path = os.path.join(self._session_dir, f"{key}.json")
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, default=str)
 
     def save_screenshot(self, event_id: str, data: bytes):
@@ -32,19 +32,19 @@ class RawRecordingStore:
         if not html or len(html.strip()) < 20:
             self._quality_alerts.append(f"DOM_SNAPSHOT_EMPTY:{event_id}")
             return ""
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             f.write(html)
         return os.path.relpath(path, self._session_dir)
 
     def save_ax_snapshot(self, event_id: str, data: dict):
         path = os.path.join(self._session_dir, "ax_snapshots", f"{event_id}.json")
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, default=str)
         return os.path.relpath(path, self._session_dir)
 
     def save_network_log(self, entries: list):
         path = os.path.join(self._session_dir, "network_log.json")
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(entries, f, indent=2, default=str)
 
     def save_sensitive_data_alert(self, alerts: list):
@@ -54,5 +54,5 @@ class RawRecordingStore:
             "masking_applied": False,
             "alerts": alerts,
         }
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, default=str)

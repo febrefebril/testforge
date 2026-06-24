@@ -196,7 +196,7 @@ class RecordingSessionManager:
 
     def _update_metadata(self, session: RecordingSession):
         if session.metadata_path:
-            with open(session.metadata_path, "w") as f:
+            with open(session.metadata_path, "w", encoding="utf-8") as f:
                 json.dump(session.to_metadata_dict(), f, indent=2, default=str)
 
     @staticmethod

@@ -61,7 +61,7 @@ class PlaywrightCompiler:
                           test_case.test_id, exc, exc_info=True)
             raise
         code_len = len(code)
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             f.write(code)
         logger.info("Compilation OK test_id=%s lines=%d bytes=%d",
                      test_case.test_id, code.count('\n'), code_len)
@@ -83,7 +83,7 @@ class PlaywrightCompiler:
         os.makedirs(output_dir, exist_ok=True)
         path = os.path.join(output_dir, "semantic_steps.jsonl")
 
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             # Header line: metadata
             metadata = {
                 "type": "metadata",

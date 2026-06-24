@@ -172,7 +172,7 @@ class GitPublisher:
                 )
                 # Save locally in recording dir (permanent copy)
                 local_report_path = os.path.join(recordings_dir, recording_id, "submission_report.json")
-                with open(local_report_path, "w") as f:
+                with open(local_report_path, "w", encoding="utf-8") as f:
                     json.dump(submission_report, f, indent=2, default=str)
                 # Copy to repo
                 report_path = os.path.join(dest_dir, "submission_report.json")
@@ -182,7 +182,7 @@ class GitPublisher:
                 # Generate summary
                 summary_md = self._generate_summary(recording_id, metadata)
                 summary_path = os.path.join(dest_dir, "SUMMARY.md")
-                with open(summary_path, "w") as f:
+                with open(summary_path, "w", encoding="utf-8") as f:
                     f.write(summary_md)
                 summary_generated = True
 
@@ -294,7 +294,7 @@ class GitPublisher:
                 recording_id, metadata, recordings_dir
             )
             local_report_path = os.path.join(recordings_dir, recording_id, "submission_report.json")
-            with open(local_report_path, "w") as f:
+            with open(local_report_path, "w", encoding="utf-8") as f:
                 json.dump(submission_report, f, indent=2, default=str)
             shutil.copy2(local_report_path, os.path.join(dest_dir, "submission_report.json"))
             if "submission_report.json" not in copied:

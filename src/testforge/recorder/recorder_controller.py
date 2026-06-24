@@ -245,7 +245,7 @@ class RecorderController:
             "css_path": data.get("css_path", ""),
             "accessible_name": data.get("accessible_name", ""),
         }
-        with open(path, "a") as f:
+        with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(step, default=str) + "\n")
 
     def _capture_snapshots(self, event: RawRecordedEvent):
@@ -317,13 +317,13 @@ class RecorderController:
     def _save_field_snapshot(self, snapshot_data: dict):
         """Append a single field snapshot to field_snapshots.jsonl."""
         path = os.path.join(self._store._session_dir, "field_snapshots.jsonl")
-        with open(path, "a") as f:
+        with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(snapshot_data, default=str) + "\n")
 
     def _save_value_mutation(self, mutation_data: dict):
         """Append a value mutation to value_mutations.jsonl."""
         path = os.path.join(self._store._session_dir, "value_mutations.jsonl")
-        with open(path, "a") as f:
+        with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(mutation_data, default=str) + "\n")
 
     def _flush_field_snapshots(self) -> int:
@@ -368,7 +368,7 @@ class RecorderController:
             }""")
             if final_state:
                 path = os.path.join(self._store._session_dir, "final_state_snapshot.json")
-                with open(path, "w") as f:
+                with open(path, "w", encoding="utf-8") as f:
                     json.dump(final_state, f, indent=2, default=str)
         except Exception:
             pass

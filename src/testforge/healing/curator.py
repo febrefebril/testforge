@@ -90,7 +90,7 @@ class FailureTracker:
     def _save(self):
         import json as _json
         os.makedirs(os.path.dirname(self._path) or ".", exist_ok=True)
-        with open(self._path, "w") as f:
+        with open(self._path, "w", encoding="utf-8") as f:
             _json.dump(self._counts, f, indent=2)
 
     def increment(self, taxonomy_id: str) -> int:

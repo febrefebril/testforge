@@ -62,7 +62,7 @@ class HealingCatalog:
             recipe.recipe_id = hashlib.sha256(
                 f"{recipe.trigger_code}:{recipe.trigger_pattern}:{recipe.solution_strategy}".encode()
             ).hexdigest()[:12]
-        with open(self._path, "a") as f:
+        with open(self._path, "a", encoding="utf-8") as f:
             f.write(json.dumps(recipe.to_dict(), default=str) + "\n")
         return recipe.recipe_id
 
@@ -111,7 +111,7 @@ class HealingCatalog:
                         r["success_count"] = r.get("success_count", 0) + 1
                     r["last_used"] = datetime.now(timezone.utc).isoformat()
                 updated.append(r)
-        with open(self._path, "w") as f:
+        with open(self._path, "w", encoding="utf-8") as f:
             for r in updated:
                 f.write(json.dumps(r, default=str) + "\n")
 

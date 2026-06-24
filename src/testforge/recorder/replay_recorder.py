@@ -258,10 +258,10 @@ class ReplayRecorder:
 
     def _write_json(self, name: str, data):
         path = self._session_dir / name
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, default=str)
 
     def _append_jsonl(self, name: str, data):
         path = self._session_dir / name
-        with open(path, "a") as f:
+        with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(data, default=str) + "\n")

@@ -235,7 +235,7 @@ def _save_field_value_map(rec_dir: str, values: dict) -> str:
         existing["_meta"].get("sources", []) + ["user_supplied_cli"]
     ))
 
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(existing, f, indent=2, ensure_ascii=False)
 
     return path
@@ -298,7 +298,7 @@ def _save_test_data(rec_dir: str, values: dict, recording_id: str) -> str:
                 })
                 break
 
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(existing, f, indent=2, ensure_ascii=False)
 
     return path

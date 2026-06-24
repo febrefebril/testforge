@@ -290,7 +290,7 @@ class IncrementalRecordingValidator:
     def _save_status_history(self):
         """Save status history to recording directory."""
         history_path = os.path.join(self.output_dir, "status_history.json")
-        with open(history_path, "w") as f:
+        with open(history_path, "w", encoding="utf-8") as f:
             json.dump(
                 {
                     "recording_id": self.recording_id,
