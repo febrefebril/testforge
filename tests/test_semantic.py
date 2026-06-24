@@ -730,6 +730,113 @@ class TestCompiler:
             assert "resultado" not in code.lower().replace("page.goto(base_url)", "")
 
 
+class TestL0_5AccessibilityResolution:
+    """Tests for L0.5 get_by_role with regex fuzzy name matching."""
+
+    def test_l0_5_role_expr_with_role_and_name(self):
+        """_l0_5_role_expr returns regex get_by_role when role+name present."""
+        compiler = PlaywrightCompiler()
+        target = SemanticTarget(role="button", accessible_name="Enviar formulário")
+        expr = compiler._l0_5_role_expr(target)
+        assert expr is not None
+        assert "get_by_role" in expr
+        assert "re.compile" in expr
+        assert "re.escape" in expr
+        assert "re.I" in expr
+        assert "Enviar" in expr  # first 40 chars
+
+    def test_l0_5_role_expr_without_role(self):
+        """_l0_5_role_expr returns None when role missing."""
+        compiler = PlaywrightCompiler()
+        target = SemanticTarget(accessible_name="Enviar")
+        assert compiler._l0_5_role_expr(target) is None
+
+    def test_l0_5_role_expr_without_name(self):
+        """_l0_5_role_expr returns None when accessible_name too short."""
+        compiler = PlaywrightCompiler()
+        target = SemanticTarget(role="button")
+        assert compiler._l0_5_role_expr(target) is None
+        target = SemanticTarget(role="button", accessible_name="A")
+        assert compiler._l0_5_role_expr(target) is None
+
+    def test_l0_5_role_expr_truncates_long_name(self):
+        """_l0_5_role_expr truncates accessible_name to 40 chars."""
+        compiler = PlaywrightCompiler()
+        long_name = "A" * 100
+        target = SemanticTarget(role="button", accessible_name=long_name)
+        expr = compiler._l0_5_role_expr(target)
+        assert expr is not None
+        assert "A" * 40 in expr
+        assert "A" * 41 not in expr
+
+    def test_compiled_code_imports_re(self):
+        """Generated test script imports re for L0.5 regex support."""
+        tc = SemanticTestCase(test_id="ST-L05", source_recording_id="REC-001",
+                              application="fake-bank", base_url="http://localhost:8765")
+        tc.steps.append(SemanticAction(action="navigation"))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile(tc, tmpdir)
+            with open(path) as f:
+                code = f.read()
+            assert "import json, os, re" in code or "import re" in code
+
+    def test_compiled_fill_includes_l0_5_regex(self):
+        """Fill step with role+name generates re.compile fallback."""
+        tc = SemanticTestCase(test_id="ST-L05-FILL", source_recording_id="REC-001",
+                              application="fake-bank", base_url="http://localhost:8765")
+        tc.steps.append(SemanticAction(action="navigation"))
+        target = SemanticTarget(role="textbox", accessible_name="Renda mensal",
+                                placeholder="R$0,00")
+        target.candidates = [
+            LocatorCandidate("placeholder", "input[placeholder='R$0,00']", 0.85),
+            LocatorCandidate("id", "#renda", 0.75),
+        ]
+        tc.steps.append(SemanticAction(action="fill", target=target, value="5000"))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile(tc, tmpdir)
+            with open(path) as f:
+                code = f.read()
+            assert "re.compile(re.escape" in code, f"L0.5 re.compile not found in:\n{code}"
+
+    def test_compiled_click_includes_l0_5_regex(self):
+        """Click step with role+name generates re.compile fallback."""
+        tc = SemanticTestCase(test_id="ST-L05-CLK", source_recording_id="REC-001",
+                              application="fake-bank", base_url="http://localhost:8765")
+        tc.steps.append(SemanticAction(action="navigation"))
+        target = SemanticTarget(role="button", accessible_name="Continuar",
+                                text="Continuar", tag="button")
+        target.candidates = [
+            LocatorCandidate("role", "role=button[name='Continuar']", 0.95),
+            LocatorCandidate("text", "button:has-text('Continuar')", 0.55),
+        ]
+        tc.steps.append(SemanticAction(action="click", target=target))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile(tc, tmpdir)
+            with open(path) as f:
+                code = f.read()
+            assert "re.compile(re.escape" in code, f"L0.5 re.compile not found in:\n{code}"
+
+    def test_compiled_fill_without_role_no_l0_5(self):
+        """Fill without role+name does not generate re.compile."""
+        tc = SemanticTestCase(test_id="ST-L05-NO", source_recording_id="REC-001",
+                              application="fake-bank", base_url="http://localhost:8765")
+        tc.steps.append(SemanticAction(action="navigation"))
+        target = SemanticTarget(placeholder="R$0,00")
+        target.candidates = [
+            LocatorCandidate("placeholder", "input[placeholder='R$0,00']", 0.85),
+        ]
+        tc.steps.append(SemanticAction(action="fill", target=target, value="5000"))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compiler = PlaywrightCompiler()
+            path = compiler.compile(tc, tmpdir)
+            with open(path) as f:
+                code = f.read()
+            assert "re.compile" not in code, f"Unexpected re.compile in:\n{code}"
+
+
 class TestSemanticStepsJsonl:
     """Tests for semantic_steps.jsonl generation alongside compiled script."""
 
