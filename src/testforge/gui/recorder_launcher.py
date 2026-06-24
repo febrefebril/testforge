@@ -52,6 +52,11 @@ def _combo(parent, textvariable, values, width=20):
                     foreground=FG, selectbackground=ACCENT,
                     selectforeground=BG, bordercolor=BORDER,
                     arrowcolor=FG, relief="flat")
+    style.map("TF.TCombobox",
+              fieldbackground=[("readonly", BG_INPUT)],
+              foreground=[("readonly", FG)],
+              selectbackground=[("readonly", ACCENT)],
+              selectforeground=[("readonly", BG)])
     c = ttk.Combobox(parent, textvariable=textvariable, values=values,
                      width=width, state="readonly", style="TF.TCombobox",
                      font=("Segoe UI", 9))
@@ -88,7 +93,7 @@ def _row(grid, row, label, widget, req=False):
 class RecorderLauncher(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("TestForge — Lançador de Gravação")
+        self.title("testforge")
         self.configure(bg=BG)
         self.resizable(True, True)
         self.minsize(620, 720)
