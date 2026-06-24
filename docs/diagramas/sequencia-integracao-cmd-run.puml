@@ -1,5 +1,5 @@
 @startuml
-title TestForge v0.4.1 — Sequência: Integração cmd_run com CuradorAutomatico + Handler Delegation
+title TestForge v0.4.2 — Sequência: Integração cmd_run com CuradorAutomatico + Handler Delegation
 
 skinparam backgroundColor #FFFFFF
 skinparam sequenceMessageAlign center

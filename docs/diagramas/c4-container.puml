@@ -1,5 +1,5 @@
 @startuml
-title TestForge v0.4.1 — C4 Container (32 modulos, L0→L3 healing + ComponentHandlers)
+title TestForge v0.4.2 — C4 Container (L0→L3 healing + ComponentHandlers + native Playwright locators)
 
 skinparam backgroundColor #FFFFFF
 skinparam packageStyle rectangle
@@ -9,12 +9,12 @@ rectangle "TestForge CLI\nPython 3.10+" as CLI #LightYellow {
 }
 
 rectangle "Recorder Sensorial\nPlaywright sync_api" as Recorder #LightGreen {
-  component "RecorderController\n+ RecordingSession\n+ RawEvent" as REC
+  component "RecorderController\n+ RecordingSession\n+ RawEvent\n+ overlay_inject.js\n+ framenavigated tracking" as REC
 }
 
 rectangle "Semantic (MIS)\nModelo Intermediario" as Semantic #LightYellow {
-  component "RecordingNormalizer\n+ SemanticTestCase\n+ SemanticAction" as MIS
-  component "PlaywrightCompiler\n+ data-driven support" as COMP
+  component "RecordingNormalizer\n+ SemanticTestCase + SemanticAction\n+ compound candidates\n+ multi-attr fingerprint\n+ intent reconstruction (_ir_*)" as MIS
+  component "PlaywrightCompiler\n+ native PW locators\n+ L0.5 get_by_role regex\n+ data-driven support" as COMP
   component "DataExtractor\n+ test_data.json" as DE
 }
 
@@ -29,7 +29,7 @@ rectangle "Taxonomy\n11 families, 88 codes" as Taxonomy #LightBlue {
 }
 
 rectangle "Healing L0\nRecipe Catalog" as L0 #LightGreen {
-  component "HealingCatalog\nJSONL, 54 recipes\n<50ms match" as HC
+  component "HealingCatalog\nJSONL recipes, <50ms match\nauto-learn: record_success()" as HC
 }
 
 rectangle "Healing L1\nFallback Runner" as L1 #LightGreen {

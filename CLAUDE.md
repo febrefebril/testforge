@@ -46,13 +46,13 @@ Browser → raw_events.jsonl       (RecorderController injects JS listeners)
         → test_*.py              (PlaywrightCompiler, executable Playwright script)
 ```
 
-`SemanticAction` carries `LocatorCandidate[]` (role, label, placeholder, test-id, text, XPath) ranked by score. The compiled script tries candidates in order before escalating to healing.
+`SemanticAction` carries `LocatorCandidate[]` (role, label, placeholder, test-id, text, XPath) ranked by score plus compound multi-attribute candidates. The compiled script tries Playwright-native locators (`get_by_role`, `get_by_label`, `get_by_placeholder`, `get_by_test_id`) first, then L0.5 fuzzy `get_by_role` with regex, then CSS fallback, before escalating to healing.
 
 ### Healing Layers (L0 → L3)
 
 | Layer | Class | Mechanism | Cost |
 |-------|-------|-----------|------|
-| L0 | `HealingCatalog` | Exact match against `healing_catalog.jsonl` by family+symptom | <50ms |
+| L0 | `HealingCatalog` | Exact match against `healing_catalog.jsonl`; auto-learns from successful heals (`record_success`) | <50ms |
 | L1 | `FallbackRunner` | Try ranked `LocatorCandidate[]` from MIS | 2-5s |
 | L2 | `SpecialistAgents` | 6 deterministic agents by failure family | <100ms |
 | L3 | `LLMHealer` | Azure GPT-4.1-mini (or `MockLLMHealer` offline) | ~500 tok |
@@ -66,9 +66,9 @@ Browser → raw_events.jsonl       (RecorderController injects JS listeners)
 | `src/testforge/cli/app.py` | All CLI commands (argparse) |
 | `src/testforge/recorder/recorder_controller.py` | Playwright-based recorder, injects JS hooks |
 | `src/testforge/recorder/recording_status.py` | Recording state machine |
-| `src/testforge/semantic/recording_normalizer.py` | raw_events → SemanticTestCase |
-| `src/testforge/semantic/compiler.py` | SemanticTestCase → Playwright script |
-| `src/testforge/semantic/intent_reconstructor.py` | 3 strategies: snapshot_diff, form_values, network_payload |
+| `src/testforge/semantic/recording_normalizer.py` | raw_events → SemanticTestCase; includes intent reconstruction (_ir_* methods: polling, value_mutations, snapshots, form_values, network) |
+| `src/testforge/semantic/compiler.py` | SemanticTestCase → Playwright script; native locators + L0.5 fuzzy get_by_role |
+| `src/testforge/recorder/overlay_inject.js` | JS injected into browser for event capture (extracted from Python) |
 | `src/testforge/validation/readiness_gate.py` | 5-criteria ReadinessGate (READY/REVIEW/FAIL) |
 | `src/testforge/validation/incremental_validator.py` | normalize → complete → validate → gate pipeline |
 | `src/testforge/healing/healing_catalog.py` | L0 JSONL catalog lookup |

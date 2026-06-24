@@ -1,5 +1,5 @@
 @startuml
-title TestForge v0.4.1 — Sequência: Handler Delegation (detect → execute → heal)
+title TestForge v0.4.2 — Sequência: Handler Delegation (detect → execute → heal)
 
 skinparam backgroundColor #FFFFFF
 skinparam sequenceMessageAlign center

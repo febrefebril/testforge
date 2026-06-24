@@ -1,5 +1,5 @@
 @startuml
-title TestForge v0.4.1 — Sequencia: Gravacao → MIS → Compilacao → Data-Driven → Execucao → Healing L0→L3 + Handlers
+title TestForge v0.4.2 — Sequencia: Gravacao → MIS → Compilacao → Data-Driven → Execucao → Healing L0→L3 + Handlers
 
 skinparam backgroundColor #FFFFFF
 skinparam sequenceMessageAlign center

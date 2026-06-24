@@ -1,5 +1,5 @@
 @startuml
-title TestForge v0.4.1 — LLM Self-Healing: Componentes (L0→L3 + Handlers)
+title TestForge v0.4.2 — LLM Self-Healing: Componentes (L0→L3 + Handlers)
 
 skinparam packageStyle rectangle
 skinparam backgroundColor #FFFFFF
@@ -105,7 +105,7 @@ legend right
   |= Cor |= Significado |
   | <#LightGreen> | Existente — sem mudanças |
   | <#LightYellow> | Existente — será atualizado |
-  | <#LightBlue> | Novo — v0.4.1 |
+  | <#LightBlue> | Novo — v0.4.x |
 endlegend
 
 @enduml

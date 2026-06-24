@@ -1,7 +1,7 @@
 # Versionamento e Sincronização de Diagramas
 
-**Versão**: v0.4.1 (2026-06-23)  
-**Status**: Fase A congelada — Fase B/D em progresso — ComponentHandler system implementado (Sprints 1-6)
+**Versão**: v0.4.2 (2026-06-24)  
+**Status**: Fase A congelada — Fase B/D em progresso — Native Playwright locators + HealCatalog auto-learning implementados
 
 ## 🎯 Objetivo
 
@@ -15,14 +15,14 @@ Manter diagramas PlantUML sincronizados com código durante evolução do projet
 
 | Categoria | Diagramas | Última Atualização | Status |
 |-----------|-----------|-------------------|--------|
-| **C4 Architecture** | c4-context.puml, c4-container.puml, c4-context-v1.puml | 2026-06-23 | ✅ Aligned |
+| **C4 Architecture** | c4-context.puml, c4-container.puml, c4-context-v1.puml | 2026-06-24 | ✅ Aligned |
 | **Componentes** | componentes-v1.puml, componentes-llm-healing.puml | 2026-06-23 | ✅ Aligned |
 | **Classes** | classes-llm-healing.puml | 2026-06-23 | ✅ Aligned |
 | **Deploy** | deploy-llm-healing.puml | 2026-06-23 | ✅ Aligned |
 | **Estados** | estados-recording-session.puml, estados-curacao-outcome.puml | 2026-06-23 | ✅ Aligned |
-| **Fluxogramas** | fluxograma-pipeline-v1.puml | 2026-06-23 | ✅ Aligned |
+| **Fluxogramas** | fluxograma-pipeline-v1.puml | 2026-06-24 | ✅ Aligned |
 | **Sequências** | sequencia-curadoria-l0-l3.puml, sequencia-data-driven.puml, sequencia-fluxo-completo.puml, sequencia-integracao-cmd-run.puml | 2026-06-23 | ✅ Aligned |
-| **Handlers** | sequencia-handler-delegation.puml **(NOVO)** | 2026-06-23 | ✅ Aligned |
+| **Handlers** | sequencia-handler-delegation.puml | 2026-06-23 | ✅ Aligned |
 
 ## 🔄 Sincronização por Fase
 
@@ -125,6 +125,12 @@ Cada milestone (v0.4.0, v0.4.1, v0.5.0, etc.) deve:
 1. Atualizar versão em todos os `.puml` (título)
 2. Regenerar PNGs
 3. Committar com tag: `git tag -a v0.4.1-diagrams -m "Diagrams v0.4.1"`
+
+### v0.4.2 (2026-06-24) — Diagramas atualizados
+- `c4-container.puml`: RecorderController + overlay_inject.js, RecordingNormalizer + compound/fingerprint, PlaywrightCompiler + native locators + L0.5, HealingCatalog + auto-learn
+- `fluxograma-pipeline-v1.puml`: Recorder + framenavigated, MIS + compound candidates + fingerprint, Compiler + native PW locators + L0.5
+- PNGs a regenerar
+- `intent_reconstructor.py` removido — merged em RecordingNormalizer
 
 ### v0.4.1 (2026-06-23) — Diagramas atualizados
 - 6 PUML existentes atualizados com handlers/ namespace + fluxo de delegacao

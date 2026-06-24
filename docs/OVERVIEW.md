@@ -1,6 +1,6 @@
 # TestForge — Visão Geral Executiva
 
-**Versão:** 0.4.1  
+**Versão:** 0.4.2  
 **Leia em:** 5 minutos
 
 ---
@@ -149,10 +149,10 @@ cat recordings/meu_primeiro_teste/script.py
 
 ### ✅ Self-Healing Automático
 
-- **L0:** Retry simples (timeout, stale element)
-- **L1:** Classificação + routing para agents (11 famílias)
-- **L2:** Healing propose (novo seletor, estratégia)
-- **L3:** Oracle validation (learning automático)
+- **L0:** HealingCatalog JSONL (<50ms) + auto-learning de curas bem-sucedidas
+- **L1:** FallbackRunner — tenta LocatorCandidates[] ranqueados do MIS
+- **L2:** 6 SpecialistAgents determinísticos por família (FAM-01→07)
+- **L3:** LLMHealer (Azure GPT-4.1-mini ou MockLLMHealer offline)
 
 ### ✅ Métricas de Qualidade
 
@@ -166,23 +166,27 @@ cat recordings/meu_primeiro_teste/script.py
 ## Arquitetura de Healing
 
 ```
-Step Falha
+Script compilado: tenta nativos PW (get_by_role, get_by_label, etc.)
+    └─ L0.5: get_by_role + regex fuzzy antes do CSS fallback
+
+Step Falha em Runtime
     ↓
-[L0] Retry simples
-    └─ Timeout? → wait + retry
-    └─ Stale? → find + retry
+[L0] HealingCatalog (<50ms, zero LLM)
+    └─ Match exato por family+symptom no JSONL
+    └─ Auto-aprendizado: record_success() grava curas bem-sucedidas
     
-[L1] Classifier + Agent roteamento
-    └─ Classify erro em FAM-01 a FAM-11
-    └─ Route para SelectorAgent, TimingAgent, etc
+[L1] FallbackRunner (2-5s)
+    └─ Tenta LocatorCandidates[] do MIS em ordem de score
+    └─ compound multi-attr candidates (placeholder+aria-label, etc.)
     
-[L2] Proposal + Execution
-    └─ Agent propõe novo seletor/estratégia
-    └─ Tenta aplicar proposta
+[L2] SpecialistAgents (<100ms, determinístico)
+    └─ 6 agentes: Selector, Timing, Input, Context, State, DynamicDOM
+    └─ FAM-08→FAM-11 escalam direto para L3
     
-[L3] Oracle Validation
-    └─ Valida se healing funcionou
-    └─ Armazena em base de conhecimento
+[L3] LLMHealer (~500 tokens)
+    └─ Azure GPT-4.1-mini (ou MockLLMHealer offline)
+    └─ Prompt por família (11 templates)
+    └─ Cura bem-sucedida → registra em HealingCatalog
 
 Métricas
     ├─ true_heals: healing resolveu o problema
@@ -203,6 +207,8 @@ Métricas
 **Fase D (⏳ Em Progresso)** — Executor com healing L0-L3 completo
 
 **🎯 ComponentHandler System (✅ v0.4.1)** — Sprints 1-6: Angular Material completo + PrimeFaces/React MUI skeletons
+
+**🎯 Native Playwright Locators + Auto-Healing (✅ v0.4.2)** — Compiler gera get_by_role/label/placeholder; L0.5 fuzzy regex; compound multi-attr candidates; HealCatalog auto-learning; IntentReconstructor merged em RecordingNormalizer
 
 ---
 
@@ -235,5 +241,5 @@ R: Não! TestForge gera o código. Mas saber Playwright ajuda a entender o outpu
 
 ---
 
-**Última atualização:** 2026-06-23  
-**Versão:** v0.4.1
+**Última atualização:** 2026-06-24  
+**Versão:** v0.4.2

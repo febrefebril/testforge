@@ -1,5 +1,5 @@
 @startuml
-title TestForge v1 — Flowchart Pipeline (implementado)
+title TestForge v0.4.2 — Flowchart Pipeline (implementado)
 
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontSize 13
@@ -7,7 +7,8 @@ skinparam defaultFontSize 13
 |Recorder|
 start
 :RecorderController.start()
-Injeta JS listeners via add_init_script;
+Injeta overlay_inject.js via add_init_script
++ page.on('framenavigated') para nav tracking;
 :page.goto(url);
 :Usuario interage (fill, click);
 :JS captura eventos → __tfEventQueue;
@@ -26,11 +27,16 @@ page.evaluate() le as queues;
 
 |MIS|
 :RecordingNormalizer.normalize()
-Le raw_events.jsonl + steps.jsonl;
+Le raw_events.jsonl + steps.jsonl
++ intent reconstruction (_ir_* methods);
 :Converte eventos → SemanticAction
 fill, click, navigation, assert;
 :Gera LocatorCandidates
-(role > label > placeholder > id > name > text);
+(role > label > placeholder > id > name > text)
++ compound multi-attr candidates
+(placeholder+aria-label, aria-label+name, etc.);
+:SemanticTarget.fingerprint
+multi-attribute snapshot para healing runtime;
 
 |Handler Detection|
 :detect_handler(step)
@@ -47,9 +53,14 @@ endif
 |Compiler|
 :PlaywrightCompiler.compile()
 Le SemanticTestCase;
+:Tenta locators nativos Playwright
+get_by_role, get_by_label,
+get_by_placeholder, get_by_test_id;
+:L0.5: get_by_role com regex fuzzy
+antes do fallback CSS;
 :Gera script Python com fallback loop
 for/else/try/except/break/continue;
-:Script salvo em generated_tests/;
+:Script salvo em semantic_tests/;
 
 |Oracle|
 :OracleRunner.run_all()
