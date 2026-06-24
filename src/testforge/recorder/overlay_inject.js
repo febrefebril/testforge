@@ -242,12 +242,12 @@
     try {
       if (!el || el === document.body || el === document.documentElement ||
           (el.tagName && (el.tagName === 'BODY' || el.tagName === 'HTML'))) {
-        _showToast('[WARN] Select a specific element, not the whole page');
+        _showToast('[AVISO] Selecione um elemento especifico, nao a pagina inteira');
         window.__tfAssertWaiting = false;
         var dot = document.getElementById('tf-rec-dot');
         var status = document.getElementById('tf-status');
         if (dot) dot.style.color = '#e94560';
-        if (status) status.textContent = 'Recording...';
+        if (status) status.textContent = 'Gravando...';
         return false;
       }
       var target = _extractTarget(el);
@@ -479,23 +479,23 @@
     var dot = document.getElementById('tf-rec-dot');
     var status = document.getElementById('tf-status');
     if (dot) dot.style.color = '#e94560';
-    if (status) status.textContent = 'Recording...';
+    if (status) status.textContent = 'Gravando...';
     document.body.style.outline = '';
   };
 
   window._tf_enterAssertMode = function() {
     window.__tfAssertWaiting = true;
     window.__tfCommandQueue.push('ASSERT');
-    _showToast('Assert Mode — click element (Esc to cancel)');
+    _showToast('Modo Assert — clique no elemento (Esc para cancelar)');
     var dot = document.getElementById('tf-rec-dot');
     var status = document.getElementById('tf-status');
     if (dot) dot.style.color = '#f59e0b';
-    if (status) status.textContent = 'Assert — click element (Esc to cancel)';
+    if (status) status.textContent = 'Assert — clique no elemento (Esc para cancelar)';
     document.body.style.outline = '3px solid #f59e0b';
     if (window.__tfAssertTimeout) clearTimeout(window.__tfAssertTimeout);
     window.__tfAssertTimeout = setTimeout(function() {
       if (window.__tfAssertWaiting) {
-        _showToast('Assert cancelled (timeout 30s)');
+        _showToast('Assert cancelado (timeout 30s)');
         window._tf_cancelAssertMode();
       }
     }, 30000);
@@ -506,7 +506,7 @@
     if (e.key === 'Escape' && window.__tfAssertWaiting) {
       e.preventDefault();
       e.stopPropagation();
-      _showToast('Assert cancelled');
+      _showToast('Assert cancelado');
       window._tf_cancelAssertMode();
       return;
     }
@@ -535,20 +535,35 @@
       initSteps   = parseInt(sessionStorage.getItem('__tfStepCount')   || 0);
       initAsserts = parseInt(sessionStorage.getItem('__tfAssertCount') || 0);
     } catch(_e) {}
+
+    // Build context label from recording info injected by recorder_controller
+    var info = window.__tfRecordingInfo || {};
+    var ctxParts = [];
+    if (info.system)   ctxParts.push(info.system);
+    if (info.suite)    ctxParts.push(info.suite);
+    if (info.testCase && info.testCase !== info.rid) ctxParts.push(info.testCase);
+    var ctxLabel = ctxParts.length ? ctxParts.join(' / ') : (info.rid || '');
+    var ctxHtml = ctxLabel
+      ? '<div style="font-size:10px;color:#94a3b8;margin-top:3px;letter-spacing:0.03em">' + ctxLabel + '</div>'
+      : '';
+
     var ov = document.createElement('div');
     ov.id = 'tf-overlay';
     ov.innerHTML = [
-      '<div id="tf-panel" style="position:fixed;top:8px;right:8px;background:#1a1a2e;color:#fff;padding:8px 14px;border-radius:8px;font:14px monospace;z-index:99999;display:flex;gap:12px;align-items:center;box-shadow:0 4px 16px rgba(0,0,0,0.3)">',
-        '<span id="tf-rec-dot" style="color:#e94560;font-size:18px">R</span>',
-        '<span id="tf-status">Recording...</span>',
-        '<span style="color:#aaa">|</span>',
-        '<button id="tf-btn-pause" style="background:#334155;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font:12px monospace" title="Shift+P">||</button>',
-        '<button id="tf-btn-stop" style="background:#991b1b;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font:12px monospace" title="Shift+S">[]</button>',
-        '<button id="tf-btn-assert" style="background:#6366f1;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font:12px monospace" title="Shift+A">Assert</button>',
-        '<span style="color:#aaa">|</span>',
-        '<span>Steps: <strong id="tf-step-count">' + initSteps + '</strong></span>',
-        ' <span>|</span>',
-        '<span>Asserts: <strong id="tf-assert-count">' + initAsserts + '</strong></span>',
+      '<div id="tf-panel" style="position:fixed;top:8px;right:8px;background:#1a1a2e;color:#fff;padding:8px 14px;border-radius:8px;font:14px monospace;z-index:99999;display:flex;flex-direction:column;gap:4px;box-shadow:0 4px 16px rgba(0,0,0,0.3)">',
+        '<div style="display:flex;gap:12px;align-items:center">',
+          '<span id="tf-rec-dot" style="color:#e94560;font-size:18px">R</span>',
+          '<span id="tf-status">Gravando...</span>',
+          '<span style="color:#aaa">|</span>',
+          '<button id="tf-btn-pause" style="background:#334155;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font:12px monospace" title="Shift+P">||</button>',
+          '<button id="tf-btn-stop" style="background:#991b1b;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font:12px monospace" title="Shift+S">[]</button>',
+          '<button id="tf-btn-assert" style="background:#6366f1;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font:12px monospace" title="Shift+A">Assert</button>',
+          '<span style="color:#aaa">|</span>',
+          '<span>Passos: <strong id="tf-step-count">' + initSteps + '</strong></span>',
+          '<span>|</span>',
+          '<span>Asserts: <strong id="tf-assert-count">' + initAsserts + '</strong></span>',
+        '</div>',
+        ctxHtml,
       '</div>',
       '<div id="tf-toast" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 24px;border-radius:8px;font:14px sans-serif;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,0.3)"></div>'
     ].join('\n');
@@ -596,7 +611,7 @@
     ) : '?';
     var header = document.createElement('div');
     header.style.cssText = 'color:#94a3b8;font-size:11px;margin-bottom:2px';
-    header.textContent = 'ASSERT on: "' + desc.substring(0,50) + '"';
+    header.textContent = 'ASSERT em: "' + desc.substring(0,50) + '"';
     el.appendChild(header);
     var btnRow = document.createElement('div');
     btnRow.style.cssText = 'display:flex;gap:6px';
@@ -617,13 +632,13 @@
         e.preventDefault();
         el.remove();
         if (item.type === '_cancel') {
-          _showToast('Assert cancelled');
+          _showToast('Assert cancelado');
           window._tf_cancelAssertMode();
           return;
         }
         var target = window.__tfAssertElement;
         if (!target) {
-          _showToast('[WARN] Element lost — click again');
+          _showToast('[AVISO] Elemento perdido — clique novamente');
           window._tf_cancelAssertMode();
           return;
         }
@@ -649,7 +664,7 @@
         var dot = document.getElementById('tf-rec-dot');
         var status = document.getElementById('tf-status');
         if (dot) dot.style.color = '#e94560';
-        if (status) status.textContent = 'Recording...';
+        if (status) status.textContent = 'Gravando...';
       };
       btnRow.appendChild(btn);
     });
@@ -668,14 +683,14 @@
         'z-index:999999;background:#1e293b;color:#fff;padding:20px 24px;border-radius:12px;' +
         'box-shadow:0 8px 32px rgba(0,0,0,0.6);font:14px sans-serif;text-align:center;max-width:360px';
       dlg.innerHTML =
-        '<div style="font-size:24px;margin-bottom:12px">[WARNING]</div>' +
-        '<div style="margin-bottom:16px">The recorded test will have <strong>no asserts</strong>.<br>' +
-        '<span style="color:#94a3b8;font-size:12px">Without asserts, TestForge can\'t verify expected results.</span></div>' +
+        '<div style="font-size:22px;margin-bottom:12px">&#9888; Sem asserts</div>' +
+        '<div style="margin-bottom:16px">O teste gravado nao tera <strong>nenhum assert</strong>.<br>' +
+        '<span style="color:#94a3b8;font-size:12px">Sem asserts o TestForge nao consegue verificar os resultados esperados.</span></div>' +
         '<div style="display:flex;gap:10px;justify-content:center">' +
           '<button id="tf-stop-yes" style="background:#991b1b;color:#fff;border:none;' +
-            'padding:9px 20px;border-radius:6px;cursor:pointer;font:13px sans-serif;font-weight:600">Exit anyway</button>' +
+            'padding:9px 20px;border-radius:6px;cursor:pointer;font:13px sans-serif;font-weight:600">Sair mesmo assim</button>' +
           '<button id="tf-stop-no" style="background:#334155;color:#fff;border:none;' +
-            'padding:9px 20px;border-radius:6px;cursor:pointer;font:13px sans-serif;font-weight:600">Back</button>' +
+            'padding:9px 20px;border-radius:6px;cursor:pointer;font:13px sans-serif;font-weight:600">Voltar</button>' +
         '</div>';
       document.body.appendChild(dlg);
       document.getElementById('tf-stop-yes').onclick = function() {

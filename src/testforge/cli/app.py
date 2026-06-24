@@ -269,6 +269,23 @@ def _check_python_keyboard(page, recorder):
         pass
 
 
+def _load_config_defaults() -> dict:
+    """Read defaults: section from .testforge/config.yml. Returns {} on any error."""
+    try:
+        from testforge.publisher import GitPublisher
+        import yaml
+        git_root = GitPublisher._find_git_root(os.getcwd())
+        for base in filter(None, [os.getcwd(), git_root]):
+            config_path = os.path.join(base, ".testforge", "config.yml")
+            if os.path.exists(config_path):
+                with open(config_path) as f:
+                    cfg = yaml.safe_load(f) or {}
+                return cfg.get("defaults", {})
+    except Exception:
+        pass
+    return {}
+
+
 def _auto_publish_recording(rid: str, rec_dir: str):
     """Auto-publish recording artifacts to Git repo if env vars configured.
 
@@ -347,19 +364,34 @@ def cmd_record(args):
         ts = time.strftime("%Y%m%d-%H%M%S")
         rid = _sanitize_name(args.name) if args.name else f"REC-{ts}"
 
+        # Load system/suite/test_case — args override config defaults
+        _cfg_defaults = _load_config_defaults()
+        _system = getattr(args, 'system', None) or _cfg_defaults.get("system", "") or ""
+        _suite = getattr(args, 'suite', None) or ""
+        _test_case_arg = getattr(args, 'test_case', None) or args.name or ""
+
         print(f"[TestForge] Gravando: {rid}")
         print(f"  URL: {args.url}")
+        if _system or _suite:
+            _ctx = " / ".join(filter(None, [_system, _suite, _test_case_arg or rid]))
+            print(f"  Contexto: {_ctx}")
         print(f"  Viewport: {'1280x720 (headless)' if args.headless else 'janela real (headed)'}")
-        print(f"  Shift+P=pause | Shift+S=stop | Shift+A=assert | Shift+H=hide overlay")
+        print(f"  Shift+P=pausar | Shift+S=parar | Shift+A=assert")
         print()
 
-        session = recorder.start(recording_id=rid, application=args.app or "web", base_url=args.url, evidence_level=args.evidence_level)
+        session = recorder.start(
+            recording_id=rid,
+            application=args.app or "web",
+            base_url=args.url,
+            evidence_level=args.evidence_level,
+            system=_system,
+            suite=_suite,
+            test_case=_test_case_arg,
+        )
         rid = session.recording_id  # may be suffixed (_2, _3) if original name exists
+        _test_case = _test_case_arg or args.name or rid
 
         # Write system/suite/test_case classification metadata
-        _system = getattr(args, 'system', None) or ""
-        _suite = getattr(args, 'suite', None) or ""
-        _test_case = getattr(args, 'test_case', None) or args.name or rid
         _meta_path = str(_PROJECT_ROOT / "recordings" / rid / "recording_metadata.json")
         if os.path.exists(_meta_path):
             with open(_meta_path) as _f:
@@ -1591,25 +1623,29 @@ def cmd_send(args):
     """Re-publish recording artifacts to configured Git repo."""
     from testforge.publisher import GitPublisher
     rid = args.recording_id
-    publisher = GitPublisher.from_env()
+    publisher = GitPublisher.from_config() or GitPublisher.from_env()
     if publisher is None:
         print("[TestForge] Git publisher nao configurado.")
-        print("  Configure: TESTFORGE_GIT_URL e TESTFORGE_GIT_TOKEN")
+        print("  Opcao 1: crie .testforge/config.yml com publisher.url")
+        print("  Opcao 2: defina TESTFORGE_GIT_URL (e opcionalmente TESTFORGE_GIT_TOKEN)")
         return
 
+    mode = "local" if publisher._local_mode else "remoto"
     rec_dir = str(_PROJECT_ROOT / "recordings" / rid)
     if not os.path.isdir(rec_dir):
         print(f"[TestForge] Gravacao nao encontrada: {rec_dir}")
         return
 
-    print(f"[TestForge] Enviando {rid}...")
+    print(f"[TestForge] Enviando {rid} (modo {mode})...")
     result = publisher.publish(rid, str(_PROJECT_ROOT / "recordings"), str(_PROJECT_ROOT / "semantic_tests"))
     if result.success:
+        sha_short = result.commit_sha[:8] if result.commit_sha and result.commit_sha != "(no changes)" else result.commit_sha or "sem-commit"
         print(f"[TestForge] ✓ Publicado: {result.remote_path}")
-        print(f"  Commit: {result.commit_sha[:8]}")
+        print(f"  Commit: {sha_short}")
         print(f"  Artefatos: {len(result.artifacts_copied)} arquivo(s)")
     else:
         print(f"[TestForge] ✗ Falha: {result.error}", file=sys.stderr)
+        print("[TestForge]   Execute com --verbose para logs detalhados.", file=sys.stderr)
 
 
 def _setup_logging(verbose: bool = False):
@@ -1620,7 +1656,7 @@ def _setup_logging(verbose: bool = False):
     if not logging.getLogger().handlers:
         logging.basicConfig(level=level, format=fmt, datefmt="%H:%M:%S")
     # Ensure our components log at the right level
-    for name in ("testforge.recorder", "testforge.semantic", "testforge.cli"):
+    for name in ("testforge.recorder", "testforge.semantic", "testforge.cli", "testforge.publisher"):
         logging.getLogger(name).setLevel(level)
 
 

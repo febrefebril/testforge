@@ -43,7 +43,17 @@ class RecorderController:
         self._headless = False
         self._evidence_level = "light"
 
-    def start(self, recording_id: str, application: str = "", base_url: str = "", headless: bool = False, evidence_level: str = "light") -> RecordingSession:
+    def start(
+        self,
+        recording_id: str,
+        application: str = "",
+        base_url: str = "",
+        headless: bool = False,
+        evidence_level: str = "light",
+        system: str = "",
+        suite: str = "",
+        test_case: str = "",
+    ) -> RecordingSession:
         session = self._session_manager.start(recording_id, application, base_url)
         self._store = RawRecordingStore(session.session_dir)
         self._network_entries = []
@@ -57,13 +67,23 @@ class RecorderController:
         self._page.on("response", self._on_response)
         self._page.on("framenavigated", self._on_framenavigated)
 
+        # Inject recording context so the overlay can display system/suite/test_case
+        context_script = (
+            "window.__tfRecordingInfo = {"
+            f" rid: {json.dumps(recording_id)},"
+            f" system: {json.dumps(system)},"
+            f" suite: {json.dumps(suite)},"
+            f" testCase: {json.dumps(test_case or recording_id)}"
+            " };"
+        )
+        self._page.add_init_script(context_script)
         self._page.add_init_script(_OVERLAY_JS)
         self._store.save_metadata("recording_config", {
             "evidence_level": self._evidence_level,
             "headless": self._headless,
         })
-        logger.info("Recording started id=%s app=%s url=%s headless=%s evidence=%s",
-                     recording_id, application, base_url, headless, evidence_level)
+        logger.info("Recording started id=%s app=%s url=%s headless=%s evidence=%s system=%s suite=%s",
+                     recording_id, application, base_url, headless, evidence_level, system, suite)
         return session
 
     def wait_for_command(self, timeout_ms: int = 500) -> list[str]:

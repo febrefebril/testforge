@@ -2,75 +2,78 @@
 # TestForge — Configuracao do Publisher Git
 # =============================================================================
 #
-# Ao final de cada gravacao (`testforge record`), o TestForge publica
-# automaticamente os artefatos no Git. Isso permite que o time veja,
-# revisE e audite as gravacoes centralizadamente.
+# QUEM EDITA ESTE ARQUIVO: responsavel tecnico / infra do time (uma unica vez).
+# TESTADORES: nao precisam editar este arquivo. Passam --suite e --test-case
+# na linha de comando ao gravar.
 #
-# Caminho no repositorio:
+# Caminho gerado automaticamente no repositorio:
 #   {path_prefix}/{system}/{suite}/{test_case}/{recording_id}/
 #
 # Exemplo:
-#   recordings/sistema-frotas/fluxo-cadastro/CT-001-criar-motorista/REC-20260623-153000/
+#   recordings/siopi/credito/CT-001-criar-motorista/REC-20260624-153000/
 #     ├── recording_metadata.json
 #     ├── dom_snapshots/
 #     ├── screenshots/
 #     ├── test_ct_001_criar_motorista.py
 #     └── submission_report.json
 #
-# -----------------------------------------------------------------------------
-# MODO LOCAL  (sem url)
-# -----------------------------------------------------------------------------
-# Se `url` estiver vazio ou ausente, o TestForge opera em MODO LOCAL:
-# commita diretamente no repositorio local do projeto, sem clone.
-# Util para times que compartilham o mesmo repo do codigo fonte.
+# =============================================================================
+# SECAO 1: defaults — valores pre-preenchidos para os testadores
+# =============================================================================
 #
-#   publisher:
-#     enabled: true
-#     # url: (vazio → modo local)
-#     branch: main
-#     path_prefix: recordings
+# Se todos os testadores do projeto trabalham no mesmo sistema, preencha
+# `system` aqui. Assim eles nao precisam passar --system em cada gravacao.
 #
-# -----------------------------------------------------------------------------
-# MODO REMOTO (com url)
-# -----------------------------------------------------------------------------
-# Se `url` estiver preenchido, o TestForge clona o repositorio remoto,
-# copia os artefatos e faz push. Util para separar recordings do codigo.
+# Linha de comando minima para o testador (com defaults.system preenchido):
+#   testforge record "https://sistema/" --suite cadastro --test-case CT-001
 #
-# ATENCAO: O token e OPCIONAL se voce usa autenticacao nativa:
-#   - Windows: Git Credential Manager (GCM) autentica automaticamente
-#   - Linux:  SSH keys ou GCM
-#   - Azure DevOps: `az devops login` + `system-prompt` via GCM
-#   - GitHub: `gh auth login`
+# Se o time trabalha em multiplos sistemas, deixe system vazio e
+# os testadores passam --system manualmente.
 #
-# -----------------------------------------------------------------------------
-# VARIAVEIS DE AMBIENTE (alternativa ao config.yml)
-# -----------------------------------------------------------------------------
-# Se o arquivo .testforge/config.yml nao existir, o TestForge le as env vars:
-#
-#   TESTFORGE_GIT_URL          URL do repositorio (obrigatorio se sem config.yml)
-#   TESTFORGE_GIT_TOKEN        Token de acesso (opicional se GCM configurado)
-#   TESTFORGE_GIT_BRANCH       Branch alvo (default: main)
-#   TESTFORGE_GIT_PATH_PREFIX  Prefixo no repositorio (default: recordings)
-#
+defaults:
+  # Sistema/aplicacao principal do projeto (ex: SIOPI, FROTAS, CRM).
+  # Quando preenchido, dispensa o uso de --system em cada gravacao.
+  # Deixe vazio ("") se o time grava para multiplos sistemas.
+  system: ""
+
+# =============================================================================
+# SECAO 2: publisher — configuracao Git (infra preenche uma vez)
 # =============================================================================
 
 publisher:
-  # Habilita/desabilita publicacao automatica apos gravacao
+  # Habilita/desabilita publicacao automatica apos cada gravacao.
   enabled: true
 
   # URL do repositorio Git para publicacao.
-  # Vazio = modo local (commita no repo local do projeto)
+  # Vazio = MODO LOCAL: commita diretamente no repo local do projeto (sem clone).
+  # Util para times que compartilham o mesmo repo do codigo fonte.
+  #
+  # Com URL = MODO REMOTO: clona, copia artefatos e faz push.
+  # Util para separar recordings do codigo de producao.
   url: ""
 
-  # Token de acesso (OPCIONAL — GCM/SSH autentica automaticamente).
-  # Nao usar se GCM ja configurado.
+  # Token de acesso (OPCIONAL).
+  # Nao preencher se o ambiente usa autenticacao nativa:
+  #   - Linux/Mac: SSH keys ou gh auth login (GitHub), az devops login (Azure)
+  #   - Windows: Git Credential Manager (GCM) autentica automaticamente
   # token: ""
 
-  # Branch alvo para os commits
+  # Branch alvo para os commits de gravacao.
   branch: main
 
-  # Prefixo do caminho no repositorio
+  # Prefixo do caminho no repositorio.
   path_prefix: recordings
 
-  # Nome do remote (usado apenas em modo local)
+  # Nome do remote Git (usado apenas no modo local).
   remote: origin
+
+# =============================================================================
+# REFERENCIA: variaveis de ambiente (alternativa ao config.yml)
+# =============================================================================
+# Se este arquivo nao existir, o TestForge le as env vars abaixo.
+# Util para CI/CD ou ambientes efemeros sem acesso ao filesystem do projeto.
+#
+#   TESTFORGE_GIT_URL          URL do repositorio (obrigatorio se sem config.yml)
+#   TESTFORGE_GIT_TOKEN        Token de acesso (opcional se GCM configurado)
+#   TESTFORGE_GIT_BRANCH       Branch alvo (default: main)
+#   TESTFORGE_GIT_PATH_PREFIX  Prefixo no repositorio (default: recordings)

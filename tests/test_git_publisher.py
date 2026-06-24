@@ -1,5 +1,7 @@
 import json
+import logging
 import os
+import subprocess
 import tempfile
 from unittest import mock
 from pathlib import Path
@@ -536,3 +538,196 @@ class TestLocalPublish:
         result = pub.publish("REC-missing", str(tmp_path / "recordings_src"), str(tmp_path))
         assert result.success is False
         assert "metadata not found" in result.error
+
+    def test_local_publish_without_git_root_returns_failure(self, tmp_path):
+        """If git_root is empty, _local_publish must return a clear failure."""
+        pub = GitPublisher(url="", token="", local_mode=True, git_root="", branch="main", remote="origin")
+        recordings_dir = str(tmp_path / "recordings_src")
+        os.makedirs(recordings_dir)
+        result = pub.publish("REC-nogit", recordings_dir, str(tmp_path))
+        assert result.success is False
+        assert "git_root" in result.error
+
+
+class TestFromConfigBugFixes:
+    """Regression tests for the UnboundLocalError in from_config."""
+
+    def test_config_at_cwd_no_unboundlocal_error(self, tmp_path):
+        """Bug: when .testforge/config.yml is directly in cwd, git_root was never
+        assigned → UnboundLocalError on return. Must not raise."""
+        (tmp_path / ".git").mkdir()
+        tf = tmp_path / ".testforge"
+        tf.mkdir()
+        (tf / "config.yml").write_text("publisher:\n  enabled: true\n")
+        pub = GitPublisher.from_config(cwd=str(tmp_path))
+        assert pub is not None
+
+    def test_git_root_resolved_when_config_at_cwd(self, tmp_path):
+        """git_root must point to the repo root even when config is at cwd."""
+        (tmp_path / ".git").mkdir()
+        tf = tmp_path / ".testforge"
+        tf.mkdir()
+        (tf / "config.yml").write_text("publisher:\n  enabled: true\n")
+        pub = GitPublisher.from_config(cwd=str(tmp_path))
+        assert pub._git_root == str(tmp_path)
+
+    def test_git_root_resolved_via_walk_up(self, tmp_path):
+        """git_root is found when cwd is a subdirectory without its own config."""
+        (tmp_path / ".git").mkdir()
+        tf = tmp_path / ".testforge"
+        tf.mkdir()
+        (tf / "config.yml").write_text("publisher:\n  enabled: true\n")
+        subdir = tmp_path / "deep" / "subdir"
+        subdir.mkdir(parents=True)
+        pub = GitPublisher.from_config(cwd=str(subdir))
+        assert pub is not None
+        assert pub._git_root == str(tmp_path)
+
+    def test_from_config_with_url_sets_remote_mode(self, tmp_path):
+        """When url is set in config, local_mode must be False."""
+        (tmp_path / ".git").mkdir()
+        tf = tmp_path / ".testforge"
+        tf.mkdir()
+        (tf / "config.yml").write_text(
+            "publisher:\n  enabled: true\n  url: https://example.com/repo.git\n"
+        )
+        pub = GitPublisher.from_config(cwd=str(tmp_path))
+        assert pub is not None
+        assert pub._local_mode is False
+        assert pub._url == "https://example.com/repo.git"
+
+
+class TestCmdSendUsesConfig:
+    """Ensure cmd_send falls back to config file, not only env vars."""
+
+    def test_cmd_send_uses_from_config_when_no_env(self, tmp_path):
+        """cmd_send must pick up config.yml when TESTFORGE_GIT_URL is not set."""
+        (tmp_path / ".git").mkdir()
+        tf = tmp_path / ".testforge"
+        tf.mkdir()
+        (tf / "config.yml").write_text("publisher:\n  enabled: true\n")
+        captured = {}
+
+        def fake_from_config(cwd=None):
+            captured["called"] = True
+            return GitPublisher(url="", token="", local_mode=True, git_root=str(tmp_path))
+
+        with mock.patch.object(GitPublisher, "from_config", side_effect=fake_from_config):
+            with mock.patch.dict(os.environ, {}, clear=True):
+                from testforge.publisher import GitPublisher as GP
+                pub = GP.from_config() or GP.from_env()
+        assert pub is not None
+
+
+class TestCloneShallowAuthErrors:
+    """_clone_shallow must not mask authentication errors."""
+
+    def test_auth_error_propagates_not_masked(self):
+        """Authentication failure (401/403) must not trigger branch-not-found fallback."""
+        publisher = GitPublisher("https://example.com", "bad-token")
+        auth_error = subprocess.CalledProcessError(
+            128, ["git", "clone"],
+            stderr="remote: Invalid username or password.\nfatal: Authentication failed",
+        )
+        call_count = [0]
+
+        def fake_git(*args, cwd=None, env=None):
+            call_count[0] += 1
+            raise auth_error
+
+        with mock.patch.object(publisher, "_git", side_effect=fake_git):
+            with tempfile.TemporaryDirectory() as tmp:
+                with pytest.raises(subprocess.CalledProcessError):
+                    publisher._clone_shallow(tmp)
+
+        # Must not retry — only one git call attempted
+        assert call_count[0] == 1
+
+    def test_branch_not_found_triggers_fallback_clone(self):
+        """Branch-not-found must retry with default branch clone."""
+        publisher = GitPublisher("https://example.com", "valid-token", branch="qa-branch")
+        call_count = [0]
+
+        def fake_git(*args, cwd=None, env=None):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                raise subprocess.CalledProcessError(
+                    128, ["git", "clone"],
+                    stderr="fatal: Remote branch qa-branch not found in upstream origin",
+                )
+            return ""
+
+        with mock.patch.object(publisher, "_git", side_effect=fake_git):
+            with tempfile.TemporaryDirectory() as tmp:
+                publisher._clone_shallow(tmp)
+
+        assert call_count[0] >= 2
+
+    def test_403_propagates(self):
+        """HTTP 403 error must not trigger fallback."""
+        publisher = GitPublisher("https://example.com", "token")
+        call_count = [0]
+
+        def fake_git(*args, cwd=None, env=None):
+            call_count[0] += 1
+            raise subprocess.CalledProcessError(
+                128, ["git", "clone"],
+                stderr="fatal: repository 'https://example.com/' not found\nerror: 403",
+            )
+
+        with mock.patch.object(publisher, "_git", side_effect=fake_git):
+            with tempfile.TemporaryDirectory() as tmp:
+                with pytest.raises(subprocess.CalledProcessError):
+                    publisher._clone_shallow(tmp)
+
+        assert call_count[0] == 1
+
+
+class TestGitCommandLogging:
+    """_git must log commands and scrub tokens from all output."""
+
+    def test_git_logs_debug_on_success(self, caplog):
+        publisher = GitPublisher("https://example.com", "token")
+        with caplog.at_level(logging.DEBUG, logger="testforge.publisher"):
+            with mock.patch("subprocess.run") as mock_run:
+                mock_run.return_value = mock.Mock(returncode=0, stdout="abc123\n", stderr="")
+                publisher._git("rev-parse", "HEAD", cwd="/tmp")
+        assert any("rev-parse" in r.message for r in caplog.records)
+
+    def test_git_scrubs_token_in_logged_args(self, caplog):
+        """Token embedded in a URL arg must not appear in any log record."""
+        publisher = GitPublisher("https://example.com", "super-secret-token")
+        with caplog.at_level(logging.DEBUG, logger="testforge.publisher"):
+            with mock.patch("subprocess.run") as mock_run:
+                mock_run.return_value = mock.Mock(returncode=0, stdout="", stderr="")
+                publisher._git(
+                    "clone", "https://:super-secret-token@example.com/repo.git", "repo",
+                    cwd="/tmp",
+                )
+        for record in caplog.records:
+            assert "super-secret-token" not in record.message
+
+    def test_git_logs_error_on_failure(self, caplog):
+        publisher = GitPublisher("https://example.com", "token")
+        with caplog.at_level(logging.ERROR, logger="testforge.publisher"):
+            with mock.patch("subprocess.run") as mock_run:
+                mock_run.return_value = mock.Mock(
+                    returncode=128, stdout="", stderr="fatal: not a git repository"
+                )
+                with pytest.raises(subprocess.CalledProcessError):
+                    publisher._git("status", cwd="/tmp")
+        assert any("falhou" in r.message for r in caplog.records)
+
+    def test_git_error_does_not_leak_token_in_exception(self):
+        """Token in stderr must be scrubbed before raising CalledProcessError."""
+        publisher = GitPublisher("https://example.com", "my-secret")
+        with mock.patch("subprocess.run") as mock_run:
+            mock_run.return_value = mock.Mock(
+                returncode=128,
+                stdout="",
+                stderr="error: auth failed with my-secret in url",
+            )
+            with pytest.raises(subprocess.CalledProcessError) as exc_info:
+                publisher._git("push", "origin", "main", cwd="/tmp")
+        assert "my-secret" not in (exc_info.value.stderr or "")
+        assert "***" in (exc_info.value.stderr or "")
