@@ -213,6 +213,28 @@
     } catch(_e) { /* ignore oversized */ }
   }
 
+  // ---- Value mutation setter hooks ----
+  function _hookValue(proto) {
+    var orig = Object.getOwnPropertyDescriptor(proto, 'value');
+    if (!orig || !orig.set) return;
+    Object.defineProperty(proto, 'value', {
+      get: orig.get,
+      set: function(v) {
+        orig.set.call(this, v);
+        window.__tfValueMutationQueue.push({
+          type: 'value_mutation',
+          timestamp: new Date().toISOString(),
+          fingerprint: this.tagName.toLowerCase() + '#' + (this.id||'') + '[name=' + (this.name||'') + ']',
+          value: String(v).substring(0, 200)
+        });
+      },
+      configurable: true
+    });
+  }
+  _hookValue(HTMLInputElement.prototype);
+  _hookValue(HTMLSelectElement.prototype);
+  _hookValue(HTMLTextAreaElement.prototype);
+
   // ---- Assert helpers ----
   function _detectState(el) {
     var tag = (el.tagName||'').toLowerCase();
@@ -793,4 +815,9 @@
     }
     setTimeout(function() { _showOverlay(); }, 100);
   });
+
+  // ---- Public aliases ----
+  window._tf_snapshotFields = _snapshotFields;
+  window._tf_captureFinalState = _captureFinalState;
+  window.__tfFieldSnapshotInterval = setInterval(function() { _tf_snapshotFields(); }, 2000);
 })();

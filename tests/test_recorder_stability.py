@@ -122,8 +122,12 @@ class TestCommandControlFlow:
         assert ctrl.handle_commands() == "continue"
 
     def test_js_commands_processed(self):
-        page = _make_page(evaluate_return=["STOP"])
+        page = _make_page(evaluate_return={
+            "events": [], "steps": [], "commands": ["STOP"],
+            "fieldSnapshots": [], "valueMutations": [],
+        })
         ctrl = RecorderController(page)
+        ctrl.flush_events()
         assert ctrl.handle_commands() == "stop"
 
     def test_wait_for_command_js_exception_returns_empty_list(self):

@@ -373,9 +373,12 @@ class RecordingReadinessGate:
             report.healing_oracles_passed,
         ]
 
-        if all(all_criteria):
+        if all(all_criteria) and step_results:
             report.verdict = ReadinessVerdict.PASS
             report.status = RecordingStatus.ready_for_team
+        elif all(all_criteria) and not step_results:
+            report.verdict = ReadinessVerdict.NEEDS_REVIEW
+            report.status = RecordingStatus.needs_review
         elif report.failures:
             # Determine if it's NEEDS_REVIEW or FAIL based on severity
             has_blocking_failures = any(

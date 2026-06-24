@@ -554,19 +554,19 @@ class TestOverlayJS:
         assert "_tf_snapshotFields()" in js
 
     def test_overlay_js_captures_final_state_on_stop(self):
-        """_OVERLAY_JS calls _tf_captureFinalState('user_stop') on Shift+S."""
+        """_OVERLAY_JS calls _captureFinalState('user_stop') on Shift+S."""
         js = RecorderController._OVERLAY_JS
-        assert "_tf_captureFinalState('user_stop')" in js or '_tf_captureFinalState("user_stop")' in js
+        assert "_captureFinalState('user_stop')" in js or '_captureFinalState("user_stop")' in js
 
     def test_overlay_js_captures_final_state_on_submit(self):
-        """_OVERLAY_JS calls _tf_captureFinalState('form_submit') on submit."""
+        """_OVERLAY_JS calls _captureFinalState('form_submit') on submit."""
         js = RecorderController._OVERLAY_JS
-        assert "_tf_captureFinalState('form_submit')" in js or '_tf_captureFinalState("form_submit")' in js
+        assert "_captureFinalState('form_submit')" in js or '_captureFinalState("form_submit")' in js
 
     def test_overlay_js_captures_final_state_on_beforeunload(self):
-        """_OVERLAY_JS calls _tf_captureFinalState('beforeunload') on beforeunload."""
+        """_OVERLAY_JS calls _captureFinalState('beforeunload') on beforeunload."""
         js = RecorderController._OVERLAY_JS
-        assert "_tf_captureFinalState('beforeunload')" in js or '_tf_captureFinalState("beforeunload")' in js
+        assert "_captureFinalState('beforeunload')" in js or '_captureFinalState("beforeunload")' in js
 
 
 # -- Edge cases ----------------------------------------------------------------

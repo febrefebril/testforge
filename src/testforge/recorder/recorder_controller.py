@@ -272,16 +272,15 @@ class RecorderController:
                 event.screenshot_path = self._store.save_screenshot(eid, data)
             except Exception:
                 pass
-            # DOM snapshot only in full mode — not consumed by normalizer/validation
-            try:
-                self._page.wait_for_load_state("domcontentloaded", timeout=2000)
-            except Exception:
-                pass
-            try:
-                dom = self._page.content()
-                event.dom_snapshot_path = self._store.save_dom(eid, dom)
-            except Exception:
-                pass
+        try:
+            self._page.wait_for_load_state("domcontentloaded", timeout=2000)
+        except Exception:
+            pass
+        try:
+            dom = self._page.content()
+            event.dom_snapshot_path = self._store.save_dom(eid, dom)
+        except Exception:
+            pass
 
     def _on_request(self, request: Request):
         post_data = None
