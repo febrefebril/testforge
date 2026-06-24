@@ -57,11 +57,15 @@ class GitPublisher:
 
     @classmethod
     def from_config(cls, cwd: str = None) -> Optional[GitPublisher]:
-        """Load from .testforge/config.yml in git repo root. No token needed."""
-        git_root = cls._find_git_root(cwd or os.getcwd())
-        if not git_root:
-            return None
-        config_path = os.path.join(git_root, ".testforge", "config.yml")
+        """Load from .testforge/config.yml. Probes cwd first, then git root."""
+        cwd = cwd or os.getcwd()
+        # 1. Try cwd/.testforge/config.yml
+        config_path = os.path.join(cwd, ".testforge", "config.yml")
+        # 2. Fallback to git root/.testforge/config.yml
+        if not os.path.exists(config_path):
+            git_root = cls._find_git_root(cwd)
+            if git_root:
+                config_path = os.path.join(git_root, ".testforge", "config.yml")
         if not os.path.exists(config_path):
             return None
         import yaml

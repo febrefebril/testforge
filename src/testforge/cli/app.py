@@ -276,6 +276,11 @@ def _auto_publish_recording(rid: str, rec_dir: str):
         from testforge.publisher import GitPublisher
         publisher = GitPublisher.from_config() or GitPublisher.from_env()
         if publisher is None:
+            print(
+                "[TestForge] ℹ Git publisher nao configurado. "
+                "Crie .testforge/config.yml ou defina TESTFORGE_GIT_URL.",
+                file=sys.stderr,
+            )
             return
         mode = "local" if publisher._local_mode else "remoto"
         # Warn if system/suite not set
