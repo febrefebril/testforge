@@ -23,6 +23,7 @@ class SemanticTarget:
     element_id: Optional[str] = None
     name: Optional[str] = None
     candidates: list = field(default_factory=list)
+    fingerprint: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -103,6 +104,8 @@ class SemanticTestCase:
                 if step.target.tag: t["tag"] = step.target.tag
                 if step.target.element_id: t["id"] = step.target.element_id
                 if step.target.name: t["name"] = step.target.name
+                if step.target.fingerprint:
+                    t["fingerprint"] = step.target.fingerprint
                 if step.target.candidates:
                     t["candidates"] = [
                         {"strategy": c.strategy, "selector": c.selector, "score": c.score, "reason": c.reason}

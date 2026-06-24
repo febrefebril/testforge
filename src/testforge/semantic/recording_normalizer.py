@@ -1359,6 +1359,29 @@ class RecordingNormalizer:
         # Compound selectors: combine 2 attributes for higher specificity
         candidates.extend(_compound_candidates(target_data, tag))
 
+        # Build fingerprint: flat dict of all available attributes for runtime healing
+        _nth = target_data.get("nth_child", 0) or 0
+        _class_list = target_data.get("class_list") or []
+        _parent_tag = target_data.get("parent_tag") or ""
+        fingerprint = {
+            "tag": target_data.get("tag", ""),
+            "role": target_data.get("role", ""),
+            "accessible_name": target_data.get("accessible_name", ""),
+            "placeholder": target_data.get("placeholder", ""),
+            "label": target_data.get("label", ""),
+            "name": target_data.get("name", ""),
+            "test_id": target_data.get("test_id", ""),
+            "id": target_data.get("id", ""),
+            "text": target_data.get("text", ""),
+            "nth_child": _nth,
+            "class_list": _class_list[:5],
+            "parent_tag": _parent_tag,
+            "href": (target_data.get("all_attributes") or {}).get("href", "")
+                     or target_data.get("href", ""),
+        }
+        # Remove empty values to keep fingerprint compact
+        fingerprint = {k: v for k, v in fingerprint.items() if v}
+
         # Sort candidates by score (descending) for deterministic ordering
         candidates.sort(key=lambda c: c.score, reverse=True)
 
@@ -1373,6 +1396,7 @@ class RecordingNormalizer:
             element_id=target_data.get("id"),
             name=target_data.get("name"),
             candidates=candidates,
+            fingerprint=fingerprint,
         )
 
     def _steps_identical(self, a: SemanticAction, b: SemanticAction) -> bool:
