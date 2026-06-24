@@ -124,7 +124,6 @@ class RecordingSessionManager:
         elapsed = ""
         if session.started_at and session.finished_at:
             try:
-                from datetime import datetime
                 s = datetime.fromisoformat(session.started_at)
                 f = datetime.fromisoformat(session.finished_at)
                 elapsed = f" duration={(f-s).total_seconds():.1f}s"
