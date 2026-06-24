@@ -396,6 +396,7 @@ def cmd_record(args):
             system=_system,
             suite=_suite,
             test_case=_test_case_arg,
+            use_cdp=getattr(args, "use_cdp_recorder", False),
         )
         rid = session.recording_id  # may be suffixed (_2, _3) if original name exists
         _test_case = _test_case_arg or args.name or rid
@@ -1740,6 +1741,8 @@ def main():
                      help="Modo piloto: habilita validacao automatica antes de READY (--validate-before-ready)")
     rec.add_argument("--evidence-level", choices=["light", "full"], default="light",
                      help="Nivel de evidencia: light (padrao, sem screenshot por evento) ou full (screenshot + DOM por evento)")
+    rec.add_argument("--use-cdp-recorder", action="store_true",
+                     help="(Fase 1) Captura paralela via Playwright tracing + CDP AX tree. Gera trace.zip e ax_snapshots/. Feature flag — nao remove caminho legado.")
     rec.add_argument("--system", default="",
                      help="Sistema/aplicacao (ex: SIOPI). Caminho Git: recordings/{system}/{suite}/{test_case}/")
     rec.add_argument("--suite", default="",

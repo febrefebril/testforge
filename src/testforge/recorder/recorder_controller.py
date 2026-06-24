@@ -13,9 +13,11 @@ from pathlib import Path
 
 from playwright.sync_api import Page, Request, Response
 
+from .cdp_snapshot import CDPSnapshotter
 from .raw_event import RawRecordedEvent, TargetInfo
 from .raw_recording_store import RawRecordingStore
 from .recording_session import RecordingSession, RecordingSessionManager
+from .tracing_manager import TracingManager
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +46,10 @@ class RecorderController:
         self._paused = False
         self._headless = False
         self._evidence_level = "light"
+        # Phase 1: parallel CDP/tracing capture (feature-flagged)
+        self._use_cdp = False
+        self._tracing: TracingManager | None = None
+        self._cdp: CDPSnapshotter | None = None
 
     def start(
         self,
@@ -55,6 +61,7 @@ class RecorderController:
         system: str = "",
         suite: str = "",
         test_case: str = "",
+        use_cdp: bool = False,
     ) -> RecordingSession:
         session = self._session_manager.start(recording_id, application, base_url)
         self._store = RawRecordingStore(session.session_dir)
@@ -64,10 +71,20 @@ class RecorderController:
         self._paused = False
         self._headless = headless
         self._evidence_level = evidence_level
+        self._use_cdp = bool(use_cdp)
 
         self._page.on("request", self._on_request)
         self._page.on("response", self._on_response)
         self._page.on("framenavigated", self._on_framenavigated)
+
+        # Phase 1: start Playwright tracing + attach CDP for AX-tree snapshots.
+        # Runs in parallel with legacy JS overlay capture. Feature-flagged.
+        if self._use_cdp:
+            self._tracing = TracingManager(self._page)
+            self._tracing.start(session.session_dir, recording_id)
+            self._cdp = CDPSnapshotter(self._page)
+            self._cdp.attach()
+            logger.info("Phase 1 capture enabled: tracing + CDP AX snapshots")
 
         # Inject recording context so the overlay can display system/suite/test_case
         context_script = (
@@ -151,6 +168,17 @@ class RecorderController:
     def stop(self) -> RecordingSession:
         self._capture_final_state_snapshot("recording_stopped")
         self.flush_events()
+        # Phase 1: stop tracing + detach CDP before tearing down page listeners.
+        if self._tracing is not None and self._tracing.is_active:
+            try:
+                self._tracing.stop()
+            except Exception as exc:
+                logger.error("Tracing stop failed: %s", exc)
+        if self._cdp is not None:
+            try:
+                self._cdp.detach()
+            except Exception:
+                pass
         for event_name in ("request", "response", "framenavigated"):
             try:
                 self._page.remove_listener(event_name, getattr(self, f"_on_{event_name}"))
@@ -281,6 +309,14 @@ class RecorderController:
             event.dom_snapshot_path = self._store.save_dom(eid, dom)
         except Exception:
             pass
+        # Phase 1: AX-tree snapshot via CDP (parallel to legacy DOM snapshot).
+        if self._cdp is not None and self._cdp._enabled:
+            try:
+                ax_tree = self._cdp.get_full_ax_tree()
+                if ax_tree:
+                    event.ax_snapshot_path = self._store.save_ax_snapshot(eid, ax_tree)
+            except Exception as exc:
+                logger.debug("AX snapshot failed for %s: %s", eid, exc)
 
     def _on_request(self, request: Request):
         post_data = None
