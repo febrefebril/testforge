@@ -620,7 +620,12 @@ def cmd_compile(args):
 
     try:
         compiler = PlaywrightCompiler()
-        path = compiler.compile(stc, out_dir, data_file=data_file)
+        if getattr(args, "use_v2_compiler", False):
+            path = compiler.compile_v2(stc, out_dir, data_file=data_file)
+            print(f"[TestForge] ✓ v2 compile: {path}")
+            print(f"  Fallback chain em runtime (LocatorResolver). Candidates em {out_dir}/candidates/")
+        else:
+            path = compiler.compile(stc, out_dir, data_file=data_file)
     except Exception as exc:
         logger.error("Compilation FAILED: %s", exc, exc_info=True)
         print(f"[TestForge] ✗ Compilacao falhou: {exc}")
@@ -1761,6 +1766,8 @@ def main():
     comp.add_argument("--scenarios", action="store_true", help="Gerar JSON com suporte a multiplos cenarios")
     comp.add_argument("--check", action="store_true", help="Verificar completude da intencao antes de compilar")
     comp.add_argument("--audit", action="store_true", help="Gerar relatorio de auditoria da gravacao (metricas, qualidade, issues)")
+    comp.add_argument("--use-v2-compiler", action="store_true",
+                     help="(Fase 3) Emite script minimal usando testforge.runtime.step + JSON candidates por step. Fallback chain roda em runtime, nao no .py.")
     comp.set_defaults(func=cmd_compile)
 
     # run

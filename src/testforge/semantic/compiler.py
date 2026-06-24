@@ -2,6 +2,11 @@
 
 Le SemanticTestCase e gera script Python executavel com fallback loop.
 Suporte a data-driven testing: extrai valores para JSON externo.
+
+Phase 3: optional `compile_v2` emits a minimal script that delegates
+the fallback chain to the runtime LocatorResolver. Each step's
+candidates are persisted to `<output_dir>/candidates/step_NNN.json`
+and looked up at run time. The legacy `compile` is unchanged.
 """
 import logging
 import os
@@ -10,14 +15,154 @@ import textwrap
 import json as _json
 from typing import Optional
 
-from .model import SemanticTestCase, SemanticAction, SemanticTarget, FieldValueMap
 from .data_extractor import _best_field_name
+from .locator.intent import normalize_intent
+from .model import FieldValueMap, SemanticAction, SemanticTarget, SemanticTestCase
 
 logger = logging.getLogger(__name__)
 
 
+def _derive_intent(action: SemanticAction) -> str:
+    """Use target.intent_text if present, else derive from attributes."""
+    target = action.target
+    if target and target.intent_text:
+        return target.intent_text
+    if not target:
+        return action.action
+    return normalize_intent(
+        action=action.action,
+        role=target.role,
+        accessible_name=target.accessible_name,
+        label=target.label,
+        placeholder=target.placeholder,
+        text=target.text,
+        value=action.value,
+        ancestor_roles=getattr(target, "ancestor_roles", []) or [],
+    )
+
+
+def _candidates_dict(target: SemanticTarget) -> list[dict]:
+    """Serialize target.candidates to plain JSON-ready dicts."""
+    out: list[dict] = []
+    for c in target.candidates or []:
+        item = {
+            "strategy": c.strategy,
+            "selector": c.selector,
+            "score": c.score,
+            "reason": c.reason,
+        }
+        if getattr(c, "playwright_call", None):
+            item["playwright_call"] = c.playwright_call
+        if getattr(c, "intent_text", None):
+            item["intent_text"] = c.intent_text
+        if getattr(c, "attribute_stability", None):
+            item["attribute_stability"] = c.attribute_stability
+        if getattr(c, "ancestor_roles", None):
+            item["ancestor_roles"] = c.ancestor_roles
+        if getattr(c, "backend_node_id", None) is not None:
+            item["backend_node_id"] = c.backend_node_id
+        out.append(item)
+    return out
+
+
 class PlaywrightCompiler:
     """Gera script Playwright Python a partir de SemanticTestCase."""
+
+    # ------------------------------------------------------------------
+    # Phase 3: v2 compiler
+    # ------------------------------------------------------------------
+    def compile_v2(
+        self,
+        test_case: SemanticTestCase,
+        output_dir: str,
+        data_file: str = "",
+    ) -> str:
+        """Emit a minimal script that delegates resolution to LocatorResolver.
+
+        Side-effects:
+        - writes `<output_dir>/candidates/step_NNN.json` per step
+        - writes `<output_dir>/test_<safe_id>.py` calling step.click/fill/...
+
+        The compiled script contains NO try/except fallback chain — the
+        runtime resolver consumes the per-step candidate files.
+        """
+        os.makedirs(output_dir, exist_ok=True)
+        candidates_dir = os.path.join(output_dir, "candidates")
+        os.makedirs(candidates_dir, exist_ok=True)
+
+        safe_id = re.sub(r"[^a-zA-Z0-9_-]", "_", test_case.test_id)
+        safe_id = re.sub(r"_+", "_", safe_id).strip("_").lower()
+        script_path = os.path.join(output_dir, f"test_{safe_id}.py")
+
+        lines: list[str] = []
+        lines.append('"""Compiled by TestForge v2 compiler — fallback chain runs in runtime LocatorResolver."""')
+        lines.append("from playwright.sync_api import Page")
+        lines.append("from testforge.runtime import step")
+        lines.append("")
+        lines.append(f"BASE_URL = {_json.dumps(test_case.base_url)}")
+        lines.append("")
+        lines.append(f"def test_{safe_id}(page: Page):")
+        lines.append(f'    """{test_case.application or "Recorded flow"} — source: {test_case.source_recording_id}."""')
+        lines.append("    step.go(page, BASE_URL)")
+
+        step_idx = 0
+        for action in test_case.steps:
+            if action.action == "navigation":
+                continue
+            if action.skip_reason:
+                continue
+
+            step_idx += 1
+            step_filename = f"step_{step_idx:03d}.json"
+            step_path = os.path.join(candidates_dir, step_filename)
+            target = action.target or SemanticTarget()
+            intent = _derive_intent(action)
+
+            payload = {
+                "step_id": f"step_{step_idx:03d}",
+                "action": action.action,
+                "intent_text": intent,
+                "value": action.value or "",
+                "url": action.url or "",
+                "candidates": _candidates_dict(target),
+            }
+            with open(step_path, "w", encoding="utf-8") as f:
+                _json.dump(payload, f, ensure_ascii=False, indent=2)
+
+            call = self._emit_v2_call(action, intent, step_filename)
+            lines.append(f"    {call}")
+
+        code = "\n".join(lines) + "\n"
+        with open(script_path, "w", encoding="utf-8") as f:
+            f.write(code)
+        logger.info("v2 compile OK test_id=%s steps=%d script=%s candidates_dir=%s",
+                     test_case.test_id, step_idx, script_path, candidates_dir)
+        return script_path
+
+    def _emit_v2_call(self, action: SemanticAction, intent: str, step_filename: str) -> str:
+        """Render one `step.<verb>(page, ...)` call for the v2 script."""
+        intent_lit = _json.dumps(intent, ensure_ascii=False)
+        file_lit = _json.dumps(step_filename)
+        value_lit = _json.dumps(action.value or "", ensure_ascii=False)
+        tag = ((action.target.tag if action.target else "") or "").lower()
+
+        if action.action == "click":
+            return f"step.click(page, intent={intent_lit}, candidates_file={file_lit})"
+        if action.action == "fill" and tag == "select":
+            return f"step.select(page, intent={intent_lit}, value={value_lit}, candidates_file={file_lit})"
+        if action.action == "fill":
+            return f"step.fill(page, intent={intent_lit}, value={value_lit}, candidates_file={file_lit})"
+        if action.action in ("select_option",):
+            return f"step.select(page, intent={intent_lit}, value={value_lit}, candidates_file={file_lit})"
+        if action.action == "assert":
+            expected = action.target.text if action.target and action.target.text else (action.value or "")
+            expected_lit = _json.dumps(expected, ensure_ascii=False)
+            return f"step.assert_text(page, intent={intent_lit}, expected={expected_lit}, candidates_file={file_lit})"
+        # Unknown action — emit a stub so the script remains syntactically valid.
+        return (
+            f"# TODO: unsupported v2 action {action.action!r} — "
+            f"intent={intent_lit}, candidates_file={file_lit}"
+        )
 
     def compile(
         self,
