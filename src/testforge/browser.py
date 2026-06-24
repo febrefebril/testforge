@@ -26,8 +26,14 @@ def _is_windows():
     return platform.system() == "Windows"
 
 
-def _gpu_args():
-    return _WINDOWS_GPU_ARGS if _is_windows() else []
+def _gpu_args(headless=False):
+    if not _is_windows():
+        return []
+    args = list(_WINDOWS_GPU_ARGS)
+    if not headless:
+        # headed mode: remove --window-size to avoid window resize flicker
+        args = [a for a in args if not a.startswith("--window-size")]
+    return args
 
 
 def launch_browser(pw, browser_type="chromium", headless=False, cdp_url=""):
@@ -51,7 +57,7 @@ def launch_browser(pw, browser_type="chromium", headless=False, cdp_url=""):
         except Exception as e:
             errors.append(f"cdp_param: {e}")
 
-    gpu_args = _gpu_args()
+    gpu_args = _gpu_args(headless=headless)
 
     if _is_windows() and browser_type in ("chromium", "edge"):
         strategies = [
