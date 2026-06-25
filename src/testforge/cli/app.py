@@ -374,6 +374,14 @@ def cmd_record(args):
         _system = getattr(args, 'system', None) or _cfg_defaults.get("system", "") or ""
         _suite = getattr(args, 'suite', None) or ""
         _test_case_arg = getattr(args, 'test_case', None) or args.name or ""
+        # Hotfix BUG 12: when --system is empty but --app is provided, reuse
+        # --app as the system slug so recordings stop landing in `uncategorized/`
+        # whenever the user forgets to pass --system explicitly.
+        if not _system:
+            _app_value = getattr(args, 'app', None) or ""
+            if _app_value:
+                _system = _app_value
+                logger.info("hotfix-12: --system omitted, defaulting to --app=%s", _system)
 
         print(f"[TestForge] Gravando: {rid}")
         print(f"  URL: {args.url}")

@@ -305,7 +305,11 @@ class GitPublisher:
                 f.write(summary_md)
 
             rel_dest = os.path.relpath(dest_dir, self._git_root)
-            self._git("add", rel_dest, cwd=self._git_root)
+            # Hotfix BUG 11: force-add because `recordings/` is normally in
+            # .gitignore. The publisher's whole job is to lift selected
+            # recording dirs into a git-tracked snapshot — `git add -f` is
+            # what the user wants every single time the publisher runs.
+            self._git("add", "-f", rel_dest, cwd=self._git_root)
 
             staged = self._git("diff", "--cached", "--name-only", cwd=self._git_root)
             if not staged.strip():
