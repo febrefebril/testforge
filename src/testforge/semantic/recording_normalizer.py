@@ -252,6 +252,10 @@ class RecordingNormalizer:
 
     def normalize(self, recording_dir: str, test_id: str = "",
                   application: str = "", base_url: str = "") -> SemanticTestCase:
+        # Hotfix BUG 13: remember the recording dir so _merge_user_supplied_values
+        # can locate field_value_map.json without changing the public method
+        # signature consumed by every caller.
+        self._current_recording_dir = recording_dir
         # Phase 5: optional Pipes & Filters pipeline for the load + dedup
         # + compact stages. Output is byte-identical to the legacy path.
         if self._use_pipeline:
@@ -849,6 +853,54 @@ class RecordingNormalizer:
                     source=entry["source"],
                     step_index=entry["step_index"],
                 )
+
+        # Hotfix BUG 13: merge user-supplied values from field_value_map.json.
+        # `--complete` writes that file but the normalizer historically ignored
+        # it on subsequent runs, so the second invocation re-reported every
+        # field as missing. Now we overlay user_supplied_cli entries with
+        # priority over fill events but without overwriting verified
+        # form_values.
+        self._merge_user_supplied_values(stc)
+
+    def _merge_user_supplied_values(self, stc) -> None:
+        from .model import FieldValueMap
+        rec_dir = getattr(self, "_current_recording_dir", "") or ""
+        if not rec_dir:
+            return
+        path = os.path.join(rec_dir, "field_value_map.json")
+        if not os.path.exists(path):
+            return
+        try:
+            data = json.loads(open(path, encoding="utf-8").read())
+        except Exception:
+            return
+        if not isinstance(data, dict):
+            return
+        for raw_key, payload in data.items():
+            if raw_key.startswith("_"):  # skip _meta
+                continue
+            if not isinstance(payload, dict):
+                continue
+            value = payload.get("value") or ""
+            if not value:
+                continue
+            source = payload.get("source", "user_supplied_cli")
+            canonical = self._canonical_field_key(raw_key)
+            existing = stc.field_values.get(canonical)
+            # Do not overwrite trusted form_values; everything else loses.
+            if existing and existing.source == "form_values":
+                continue
+            stc.field_values[canonical] = FieldValueMap(
+                field_key=canonical,
+                value=value,
+                intention=payload.get("intention",
+                                       f"fill {raw_key} with '{value}' (user supplied)"),
+                identifiers=payload.get("identifiers", {}) or {},
+                source=source,
+                step_index=payload.get("step_index", -1),
+            )
+        logger.info("Merged %d user-supplied value(s) from field_value_map.json",
+                     sum(1 for k, v in data.items() if not k.startswith("_")))
 
         # Report
         if stc.field_values:
