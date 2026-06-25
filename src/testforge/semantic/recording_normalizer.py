@@ -226,49 +226,81 @@ class RecordingNormalizer:
     code that ignores the new fields keeps working unchanged.
     """
 
-    def __init__(self, use_v2_locator: bool = False) -> None:
+    def __init__(self, use_v2_locator: bool = False,
+                 use_pipeline: bool = False) -> None:
         self._use_v2 = bool(use_v2_locator)
+        self._use_pipeline = bool(use_pipeline)
         self._v2_extractor = None
         if self._use_v2:
             from .locator import LocatorExtractor
             self._v2_extractor = LocatorExtractor()
 
+    def _build_load_dedup_compact_pipeline(self):
+        """Phase 5: lazy-construct Pipes&Filters pipeline.
+
+        Imported lazily to avoid a circular import between stages and
+        this module (stages reference RecordingNormalizer methods).
+        """
+        from .stages import (
+            CompactStage, DedupStage, LoadStage, Pipeline,
+        )
+        return Pipeline([LoadStage(), DedupStage(self), CompactStage(self)])
+
+    def _build_audit_pipeline(self):
+        from .stages import AuditStage, Pipeline
+        return Pipeline([AuditStage(self)])
+
     def normalize(self, recording_dir: str, test_id: str = "",
                   application: str = "", base_url: str = "") -> SemanticTestCase:
-        events_path = os.path.join(recording_dir, "raw_events.jsonl")
-        if not os.path.exists(events_path):
-            raise FileNotFoundError(f"raw_events.jsonl nao encontrado em {recording_dir}")
+        # Phase 5: optional Pipes & Filters pipeline for the load + dedup
+        # + compact stages. Output is byte-identical to the legacy path.
+        if self._use_pipeline:
+            from .stages import NormalizationContext
+            ctx = NormalizationContext(
+                recording_dir=recording_dir, test_id=test_id,
+                application=application, base_url=base_url,
+            )
+            ctx = self._build_load_dedup_compact_pipeline().run(ctx)
+            raw_events = ctx.raw_events
+            pre_dedup = ctx.initial_event_count
+            logger.info("Normalizing (pipeline) recording_dir=%s raw_events=%d",
+                         os.path.basename(recording_dir), pre_dedup)
+        else:
+            events_path = os.path.join(recording_dir, "raw_events.jsonl")
+            if not os.path.exists(events_path):
+                raise FileNotFoundError(f"raw_events.jsonl nao encontrado em {recording_dir}")
 
-        with open(events_path) as f:
-            raw_events = [json.loads(line) for line in f if line.strip()]
+            with open(events_path) as f:
+                raw_events = [json.loads(line) for line in f if line.strip()]
 
-        logger.info("Normalizing recording_dir=%s raw_events=%d",
-                     os.path.basename(recording_dir), len(raw_events))
-        # Log per-type breakdown before dedup
-        type_counts = {}
-        for ev in raw_events:
-            et = ev.get("type", "unknown")
-            type_counts[et] = type_counts.get(et, 0) + 1
-        logger.debug("Raw event types: %s", type_counts)
+            logger.info("Normalizing recording_dir=%s raw_events=%d",
+                         os.path.basename(recording_dir), len(raw_events))
+            # Log per-type breakdown before dedup
+            type_counts = {}
+            for ev in raw_events:
+                et = ev.get("type", "unknown")
+                type_counts[et] = type_counts.get(et, 0) + 1
+            logger.debug("Raw event types: %s", type_counts)
 
-        # Run dedup BEFORE compaction: removes periodic DOM snapshot cycles
-        # (e.g. radio button spam) so consecutive fills on the same field
-        # become adjacent and get properly collapsed.
-        pre_dedup = len(raw_events)
-        raw_events = self._remove_snapshot_duplicates(raw_events)
-        after_dedup = len(raw_events)
-        logger.debug("After _remove_snapshot_duplicates: %d → %d (-%d)",
-                      pre_dedup, after_dedup, pre_dedup - after_dedup)
-        # Collapse individual-key keypress sequences before fill compaction.
-        # mat-autocomplete may emit one keypress per character instead of
-        # accumulated fill events — rebuild the full typed string first.
-        raw_events = self._compact_keypress_sequences(raw_events)
-        raw_events = self._compact_fill_events(raw_events)
+            # Run dedup BEFORE compaction: removes periodic DOM snapshot cycles
+            # (e.g. radio button spam) so consecutive fills on the same field
+            # become adjacent and get properly collapsed.
+            pre_dedup = len(raw_events)
+            raw_events = self._remove_snapshot_duplicates(raw_events)
+            after_dedup = len(raw_events)
+            logger.debug("After _remove_snapshot_duplicates: %d → %d (-%d)",
+                          pre_dedup, after_dedup, pre_dedup - after_dedup)
+            # Collapse individual-key keypress sequences before fill compaction.
+            # mat-autocomplete may emit one keypress per character instead of
+            # accumulated fill events — rebuild the full typed string first.
+            raw_events = self._compact_keypress_sequences(raw_events)
+            raw_events = self._compact_fill_events(raw_events)
+            after_compact = len(raw_events)
+            logger.info("After compaction: %d events (reduced %d%%)",
+                         after_compact,
+                         int((1 - after_compact / max(pre_dedup, 1)) * 100))
+
         after_compact = len(raw_events)
-        logger.info("After compaction: %d events (reduced %d%%)",
-                     after_compact,
-                     int((1 - after_compact / max(pre_dedup, 1)) * 100))
-
         recording_id = os.path.basename(recording_dir)
         stc = SemanticTestCase(
             test_id=test_id or f"ST-{recording_id}",
