@@ -68,6 +68,9 @@ class FrameworkDetector:
         self._cdp = cdp_session
         self._bundles_seen: list[str] = []
         self._listener = None
+        # Hotfix BUG 6: cache last successful detection so finalize() after
+        # browser close still reports the real framework rather than 'unknown'.
+        self._last_detection: dict | None = None
 
     # ------------------------------------------------------------------
     def attach(self) -> None:
@@ -159,6 +162,16 @@ class FrameworkDetector:
 
         flags["primary"] = self._pick_primary(flags)
         flags["evidence"] = evidence
+        # Hotfix BUG 6: cache result iff page evaluation didn't fail
+        # (page_eval_failed shows up in evidence on a closed page).
+        page_failed = any("page_eval_failed" in e for e in evidence)
+        if not page_failed and flags["primary"] != "unknown":
+            self._last_detection = dict(flags)
+        elif page_failed and self._last_detection is not None:
+            cached = dict(self._last_detection)
+            cached.setdefault("evidence", []).append(
+                "page_eval_failed_at_finalize: served from cache")
+            return cached
         return flags
 
     # ------------------------------------------------------------------

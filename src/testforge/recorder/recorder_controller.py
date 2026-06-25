@@ -283,6 +283,11 @@ class RecorderController:
         # Sprint 0: diagnostic per-event assessment
         if self._diagnostic is not None:
             try:
+                # Hotfix BUG 7: build quick heuristic candidates so ReplayCheck
+                # has something to probe — the legacy overlay does not surface
+                # the v2 LocatorExtractor output during recording.
+                from ..diagnostic.heuristic_candidates import build_quick_candidates
+                quick_candidates = build_quick_candidates(target_data)
                 self._diagnostic.assess_event(
                     raw_event={
                         "event_id": event.event_id,
@@ -292,7 +297,7 @@ class RecorderController:
                         "target": target_data,
                     },
                     target_data=target_data,
-                    candidates=None,  # legacy overlay does not surface candidates here
+                    candidates=quick_candidates,
                 )
             except Exception as exc:
                 logger.debug("Diagnostic assess failed: %s", exc)
