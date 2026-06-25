@@ -158,6 +158,16 @@ class RecorderController:
                 et = data.get("type", "unknown")
                 type_counts[et] = type_counts.get(et, 0) + 1
                 self._persist_raw_event(data)
+                # Hotfix BUG 10: keep a short tail of recent clicks so the
+                # request handler can promote them to pseudo-submit when a
+                # POST/PUT/PATCH XHR fires shortly after.
+                if et == "click":
+                    if not hasattr(self, "_recent_clicks"):
+                        self._recent_clicks = []
+                    self._recent_clicks.append({
+                        "event_id": data.get("event_id"),
+                        "ts": datetime.now(timezone.utc).timestamp(),
+                    })
             if type_counts:
                 logger.debug("Flushed %d events: %s", len(raw_events), type_counts)
 
@@ -413,6 +423,54 @@ class RecorderController:
             "post_data": post_data,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
+        # Hotfix BUG 10: in SPA Angular apps `<form action>` submits are rare.
+        # The user clicks a button and the framework dispatches an XHR/fetch
+        # POST/PUT/PATCH that carries the form payload. Promote the latest
+        # click event to a pseudo-submit when a same-origin POST/PUT/PATCH
+        # fires within 1500 ms of it, so downstream IntentReconstructor and
+        # form-values capture get the payload they expect.
+        try:
+            if request.method in ("POST", "PUT", "PATCH") \
+               and request.resource_type in ("xhr", "fetch") \
+               and post_data:
+                self._mark_pseudo_submit(request.url, request.method, post_data)
+        except Exception:
+            pass
+
+    def _mark_pseudo_submit(self, url: str, method: str, post_data) -> None:
+        """Promote the most-recent click event to a submit-like event."""
+        if not self._network_entries:
+            return
+        # Try to find a recent click in raw_events. Look at events written in
+        # the last 1.5 s by reading the in-memory event counter is not enough
+        # — they are already serialized. Use a small in-memory tail.
+        if not hasattr(self, "_recent_clicks"):
+            self._recent_clicks = []
+        # Drop clicks older than 1.5 s
+        now = datetime.now(timezone.utc).timestamp()
+        self._recent_clicks = [c for c in self._recent_clicks
+                                if now - c["ts"] < 1.5]
+        if not self._recent_clicks:
+            return
+        latest = self._recent_clicks[-1]
+        # Decode the post_data into a dict best-effort
+        form_values = {}
+        try:
+            import json as _json
+            from urllib.parse import parse_qsl
+            if post_data.lstrip().startswith("{"):
+                parsed = _json.loads(post_data)
+                if isinstance(parsed, dict):
+                    form_values = {str(k): str(v) for k, v in parsed.items()
+                                    if v not in (None, "")}
+            else:
+                form_values = dict(parse_qsl(post_data)) or {}
+        except Exception:
+            pass
+        latest["pseudo_submit"] = {
+            "url": url, "method": method,
+            "form_values": form_values,
+        }
 
     def _on_response(self, response: Response):
         self._network_entries.append({
