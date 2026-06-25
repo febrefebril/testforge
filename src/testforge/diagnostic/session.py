@@ -48,21 +48,99 @@ class DiagnosticSession:
         self._replay = None
         self._gherkin = None
         self._store = None
+        # Totals updated as steps stream in
+        self._totals = {
+            "steps": 0, "asserts": 0,
+            "value_captured": 0, "value_missing": 0,
+            "selectors_generated": 0,
+            "selectors_immediate_ok": 0, "selectors_immediate_fail": 0,
+            "blind_spots": 0,
+        }
 
     def start(self) -> None:
+        from .capture_quality import CaptureQualityTracker
         from .framework_detector import FrameworkDetector
+        from .gherkin_writer import GherkinWriter
+        from .replay_check import ReplayCheck
+        from .telemetry_store import DiagnosticTelemetryStore
         self._started_at = datetime.now(timezone.utc).isoformat()
         self._detector = FrameworkDetector(self._page, self._cdp)
         self._detector.attach()
-        logger.info("DiagnosticSession started id=%s dir=%s",
-                     self._session_id, self._dir)
+        self._tracker = CaptureQualityTracker()
+        self._replay = ReplayCheck(self._page, mode=self._replay_mode)
+        self._gherkin = GherkinWriter(self._dir, lang=self._gherkin_lang)
+        self._store = DiagnosticTelemetryStore(self._dir)
+        logger.info("DiagnosticSession started id=%s dir=%s replay=%s",
+                     self._session_id, self._dir, self._replay_mode)
 
-    def finalize(self) -> dict:
+    # ------------------------------------------------------------------
+    def on_navigation(self, url: str, title: Optional[str] = None) -> None:
+        if self._gherkin is not None:
+            self._gherkin.on_navigation(url, title)
+
+    def assess_event(self, raw_event: dict, target_data: Optional[dict] = None,
+                     candidates: Optional[list] = None) -> dict:
+        """Called by RecorderController after each _persist_raw_event."""
+        if self._tracker is None or self._store is None:
+            return {}
+        framework = self._detector.detect() if self._detector else None
+        payload = self._tracker.assess(
+            raw_event, target_data=target_data,
+            candidates=candidates, framework=framework,
+        )
+        self._store.append_step(payload)
+        # Update totals
+        self._totals["steps"] += 1
+        action = (raw_event.get("type") or "").lower()
+        if action == "assert":
+            self._totals["asserts"] += 1
+        cq = payload.get("capture_quality") or {}
+        if cq.get("value_captured_at_event"):
+            self._totals["value_captured"] += 1
+        else:
+            self._totals["value_missing"] += 1
+        sg = payload.get("selector_generated") or {}
+        if sg.get("primary"):
+            self._totals["selectors_generated"] += 1
+        self._totals["blind_spots"] += len(payload.get("blind_spots") or [])
+        # Gherkin live
+        if self._gherkin is not None:
+            self._gherkin.on_step(
+                action=action, target=target_data or {},
+                value=raw_event.get("value"),
+            )
+        # Replay check
+        if self._replay is not None and candidates:
+            rec = self._replay.check(payload.get("step_id") or raw_event.get("event_id"),
+                                       candidates)
+            if rec is not None:
+                self._store.append_replay(rec)
+                if rec.get("resolved"):
+                    self._totals["selectors_immediate_ok"] += 1
+                else:
+                    self._totals["selectors_immediate_fail"] += 1
+        return payload
+
+    def finalize(self,
+                 funcionalidade_override: str = "",
+                 cenario_override: str = "") -> dict:
         """Detect frameworks, write session.json, return the payload."""
         self._stopped_at = datetime.now(timezone.utc).isoformat()
         framework = self._detector.detect() if self._detector else {}
         if self._detector:
             self._detector.detach()
+        # Drain batched replay queue if any
+        if self._replay is not None:
+            for rec in self._replay.drain():
+                if self._store is not None:
+                    self._store.append_replay(rec)
+        # Write Gherkin
+        feature_path = ""
+        if self._gherkin is not None:
+            feature_path = self._gherkin.write(
+                funcionalidade_override=funcionalidade_override,
+                cenario_override=cenario_override,
+            )
         try:
             url = self._page.url
         except Exception:
@@ -76,13 +154,31 @@ class DiagnosticSession:
             "framework_detection": framework,
             "replay_mode": self._replay_mode,
             "gherkin_lang": self._gherkin_lang,
+            "totals": self._totals,
+            "feature_path": feature_path,
         }
-        out = Path(self._dir) / "session.json"
-        out.write_text(json.dumps(payload, ensure_ascii=False, indent=2),
-                       encoding="utf-8")
-        logger.info("DiagnosticSession finalized id=%s primary_framework=%s",
-                     self._session_id, framework.get("primary"))
+        if self._store is not None:
+            self._store.write_session(payload)
+        else:
+            out = Path(self._dir) / "session.json"
+            out.write_text(json.dumps(payload, ensure_ascii=False, indent=2),
+                            encoding="utf-8")
+        logger.info("DiagnosticSession finalized id=%s primary_framework=%s steps=%d",
+                     self._session_id, framework.get("primary"),
+                     self._totals["steps"])
         return payload
+
+    @property
+    def gherkin(self):
+        return self._gherkin
+
+    @property
+    def store(self):
+        return self._store
+
+    @property
+    def totals(self) -> dict:
+        return dict(self._totals)
 
 
 def _normalize(url: str) -> str:

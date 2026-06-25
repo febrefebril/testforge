@@ -388,6 +388,10 @@ def cmd_record(args):
         print(f"  Shift+P=pausar | Shift+S=parar | Shift+A=assert")
         print()
 
+        # Sprint 0 mode resolution
+        _diag = getattr(args, "diagnostic_mode", False) or \
+                getattr(args, "pipeline_and_diagnostic_mode", False)
+        _replay_mode = "batched" if getattr(args, "replay_batched", False) else "immediate"
         session = recorder.start(
             recording_id=rid,
             application=args.app or "web",
@@ -397,6 +401,8 @@ def cmd_record(args):
             suite=_suite,
             test_case=_test_case_arg,
             use_cdp=getattr(args, "use_cdp_recorder", False),
+            diagnostic_mode=_diag,
+            replay_mode=_replay_mode,
         )
         rid = session.recording_id  # may be suffixed (_2, _3) if original name exists
         _test_case = _test_case_arg or args.name or rid
@@ -446,7 +452,12 @@ def cmd_record(args):
         except KeyboardInterrupt:
             print("\n[TestForge] Interrompido")
 
-        recorder.stop()
+        # Sprint 0: prompt for Gherkin confirm/edit BEFORE stop (so finalize writes correct .feature)
+        _gherkin_func = ""
+        _gherkin_cen = ""
+        if _diag and recorder._diagnostic is not None and recorder._diagnostic.gherkin is not None:
+            _gherkin_func, _gherkin_cen = _prompt_gherkin_confirm(recorder._diagnostic.gherkin)
+        recorder.stop(gherkin_funcionalidade=_gherkin_func, gherkin_cenario=_gherkin_cen)
         recorder.finalize()
         # Count raw events and display breakdown
         raw_count = 0
@@ -457,7 +468,20 @@ def cmd_record(args):
                 raw_count = sum(1 for _ in f)
         print(f"[TestForge] Eventos brutos: {raw_count}")
         print(f"[TestForge] Sessao salva: recordings/{rid}/")
+        if _diag:
+            diag_dir = os.path.join(rec_dir, "diagnostic")
+            print(f"[TestForge] Diagnostic: {diag_dir}/")
+            if os.path.exists(os.path.join(diag_dir, "scenario.feature")):
+                print(f"[TestForge] Gherkin:    {diag_dir}/scenario.feature")
         browser.close()
+
+    # Q4 — `--diagnostic-mode` skips compile/run. `--pipeline-and-diagnostic-mode`
+    # runs both. Plain --diagnostic-mode (no pipeline flag) early-returns.
+    _diagnostic_only = getattr(args, "diagnostic_mode", False) and \
+                       not getattr(args, "pipeline_and_diagnostic_mode", False)
+    if _diagnostic_only:
+        _auto_publish_recording(rid, rec_dir)
+        return
 
     # Post-recording: intent completeness check + validation
     validate_before_ready = getattr(args, 'validate_before_ready', False)
@@ -477,6 +501,35 @@ def cmd_record(args):
 
     # Auto-publish after validation so git snapshot includes validated artifacts
     _auto_publish_recording(rid, rec_dir)
+
+
+def _prompt_gherkin_confirm(writer) -> tuple:
+    """C4c — prompt user to confirm or override auto-derived Gherkin metadata."""
+    auto_func = writer.auto_funcionalidade()
+    auto_cen = writer.auto_cenario_from_sequence()
+    print()
+    print("[TestForge] Gherkin auto-derivado:")
+    print(f"  Funcionalidade: {auto_func}")
+    print(f"  Cenario:        {auto_cen}")
+    print("  (Enter aceita | texto sobrescreve | 'e' abre editor depois)")
+    try:
+        func_in = input(f"  Funcionalidade [{auto_func}]: ").strip()
+        cen_in = input(f"  Cenario [{auto_cen}]: ").strip()
+    except (EOFError, KeyboardInterrupt):
+        return ("", "")
+    edit = (func_in.lower() == "e") or (cen_in.lower() == "e")
+    final_func = "" if func_in.lower() == "e" else func_in
+    final_cen = "" if cen_in.lower() == "e" else cen_in
+    if edit:
+        # write first, then open in $EDITOR
+        writer.write(final_func, final_cen)
+        editor = os.environ.get("EDITOR", "vi")
+        try:
+            import subprocess
+            subprocess.call([editor, writer.path])
+        except Exception as exc:
+            print(f"[TestForge] Editor falhou ({editor}): {exc}")
+    return (final_func, final_cen)
 
 
 def _auto_learn(error_msg: str, solution: str, framework: str = "generic"):
@@ -1649,6 +1702,12 @@ def cmd_pilot_report(args):
                 print(f"    {cat.replace('_', ' ').title()}: {count}")
 
 
+def cmd_diagnose(args):
+    """Sprint 0 alias: invokes cmd_record with diagnostic_mode forced True."""
+    args.diagnostic_mode = True
+    return cmd_record(args)
+
+
 def cmd_dashboard(args):
     """Phase 6: generate static dashboard.html."""
     from testforge.metrics.dashboard import write_dashboard
@@ -1789,6 +1848,12 @@ def main():
                      help="Nivel de evidencia: light (padrao, sem screenshot por evento) ou full (screenshot + DOM por evento)")
     rec.add_argument("--use-cdp-recorder", action="store_true",
                      help="(Fase 1) Captura paralela via Playwright tracing + CDP AX tree. Gera trace.zip e ax_snapshots/. Feature flag — nao remove caminho legado.")
+    rec.add_argument("--diagnostic-mode", action="store_true",
+                     help="(Sprint 0) Diagnostic recorder: framework detection + capture quality + replay check + Gherkin live. NAO roda compile/run.")
+    rec.add_argument("--pipeline-and-diagnostic-mode", action="store_true",
+                     help="(Sprint 0) Diagnostic + pipeline normal (compile/validate/run) rodando juntos.")
+    rec.add_argument("--replay-batched", action="store_true",
+                     help="(Sprint 0) Replay check em batch (B4) ao inves de imediato (B1).")
     rec.add_argument("--system", default="",
                      help="Sistema/aplicacao (ex: SIOPI). Caminho Git: recordings/{system}/{suite}/{test_case}/")
     rec.add_argument("--suite", default="",
@@ -1859,6 +1924,27 @@ def main():
     audit_cmd = sub.add_parser("audit", help="Auditar gravacao: metricas de qualidade, eventos, compilacao")
     audit_cmd.add_argument("recording", help="ID da gravacao (ex: REC-20260613) ou caminho")
     audit_cmd.set_defaults(func=cmd_audit)
+
+    # diagnose (Sprint 0: alias de `record --diagnostic-mode`)
+    diag = sub.add_parser("diagnose", help="(Sprint 0) Alias de 'record --diagnostic-mode'. Coleta diagnostica sem compile/run.")
+    diag.add_argument("url", nargs="?", help="URL alvo")
+    diag.add_argument("--name", help="Nome da gravacao")
+    diag.add_argument("--app", default="web")
+    diag.add_argument("--headless", action="store_true")
+    diag.add_argument("--browser", choices=["chromium", "chrome", "edge"], default="chromium")
+    diag.add_argument("--system", default="")
+    diag.add_argument("--suite", default="")
+    diag.add_argument("--test-case", dest="test_case", default="")
+    diag.add_argument("--evidence-level", choices=["light", "full"], default="light")
+    diag.add_argument("--replay-batched", action="store_true",
+                       help="Replay check em batch (B4) ao inves de imediato (B1)")
+    diag.add_argument("--pipeline-also", dest="pipeline_and_diagnostic_mode",
+                       action="store_true",
+                       help="Tambem roda compile/validate/run alem do diagnostico")
+    diag.set_defaults(func=cmd_diagnose, diagnostic_mode=True,
+                       use_cdp_recorder=False, complete=False,
+                       no_interactive=True, validate_before_ready=False,
+                       pilot_mode=False)
 
     # dashboard (Phase 6: static HTML observability)
     dash = sub.add_parser("dashboard", help="(Fase 6) Gerar dashboard HTML estatico com metricas de resolve, catalog, latencia")

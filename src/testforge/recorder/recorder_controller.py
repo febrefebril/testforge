@@ -50,6 +50,9 @@ class RecorderController:
         self._use_cdp = False
         self._tracing: TracingManager | None = None
         self._cdp: CDPSnapshotter | None = None
+        # Sprint 0: diagnostic mode (feature-flagged)
+        self._diagnostic_mode = False
+        self._diagnostic = None  # DiagnosticSession instance
 
     def start(
         self,
@@ -62,6 +65,8 @@ class RecorderController:
         suite: str = "",
         test_case: str = "",
         use_cdp: bool = False,
+        diagnostic_mode: bool = False,
+        replay_mode: str = "immediate",
     ) -> RecordingSession:
         session = self._session_manager.start(recording_id, application, base_url)
         self._store = RawRecordingStore(session.session_dir)
@@ -85,6 +90,20 @@ class RecorderController:
             self._cdp = CDPSnapshotter(self._page)
             self._cdp.attach()
             logger.info("Phase 1 capture enabled: tracing + CDP AX snapshots")
+
+        # Sprint 0: diagnostic recorder (rich telemetry collection)
+        self._diagnostic_mode = bool(diagnostic_mode)
+        if self._diagnostic_mode:
+            from testforge.diagnostic import DiagnosticSession
+            cdp_session = self._cdp._session if self._cdp and self._cdp._enabled else None
+            diag_dir = os.path.join(session.session_dir, "diagnostic")
+            self._diagnostic = DiagnosticSession(
+                page=self._page, cdp_session=cdp_session,
+                session_dir=diag_dir, replay_mode=replay_mode,
+            )
+            self._diagnostic.start()
+            logger.info("Sprint 0 diagnostic mode enabled dir=%s replay=%s",
+                         diag_dir, replay_mode)
 
         # Inject recording context so the overlay can display system/suite/test_case
         context_script = (
@@ -165,9 +184,20 @@ class RecorderController:
                 logger.info("Assert mode activated by keyboard shortcut")
         return "continue" if not self._paused else "paused"
 
-    def stop(self) -> RecordingSession:
+    def stop(self,
+             gherkin_funcionalidade: str = "",
+             gherkin_cenario: str = "") -> RecordingSession:
         self._capture_final_state_snapshot("recording_stopped")
         self.flush_events()
+        # Sprint 0: finalize diagnostic session (writes session.json + scenario.feature)
+        if self._diagnostic is not None:
+            try:
+                self._diagnostic.finalize(
+                    funcionalidade_override=gherkin_funcionalidade,
+                    cenario_override=gherkin_cenario,
+                )
+            except Exception as exc:
+                logger.error("Diagnostic finalize failed: %s", exc)
         # Phase 1: stop tracing + detach CDP before tearing down page listeners.
         if self._tracing is not None and self._tracing.is_active:
             try:
@@ -250,6 +280,22 @@ class RecorderController:
         )
         self._capture_snapshots(event)
         self._store.append_event(event)
+        # Sprint 0: diagnostic per-event assessment
+        if self._diagnostic is not None:
+            try:
+                self._diagnostic.assess_event(
+                    raw_event={
+                        "event_id": event.event_id,
+                        "type": event.event_type,
+                        "timestamp": event.timestamp,
+                        "value": event.value,
+                        "target": target_data,
+                    },
+                    target_data=target_data,
+                    candidates=None,  # legacy overlay does not surface candidates here
+                )
+            except Exception as exc:
+                logger.debug("Diagnostic assess failed: %s", exc)
 
     def _persist_step(self, data: dict):
         """Persist a user-intended step (click, fill, or assert)."""
@@ -360,6 +406,12 @@ class RecorderController:
             value=None,
         )
         self._store.append_event(nav_event)
+        # Sprint 0: feed navigation into diagnostic Gherkin writer
+        if self._diagnostic is not None:
+            try:
+                self._diagnostic.on_navigation(current_url, page_title)
+            except Exception:
+                pass
         logger.info("Navigation detected: %s — %s", current_url, page_title[:60])
 
     # ---- Sprint 3: Field snapshot & value mutation persistence ----
