@@ -20,6 +20,9 @@ dev = [
     "pytest-playwright>=0.4",
 ]
 
+[tool.setuptools.package-data]
+testforge = ["config/*.yaml", "recorder/overlay_inject.js"]
+
 [tool.pytest.ini_options]
 testpaths = [
     "tests",
