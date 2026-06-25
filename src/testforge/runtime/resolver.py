@@ -1,15 +1,17 @@
-"""Phase 3: LocatorResolver — runtime fallback chain (replaces hard-coded try/except).
+"""Phase 3+4: LocatorResolver — runtime fallback chain (replaces hard-coded try/except).
 
 Reads candidate locators from a JSON file (one per step) and resolves
 to a Playwright `Locator` using an L0→L1 chain:
 
     L0   intent-keyed cache hit                      ~1 ms
+         - in-memory dict (Phase 3)
+         - SQLite IntentCatalog persistence (Phase 4, opt-in)
     L1   walk candidates by score, first hit wins    ~50-2000 ms
 
-L2 (specialist agents) and L3 (LLM) are wired into the legacy
-fallback_runner today and will be plugged here in Phase 4 when the
-catalog migrates to SQLite. For now the resolver focuses on producing
-a working Locator from the v2 super-selector candidate list.
+L2 (specialist agents) and L3 (LLM) stay in the legacy fallback_runner
+for now and will be plugged here in a later phase. The resolver focuses
+on producing a working Locator from the v2 super-selector candidate
+list and persisting what worked.
 """
 from __future__ import annotations
 
@@ -49,11 +51,22 @@ class LocatorResolver:
     only here; Phase 4 will persist it to SQLite.
     """
 
-    def __init__(self, page, probe_timeout_ms: int = DEFAULT_PROBE_TIMEOUT_MS) -> None:
+    def __init__(self, page, probe_timeout_ms: int = DEFAULT_PROBE_TIMEOUT_MS,
+                 sqlite_catalog: Optional[object] = None) -> None:
         self._page = page
         self._probe_timeout_ms = probe_timeout_ms
-        # intent -> winning candidate dict (so cache replays the exact call)
+        # intent -> winning candidate dict (in-memory; per-test-process)
         self._cache: dict[str, dict] = {}
+        # Optional persistent SQLite intent catalog (Phase 4).
+        # Duck-typed: anything with lookup/record_success methods works.
+        self._sqlite = sqlite_catalog
+
+    # ------------------------------------------------------------------
+    def _current_url(self) -> str:
+        try:
+            return self._page.url
+        except Exception:
+            return ""
 
     # ------------------------------------------------------------------
     def resolve_from_file(self, candidates_path: str, intent: str) -> ResolveResult:
@@ -61,20 +74,22 @@ class LocatorResolver:
         candidates = self._load(candidates_path)
         return self.resolve(intent, candidates)
 
-    def resolve(self, intent: str, candidates: list[dict]) -> ResolveResult:
-        """Try L0 cache, then candidates in order."""
+    def resolve(self, intent: str, candidates: list[dict],
+                action: str = "click") -> ResolveResult:
+        """Try L0 cache (memory then SQLite), then candidates in order."""
         t0 = time.perf_counter()
         attempted: list[str] = []
         last_error = ""
+        url = self._current_url()
 
-        # L0: cache hit
+        # L0a: in-memory cache hit (per test process)
         cached = self._cache.get(intent)
         if cached:
             try:
                 locator = self._build(cached)
                 if self._exists(locator):
                     elapsed = (time.perf_counter() - t0) * 1000
-                    logger.info("L0 cache hit intent=%s strategy=%s elapsed=%.1fms",
+                    logger.info("L0 mem hit intent=%s strategy=%s elapsed=%.1fms",
                                  intent, cached.get("strategy"), elapsed)
                     return ResolveResult(
                         locator=locator,
@@ -83,12 +98,49 @@ class LocatorResolver:
                         intent=intent,
                         level="L0_cache",
                         elapsed_ms=elapsed,
-                        attempted=["L0_cache_hit"],
+                        attempted=["L0_mem_hit"],
                     )
             except Exception as exc:
                 last_error = str(exc)
-                attempted.append("L0_cache_miss")
+                attempted.append("L0_mem_miss")
                 self._cache.pop(intent, None)
+
+        # L0b: SQLite persistent cache (cross-run)
+        if self._sqlite is not None:
+            try:
+                row = self._sqlite.lookup(intent, url, action)
+                if row and row.resolved_call:
+                    cand = {
+                        "strategy": "sqlite_cached",
+                        "playwright_call": row.resolved_call,
+                        "selector": row.resolved_selector or f"page.{row.resolved_call}",
+                        "score": row.confidence,
+                    }
+                    try:
+                        locator = self._build(cand)
+                        if self._exists(locator):
+                            self._cache[intent] = cand
+                            elapsed = (time.perf_counter() - t0) * 1000
+                            logger.info("L0 sqlite hit intent=%s call=%s elapsed=%.1fms",
+                                         intent, row.resolved_call, elapsed)
+                            return ResolveResult(
+                                locator=locator,
+                                strategy="sqlite_cached",
+                                score=row.confidence,
+                                intent=intent,
+                                level="L0_cache",
+                                elapsed_ms=elapsed,
+                                attempted=["L0_sqlite_hit"],
+                            )
+                    except Exception as exc:
+                        last_error = str(exc)
+                        attempted.append("L0_sqlite_miss")
+                        try:
+                            self._sqlite.record_failure(intent, url, action)
+                        except Exception:
+                            pass
+            except Exception as exc:
+                logger.debug("SQLite lookup failed (non-fatal): %s", exc)
 
         # L1: walk candidates by score, return first hit
         for idx, c in enumerate(candidates):
@@ -98,6 +150,16 @@ class LocatorResolver:
                 locator = self._build(c)
                 if self._exists(locator):
                     self._cache[intent] = c
+                    if self._sqlite is not None:
+                        try:
+                            self._sqlite.record_success(
+                                intent_text=intent, url=url, action=action,
+                                resolved_call=c.get("playwright_call", ""),
+                                resolved_selector=c.get("selector", ""),
+                                attributes_at_record=c.get("attribute_stability"),
+                            )
+                        except Exception as exc:
+                            logger.debug("SQLite record_success failed: %s", exc)
                     elapsed = (time.perf_counter() - t0) * 1000
                     logger.info(
                         "L1 hit intent=%s strategy=%s score=%.2f idx=%d elapsed=%.1fms",

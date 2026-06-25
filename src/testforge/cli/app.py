@@ -1649,6 +1649,37 @@ def cmd_pilot_report(args):
                 print(f"    {cat.replace('_', ' ').title()}: {count}")
 
 
+def cmd_catalog_migrate(args):
+    """Phase 4: import legacy JSONL recipes into SQLite intent catalog."""
+    from testforge.healing.sqlite_intent_catalog import IntentCatalog
+    src = args.source
+    db = args.db
+    if not os.path.exists(src):
+        print(f"[TestForge] x JSONL nao encontrado: {src}")
+        return
+    cat = IntentCatalog(db)
+    n = cat.import_legacy_recipes(src)
+    total = cat.count()
+    cat.close()
+    print(f"[TestForge] ok migracao: {n} recipes importadas (legacy_recipes) -> {db}")
+    print(f"  Intent resolutions ativas no banco: {total}")
+    print(f"  Use: testforge catalog-export para gerar JSONL para git")
+
+
+def cmd_catalog_export(args):
+    """Phase 4: export SQLite intent catalog to JSONL."""
+    from testforge.healing.sqlite_intent_catalog import IntentCatalog
+    db = args.db
+    out = args.output
+    if not os.path.exists(db):
+        print(f"[TestForge] x SQLite nao encontrado: {db}")
+        return
+    cat = IntentCatalog(db)
+    n = cat.export_jsonl(out)
+    cat.close()
+    print(f"[TestForge] ok export: {n} intent resolutions ativas -> {out}")
+
+
 def cmd_send(args):
     """Re-publish recording artifacts to configured Git repo."""
     from testforge.publisher import GitPublisher
@@ -1818,6 +1849,22 @@ def main():
     audit_cmd = sub.add_parser("audit", help="Auditar gravacao: metricas de qualidade, eventos, compilacao")
     audit_cmd.add_argument("recording", help="ID da gravacao (ex: REC-20260613) ou caminho")
     audit_cmd.set_defaults(func=cmd_audit)
+
+    # catalog-migrate (Phase 4: JSONL → SQLite intent catalog)
+    catmig = sub.add_parser("catalog-migrate", help="(Fase 4) Importa healing-catalog.jsonl para SQLite intent catalog")
+    catmig.add_argument("--source", default=str(_PROJECT_ROOT / ".planning/healing-catalog.jsonl"),
+                         help="JSONL de origem (default: .planning/healing-catalog.jsonl)")
+    catmig.add_argument("--db", default=str(_PROJECT_ROOT / ".testforge/intent_catalog.sqlite"),
+                         help="Caminho do SQLite alvo (default: .testforge/intent_catalog.sqlite)")
+    catmig.set_defaults(func=cmd_catalog_migrate)
+
+    # catalog-export (Phase 4: SQLite → JSONL for git tracking)
+    catexp = sub.add_parser("catalog-export", help="(Fase 4) Exporta intent catalog SQLite para JSONL")
+    catexp.add_argument("--db", default=str(_PROJECT_ROOT / ".testforge/intent_catalog.sqlite"),
+                         help="SQLite source")
+    catexp.add_argument("--output", default=str(_PROJECT_ROOT / ".testforge/intent_catalog.jsonl"),
+                         help="JSONL destination")
+    catexp.set_defaults(func=cmd_catalog_export)
 
     # send (Git publisher)
     send = sub.add_parser("send", help="Re-enviar gravacao existente para repositorio Git (config em .testforge/config.yml)")
