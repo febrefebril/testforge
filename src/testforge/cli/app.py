@@ -480,6 +480,7 @@ def cmd_record(args):
     _diagnostic_only = getattr(args, "diagnostic_mode", False) and \
                        not getattr(args, "pipeline_and_diagnostic_mode", False)
     if _diagnostic_only:
+        _publish_diagnostic_to_azure(rid, os.path.join(rec_dir, "diagnostic"))
         _auto_publish_recording(rid, rec_dir)
         return
 
@@ -501,6 +502,41 @@ def cmd_record(args):
 
     # Auto-publish after validation so git snapshot includes validated artifacts
     _auto_publish_recording(rid, rec_dir)
+
+
+def _publish_diagnostic_to_azure(recording_id: str, diagnostic_dir: str) -> None:
+    """Sprint 0 commit 6: publish diagnostic/ to Azure DevOps repo via Z5 chain."""
+    if not os.path.isdir(diagnostic_dir):
+        return
+    cfg_path = _PROJECT_ROOT / ".testforge" / "config.yml"
+    if not cfg_path.exists():
+        return
+    try:
+        import yaml
+        cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return
+    if cfg.get("provider") != "azure-devops":
+        return
+    az = cfg.get("azure_devops") or {}
+    org = az.get("org") or ""
+    project = az.get("project") or ""
+    repo = az.get("repo") or ""
+    if not (org and project and repo) or "YOUR_" in (org + project + repo):
+        return  # template not configured
+    from testforge.publisher.azure_devops import AzureDevOpsPublisher
+    pub = AzureDevOpsPublisher(
+        org=org, project=project, repo=repo,
+        branch=az.get("branch", "main"),
+        prefer_ssh=bool(az.get("prefer_ssh", False)),
+        path_prefix=az.get("path_prefix", "diagnostic"),
+    )
+    result = pub.publish(recording_id, diagnostic_dir)
+    if result.get("success"):
+        print(f"[TestForge] ok Azure DevOps publish ({result.get('credential_source')}): "
+              f"{result.get('remote_path')} @ {result.get('commit_sha', '?')[:7]}")
+    else:
+        print(f"[TestForge] [WARN] Azure DevOps publish falhou: {result.get('error')}")
 
 
 def _prompt_gherkin_confirm(writer) -> tuple:
@@ -1702,6 +1738,18 @@ def cmd_pilot_report(args):
                 print(f"    {cat.replace('_', ' ').title()}: {count}")
 
 
+def cmd_admin_install_pat(args):
+    """Sprint 0 Z1: persist Azure DevOps credentials with 0600 permission."""
+    if not getattr(args, "admin_cmd", None):
+        print("[TestForge] Use: testforge admin install-pat --pat <PAT> --org <org> --project <p> --repo <r>")
+        return
+    from testforge.publisher.azure_devops import install_pat
+    path = install_pat(args.pat, args.org, args.project, args.repo)
+    print(f"[TestForge] ok PAT salvo em {path} (chmod 600)")
+    print(f"  org={args.org} project={args.project} repo={args.repo}")
+    print(f"  Tester agora pode rodar 'testforge diagnose <url>' sem configurar nada.")
+
+
 def cmd_diagnose(args):
     """Sprint 0 alias: invokes cmd_record with diagnostic_mode forced True."""
     args.diagnostic_mode = True
@@ -1924,6 +1972,16 @@ def main():
     audit_cmd = sub.add_parser("audit", help="Auditar gravacao: metricas de qualidade, eventos, compilacao")
     audit_cmd.add_argument("recording", help="ID da gravacao (ex: REC-20260613) ou caminho")
     audit_cmd.set_defaults(func=cmd_audit)
+
+    # admin (Sprint 0: Z1 install-pat helper)
+    admin = sub.add_parser("admin", help="(Sprint 0) Comandos administrativos (instalar PAT, etc)")
+    admin_sub = admin.add_subparsers(dest="admin_cmd")
+    install_pat = admin_sub.add_parser("install-pat", help="Salva credenciais Azure DevOps em ~/.testforge/secrets (0600)")
+    install_pat.add_argument("--pat", required=True, help="Personal Access Token")
+    install_pat.add_argument("--org", required=True)
+    install_pat.add_argument("--project", required=True)
+    install_pat.add_argument("--repo", required=True)
+    install_pat.set_defaults(func=cmd_admin_install_pat)
 
     # diagnose (Sprint 0: alias de `record --diagnostic-mode`)
     diag = sub.add_parser("diagnose", help="(Sprint 0) Alias de 'record --diagnostic-mode'. Coleta diagnostica sem compile/run.")

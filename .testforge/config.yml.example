@@ -1,0 +1,22 @@
+# TestForge — config example (Sprint 0 diagnostic publisher)
+#
+# Copy this file to .testforge/config.yml and edit. The Azure DevOps
+# block is consumed by AzureDevOpsPublisher when the recorder runs
+# with --diagnostic-mode or via `testforge diagnose`.
+#
+# Credentials (PAT) are NOT stored here — see Z1+Z5 chain:
+#   1. env  AZURE_DEVOPS_PAT
+#   2. file ~/.testforge/secrets   (recommended; written by
+#                                   `testforge admin install-pat ...`)
+#   3. file ~/.azure/credentials
+#   4. git credential helper
+
+provider: azure-devops
+
+azure_devops:
+  org: YOUR_ORGANIZATION         # ex: minhaorg
+  project: YOUR_PROJECT          # ex: QA
+  repo: YOUR_REPO                # ex: testforge-diagnostic
+  branch: main
+  prefer_ssh: false              # true: skip PAT, use SSH key
+  path_prefix: diagnostic        # commit destination prefix
