@@ -456,6 +456,12 @@ def cmd_record(args):
         _gherkin_func = ""
         _gherkin_cen = ""
         if _diag and recorder._diagnostic is not None and recorder._diagnostic.gherkin is not None:
+            # Hotfix BUG 2: detach page listeners before blocking input —
+            # browser may close mid-prompt and we don't want callbacks racing.
+            try:
+                recorder.detach_page_listeners()
+            except Exception:
+                pass
             _gherkin_func, _gherkin_cen = _prompt_gherkin_confirm(recorder._diagnostic.gherkin)
         recorder.stop(gherkin_funcionalidade=_gherkin_func, gherkin_cenario=_gherkin_cen)
         recorder.finalize()
@@ -557,15 +563,49 @@ def _prompt_gherkin_confirm(writer) -> tuple:
     final_func = "" if func_in.lower() == "e" else func_in
     final_cen = "" if cen_in.lower() == "e" else cen_in
     if edit:
-        # write first, then open in $EDITOR
+        # write first, then open in editor with shutil.which fallback chain
         writer.write(final_func, final_cen)
-        editor = os.environ.get("EDITOR", "vi")
-        try:
-            import subprocess
-            subprocess.call([editor, writer.path])
-        except Exception as exc:
-            print(f"[TestForge] Editor falhou ({editor}): {exc}")
+        _open_in_editor(writer.path)
     return (final_func, final_cen)
+
+
+import shutil  # noqa: E402 — used by _open_in_editor (BUG 4 fix)
+import subprocess  # noqa: E402
+
+
+def _open_in_editor(path: str) -> None:
+    """Hotfix BUG 4: graceful EDITOR resolution.
+
+    Tries $EDITOR first (resolved via shutil.which so /bin/nano-style
+    invalid absolute paths fall through), then a small chain of common
+    editors. If none work, just prints the path so the user can edit
+    manually.
+    """
+    candidates: list[str] = []
+    env_editor = os.environ.get("EDITOR", "").strip()
+    if env_editor:
+        candidates.append(env_editor)
+    for fallback in ("vi", "vim", "nano", "code", "nvim"):
+        if fallback not in candidates:
+            candidates.append(fallback)
+    for cand in candidates:
+        # If the candidate is an absolute path, accept only when the
+        # binary actually exists. Otherwise resolve via shutil.which.
+        if os.path.isabs(cand):
+            if not os.path.exists(cand):
+                continue
+            resolved = cand
+        else:
+            resolved = shutil.which(cand)
+            if not resolved:
+                continue
+        try:
+            subprocess.call([resolved, path])
+            return
+        except Exception as exc:
+            print(f"[TestForge] Editor falhou ({resolved}): {exc}")
+            continue
+    print(f"[TestForge] [WARN] Nenhum editor disponivel. Edite manualmente: {path}")
 
 
 def _auto_learn(error_msg: str, solution: str, framework: str = "generic"):

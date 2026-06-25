@@ -130,6 +130,11 @@ class RecorderController:
 
     def flush_events(self):
         """Read all pending JS queues in a single CDP call to minimise V8 pauses."""
+        # Hotfix BUG 2: silently no-op when the page/browser/context is gone.
+        try:
+            _ = self._page.url  # cheap check; raises if closed
+        except Exception:
+            return
         try:
             payload = self._page.evaluate("""() => {
                 const evts  = window.__tfEventQueue         || []; window.__tfEventQueue         = [];
@@ -168,7 +173,13 @@ class RecorderController:
             if raw_fsnaps or raw_vmuts:
                 logger.debug("Flushed %d field snapshots, %d value mutations", len(raw_fsnaps), len(raw_vmuts))
         except Exception as exc:
-            logger.error("flush_events failed: %s", exc, exc_info=True)
+            # Hotfix BUG 2: closed-target errors during the recorder's
+            # natural shutdown are not real failures — log at debug only.
+            msg = str(exc)
+            if "closed" in msg.lower() or "target" in msg.lower():
+                logger.debug("flush_events tolerated (page closed): %s", exc)
+            else:
+                logger.error("flush_events failed: %s", exc, exc_info=True)
 
     def handle_commands(self) -> str:
         """Process pending commands. Returns 'stop' if recording should end."""
@@ -184,11 +195,31 @@ class RecorderController:
                 logger.info("Assert mode activated by keyboard shortcut")
         return "continue" if not self._paused else "paused"
 
+    def detach_page_listeners(self) -> None:
+        """Hotfix BUG 2: remove page listeners synchronously.
+
+        Called before any blocking input (Gherkin prompt) so the browser
+        can be closed by the user without triggering callbacks that race
+        against a torn-down page.
+        """
+        for event_name in ("request", "response", "framenavigated"):
+            try:
+                self._page.remove_listener(event_name, getattr(self, f"_on_{event_name}"))
+            except Exception:
+                pass
+
     def stop(self,
              gherkin_funcionalidade: str = "",
              gherkin_cenario: str = "") -> RecordingSession:
-        self._capture_final_state_snapshot("recording_stopped")
-        self.flush_events()
+        # Hotfix BUG 2: capture final snapshot + flush tolerating a closed page.
+        try:
+            self._capture_final_state_snapshot("recording_stopped")
+        except Exception:
+            pass
+        try:
+            self.flush_events()
+        except Exception as exc:
+            logger.debug("flush_events tolerated (page may be closed): %s", exc)
         # Sprint 0: finalize diagnostic session (writes session.json + scenario.feature)
         if self._diagnostic is not None:
             try:
