@@ -1,0 +1,96 @@
+@startuml
+title TestForge Sprint 0 — Sequence: diagnose -> Gherkin + Telemetry -> Azure DevOps
+
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 10
+
+actor "QA" as QA
+actor "Admin" as Admin
+
+box "Setup (Z1, once per machine)" #FEF3C7
+  participant "CLI\nadmin install-pat" as CLI_ADM
+  database "~/.testforge/secrets\n(chmod 600)" as SEC
+end box
+
+box "Recording" #E0F2FE
+  participant "CLI\ndiagnose" as CLI_R
+  participant "RecorderController" as REC
+  participant "DiagnosticSession" as DS
+  participant "FrameworkDetector\nA3+A4" as FW
+  participant "CaptureQualityTracker" as CQ
+  participant "ReplayCheck\nB1/B4" as RC
+  participant "GherkinWriter\nC4b+C4c" as GW
+  participant "TelemetryStore\nE4" as TS
+end box
+
+box "Persistence" #DCFCE7
+  database "recordings/<rid>/diagnostic/\n  session.json\n  steps.jsonl\n  replay_check.jsonl\n  scenario.feature" as STORE
+end box
+
+box "Publish (Z5)" #F3E8FF
+  participant "AzureDevOpsPublisher" as PUB
+  database "Azure DevOps Repo\n(private)" as AZ
+end box
+
+== Z1 — One-time admin setup ==
+Admin -> CLI_ADM: testforge admin install-pat\n  --pat <PAT> --org <o>\n  --project <p> --repo <r>
+CLI_ADM -> SEC: write JSON {pat, org, project, repo}\nchmod 0600
+note right of SEC
+ Tester never sees PAT.
+ From now on, all publish
+ calls find it via Z5 chain.
+end note
+
+== Recording ==
+QA -> CLI_R: testforge diagnose <url>\n  --name "fluxo-x"
+CLI_R -> REC: start(diagnostic_mode=True)
+REC -> DS: DiagnosticSession.start()
+DS -> FW: FrameworkDetector.attach()
+FW -> FW: CDP Network.responseReceived\n   listen for @angular, primefaces, MUI bundles
+DS -> CQ: init
+DS -> RC: init (mode=B1)
+DS -> GW: init (lang=pt)
+DS -> TS: init
+
+loop while recording
+  alt navigation
+    REC -> DS: on_navigation(url, title)
+    DS -> GW: seed Funcionalidade (first nav)\nappend Dado line
+  else step (click/fill/assert)
+    REC -> DS: assess_event(raw, target, candidates)
+    DS -> FW: detect() snapshot
+    DS -> CQ: assess(raw, target, candidates, framework)\nreturns step payload
+    DS -> TS: append_step(payload) + emit span
+    TS -> STORE: append steps.jsonl
+    DS -> GW: on_step(action, target, value)
+    GW -> GW: pick Quando/E/Então\nopaque value phrase
+    DS -> RC: check(step_id, candidates)
+    RC -> RC: LocatorResolver probe (~50-200 ms)
+    DS -> TS: append_replay(rec) + emit span
+    TS -> STORE: append replay_check.jsonl
+    DS -> DS: update totals
+  end
+end
+
+QA -> REC: Shift+S
+CLI_R -> CLI_R: _prompt_gherkin_confirm (C4c)\n   show auto Funcionalidade/Cenário\n   accept | override | 'e' EDITOR
+CLI_R -> REC: stop(gherkin_func, gherkin_cen)
+REC -> DS: finalize(overrides)
+DS -> FW: detect() final
+DS -> RC: drain() if batched
+DS -> GW: write(overrides)
+GW -> STORE: scenario.feature
+DS -> TS: write_session(payload incl. totals)
+TS -> STORE: session.json
+
+== Z5 — Auto-publish ==
+CLI_R -> PUB: _publish_diagnostic_to_azure(rid, diagnostic/)
+PUB -> PUB: resolve_credentials\n  env -> secrets -> azure -> git_helper
+PUB -> SEC: read PAT (if env missing)
+PUB -> AZ: git clone HTTPS+PAT (or SSH)
+PUB -> PUB: copy diagnostic/* into working tree
+PUB -> AZ: git add -f + commit + push
+PUB --> CLI_R: success {remote_path, commit_sha, credential_source}
+CLI_R -> QA: "[OK] Azure DevOps publish: diagnostic/<rid> @ <sha>"
+@enduml

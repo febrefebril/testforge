@@ -143,6 +143,31 @@ are detected and reported as `sensitive_alerts`. Multi-scenario layout via `--sc
 The compiled script reads `test_data.json` at run time. Changing values does NOT
 require recompiling.
 
+### Diagnostic Mode (Sprint 0)
+
+Standalone data-collection mode that ships to QA teams to enrich next-phase
+decisions with real-world telemetry. Activates via
+`testforge record --diagnostic-mode`, `testforge record --pipeline-and-diagnostic-mode`,
+or the alias `testforge diagnose <url>`.
+
+Pipeline components in `src/testforge/diagnostic/`:
+- `framework_detector.py` — A3 CDP bundle analysis + A4 window/DOM/custom-elements
+- `capture_quality.py` — value_kind regex, framework_signal, blind_spots
+- `replay_check.py` — immediate (B1) or batched (B4) Locator probe
+- `gherkin_writer.py` — live `scenario.feature` (pt-BR), C4b auto-derive + C4c confirm
+- `telemetry_store.py` — JSONL primary + OTel spans (E4)
+- `session.py` — `DiagnosticSession` orchestrator
+
+Storage: `recordings/<id>/diagnostic/{session.json,steps.jsonl,replay_check.jsonl,scenario.feature}`.
+
+Publishing to Azure DevOps via Z1 (`testforge admin install-pat`) + Z5 (env →
+`~/.testforge/secrets` → `~/.azure/credentials` → git credential helper) is
+implemented in `src/testforge/publisher/azure_devops.py`. Config template at
+`.testforge/config.yml.example`. Full reference in
+[docs/ARCHITECTURE-V2.md](docs/ARCHITECTURE-V2.md#diagnostic-mode-sprint-0)
+plus the two diagrams `fluxograma-diagnostic-mode.puml` and
+`sequencia-diagnostic-gherkin.puml`.
+
 ### Assert flow
 
 Triggered by **Shift+A** (or the Assert button on the overlay). User picks an element,

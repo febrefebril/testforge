@@ -234,6 +234,64 @@ reports/                            # dashboards
 
 ---
 
+## Diagnostic Mode (Sprint 0)
+
+Standalone capture mode that ships to teams to collect real-world data
+on where the recorder hurts. Does NOT generate tests on its own —
+designed so a champion can deploy TestForge with `--diagnostic-mode`
+and gather telemetry without committing to the rest of the pipeline.
+
+**Activate via**:
+- `testforge record <url> --diagnostic-mode` — capture only (Q4)
+- `testforge record <url> --pipeline-and-diagnostic-mode` — both
+- `testforge diagnose <url>` — alias subcommand
+- `testforge record --replay-batched` — switch from B1 to B4
+
+**Modules** (`src/testforge/diagnostic/`):
+
+| File | Role |
+|---|---|
+| `session.py` | DiagnosticSession lifecycle, thread-safe wrapper around the 5 sub-components |
+| `framework_detector.py` | A3 HTTP bundle analysis via CDP Network events + A4 window.* + DOM markers + custom elements |
+| `capture_quality.py` | Per-step value_kind (currency_BR, cpf, email, ...) + framework_signal + blind_spots + intent_text |
+| `replay_check.py` | Immediate (B1) or batched (B4) Locator probe right after capture |
+| `gherkin_writer.py` | Live `scenario.feature` in PT (C4b auto-derive + C4c CLI confirm/edit) |
+| `telemetry_store.py` | JSONL primary source + OTel-compatible spans via Phase 6 tracer (E4) |
+
+**Per-session artifacts** in `recordings/<id>/diagnostic/`:
+
+```
+session.json          totals, framework_detection, tester_hash, app_url_signature
+steps.jsonl           one row per assessed step (capture_quality + framework_signal)
+replay_check.jsonl    one row per immediate/batched Locator probe
+scenario.feature      Gherkin in pt, Funcionalidade/Cenário auto-derived + editable
+```
+
+**Publishing — Z1 + Z5 chain** (`src/testforge/publisher/azure_devops.py`):
+
+| Step | Who | What |
+|---|---|---|
+| Z1 install (once per machine) | Admin/champion | `testforge admin install-pat --pat <PAT> --org <o> --project <p> --repo <r>` writes `~/.testforge/secrets` (chmod 0600) |
+| Z5 pickup (every publish) | Recorder | `env AZURE_DEVOPS_PAT` → `~/.testforge/secrets` → `~/.azure/credentials` → `git credential fill` |
+| Publish | AzureDevOpsPublisher | Clone HTTPS+PAT (or SSH if `prefer_ssh: true`), copy `diagnostic/<id>/*`, `git add -f` + commit + push, return `{remote_path, commit_sha, credential_source}` |
+
+Config template: `.testforge/config.yml.example`. Tester never sees the
+PAT after admin install. If no PAT resolves, the publisher returns a
+clear `[WARN]` instead of failing the recording.
+
+**Privacy posture** (Q3): Sprint 0 piloto runs with fictitious test
+data, so explicit PII scrubbing is deferred. The Gherkin writer maps
+values to opaque phrases (`com valor monetário`, `com CPF`, ...) so
+the `.feature` file never carries raw values regardless. A
+`pii_scrubber.py` hook will land in a follow-up sprint when the
+diagnostic recorder is taken to production traffic.
+
+**Diagrams**:
+- [fluxograma-diagnostic-mode.puml](diagramas/fluxograma-diagnostic-mode.puml)
+- [sequencia-diagnostic-gherkin.puml](diagramas/sequencia-diagnostic-gherkin.puml)
+
+---
+
 ## Open work / deferred
 
 1. **Cutover handlers `detect()`** — Phase 7 ships parity; delete legacy methods after one release.
