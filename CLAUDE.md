@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **v2 migration (2026-06-25)** — Phases 1-7 of the architecture migration are shipped on
+> `refactor/recorder-playwright`. Every change is additive and feature-flagged, so all
+> behaviour described below still works unchanged. The new surface is summarised in
+> [docs/ARCHITECTURE-V2.md](docs/ARCHITECTURE-V2.md). The new diagrams are
+> `docs/diagramas/{fluxograma-pipeline-v2,sequencia-fluxo-completo-v2,sequencia-assert-flow}.puml`.
+
 ## Environment Setup
 
 ```bash
@@ -91,19 +97,60 @@ recordings/<name>/          # Raw recording artifacts
   raw_events.jsonl
   steps.jsonl
   recording_metadata.json   # Includes status_history
+  ax_snapshots/<eid>.json   # v2 Phase 1, when --use-cdp-recorder
+  trace.zip                 # v2 Phase 1 — open at trace.playwright.dev
 
 semantic_tests/ST-<name>/   # Compiled outputs
-  test_st_<name>.py         # Executable Playwright test
+  test_st_<name>.py         # Executable Playwright test (legacy OR v2)
   semantic_steps.jsonl
   test_data.json            # Extracted field values (--data flag)
   readiness_report.md       # Gate output
+  candidates/step_NNN.json  # v2 Phase 3, when --use-v2-compiler
+
+.testforge/                 # v2 runtime state
+  spans.jsonl               # Phase 6 — JSONL spans (OTel-compatible)
+  intent_catalog.sqlite     # Phase 4 — persistent intent-keyed L0 cache
 
 reports/                    # pilot-report outputs
   pilot_readiness_report.json
   pilot_readiness_report.md
+  dashboard.html            # v2 Phase 6 — static Chart.js dashboard
 
-healing_catalog.jsonl        # L0 healing entries (root level)
+healing_catalog.jsonl       # L0 healing entries (root level)
 ```
+
+### v2 Pipeline (Phases 1-7)
+
+| Concern | Module | Opt-in |
+|---|---|---|
+| Capture (parallel) | `recorder/{tracing_manager,cdp_snapshot}.py` | `--use-cdp-recorder` |
+| Locator extraction | `semantic/locator/{intent,scorer,playwright_codegen,extractor}.py` | `RecordingNormalizer(use_v2_locator=True)` |
+| Normalizer stages | `semantic/stages/{base,context,stage_*}.py` | `RecordingNormalizer(use_pipeline=True)` |
+| Compiler v2 | `semantic/compiler.py::compile_v2` | `--use-v2-compiler` |
+| Runtime resolver | `runtime/{resolver,step,_pw_dispatch,errors}.py` | always-on for v2-compiled tests |
+| SQLite catalog | `healing/sqlite_intent_catalog.py` | passed to `LocatorResolver(sqlite_catalog=...)` |
+| Telemetry | `metrics/telemetry.py` | env `TESTFORGE_TRACING=0` disables |
+| Dashboard | `metrics/dashboard.py` | `testforge dashboard` |
+| Component patterns | `config/component_patterns.yaml`, `handlers/component_resolver.py` | construct `ComponentResolver()` |
+
+### Test data separation (`--data`)
+
+`testforge compile <rec> --data` extracts field values from raw fill events into
+`semantic_tests/ST-<name>/test_data.json`. Field names are derived from
+`label > placeholder > element_id`. Sensitive patterns (CPF, senha, cartão, email, etc.)
+are detected and reported as `sensitive_alerts`. Multi-scenario layout via `--scenarios`.
+
+The compiled script reads `test_data.json` at run time. Changing values does NOT
+require recompiling.
+
+### Assert flow
+
+Triggered by **Shift+A** (or the Assert button on the overlay). User picks an element,
+chooses textual / state / visible / auto. `overlay_inject.js:_addStep('assert', ...)`
+writes to `steps.jsonl`. `RecordingNormalizer._convert_step()` turns it into
+`SemanticAction(action="assert", value=expected, context={"assert_type": ...})`.
+The v2 compiler emits `step.assert_text(page, intent, expected, candidates_file)`.
+See [docs/diagramas/sequencia-assert-flow.puml](docs/diagramas/sequencia-assert-flow.puml).
 
 ### LLM Configuration
 

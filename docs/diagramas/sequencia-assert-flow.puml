@@ -1,0 +1,93 @@
+@startuml
+title TestForge — Assert Flow: Record -> Compile -> Run
+
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign center
+
+actor "QA" as QA
+participant "Browser\n(overlay_inject.js)" as OV
+participant "RecorderController" as REC
+database "steps.jsonl" as STEPS
+participant "RecordingNormalizer" as NORM
+participant "PlaywrightCompiler" as COMP
+database "candidates/step_NNN.json" as JSON
+database "test_<id>.py" as PY
+participant "runtime.step\nassert_text" as STEP
+participant "LocatorResolver" as RES
+
+== Capture ==
+QA -> OV: Press Shift+A\nOR click "Assert" button
+OV -> OV: __tfAssertWaiting = true\nborder orange + cursor change
+note right of OV
+ _tf_enterAssertMode()
+ overlay_inject.js:532
+end note
+
+QA -> OV: Click target element
+OV -> OV: _showAssertMenu()\nshow 4 buttons:\nText | State | Visible | Auto
+
+QA -> OV: Click "Text" (textual)
+OV -> OV: _addStep('assert', el, 'textual')\n  expected_value = textContent
+note right of OV
+ overlay_inject.js:263
+ fields written:
+   action: 'assert'
+   assert_type: 'textual'
+   expected_value: '...'
+   accessible_name, role, css_path
+end note
+
+OV -> REC: __tfStepQueue (drained next flush)
+REC -> STEPS: append step record
+
+== Normalize ==
+NORM -> STEPS: read steps.jsonl
+NORM -> NORM: _convert_step()
+note right
+ recording_normalizer.py:1191
+ returns SemanticAction(
+   action="assert",
+   value=expected,
+   target=SemanticTarget(...),
+   context={
+     assert_type: 'textual',
+     assert_state: ''
+   }
+ )
+end note
+
+== Compile (v2) ==
+COMP -> COMP: _emit_v2_call(action)
+note right
+ compiler.py:157
+ expected = target.text or action.value
+end note
+COMP -> JSON: write candidates payload\n  {action: 'assert',\n   intent_text: 'assert text "Welcome"',\n   value: '',\n   candidates: [...]}
+COMP -> PY: append line:
+note right
+ step.assert_text(
+   page,
+   intent='assert text "Welcome"',
+   expected="Welcome",
+   candidates_file="step_007.json")
+end note
+
+== Run ==
+STEP -> RES: resolve(intent, candidates, action='assert')
+RES --> STEP: Locator
+STEP -> STEP: locator.first.wait_for(state='visible')
+STEP -> STEP: actual = locator.first.text_content()
+alt expected.lower() in actual.lower()
+  STEP --> STEP: PASS
+else mismatch
+  STEP -> STEP: raise AssertionError(\n  'assert_text: expected="X" got="Y"')
+end
+
+== Variants ==
+note over QA
+ Other assert types from menu:
+ - State    -> assert_state='checked'|'enabled'|...
+ - Visible  -> visibility-only check
+ - Auto     -> textual + state combined
+end note
+@enduml
