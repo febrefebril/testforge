@@ -1649,6 +1649,16 @@ def cmd_pilot_report(args):
                 print(f"    {cat.replace('_', ' ').title()}: {count}")
 
 
+def cmd_dashboard(args):
+    """Phase 6: generate static dashboard.html."""
+    from testforge.metrics.dashboard import write_dashboard
+    path = write_dashboard(
+        output_path=args.output, spans_path=args.spans, db_path=args.db,
+    )
+    print(f"[TestForge] ok dashboard: {path}")
+    print(f"  Abrir no browser: file://{os.path.abspath(path)}")
+
+
 def cmd_catalog_migrate(args):
     """Phase 4: import legacy JSONL recipes into SQLite intent catalog."""
     from testforge.healing.sqlite_intent_catalog import IntentCatalog
@@ -1849,6 +1859,16 @@ def main():
     audit_cmd = sub.add_parser("audit", help="Auditar gravacao: metricas de qualidade, eventos, compilacao")
     audit_cmd.add_argument("recording", help="ID da gravacao (ex: REC-20260613) ou caminho")
     audit_cmd.set_defaults(func=cmd_audit)
+
+    # dashboard (Phase 6: static HTML observability)
+    dash = sub.add_parser("dashboard", help="(Fase 6) Gerar dashboard HTML estatico com metricas de resolve, catalog, latencia")
+    dash.add_argument("--output", default=str(_PROJECT_ROOT / "reports/dashboard.html"),
+                     help="Caminho HTML de saida")
+    dash.add_argument("--spans", default=str(_PROJECT_ROOT / ".testforge/spans.jsonl"),
+                     help="JSONL de spans (default: .testforge/spans.jsonl)")
+    dash.add_argument("--db", default=str(_PROJECT_ROOT / ".testforge/intent_catalog.sqlite"),
+                     help="SQLite intent catalog")
+    dash.set_defaults(func=cmd_dashboard)
 
     # catalog-migrate (Phase 4: JSONL → SQLite intent catalog)
     catmig = sub.add_parser("catalog-migrate", help="(Fase 4) Importa healing-catalog.jsonl para SQLite intent catalog")

@@ -77,6 +77,27 @@ class LocatorResolver:
     def resolve(self, intent: str, candidates: list[dict],
                 action: str = "click") -> ResolveResult:
         """Try L0 cache (memory then SQLite), then candidates in order."""
+        from ..metrics.telemetry import get_tracer
+        tracer = get_tracer()
+        with tracer.start_span("resolve") as span:
+            span.set_attribute("intent_text", intent)
+            span.set_attribute("action", action)
+            span.set_attribute("candidate_count", len(candidates))
+            try:
+                result = self._resolve_impl(intent, candidates, action)
+                span.set_attribute("level", result.level)
+                span.set_attribute("strategy", result.strategy)
+                span.set_attribute("score", result.score)
+                span.set_attribute("candidate_index", result.candidate_index)
+                span.set_attribute("elapsed_ms", result.elapsed_ms)
+                return result
+            except LocatorNotFoundError as exc:
+                span.set_attribute("level", "FAILED")
+                span.set_attribute("attempted_count", len(getattr(exc, "candidates", []) or []))
+                raise
+
+    def _resolve_impl(self, intent: str, candidates: list[dict],
+                      action: str) -> ResolveResult:
         t0 = time.perf_counter()
         attempted: list[str] = []
         last_error = ""

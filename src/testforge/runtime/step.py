@@ -74,44 +74,52 @@ def click(page, intent: str, candidates_file: str = "",
           candidates: Optional[list[dict]] = None,
           timeout_ms: int = 5000) -> None:
     """Resolve `intent` to a Locator and click it."""
-    locator, _ = _do_resolve(page, intent, candidates_file, candidates)
-    try:
-        locator.click(timeout=timeout_ms)
-        page.wait_for_timeout(200)
-    except Exception as exc:
-        raise StepExecutionError(intent, "click", str(exc)) from exc
+    from ..metrics.telemetry import get_tracer
+    with get_tracer().start_span("step.click") as span:
+        span.set_attribute("intent_text", intent)
+        locator, _ = _do_resolve(page, intent, candidates_file, candidates)
+        try:
+            locator.click(timeout=timeout_ms)
+            page.wait_for_timeout(200)
+        except Exception as exc:
+            raise StepExecutionError(intent, "click", str(exc)) from exc
 
 
 def fill(page, intent: str, value: str, candidates_file: str = "",
          candidates: Optional[list[dict]] = None,
          timeout_ms: int = 5000) -> None:
     """Resolve `intent` and fill it with `value`."""
-    locator, result = _do_resolve(page, intent, candidates_file, candidates)
-    try:
-        locator.fill(value, timeout=timeout_ms)
-        # Press Tab for real-keyboard blur — Angular Zone.js requirement.
+    from ..metrics.telemetry import get_tracer
+    with get_tracer().start_span("step.fill") as span:
+        span.set_attribute("intent_text", intent)
+        locator, result = _do_resolve(page, intent, candidates_file, candidates)
         try:
-            locator.first.press("Tab")
-        except Exception:
+            locator.fill(value, timeout=timeout_ms)
             try:
-                page.keyboard.press("Tab")
+                locator.first.press("Tab")
             except Exception:
-                pass
-        page.wait_for_timeout(200)
-    except Exception as exc:
-        raise StepExecutionError(intent, "fill", str(exc)) from exc
+                try:
+                    page.keyboard.press("Tab")
+                except Exception:
+                    pass
+            page.wait_for_timeout(200)
+        except Exception as exc:
+            raise StepExecutionError(intent, "fill", str(exc)) from exc
 
 
 def select(page, intent: str, value: str, candidates_file: str = "",
            candidates: Optional[list[dict]] = None,
            timeout_ms: int = 5000) -> None:
     """Resolve `intent` and select an option from a <select> or combobox."""
-    locator, _ = _do_resolve(page, intent, candidates_file, candidates)
-    try:
-        locator.select_option(value, timeout=timeout_ms)
-        page.wait_for_timeout(200)
-    except Exception as exc:
-        raise StepExecutionError(intent, "select_option", str(exc)) from exc
+    from ..metrics.telemetry import get_tracer
+    with get_tracer().start_span("step.select") as span:
+        span.set_attribute("intent_text", intent)
+        locator, _ = _do_resolve(page, intent, candidates_file, candidates)
+        try:
+            locator.select_option(value, timeout=timeout_ms)
+            page.wait_for_timeout(200)
+        except Exception as exc:
+            raise StepExecutionError(intent, "select_option", str(exc)) from exc
 
 
 def assert_text(page, intent: str, expected: str, candidates_file: str = "",
