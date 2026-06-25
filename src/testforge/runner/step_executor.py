@@ -338,6 +338,26 @@ class StepExecutor:
         from ..healing import MaterialComponentDetector
         detector = MaterialComponentDetector()
 
+        # Hotfix BUG 1: when the click target lives inside a CDK overlay
+        # (Angular Material datepicker calendar, dialog, autocomplete panel),
+        # the first interaction is racy — the overlay starts animating in
+        # AFTER the previous trigger click resolved, and the immediate next
+        # click lands either on nothing or on the still-fading backdrop.
+        # Wait for the overlay container to be visible (best effort) before
+        # any click whose selector mentions cdk-overlay or mat-calendar.
+        try:
+            if any(_inside_cdk_overlay(s) for s in selectors if s):
+                self.page.wait_for_selector(
+                    ".cdk-overlay-container .cdk-overlay-pane",
+                    state="visible", timeout=2500,
+                )
+                # Also wait for any CDK animation to settle.
+                self.page.wait_for_timeout(250)
+        except Exception:
+            # If the wait fails just proceed — the click loop below has
+            # its own retry behavior.
+            pass
+
         last_error = None
         for sel in selectors:
             if not sel:
@@ -356,6 +376,17 @@ class StepExecutor:
                 last_error = e
                 continue
         raise last_error or ValueError(f"click falhou — todos os selectores tentados ({len(selectors)})")
+
+
+def _inside_cdk_overlay(selector: str) -> bool:
+    """Hotfix BUG 1 helper — detect selectors that live inside a CDK overlay."""
+    if not selector:
+        return False
+    s = selector.lower()
+    return any(token in s for token in (
+        "cdk-overlay", "mat-calendar", "mat-datepicker",
+        "mat-dialog", "mat-autocomplete-panel",
+    ))
 
     def _execute_fill(self, step, selectors, data_values, field_value_map=None):
         if not selectors:
