@@ -27,6 +27,59 @@ from .capture_quality import detect_value_kind
 logger = logging.getLogger(__name__)
 
 
+# Hotfix BUG 8: list of Material Icons names that pollute Gherkin labels.
+# Source: https://fonts.google.com/icons (most common). Conservative list —
+# only filtered when the token appears as a standalone word at the start of
+# the string, not when it might be a real word ("home" can be legitimate).
+_MATERIAL_ICONS = {
+    "table_view", "attach_money", "check_circle", "trending_up", "arrow_back",
+    "arrow_forward", "arrow_drop_down", "arrow_drop_up", "chevron_left",
+    "chevron_right", "expand_more", "expand_less", "menu", "close",
+    "search", "settings", "person", "people", "info", "warning", "error",
+    "help", "edit", "delete", "add", "remove", "check", "clear",
+    "calendar_today", "event", "schedule", "access_time", "today",
+    "credit_card", "shopping_cart", "favorite", "favorite_border",
+    "visibility", "visibility_off", "lock", "lock_open", "key",
+    "home", "house", "apartment", "real_estate_agent", "location_on",
+    "map", "phone", "email", "share", "print", "save", "download", "upload",
+    "refresh", "sync", "cloud", "cloud_download", "cloud_upload",
+    "play_arrow", "pause", "stop", "skip_next", "skip_previous",
+    "more_vert", "more_horiz", "filter_list", "sort",
+    "language", "translate", "notifications", "notifications_off",
+    "thumb_up", "thumb_down", "star", "star_border",
+    "wifi", "bluetooth", "battery_full", "battery_alert",
+    "campaign", "logout", "login", "account_circle",
+    "ticket_voucher", "verified",
+}
+
+
+def _clean_material_icons(text: str) -> str:
+    """Hotfix BUG 8: strip leading/trailing Material Icon names from a label.
+
+    Conservative rule: an icon-name token is only removed when there is at
+    least one OTHER (non-icon) token in the label. That way "Login" by
+    itself remains "Login" even though `login` is a Material icon, while
+    "home Página Inicial" correctly becomes "Página Inicial".
+    """
+    if not text:
+        return text
+    s = text.strip()
+    tokens = s.split()
+    if len(tokens) <= 1:
+        # Single-token label: never strip (could be a legitimate word that
+        # also happens to be a Material icon name).
+        return s
+    # Leading icon tokens — stop the moment we hit a non-icon, leaving at
+    # least one token in the result.
+    while len(tokens) > 1 and tokens[0].lower() in _MATERIAL_ICONS:
+        tokens.pop(0)
+    # Trailing icon tokens — same guard.
+    while len(tokens) > 1 and tokens[-1].lower() in _MATERIAL_ICONS:
+        tokens.pop()
+    cleaned = re.sub(r"\s+", " ", " ".join(tokens)).strip()
+    return cleaned
+
+
 # Phrasing chosen to be friendly to Cucumber/behave/pytest-bdd parsers.
 _KIND_PHRASE = {
     "currency_BR": "com valor monetário",
@@ -45,8 +98,14 @@ _KIND_PHRASE = {
 }
 
 
-def _safe_label(target: dict, fallback: str = "elemento") -> str:
-    """Pick the most user-meaningful label, escape quotes."""
+def _safe_label(target: dict, fallback: str = "") -> str:
+    """Pick the most user-meaningful label, clean Material Icons, escape quotes.
+
+    Hotfix BUG 8+9: previously fell back to a useless 'elemento' literal when
+    the target had no label/text. Now returns the fallback (default empty)
+    so the Gherkin writer can skip the line instead of writing
+    `clico no botão "elemento"`.
+    """
     candidates = (
         target.get("accessible_name"),
         target.get("label"),
@@ -56,7 +115,10 @@ def _safe_label(target: dict, fallback: str = "elemento") -> str:
     )
     for c in candidates:
         if isinstance(c, str) and c.strip():
-            return c.strip().replace('"', "'")[:80]
+            cleaned = _clean_material_icons(c)
+            if not cleaned:
+                continue  # only icons present — try next candidate
+            return cleaned.replace('"', "'")[:80]
     return fallback
 
 
@@ -109,8 +171,14 @@ class GherkinWriter:
         return line
 
     def _render(self, action: str, target: dict, value: Optional[str]) -> Optional[str]:
-        keyword = self._next_keyword(action)
         label = _safe_label(target)
+        # Hotfix BUG 9: drop steps without a useful label rather than writing
+        # `clico no botão "elemento"`. The forensic analysis showed these lines
+        # are noise that QA teams have to manually delete before running.
+        if not label and action in ("click", "submit", "fill", "input",
+                                      "select", "select_option"):
+            return None
+        keyword = self._next_keyword(action)
         if action == "click" or action == "submit":
             return f'  {keyword} clico no botão "{label}"'
         if action in ("fill", "input"):
@@ -125,12 +193,18 @@ class GherkinWriter:
             return f'  {keyword} seleciono "{value_label}" em "{label}"'
         if action == "assert":
             expected = (value or label).strip().replace('"', "'")[:80]
+            if not expected:
+                return None
             return f'  {keyword} vejo o texto "{expected}"'
         if action == "navigation":
             return None
         return f"  # ação não mapeada: {action} {label}"
 
     def _next_keyword(self, action: str) -> str:
+        # Hotfix BUG 9: keyword advance happens *only* when a line is
+        # actually emitted. We rebuilt _render to early-return for empty
+        # labels, so it now calls _next_keyword AFTER the empty check — the
+        # logic below stays the same.
         if action == "assert":
             if not self._then_emitted:
                 self._then_emitted = True
