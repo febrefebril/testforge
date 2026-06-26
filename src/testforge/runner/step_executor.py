@@ -377,17 +377,6 @@ class StepExecutor:
                 continue
         raise last_error or ValueError(f"click falhou — todos os selectores tentados ({len(selectors)})")
 
-
-def _inside_cdk_overlay(selector: str) -> bool:
-    """Hotfix BUG 1 helper — detect selectors that live inside a CDK overlay."""
-    if not selector:
-        return False
-    s = selector.lower()
-    return any(token in s for token in (
-        "cdk-overlay", "mat-calendar", "mat-datepicker",
-        "mat-dialog", "mat-autocomplete-panel",
-    ))
-
     def _execute_fill(self, step, selectors, data_values, field_value_map=None):
         if not selectors:
             raise ValueError("fill sem selector")
@@ -460,3 +449,14 @@ def _inside_cdk_overlay(selector: str) -> bool:
             self.page.select_option(selector, label=value, timeout=self.DEFAULT_TIMEOUT)
         self.page.wait_for_timeout(200)
         return selector
+
+
+def _inside_cdk_overlay(selector: str) -> bool:
+    """Hotfix BUG 1 helper — detect selectors that live inside a CDK overlay."""
+    if not selector:
+        return False
+    s = selector.lower()
+    return any(token in s for token in (
+        "cdk-overlay", "mat-calendar", "mat-datepicker",
+        "mat-dialog", "mat-autocomplete-panel",
+    ))
