@@ -118,3 +118,76 @@ class TestPseudoSubmitPromotion:
             assert ps["form_values"]["renda"] == "5000"
             assert ps["form_values"]["valor"] == "100000"
             ctrl.stop()
+
+
+class TestHotfix12NetworkPersistence:
+    """Hotfix 12: pseudo_submit metadata also tags the persisted network entry."""
+
+    def test_mark_pseudo_submit_tags_matching_network_entry(self):
+        from testforge.recorder.recorder_controller import RecorderController
+        page = _make_page()
+        with tempfile.TemporaryDirectory() as tmp:
+            ctrl = RecorderController(page, recordings_root=tmp)
+            ctrl.start("REC-PSP-001")
+            ctrl._network_entries = [{
+                "type": "request",
+                "method": "POST",
+                "url": "http://api/save",
+                "resource_type": "xhr",
+                "post_data": '{"renda":"5000"}',
+            }]
+            ctrl._recent_clicks = [{
+                "event_id": "evt_010",
+                "ts": datetime.now(timezone.utc).timestamp(),
+            }]
+            ctrl._mark_pseudo_submit("http://api/save", "POST", '{"renda":"5000"}')
+            entry = ctrl._network_entries[-1]
+            assert entry.get("is_pseudo_submit") is True
+            assert entry.get("pseudo_submit_click_event_id") == "evt_010"
+            assert entry.get("form_values", {}).get("renda") == "5000"
+            ctrl.stop()
+
+    def test_mark_pseudo_submit_does_not_tag_unrelated_entry(self):
+        from testforge.recorder.recorder_controller import RecorderController
+        page = _make_page()
+        with tempfile.TemporaryDirectory() as tmp:
+            ctrl = RecorderController(page, recordings_root=tmp)
+            ctrl.start("REC-PSP-002")
+            ctrl._network_entries = [{
+                "type": "request", "method": "GET",
+                "url": "http://api/other", "resource_type": "fetch",
+                "post_data": None,
+            }, {
+                "type": "request", "method": "POST",
+                "url": "http://api/save", "resource_type": "xhr",
+                "post_data": '{"a":"b"}',
+            }]
+            ctrl._recent_clicks = [{
+                "event_id": "evt_020",
+                "ts": datetime.now(timezone.utc).timestamp(),
+            }]
+            ctrl._mark_pseudo_submit("http://api/save", "POST", '{"a":"b"}')
+            assert "is_pseudo_submit" not in ctrl._network_entries[0]
+            assert ctrl._network_entries[1].get("is_pseudo_submit") is True
+            ctrl.stop()
+
+
+class TestHotfix12AuditorCounts:
+    """Auditor recognizes is_pseudo_submit entries as postbacks."""
+
+    def test_auditor_counts_pseudo_submit_as_postback(self):
+        from testforge.recorder.recording_auditor import RecordingAuditor
+        import os, json
+        with tempfile.TemporaryDirectory() as tmp:
+            rec_dir = os.path.join(tmp, "REC-AUD-001")
+            os.makedirs(rec_dir)
+            with open(os.path.join(rec_dir, "network_log.json"), "w") as f:
+                json.dump([
+                    {"type": "request", "method": "POST", "url": "http://api/save",
+                     "resource_type": "xhr", "is_pseudo_submit": True},
+                    {"type": "request", "method": "GET", "url": "http://api/data",
+                     "resource_type": "xhr"},
+                ], f)
+            auditor = RecordingAuditor()
+            report = auditor.audit(rec_dir)
+            assert report["network"]["postbacks_detected"] == 1

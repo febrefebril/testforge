@@ -454,16 +454,28 @@ class RecorderController:
             "post_data": post_data,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
-        # Hotfix BUG 10: in SPA Angular apps `<form action>` submits are rare.
-        # The user clicks a button and the framework dispatches an XHR/fetch
-        # POST/PUT/PATCH that carries the form payload. Promote the latest
-        # click event to a pseudo-submit when a same-origin POST/PUT/PATCH
-        # fires within 1500 ms of it, so downstream IntentReconstructor and
-        # form-values capture get the payload they expect.
+        # Hotfix BUG 10 (+ hotfix 12 follow-up): in SPA Angular apps
+        # `<form action>` submits are rare. The user clicks a button and the
+        # framework dispatches an XHR/fetch POST/PUT/PATCH that carries the
+        # form payload. Promote the latest click event to a pseudo-submit
+        # when a same-origin POST/PUT/PATCH fires within 1500 ms of it so
+        # downstream IntentReconstructor and form-values capture get the
+        # payload they expect.
+        #
+        # Hotfix 12 fix: the click that triggered the XHR usually arrives on
+        # the JS overlay's __tfEventQueue *before* this _on_request handler
+        # runs, but it is still in JS-land — Python's _recent_clicks is
+        # empty until the next flush_events tick. Drain the queue here
+        # before matching so the tail actually contains the triggering
+        # click. The cost is one extra CDP evaluate per POST/PUT/PATCH XHR.
         try:
             if request.method in ("POST", "PUT", "PATCH") \
                and request.resource_type in ("xhr", "fetch") \
                and post_data:
+                try:
+                    self.flush_events()
+                except Exception:
+                    pass
                 self._mark_pseudo_submit(request.url, request.method, post_data)
         except Exception:
             pass
@@ -502,6 +514,25 @@ class RecorderController:
             "url": url, "method": method,
             "form_values": form_values,
         }
+        # Hotfix 12: also tag the matching network entry so audit/auditors
+        # and downstream consumers see the postback signal in the persisted
+        # network_log.json. Match the most recent request entry by url+method
+        # (single-pass from the end — typical case is the request we just
+        # appended a few microseconds ago).
+        try:
+            for entry in reversed(self._network_entries):
+                if not isinstance(entry, dict):
+                    continue
+                if entry.get("type") != "request":
+                    continue
+                if entry.get("url") == url and entry.get("method") == method:
+                    entry["is_pseudo_submit"] = True
+                    entry["pseudo_submit_click_event_id"] = latest.get("event_id")
+                    if form_values:
+                        entry["form_values"] = form_values
+                    break
+        except Exception:
+            pass
 
     def _on_response(self, response: Response):
         self._network_entries.append({

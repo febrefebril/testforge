@@ -222,6 +222,10 @@ class RecordingAuditor:
                             errors_5xx += 1
                         if "__dopostback" in url.lower() or "webform" in url.lower():
                             postbacks += 1
+                        # Hotfix 12: SPA pseudo-submit (XHR/fetch POST tagged
+                        # by RecorderController._mark_pseudo_submit).
+                        elif entry.get("is_pseudo_submit"):
+                            postbacks += 1
                         if any(ext in url for ext in [".json", "/api/", "/rest/", "/graphql"]):
                             api_count += 1
                 report["network"]["api_requests"] = api_count
