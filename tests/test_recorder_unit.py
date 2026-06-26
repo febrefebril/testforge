@@ -304,3 +304,33 @@ class TestRecorderH1BrowserCloseGracefulStop:
             recorder._on_target_closed()
             recorder._on_target_closed()
             assert recorder._closed is True
+
+
+class TestHotfix14ShiftSOverlayUX:
+    """Hotfix 14: Shift+S updates overlay UI before browser closes."""
+
+    def test_overlay_js_defines_showStoppingUI(self):
+        """Ensure overlay JS exposes the helper that updates the banner."""
+        from testforge.recorder.recorder_controller import RecorderController
+        assert "_showStoppingUI" in RecorderController._OVERLAY_JS
+
+    def test_confirmStop_paths_call_showStoppingUI(self):
+        """Both _confirmStop branches (with/without asserts) trigger the UI update."""
+        from testforge.recorder.recorder_controller import RecorderController
+        js = RecorderController._OVERLAY_JS
+        # The two STOP push sites must both follow a _showStoppingUI call.
+        # Use a coarse check: count _showStoppingUI() invocations >= 2.
+        invocations = js.count("_showStoppingUI()")
+        assert invocations >= 2, (
+            f"expected at least 2 _showStoppingUI() calls, found {invocations}"
+        )
+
+    def test_showStoppingUI_disables_buttons_and_shows_notice(self):
+        """The helper toggles button state and injects #tf-stop-notice."""
+        from testforge.recorder.recorder_controller import RecorderController
+        js = RecorderController._OVERLAY_JS
+        # The body should disable the stop button, change the status text,
+        # and add a notice element.
+        assert "tf-stop-notice" in js
+        assert "Encerrando" in js
+        assert "btnStop.disabled = true" in js

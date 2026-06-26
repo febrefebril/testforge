@@ -742,13 +742,57 @@
       document.getElementById('tf-stop-yes').onclick = function() {
         dlg.remove();
         _captureFinalState('user_stop');
+        _showStoppingUI();
         window.__tfCommandQueue.push('STOP');
       };
       document.getElementById('tf-stop-no').onclick = function() { dlg.remove(); };
       return;
     }
     _captureFinalState('user_stop');
+    _showStoppingUI();
     window.__tfCommandQueue.push('STOP');
+  }
+
+  function _showStoppingUI() {
+    // Hotfix 14: when the user presses Shift+S the overlay used to keep
+    // showing "Gravando..." until the browser closed seconds later, while
+    // Python paused on a blocking Gherkin prompt in the terminal. The user
+    // assumed the recorder was stuck and closed the browser by hand.
+    // Update the visible state immediately so it is obvious that the stop
+    // was received and the next action is in the terminal.
+    try {
+      var status = document.getElementById('tf-status');
+      if (status) status.textContent = 'Encerrando — responda no terminal...';
+      var dot = document.getElementById('tf-rec-dot');
+      if (dot) {
+        dot.style.color = '#fbbf24';  // amber instead of red
+        dot.textContent = '⏳';   // hourglass
+      }
+      var btnStop = document.getElementById('tf-btn-stop');
+      if (btnStop) {
+        btnStop.disabled = true;
+        btnStop.style.opacity = '0.5';
+        btnStop.style.cursor = 'not-allowed';
+      }
+      var btnPause = document.getElementById('tf-btn-pause');
+      if (btnPause) {
+        btnPause.disabled = true;
+        btnPause.style.opacity = '0.5';
+        btnPause.style.cursor = 'not-allowed';
+      }
+      var existing = document.getElementById('tf-stop-notice');
+      if (existing) existing.remove();
+      var notice = document.createElement('div');
+      notice.id = 'tf-stop-notice';
+      notice.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);' +
+        'z-index:999999;background:#1e293b;color:#fff;padding:20px 28px;border-radius:12px;' +
+        'box-shadow:0 8px 32px rgba(0,0,0,0.6);font:14px sans-serif;text-align:center;max-width:380px';
+      notice.innerHTML =
+        '<div style="font-size:20px;margin-bottom:8px">⏳ Encerrando gravacao</div>' +
+        '<div style="color:#cbd5e1;font-size:13px">O navegador vai fechar em instantes.<br>' +
+        '<strong>Responda as proximas perguntas no terminal.</strong></div>';
+      document.body.appendChild(notice);
+    } catch (_ignore) {}
   }
 
   function _highlight(el) {

@@ -460,22 +460,40 @@ def cmd_record(args):
         except KeyboardInterrupt:
             print("\n[TestForge] Interrompido")
 
-        # Sprint 0: prompt for Gherkin confirm/edit BEFORE stop (so finalize writes correct .feature)
-        _gherkin_func = ""
-        _gherkin_cen = ""
-        # Hotfix H1: if user closed the browser, the stop signal already fired
-        # via _on_target_closed — recording loop drained. We still run stop()
-        # + finalize() to write artifacts, but skip the live Gherkin prompt
-        # (input() would still work, but printing context for a vanished
-        # session is confusing UX).
+        # Hotfix 14: close the browser as soon as the recording loop ends so
+        # the user immediately sees the visible "Gravando…" surface go away.
+        # Previously the Gherkin prompt blocked while the browser was still
+        # open showing the recording banner, and testers thought the
+        # recorder was stuck. We capture the page-dependent artifacts first
+        # (the overlay is gone but the live Page is still useful for
+        # snapshots/flush), then close the browser, then ask for Gherkin in
+        # the terminal — where the next input is now obviously located.
         _browser_closed = getattr(recorder, "_closed", False)
-        if _diag and recorder._diagnostic is not None and recorder._diagnostic.gherkin is not None and not _browser_closed:
-            # Hotfix BUG 2: detach page listeners before blocking input —
-            # browser may close mid-prompt and we don't want callbacks racing.
+        try:
+            recorder.detach_page_listeners()
+        except Exception:
+            pass
+        if not _browser_closed:
             try:
-                recorder.detach_page_listeners()
+                recorder._capture_final_state_snapshot("recording_stopped")
             except Exception:
                 pass
+            try:
+                recorder.flush_events()
+            except Exception:
+                pass
+        try:
+            browser.close()
+        except Exception:
+            # Hotfix H1: user may have already closed the browser window.
+            pass
+
+        # Sprint 0: confirm/edit Gherkin AFTER the browser is gone so the
+        # tester's attention is in the terminal. recorder.stop() below
+        # writes the .feature via diagnostic.finalize using these overrides.
+        _gherkin_func = ""
+        _gherkin_cen = ""
+        if _diag and recorder._diagnostic is not None and recorder._diagnostic.gherkin is not None and not _browser_closed:
             _gherkin_func, _gherkin_cen = _prompt_gherkin_confirm(recorder._diagnostic.gherkin)
         if _browser_closed:
             print("[TestForge] [STOP] Navegador fechado — finalizando como Shift+S")
@@ -495,11 +513,6 @@ def cmd_record(args):
             print(f"[TestForge] Diagnostic: {diag_dir}/")
             if os.path.exists(os.path.join(diag_dir, "scenario.feature")):
                 print(f"[TestForge] Gherkin:    {diag_dir}/scenario.feature")
-        try:
-            browser.close()
-        except Exception:
-            # Hotfix H1: user may have already closed the browser window.
-            pass
 
     # Q4 — `--diagnostic-mode` skips compile/run. `--pipeline-and-diagnostic-mode`
     # runs both. Plain --diagnostic-mode (no pipeline flag) early-returns.
