@@ -53,6 +53,8 @@ class RecorderController:
         # Sprint 0: diagnostic mode (feature-flagged)
         self._diagnostic_mode = False
         self._diagnostic = None  # DiagnosticSession instance
+        # Hotfix H1: browser/page-closed flag (treat user close as graceful stop)
+        self._closed = False
 
     def start(
         self,
@@ -81,6 +83,16 @@ class RecorderController:
         self._page.on("request", self._on_request)
         self._page.on("response", self._on_response)
         self._page.on("framenavigated", self._on_framenavigated)
+        # Hotfix H1: treat browser/page close as graceful stop. Same path as
+        # Shift+S — sets a flag consumed by handle_commands() so the recording
+        # loop drains and finalize() runs normally instead of leaving artifacts
+        # half-written.
+        self._closed = False
+        self._page.on("close", self._on_target_closed)
+        try:
+            self._page.context.on("close", self._on_target_closed)
+        except Exception:
+            pass
 
         # Phase 1: start Playwright tracing + attach CDP for AX-tree snapshots.
         # Runs in parallel with legacy JS overlay capture. Feature-flagged.
@@ -193,6 +205,10 @@ class RecorderController:
 
     def handle_commands(self) -> str:
         """Process pending commands. Returns 'stop' if recording should end."""
+        # Hotfix H1: user-closed browser/page is equivalent to Shift+S.
+        if self._closed:
+            logger.info("Recording stop triggered by browser/page close")
+            return "stop"
         pending = self.wait_for_command()
         for cmd in pending:
             if cmd == "STOP":
@@ -204,6 +220,13 @@ class RecorderController:
             elif cmd == "ASSERT":
                 logger.info("Assert mode activated by keyboard shortcut")
         return "continue" if not self._paused else "paused"
+
+    def _on_target_closed(self, *_args) -> None:
+        """Hotfix H1: page or context closed by user — flag for graceful stop."""
+        if self._closed:
+            return
+        self._closed = True
+        logger.info("Recording target closed by user — graceful stop scheduled")
 
     def detach_page_listeners(self) -> None:
         """Hotfix BUG 2: remove page listeners synchronously.
@@ -266,8 +289,16 @@ class RecorderController:
         return session
 
     def finalize(self) -> RecordingSession:
-        self._capture_final_state_snapshot("recording_finalized")
-        self.flush_events()
+        # Hotfix H1: tolerate closed page during finalize (browser may have
+        # been closed by user — same path as Shift+S, just no live page).
+        try:
+            self._capture_final_state_snapshot("recording_finalized")
+        except Exception:
+            pass
+        try:
+            self.flush_events()
+        except Exception:
+            pass
         return self._session_manager.finalize()
 
     @property

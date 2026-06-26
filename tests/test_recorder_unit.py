@@ -260,3 +260,47 @@ class TestRecorderControllerEventId:
             assert event_ids == ["evt_00001", "evt_00002"], (
                 f"JS event_id leaked! Expected unique IDs, got {event_ids}"
             )
+
+
+class TestRecorderH1BrowserCloseGracefulStop:
+    """Hotfix H1: closing the browser/page is equivalent to Shift+S."""
+
+    def test_target_closed_handler_sets_flag(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_page = MagicMock()
+            recorder = RecorderController(mock_page, recordings_root=tmpdir)
+            assert recorder._closed is False
+            recorder._on_target_closed()
+            assert recorder._closed is True
+
+    def test_handle_commands_returns_stop_when_closed(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_page = MagicMock()
+            recorder = RecorderController(mock_page, recordings_root=tmpdir)
+            recorder._closed = True
+            assert recorder.handle_commands() == "stop"
+
+    def test_handle_commands_normal_when_not_closed(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_page = MagicMock()
+            recorder = RecorderController(mock_page, recordings_root=tmpdir)
+            assert recorder.handle_commands() == "continue"
+
+    def test_start_registers_close_listeners(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_page = MagicMock()
+            recorder = RecorderController(mock_page, recordings_root=tmpdir)
+            with patch.object(recorder, "_capture_snapshots"):
+                recorder.start(recording_id="REC-H1-001")
+            # page.on('close', ...) must be among page.on calls
+            event_names = [call.args[0] for call in mock_page.on.call_args_list]
+            assert "close" in event_names
+
+    def test_target_closed_idempotent(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_page = MagicMock()
+            recorder = RecorderController(mock_page, recordings_root=tmpdir)
+            recorder._on_target_closed()
+            recorder._on_target_closed()
+            recorder._on_target_closed()
+            assert recorder._closed is True

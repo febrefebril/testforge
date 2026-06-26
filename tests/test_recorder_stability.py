@@ -73,14 +73,19 @@ class TestListenerLifecycle:
         ctrl.stop()
         page.remove_listener.assert_any_call("response", ctrl._on_response)
 
-    def test_second_start_registers_exactly_three_listeners(self):
+    def test_second_start_registers_exactly_four_listeners(self):
         ctrl, page = self._make_ctrl()
         self._start(ctrl, "REC-001")
         ctrl.stop()
         page.on.reset_mock()
         self._start(ctrl, "REC-002")
-        # request + response + framenavigated
-        assert page.on.call_count == 3
+        # request + response + framenavigated + close (H1)
+        event_names = [call.args[0] for call in page.on.call_args_list]
+        assert "request" in event_names
+        assert "response" in event_names
+        assert "framenavigated" in event_names
+        assert "close" in event_names
+        assert page.on.call_count == 4
 
     def test_stop_with_remove_listener_exception_does_not_raise(self):
         ctrl, page = self._make_ctrl()
