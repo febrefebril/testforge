@@ -3,9 +3,11 @@
 Pós-Sprint 0 hotfixes. Decisões: branch `hotfix/sprint-0-recorder-fixes`, 2026-06-25.
 
 > **Leitura obrigatória antes de propor refactor**: [DECISIONS-LOG.md](DECISIONS-LOG.md).
+> **Leitura obrigatória antes de hotfix**: [REGRESSION-PATTERNS.md](REGRESSION-PATTERNS.md).
 > **Inventário de débito estrutural**: [DEBT-INVENTORY.md](DEBT-INVENTORY.md).
 > **Plano ativo**: [CONSOLIDATION-SPRINT.md](CONSOLIDATION-SPRINT.md).
 > **Próximo plano**: [REFACTOR-SPRINT.md](REFACTOR-SPRINT.md) (após piloto).
+> **Invariantes enforced em CI**: [tests/test_invariants.py](../tests/test_invariants.py).
 
 ## Curto prazo — estabilizar antes de liberar piloto QA
 

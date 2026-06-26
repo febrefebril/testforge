@@ -99,6 +99,52 @@ Decision: defer to post-pilot. Pilot data will tell us whether the priority chai
 
 ---
 
+## 2026-06-26 — Regression registry + invariant tests (hotfix 21)
+
+**Decision**: Stop the hotfix-per-instance cycle by making bug *classes* visible. Add `REGRESSION-PATTERNS.md` (registry of 5 patterns observed across hotfixes 7-20) and `tests/test_invariants.py` (CI checks that fail when a pattern is at risk of re-entering).
+
+**Why**: User asked "essa não é a primeira regressão desse tipo. Como evitar?". Honest answer: we had no place to record patterns, no test that pinned the *class* of bug, no process that asked "is this the Nth occurrence?". After CS-1 + CS-2 + CS-3 + hotfix 19 + hotfix 20, the same five anti-patterns recurred 17 times across 14 hotfixes. The cost is high because each instance ships, hits production, costs a debug cycle.
+
+**Mechanism**:
+
+1. `REGRESSION-PATTERNS.md` documents each pattern with name, first-seen SHA, recurrence count, symptoms, AST/grep check, invariant test, and full occurrence table. Reviewers read it before approving structural changes.
+2. `tests/test_invariants.py` translates each pattern into a CI-enforceable assertion. Current coverage:
+   - P1: press_sequentially count = 1; required StepExecutor methods are inside class
+   - P2: bare `except Exception: pass` count is capped
+   - P3: field_value_map writer/reader round-trip
+   - P4: feature flags must have a flip-or-delete deadline
+   - P5: click→fill promotion emits telemetry; datepicker click-only branch is documented
+3. New process: every hotfix must check the registry. Every recurrence increments the count and tightens the static check until the recurrence becomes impossible to ship.
+
+**Outcome**: 7/7 invariant tests green on commit. Next hotfix that would re-introduce a registered pattern is caught at CI, not at a real customer run.
+
+**The patterns** (full detail in REGRESSION-PATTERNS.md):
+
+- P1 `code-duplication-drift` — 5 recurrences (hotfixes 9, 12, 16, 17, 19)
+- P2 `silent-default-swallow` — 5 recurrences (hotfix 7, 14, 20 + 20 inline sites)
+- P3 `unanchored-state` — 3 recurrences (hotfix 8, 15, CS-4a)
+- P4 `feature-flag-rot` — 4 recurrences (v2 phases 1-7 unused; hotfix 7 plumb-later)
+- P5 `compile-runtime-divergence` — 3 recurrences (click→fill magic, Phase 7 handler drops, hotfix 20)
+
+**Note**: this is the answer to the user's question "porque esse aprendizado não está acontecendo?". The aprendizado now has a home (the registry), a static enforcement (the invariant tests), and a process (reviewer check + recurrence count). The cost of repeating a pattern is now visible.
+
+---
+
+## 2026-06-26 — Hotfixes 19 + 20 — telemetria pagou conta
+
+**Decision**: Use the CS-3 telemetry (`.testforge/spans.jsonl`) to root-cause real-run failures before guessing fixes.
+
+**Why**: After CS-1+CS-2+CS-3+CS-4a shipped, the user re-ran SIOPI and reported the same symptoms (date not filled, currency concatenated). Before CS-3, this would have triggered another hotfix-per-helper cycle. Instead, reading the spans took 5 minutes and revealed two bugs neither sprint item covered:
+
+- **Hotfix 19**: a `fill.attempted` span showed `value_len=378 type_val_len=19` — telemetry made the bug obvious. Root cause: `_resolve_field_value._match` ran `str(entry)` on `FieldValueMap` dataclass instances when `isinstance(entry, dict)` returned False. The dataclass `__repr__` got typed into the masked input. Fix: `_unwrap()` handles dict / dataclass / scalar.
+- **Hotfix 20**: 7 of 14 steps reported `[SKIP]` in the runner output. `AngularMaterialHandler._dedup_datepicker_sequences` aggressively suppressed click-only datepicker sequences (no follow-up fill) — but Caixa SIOPI's masked date input never fires a fill event, so click is the canonical path. Fix: a third branch detects "click-only completion" (last click on a `mat-calendar-body-cell`) and keeps every click.
+
+**Outcome**: real SIOPI run passed end-to-end (14/15 passed, 1 expected skip). 158 affected tests green. Both patterns added to REGRESSION-PATTERNS.md (P1 for hotfix 19, P5 for hotfix 20).
+
+**Lesson reinforced**: CS-3 telemetry was the highest-ROI item of the consolidation sprint. Without it, the next two hotfixes would have been guesses. With it, both were diagnosed before opening an editor.
+
+---
+
 ## 2026-06-26 — Consolidation sprint shipped (CS-1, CS-2, CS-3, CS-4a)
 
 **Status**: 4 of 5 sprint items shipped; CS-4b deferred to H5.
