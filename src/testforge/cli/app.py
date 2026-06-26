@@ -364,7 +364,10 @@ def cmd_record(args):
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
         context = browser.new_context(**_make_context_kwargs(args.headless))
         page = context.new_page()
-        recorder = RecorderController(page)
+        # Hotfix 15: anchor recordings at the project root, not CWD.
+        recorder = RecorderController(
+            page, recordings_root=str(_PROJECT_ROOT / "recordings")
+        )
 
         ts = time.strftime("%Y%m%d-%H%M%S")
         rid = _sanitize_name(args.name) if args.name else f"REC-{ts}"
@@ -482,6 +485,13 @@ def cmd_record(args):
                 recorder.flush_events()
             except Exception:
                 pass
+            # Hotfix 15: snapshot diagnostic framework detection while the
+            # page is still alive — finalize() runs after browser.close().
+            if recorder._diagnostic is not None:
+                try:
+                    recorder._diagnostic.precapture_for_close()
+                except Exception:
+                    pass
         try:
             browser.close()
         except Exception:
@@ -1526,7 +1536,10 @@ def cmd_pipeline(args):
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
         _vp_kw = _make_context_kwargs(args.headless)
         page = browser.new_context(**_vp_kw).new_page()
-        recorder = RecorderController(page)
+        # Hotfix 15: anchor recordings at the project root, not CWD.
+        recorder = RecorderController(
+            page, recordings_root=str(_PROJECT_ROOT / "recordings")
+        )
 
         recorder.start(recording_id=rid, application="pipeline", base_url=args.url)
         page.goto(args.url)
@@ -1659,7 +1672,10 @@ def cmd_demo_heal(args):
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
         _vp_kw = _make_context_kwargs(args.headless)
         page = browser.new_context(**_vp_kw).new_page()
-        recorder = RecorderController(page)
+        # Hotfix 15: anchor recordings at the project root, not CWD.
+        recorder = RecorderController(
+            page, recordings_root=str(_PROJECT_ROOT / "recordings")
+        )
 
         # Fase 1: Gravar fluxo normal
         print("📼 Fase 1: Gravando fluxo normal...")

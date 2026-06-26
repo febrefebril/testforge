@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 
@@ -175,3 +175,73 @@ class TestRecorderControllerDiagnostic:
             steps = open(os.path.join(session_dir, "diagnostic", "steps.jsonl")).read()
             assert "X" in steps or "click" in steps
             ctrl.stop()
+
+
+class TestHotfix15PrecaptureForClose:
+    """Hotfix 15: precapture_for_close caches framework + url for finalize
+    after browser.close()."""
+
+    def _make_page(self, url="https://app.test/"):
+        p = MagicMock()
+        type(p).url = PropertyMock(return_value=url)
+        p.evaluate = MagicMock(return_value={})
+        p.context = MagicMock()
+        p.context.new_cdp_session = MagicMock()
+        return p
+
+    def test_precapture_caches_framework(self, tmp_path):
+        from unittest.mock import patch
+        page = self._make_page()
+        sess = DiagnosticSession(
+            page=page, cdp_session=None,
+            session_dir=str(tmp_path / "diag"), replay_mode="immediate",
+        )
+        sess.start()
+        # Stub the detector so we control what gets cached.
+        with patch.object(
+            sess._detector, "detect",
+            return_value={"primary": "angular-material"},
+        ):
+            sess.precapture_for_close()
+        assert sess._cached_framework == {"primary": "angular-material"}
+        assert sess._cached_url == "https://app.test/"
+
+    def test_finalize_uses_cached_framework_after_page_closed(self, tmp_path):
+        from unittest.mock import patch
+        page = self._make_page()
+        sess = DiagnosticSession(
+            page=page, cdp_session=None,
+            session_dir=str(tmp_path / "diag2"), replay_mode="immediate",
+        )
+        sess.start()
+        with patch.object(
+            sess._detector, "detect",
+            return_value={"primary": "angular-material"},
+        ):
+            sess.precapture_for_close()
+        # Now break the page — simulate browser.close()
+        type(page).url = PropertyMock(side_effect=Exception("closed"))
+        page.evaluate = MagicMock(side_effect=Exception("closed"))
+        # detector.detect() also broken now
+        with patch.object(
+            sess._detector, "detect", side_effect=Exception("closed"),
+        ):
+            payload = sess.finalize()
+        # Framework still landed in the payload
+        assert payload["framework_detection"] == {"primary": "angular-material"}
+        # URL too
+        assert payload["app_url_signature"]
+
+    def test_precapture_tolerates_detector_failure(self, tmp_path):
+        from unittest.mock import patch
+        page = self._make_page()
+        sess = DiagnosticSession(
+            page=page, cdp_session=None,
+            session_dir=str(tmp_path / "diag3"), replay_mode="immediate",
+        )
+        sess.start()
+        with patch.object(
+            sess._detector, "detect", side_effect=Exception("boom"),
+        ):
+            sess.precapture_for_close()
+        assert sess._cached_framework == {}

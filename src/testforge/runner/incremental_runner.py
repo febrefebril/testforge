@@ -132,10 +132,21 @@ class IncrementalRunner:
                 print(f"  📋 Template: {json.dumps(template, indent=2, ensure_ascii=False)}")
 
     def _find_recording_dir(self, rec_id):
+        # Hotfix 15: also check the package's project root so the runner
+        # finds recordings even when invoked from a different CWD. Layout:
+        # <repo>/src/testforge/runner/incremental_runner.py ->
+        # parents[3] == <repo>/. Same anchor as the CLI's _PROJECT_ROOT.
+        try:
+            project_root = Path(__file__).resolve().parents[3]
+        except Exception:
+            project_root = None
         candidates = [
             Path.cwd() / "recordings" / rec_id,
             Path(self.script_path).parent.parent / "recordings" / rec_id,
+            Path(self.script_path).parent.parent.parent / "recordings" / rec_id,
         ]
+        if project_root is not None:
+            candidates.append(project_root / "recordings" / rec_id)
         for c in candidates:
             if c.is_dir():
                 return str(c)

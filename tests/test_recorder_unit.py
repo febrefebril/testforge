@@ -334,3 +334,26 @@ class TestHotfix14ShiftSOverlayUX:
         assert "tf-stop-notice" in js
         assert "Encerrando" in js
         assert "btnStop.disabled = true" in js
+
+
+class TestHotfix15RecordingsRoot:
+    """Hotfix 15: recordings_root must be absolute, anchored at project root."""
+
+    def test_recorder_uses_passed_recordings_root(self):
+        """RecorderController honors an explicit recordings_root path."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_page = MagicMock()
+            recorder = RecorderController(mock_page, recordings_root=tmpdir)
+            with patch.object(recorder, "_capture_snapshots"):
+                recorder.start(recording_id="REC-PATH-001")
+            # Verify the recording dir lives under tmpdir
+            assert os.path.isdir(os.path.join(tmpdir, "REC-PATH-001"))
+
+    def test_recorder_default_recordings_root_is_relative(self):
+        """Default 'recordings' is relative (regression guard for hotfix 15)."""
+        # If someone changes the default to absolute without thinking, the
+        # CLI's anchoring becomes a no-op. Pin the contract.
+        import inspect
+        sig = inspect.signature(RecorderController.__init__)
+        default = sig.parameters["recordings_root"].default
+        assert default == "recordings"

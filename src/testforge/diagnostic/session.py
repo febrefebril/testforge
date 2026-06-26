@@ -48,6 +48,10 @@ class DiagnosticSession:
         self._replay = None
         self._gherkin = None
         self._store = None
+        # Hotfix 15: snapshots taken before browser.close() so finalize()
+        # can still write a complete session.json after the page is gone.
+        self._cached_framework: Optional[dict] = None
+        self._cached_url: Optional[str] = None
         # Totals updated as steps stream in
         self._totals = {
             "steps": 0, "asserts": 0,
@@ -121,12 +125,36 @@ class DiagnosticSession:
                     self._totals["selectors_immediate_fail"] += 1
         return payload
 
+    def precapture_for_close(self) -> None:
+        """Hotfix 15: snapshot anything that requires a live page now, so
+        finalize() can run after the browser has already been closed."""
+        if self._cached_framework is not None:
+            return
+        try:
+            self._cached_framework = (
+                self._detector.detect() if self._detector else {}
+            )
+        except Exception as exc:
+            logger.warning(
+                "precapture_for_close: framework detect failed: %s", exc
+            )
+            self._cached_framework = {}
+        try:
+            self._cached_url = self._page.url
+        except Exception:
+            self._cached_url = ""
+
     def finalize(self,
                  funcionalidade_override: str = "",
                  cenario_override: str = "") -> dict:
         """Detect frameworks, write session.json, return the payload."""
         self._stopped_at = datetime.now(timezone.utc).isoformat()
-        framework = self._detector.detect() if self._detector else {}
+        # Use the value snapshotted by precapture_for_close() if the browser
+        # has already gone away; fall back to a live detect otherwise.
+        if self._cached_framework is not None:
+            framework = self._cached_framework
+        else:
+            framework = self._detector.detect() if self._detector else {}
         if self._detector:
             self._detector.detach()
         # Drain batched replay queue if any
@@ -141,10 +169,13 @@ class DiagnosticSession:
                 funcionalidade_override=funcionalidade_override,
                 cenario_override=cenario_override,
             )
-        try:
-            url = self._page.url
-        except Exception:
-            url = ""
+        if self._cached_url is not None:
+            url = self._cached_url
+        else:
+            try:
+                url = self._page.url
+            except Exception:
+                url = ""
         payload = {
             "session_id": self._session_id,
             "tester_hash": _tester_hash(),
