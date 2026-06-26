@@ -99,6 +99,18 @@ Decision: defer to post-pilot. Pilot data will tell us whether the priority chai
 
 ---
 
+## 2026-06-26 — Structural debt inventory + refactor sprint planned
+
+**Decision**: Catalog every anti-pattern found during the SIOPI debugging cycle in `DEBT-INVENTORY.md`. Run a dedicated refactor sprint **after** the consolidation sprint to address the P1 items (god class splits, path centralization, exception policy, click-to-fill magic, stable step_id, normalizer stage migration, LocatorStrategy enum).
+
+**Why**: User observed that the same bug class kept returning after hotfixes. Diagnosis showed the cause is structural (duplication + scattered responsibility + silent magic), not architectural in the v2-phases sense. Refactor sprint targets the structural causes directly.
+
+**Outcome**: pending — see `DEBT-INVENTORY.md` and `REFACTOR-SPRINT.md`. Pilot release sits between the consolidation sprint and this one.
+
+**Note**: this is the first sprint we plan with explicit success criteria + risks + out-of-scope. Pattern to repeat.
+
+---
+
 ## How to use this log
 
 - Read top to bottom before proposing a refactor.

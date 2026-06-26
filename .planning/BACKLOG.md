@@ -3,7 +3,9 @@
 Pós-Sprint 0 hotfixes. Decisões: branch `hotfix/sprint-0-recorder-fixes`, 2026-06-25.
 
 > **Leitura obrigatória antes de propor refactor**: [DECISIONS-LOG.md](DECISIONS-LOG.md).
+> **Inventário de débito estrutural**: [DEBT-INVENTORY.md](DEBT-INVENTORY.md).
 > **Plano ativo**: [CONSOLIDATION-SPRINT.md](CONSOLIDATION-SPRINT.md).
+> **Próximo plano**: [REFACTOR-SPRINT.md](REFACTOR-SPRINT.md) (após piloto).
 
 ## Curto prazo — estabilizar antes de liberar piloto QA
 
@@ -68,3 +70,4 @@ Histórico vivo em [DECISIONS-LOG.md](DECISIONS-LOG.md).
 - **Q4** (2026-06-25): validar fluxo XHR/postback (item B) localmente antes de QA.
 - **Q5** (2026-06-26): pausar novos hotfixes pontuais após hotfix 17. Rodar sprint de consolidação (`CONSOLIDATION-SPRINT.md`) que ataca a causa estrutural: 4 fill helpers duplicados em `step_executor.py`. Piloto bloqueado até CS-1..CS-3 verde.
 - **Q6** (2026-06-26): codegen do Playwright não substitui recorder (perde captura de masked inputs + asserts + ranking). Copiar cadeia de prioridade dele em G2 — separado, pós-piloto.
+- **Q7** (2026-06-26): inventariar débito estrutural em `DEBT-INVENTORY.md`. Após sprint de consolidação + piloto, rodar sprint de refactor (`REFACTOR-SPRINT.md`) atacando P1 (collapse stop/finalize, paths module, @tolerate policy, kill click→fill magic, stable step_id, RecorderController/overlay JS/Normalizer splits, LocatorStrategy enum). Tudo P2/P3 fica pra depois de dados do piloto.
