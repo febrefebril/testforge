@@ -229,7 +229,23 @@ class StepExecutor:
         raise NotImplementedError(f"acao desconhecida: {action}")
 
     def _fill_input(self, page, label: str, value: str) -> bool:
-        """Find and fill an input by aria-label or placeholder."""
+        """Find and fill an input by aria-label or placeholder.
+
+        Hotfix 16: clear the field before typing (triple-click select-all)
+        and strip the value to raw digits — the previous implementation
+        skipped both, which caused two production bugs:
+
+        1. Healing retries called this method twice for the same field,
+           and without a clear step the second call's keystrokes were
+           appended to the first call's output (e.g. "100000" + "100000"
+           rendering as R$ 1.000.001.000,00 through the currency mask).
+        2. The float-times-100 math interpreted the *formatted* value
+           "1.000,00" as 100_000 decimal and multiplied it to 10_000_000
+           cents, so the mask rendered R$ 100.000,00 instead of the
+           recorded R$ 1.000,00 (100x off). The correct shape is "type
+           the digits the user typed" — that is the regex-strip path
+           already used by _execute_fill.
+        """
         patterns = [
             f'input[aria-label="{label}"]',
             f'textarea[aria-label="{label}"]',
@@ -247,15 +263,25 @@ class StepExecutor:
                 el = page.locator(sel_pattern)
                 if el.count() == 1:
                     has_mask = el.get_attribute("currencymask") is not None
-                    if has_mask:
+                    placeholder = (el.get_attribute("placeholder") or "").lower()
+                    is_date_mask = any(p in placeholder for p in (
+                        "dd/mm", "mm/dd", "aaaa", "__/__/____", "dd/mm/aaaa",
+                    ))
+                    if has_mask or is_date_mask:
                         el.click()
                         page.wait_for_timeout(150)
-                        raw = value.replace(".", "").replace(",", "").replace(" ", "")
-                        try:
-                            cents = str(int(float(raw) * 100))
-                        except ValueError:
-                            cents = raw
-                        el.press_sequentially(cents, delay=50)
+                        # Triple-click selects existing content so the new
+                        # value overwrites rather than appends.
+                        el.click(click_count=3)
+                        page.wait_for_timeout(80)
+                        if is_date_mask:
+                            # Date masks need the formatted value — the slashes
+                            # position the cursor in the mask.
+                            type_val = value
+                        else:
+                            # Currency masks expect raw digits; mask formats.
+                            type_val = re.sub(r"[^0-9]", "", value) or value
+                        el.press_sequentially(type_val, delay=50)
                         page.keyboard.press("Tab")
                         page.wait_for_timeout(200)
                     else:
@@ -274,16 +300,23 @@ class StepExecutor:
             try:
                 el = self.page.locator(f'input[aria-label="{key}"], textarea[aria-label="{key}"]')
                 if el.count() == 1:
+                    # Hotfix 16: see _fill_input for the rationale on the
+                    # triple-click clear and the regex-strip type value.
                     has_mask = el.get_attribute("currencymask") is not None
-                    if has_mask:
+                    placeholder = (el.get_attribute("placeholder") or "").lower()
+                    is_date_mask = any(p in placeholder for p in (
+                        "dd/mm", "mm/dd", "aaaa", "__/__/____", "dd/mm/aaaa",
+                    ))
+                    if has_mask or is_date_mask:
                         el.click()
                         self.page.wait_for_timeout(150)
-                        raw = str(val).replace(".", "").replace(",", "").replace(" ", "")
-                        try:
-                            cents = str(int(float(raw) * 100))
-                        except ValueError:
-                            cents = raw
-                        el.press_sequentially(cents, delay=50)
+                        el.click(click_count=3)
+                        self.page.wait_for_timeout(80)
+                        if is_date_mask:
+                            type_val = str(val)
+                        else:
+                            type_val = re.sub(r"[^0-9]", "", str(val)) or str(val)
+                        el.press_sequentially(type_val, delay=50)
                         self.page.keyboard.press("Tab")
                         self.page.wait_for_timeout(200)
                     else:
@@ -312,16 +345,22 @@ class StepExecutor:
 
         try:
             el = self.page.locator(selector).first
+            # Hotfix 16: see _fill_input rationale (clear + regex-strip).
             has_mask = el.get_attribute("currencymask") is not None
-            if has_mask:
+            placeholder = (el.get_attribute("placeholder") or "").lower()
+            is_date_mask = any(p in placeholder for p in (
+                "dd/mm", "mm/dd", "aaaa", "__/__/____", "dd/mm/aaaa",
+            ))
+            if has_mask or is_date_mask:
                 el.click()
                 self.page.wait_for_timeout(150)
-                raw = str(fill_val).replace(".", "").replace(",", "").replace(" ", "")
-                try:
-                    cents = str(int(float(raw) * 100))
-                except ValueError:
-                    cents = raw
-                el.press_sequentially(cents, delay=50)
+                el.click(click_count=3)
+                self.page.wait_for_timeout(80)
+                if is_date_mask:
+                    type_val = str(fill_val)
+                else:
+                    type_val = re.sub(r"[^0-9]", "", str(fill_val)) or str(fill_val)
+                el.press_sequentially(type_val, delay=50)
                 self.page.keyboard.press("Tab")
                 self.page.wait_for_timeout(200)
             else:
