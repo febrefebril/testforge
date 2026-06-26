@@ -5,8 +5,22 @@ Não decide se o step passou semanticamente — isso é papel da pós-condição
 Usa field_value_map para ligar campo → valor com intenção e fallback.
 """
 from __future__ import annotations
+import logging
 import re
 from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+
+# CS-1 / hotfix 18: mask detection lives here, not in 4 different fill
+# helpers. Anything that needs to know "is this input masked, and how?"
+# calls _detect_mask_kind. Anything that needs to fill an input calls
+# _fill_masked. There is no other path. Hotfix-per-helper recurrences
+# (16, 17) happened because the same logic lived in 4 places and drifted.
+_DATE_MASK_PLACEHOLDER_HINTS = (
+    "dd/mm", "mm/dd", "aaaa", "yyyy", "__/__/____", "dd/mm/aaaa",
+)
+_CURRENCY_MASK_PLACEHOLDER_HINTS = ("r$", "0,00")
 
 
 class StepExecutor:
@@ -229,22 +243,11 @@ class StepExecutor:
         raise NotImplementedError(f"acao desconhecida: {action}")
 
     def _fill_input(self, page, label: str, value: str) -> bool:
-        """Find and fill an input by aria-label or placeholder.
+        """Find an input by aria-label / placeholder / name and fill it.
 
-        Hotfix 16: clear the field before typing (triple-click select-all)
-        and strip the value to raw digits — the previous implementation
-        skipped both, which caused two production bugs:
-
-        1. Healing retries called this method twice for the same field,
-           and without a clear step the second call's keystrokes were
-           appended to the first call's output (e.g. "100000" + "100000"
-           rendering as R$ 1.000.001.000,00 through the currency mask).
-        2. The float-times-100 math interpreted the *formatted* value
-           "1.000,00" as 100_000 decimal and multiplied it to 10_000_000
-           cents, so the mask rendered R$ 100.000,00 instead of the
-           recorded R$ 1.000,00 (100x off). The correct shape is "type
-           the digits the user typed" — that is the regex-strip path
-           already used by _execute_fill.
+        CS-1: mask handling, clear-before-type and value normalization
+        live in `_fill_masked`. This method's job is locator selection
+        only.
         """
         patterns = [
             f'input[aria-label="{label}"]',
@@ -252,7 +255,6 @@ class StepExecutor:
             f'input[placeholder="{label}"]',
             f'textarea[placeholder="{label}"]',
         ]
-        # Also try by name if label looks like a name
         if label and not label.startswith("step_"):
             patterns.extend([
                 f'input[name="{label}"]',
@@ -262,79 +264,35 @@ class StepExecutor:
             try:
                 el = page.locator(sel_pattern)
                 if el.count() == 1:
-                    # Hotfix 17: also detect currency masks by placeholder
-                    # ("R$0,00", "0,00") because the Caixa SIOPI Material
-                    # inputs do not expose a `currencymask` attribute. The
-                    # working _execute_fill path already does this; the
-                    # fallback helpers were missing it, so hotfix 16's
-                    # clear-and-strip logic never ran for the production
-                    # inputs we care about.
-                    has_mask = el.get_attribute("currencymask") is not None
-                    placeholder = (el.get_attribute("placeholder") or "").lower()
-                    is_date_mask = any(p in placeholder for p in (
-                        "dd/mm", "mm/dd", "aaaa", "__/__/____", "dd/mm/aaaa",
-                    ))
-                    if not has_mask and not is_date_mask:
-                        has_mask = any(p in placeholder for p in ("r$", "0,00"))
-                    if has_mask or is_date_mask:
-                        el.click()
-                        page.wait_for_timeout(150)
-                        # Triple-click selects existing content so the new
-                        # value overwrites rather than appends.
-                        el.click(click_count=3)
-                        page.wait_for_timeout(80)
-                        if is_date_mask:
-                            # Date masks need the formatted value — the slashes
-                            # position the cursor in the mask.
-                            type_val = value
-                        else:
-                            # Currency masks expect raw digits; mask formats.
-                            type_val = re.sub(r"[^0-9]", "", value) or value
-                        el.press_sequentially(type_val, delay=50)
-                        page.keyboard.press("Tab")
-                        page.wait_for_timeout(200)
-                    else:
-                        el.fill(value, timeout=self.DEFAULT_TIMEOUT)
-                        page.wait_for_timeout(150)
+                    self._fill_masked(
+                        el, value,
+                        fill_path="_fill_input",
+                        selector_used=sel_pattern,
+                    )
                     return True
             except Exception:
                 continue
         return False
 
     def _fill_by_aria_label(self, step, data_values) -> Optional[str]:
-        """Try to find and fill an input by aria-label from data_values keys."""
+        """Try to find and fill an input by aria-label from data_values keys.
+
+        CS-1: mask handling delegated to `_fill_masked`.
+        """
         if not data_values:
             return None
         for key, val in data_values.items():
             try:
-                el = self.page.locator(f'input[aria-label="{key}"], textarea[aria-label="{key}"]')
+                sel_pattern = (
+                    f'input[aria-label="{key}"], textarea[aria-label="{key}"]'
+                )
+                el = self.page.locator(sel_pattern)
                 if el.count() == 1:
-                    # Hotfix 16/17: see _fill_input for the rationale on the
-                    # triple-click clear, regex-strip type value, and the
-                    # placeholder-based mask fallback for inputs that omit
-                    # the `currencymask` attribute (e.g. Caixa SIOPI).
-                    has_mask = el.get_attribute("currencymask") is not None
-                    placeholder = (el.get_attribute("placeholder") or "").lower()
-                    is_date_mask = any(p in placeholder for p in (
-                        "dd/mm", "mm/dd", "aaaa", "__/__/____", "dd/mm/aaaa",
-                    ))
-                    if not has_mask and not is_date_mask:
-                        has_mask = any(p in placeholder for p in ("r$", "0,00"))
-                    if has_mask or is_date_mask:
-                        el.click()
-                        self.page.wait_for_timeout(150)
-                        el.click(click_count=3)
-                        self.page.wait_for_timeout(80)
-                        if is_date_mask:
-                            type_val = str(val)
-                        else:
-                            type_val = re.sub(r"[^0-9]", "", str(val)) or str(val)
-                        el.press_sequentially(type_val, delay=50)
-                        self.page.keyboard.press("Tab")
-                        self.page.wait_for_timeout(200)
-                    else:
-                        el.fill(str(val), timeout=self.DEFAULT_TIMEOUT)
-                        self.page.wait_for_timeout(150)
+                    self._fill_masked(
+                        el, str(val),
+                        fill_path="_fill_by_aria_label",
+                        selector_used=sel_pattern,
+                    )
                     return f'aria-label="{key}"'
             except Exception:
                 continue
@@ -358,33 +316,142 @@ class StepExecutor:
 
         try:
             el = self.page.locator(selector).first
-            # Hotfix 16/17: see _fill_input rationale (clear + regex-strip
-            # + placeholder-based mask fallback).
-            has_mask = el.get_attribute("currencymask") is not None
+            # CS-1: mask detection + clear + digit normalization in one place.
+            self._fill_masked(
+                el, str(fill_val),
+                fill_path="_try_data_fill",
+                selector_used=selector,
+            )
+            return True
+        except Exception:
+            return False
+
+    # ----------------------------------------------------------------
+    # CS-1 / hotfix 18 — single source of truth for masked-input fills.
+    # The four fill helpers (_execute_fill, _fill_input,
+    # _fill_by_aria_label, _try_data_fill) call _fill_masked. None of
+    # them re-implement mask detection or the clear-and-press sequence.
+    # When a bug surfaces it lives in exactly one place. CS-3 telemetry
+    # is wired here so every fill is auditable from .testforge/spans.jsonl.
+    # ----------------------------------------------------------------
+
+    def _detect_mask_kind(self, el) -> tuple[str, str]:
+        """Return (mask_kind, mask_detect) where:
+
+        mask_kind   ∈ {"currency", "date", "none"}
+        mask_detect ∈ {"attribute", "placeholder", "date_placeholder", "none"}
+
+        Mask detection consults the `currencymask` HTML attribute first
+        (legacy Caixa data layer) and falls back to placeholder
+        inspection so that Material inputs without the attribute (e.g.
+        SIOPI's `<input placeholder="R$0,00">`) are still recognized.
+        """
+        try:
+            if el.get_attribute("currencymask") is not None:
+                return "currency", "attribute"
+        except Exception:
+            pass
+        try:
             placeholder = (el.get_attribute("placeholder") or "").lower()
-            is_date_mask = any(p in placeholder for p in (
-                "dd/mm", "mm/dd", "aaaa", "__/__/____", "dd/mm/aaaa",
-            ))
-            if not has_mask and not is_date_mask:
-                has_mask = any(p in placeholder for p in ("r$", "0,00"))
-            if has_mask or is_date_mask:
+        except Exception:
+            placeholder = ""
+        if any(p in placeholder for p in _DATE_MASK_PLACEHOLDER_HINTS):
+            return "date", "date_placeholder"
+        if any(p in placeholder for p in _CURRENCY_MASK_PLACEHOLDER_HINTS):
+            return "currency", "placeholder"
+        return "none", "none"
+
+    def _fill_masked(self, el, value: str, *, fill_path: str,
+                     selector_used: str = "") -> str:
+        """Fill `el` with `value`, respecting mask kind. Returns mask_kind.
+
+        Always:
+        - Clears the field via triple-click before typing so re-runs
+          and healing retries do not concatenate keystrokes.
+        - For currency masks: types raw digits extracted via regex —
+          mask formats them into "R$ X.XXX,XX".
+        - For date masks: types the formatted value with slashes —
+          the mask uses the slashes to position the cursor.
+        - For unmasked inputs: calls `el.fill` which clears + sets.
+        - Emits a `fill.attempted` span with the full audit trail.
+
+        Single function. Four callers. No divergence possible by
+        construction. See CS-1 / `.planning/CONSOLIDATION-SPRINT.md`.
+        """
+        value = "" if value is None else str(value)
+        mask_kind, mask_detect = self._detect_mask_kind(el)
+        cleared = False
+        type_val: Optional[str] = None
+        status = "ok"
+        error_msg = ""
+
+        try:
+            if mask_kind == "none":
+                el.fill(value, timeout=self.DEFAULT_TIMEOUT)
+                self.page.wait_for_timeout(150)
+                # el.fill clears implicitly.
+                cleared = True
+                type_val = value
+            else:
                 el.click()
                 self.page.wait_for_timeout(150)
                 el.click(click_count=3)
                 self.page.wait_for_timeout(80)
-                if is_date_mask:
-                    type_val = str(fill_val)
-                else:
-                    type_val = re.sub(r"[^0-9]", "", str(fill_val)) or str(fill_val)
+                cleared = True
+                if mask_kind == "date":
+                    type_val = value
+                else:  # currency
+                    digits = re.sub(r"[^0-9]", "", value)
+                    type_val = digits if digits else value
                 el.press_sequentially(type_val, delay=50)
                 self.page.keyboard.press("Tab")
                 self.page.wait_for_timeout(200)
-            else:
-                self.page.fill(selector, str(fill_val), timeout=self.DEFAULT_TIMEOUT)
-                self.page.wait_for_timeout(150)
-            return True
+        except Exception as exc:
+            status = "error"
+            error_msg = str(exc)[:200]
+            raise
+        finally:
+            self._emit_fill_span(
+                fill_path=fill_path, selector_used=selector_used,
+                mask_kind=mask_kind, mask_detect=mask_detect,
+                cleared=cleared, type_val=type_val, value=value,
+                status=status, error_msg=error_msg,
+            )
+        return mask_kind
+
+    def _emit_fill_span(self, *, fill_path: str, selector_used: str,
+                        mask_kind: str, mask_detect: str, cleared: bool,
+                        type_val: Optional[str], value: str,
+                        status: str, error_msg: str) -> None:
+        """CS-3 — JSONL fill.attempted span so the next debug session
+        can answer "which fill path ran on step N?" without re-running.
+
+        Raw `value` and `type_val` are redacted — only length and the
+        value_kind bucket are logged. Selector strings are truncated.
+        """
+        try:
+            from testforge.metrics.telemetry import get_tracer
+            tracer = get_tracer()
+            if not tracer.enabled:
+                return
+            attrs = {
+                "fill_path": fill_path,
+                "selector_used": (selector_used or "")[:200],
+                "mask_kind": mask_kind,
+                "mask_detect": mask_detect,
+                "cleared": cleared,
+                "value_len": len(value or ""),
+                "type_val_len": len(type_val or "") if type_val is not None else 0,
+                "status": status,
+            }
+            if error_msg:
+                attrs["error.message"] = error_msg
+            with tracer.start_span("fill.attempted") as span:
+                for k, v in attrs.items():
+                    span.set_attribute(k, v)
         except Exception:
-            return False
+            # Telemetry must never break execution.
+            logger.debug("telemetry emit failed for fill.attempted", exc_info=True)
 
     def _execute_click(self, step, selectors):
         if not selectors:
@@ -453,39 +520,19 @@ class StepExecutor:
                 continue
             try:
                 el = self.page.locator(selector).first
-                # Detect masked inputs: currencymask attribute OR placeholder patterns
-                has_mask = el.get_attribute("currencymask") is not None
-                placeholder = (el.get_attribute("placeholder") or "").lower()
-                is_date_mask = any(p in placeholder for p in (
-                    "dd/mm", "mm/dd", "aaaa", "__/__/____", "dd/mm/aaaa",
-                ))
-                if not has_mask and not is_date_mask:
-                    has_mask = any(p in placeholder for p in ("r$", "0,00"))
-                if has_mask or is_date_mask:
-                    masked_val = (step.value or value).strip()
-                    if is_date_mask:
-                        # Date masks expect formatted string with slashes (e.g. "10/06/2026")
-                        # Do NOT strip slashes — they position the cursor in the mask.
-                        type_val = masked_val
-                    else:
-                        # Currency masks: type ONLY raw digits; mask adds formatting.
-                        # "10.000,00" → "1000000"
-                        digits = re.sub(r"[^0-9]", "", masked_val)
-                        type_val = digits if digits else masked_val
-                    el.click()
-                    self.page.wait_for_timeout(150)
-                    # Triple-click selects all existing content before overwriting
-                    el.click(click_count=3)
-                    self.page.wait_for_timeout(80)
-                    el.press_sequentially(type_val, delay=60)
-                    self.page.keyboard.press("Tab")
-                    self.page.wait_for_timeout(400)
-                    return selector
-            except Exception:
-                pass
-            try:
-                self.page.fill(selector, value, timeout=self.DEFAULT_TIMEOUT)
-                self.page.wait_for_timeout(150)
+                # CS-1: single fill primitive. Handles mask detection,
+                # triple-click clear, raw-digit / formatted-date /
+                # plain-fill branches, and emits the fill.attempted span.
+                mask_kind = self._fill_masked(
+                    el, (step.value or value).strip(),
+                    fill_path="_execute_fill",
+                    selector_used=selector,
+                )
+                # Masked path returns immediately. Unmasked path also
+                # succeeded if no exception bubbled up. Either way the
+                # selector resolved and we wrote a value — return it.
+                if mask_kind != "none":
+                    self.page.wait_for_timeout(200)
                 return selector
             except Exception as e:
                 last_error = e
