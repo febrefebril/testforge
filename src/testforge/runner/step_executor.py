@@ -20,7 +20,20 @@ logger = logging.getLogger(__name__)
 _DATE_MASK_PLACEHOLDER_HINTS = (
     "dd/mm", "mm/dd", "aaaa", "yyyy", "__/__/____", "dd/mm/aaaa",
 )
-_CURRENCY_MASK_PLACEHOLDER_HINTS = ("r$", "0,00")
+# `currency` is the mask_kind for any input whose mask strips non-digits
+# and types raw digits. Covers BRL currency (R$ 0,00), CPF
+# (000.000.000-00), CNPJ (00.000.000/0000-00), CEP (00000-000), Brazilian
+# phone ((00) 00000-0000). Same algorithm — name kept stable for
+# back-compat with the existing tests / spans.
+_CURRENCY_MASK_PLACEHOLDER_HINTS = (
+    "r$", "0,00",          # currency
+    "000.000.000",         # CPF
+    "00.000.000/",         # CNPJ
+    "00000-000",           # CEP
+    "(00) ",               # phone with area code
+    "(0",                  # phone (loose)
+    "00.000.000-",         # generic Brazilian doc with hyphen
+)
 
 
 class StepExecutor:

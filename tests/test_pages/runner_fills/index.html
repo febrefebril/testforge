@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Runner Fill Paths — production-shaped masks</title>
+<style>
+  body { font-family: sans-serif; max-width: 600px; margin: 40px auto; }
+  label { display: block; margin-top: 16px; font-weight: 600; }
+  input { width: 100%; padding: 8px; box-sizing: border-box; font-size: 16px; }
+  .hint { color: #666; font-size: 12px; margin-top: 4px; }
+</style>
+</head>
+<body>
+<h1>Runner Fill Fixture</h1>
+<p>Reproduce the SIOPI bug shape: Material inputs with masks but
+<strong>no</strong> <code>currencymask</code> attribute. The mask is
+implemented in JS only; <code>el.fill()</code> sets the value
+programmatically without dispatching keystroke events the mask listens
+for, so <code>el.fill</code> on these inputs corrupts state. The
+working path is triple-click clear + <code>press_sequentially</code>
+with raw digits — that is what <code>_fill_masked</code> does.</p>
+
+<label for="prestacao">Prestação desejada *</label>
+<input id="prestacao" aria-label="Prestação desejada *"
+       placeholder="R$0,00" data-mask="currency">
+<p class="hint">Currency mask, no <code>currencymask</code> attribute, aria-label has <code>*</code> and accent.</p>
+
+<label for="nascimento">Data de nascimento</label>
+<input id="nascimento" aria-label="Data de nascimento"
+       placeholder="DD/MM/AAAA" data-mask="date">
+<p class="hint">Date mask via placeholder.</p>
+
+<label for="cpf">CPF</label>
+<input id="cpf" aria-label="CPF" placeholder="000.000.000-00"
+       data-mask="cpf">
+<p class="hint">CPF mask: strip-to-digits, but placeholder is not R$ or 0,00.</p>
+
+<label for="nome">Nome completo</label>
+<input id="nome" aria-label="Nome completo" placeholder="Nome do titular">
+<p class="hint">Plain text input — no mask.</p>
+
+<script>
+// Minimal masks that mimic Caixa/Material behavior: they listen to
+// 'input' events, strip non-matching chars, and reformat. Without a
+// keystroke pressed by the user, the value is just whatever was last
+// written (plus the next reformat on focus loss).
+
+const masks = {
+  currency: (raw) => {
+    const digits = raw.replace(/\D/g, "");
+    if (!digits) return "";
+    const n = parseInt(digits, 10);
+    const reais = Math.floor(n / 100).toLocaleString("pt-BR");
+    const cents = String(n % 100).padStart(2, "0");
+    return `R$ ${reais},${cents}`;
+  },
+  date: (raw) => {
+    const digits = raw.replace(/\D/g, "").slice(0, 8);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+  },
+  cpf: (raw) => {
+    const digits = raw.replace(/\D/g, "").slice(0, 11);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+  },
+};
+
+document.querySelectorAll("input[data-mask]").forEach(el => {
+  const fn = masks[el.dataset.mask];
+  if (!fn) return;
+  el.addEventListener("input", (e) => {
+    const before = el.value;
+    const after = fn(before);
+    if (after !== before) {
+      el.value = after;
+      // We *do* dispatch a synthetic event so contenteditable observers
+      // can react, but the value mutation is already applied above.
+    }
+  });
+});
+</script>
+</body>
+</html>
