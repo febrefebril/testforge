@@ -1575,6 +1575,13 @@ class RecordingNormalizer:
             except Exception as exc:
                 logger.warning("v2 locator extractor failed: %s", exc)
 
+        # Hotfix 22b / pattern P3: the overlay JS emits the element id
+        # under the key `element_id` (see overlay_inject.js _extractTarget).
+        # The previous reader looked for `id` and got None for every
+        # input, so id-based correlation in _ir_value_mutations always
+        # fell through to nearest-by-timestamp and the per-page fill
+        # values landed under fingerprint keys (mat_input_N) instead of
+        # the aria-label canonical keys. Read both keys for safety.
         return SemanticTarget(
             role=target_data.get("role"),
             accessible_name=target_data.get("accessible_name"),
@@ -1583,7 +1590,8 @@ class RecordingNormalizer:
             test_id=target_data.get("test_id"),
             text=target_data.get("text"),
             tag=target_data.get("tag"),
-            element_id=target_data.get("id"),
+            element_id=(target_data.get("element_id")
+                        or target_data.get("id") or ""),
             name=target_data.get("name"),
             candidates=candidates,
             fingerprint=fingerprint,
@@ -1923,11 +1931,42 @@ class RecordingNormalizer:
     # ── Value mutations (setter hooks) ──────────────────────────────────────
 
     def _ir_value_mutations(self, recording_dir: str, steps: list) -> list[dict]:
-        """Read value_mutations.jsonl — programmatic value changes."""
+        """Read value_mutations.jsonl — programmatic value changes.
+
+        Hotfix 22 / pattern P3: the overlay JS (overlay_inject.js
+        _hookValue) writes mutations with this exact schema:
+
+            {"type": "value_mutation",
+             "timestamp": "ISO",
+             "fingerprint": "<tag>#<id>[name=<name>]",
+             "value": "<typed value>"}
+
+        The previous reader hunted for `new_value`, `tag`, `id`, `name`,
+        and `old_value` — fields that the overlay never emits. The
+        `value` key was only consulted for `type == "content_edit"`, so
+        the entire stream of input mutations on masked fields (Caixa
+        currency, CPF, etc.) was discarded as if it had no value. That
+        is why prestação_desejada_*, renda_mensal_*, valor_do_imóvel_*
+        and friends went to --complete and forced the tester to retype
+        9 values they had already typed during recording.
+
+        New behavior:
+
+        - Read `value` from every mutation (single source of truth).
+        - Derive tag/id/name from the fingerprint
+          (`<tag>#<id>[name=<name>]`).
+        - Keep the LAST non-empty value per fingerprint — the mask's
+          progressive formatting means earlier values are partial
+          ("100,00" → "1.000,00" → "10.000,00"), only the final one
+          is the user's intended value.
+        - Mask-detection is applied to the final value so the
+          downstream resolver knows whether to expect digit-only typing
+          at run time.
+        """
         path = os.path.join(recording_dir, "value_mutations.jsonl")
         if not os.path.exists(path):
             return []
-        mutations = []
+        mutations: list[dict] = []
         with open(path) as f:
             for line in f:
                 line = line.strip()
@@ -1939,38 +1978,122 @@ class RecordingNormalizer:
                     continue
         if not mutations:
             return []
+
+        # Keep last non-empty value per fingerprint (chronological order
+        # is the file order — _hookValue appends synchronously).
         by_fp: dict[str, dict] = {}
         for mut in mutations:
-            mut_type = mut.get("type", "value_mutation")
-            if mut_type == "content_edit":
-                value = (mut.get("value") or "").strip()
-                fp = mut.get("fingerprint", "")
-            else:
-                value = (mut.get("new_value") or "").strip()
-                fp = mut.get("fingerprint") or (
-                    f"{mut.get('tag', 'input')}#{mut.get('id', '')}[name={mut.get('name', '')}]"
-                )
-            if not value or not fp:
+            fp = (mut.get("fingerprint") or "").strip()
+            if not fp:
                 continue
-            by_fp[fp] = {**mut, "_resolved_value": value, "_fingerprint": fp}
-        entries = []
+            # Both "value_mutation" and "content_edit" carry the value
+            # under the "value" key. The previous code special-cased
+            # content_edit and missed value_mutation.
+            value = (mut.get("value") or "").strip()
+            if not value:
+                # Skip empty mutations (initial field state); keep prior
+                # non-empty if any.
+                continue
+            by_fp[fp] = {
+                "value": value,
+                "timestamp": mut.get("timestamp", ""),
+                "fingerprint": fp,
+            }
+
+        if not by_fp:
+            return []
+
+        # Parse `<tag>#<id>[name=<name>]` to recover identifiers.
+        fp_re = _re.compile(
+            r"^(?P<tag>[a-z]+)#(?P<id>[^\[]*)\[name=(?P<name>[^\]]*)\]$"
+        )
+
+        entries: list[dict] = []
         for fp, mut in by_fp.items():
-            value = mut["_resolved_value"]
-            raw_value = (mut.get("old_value") or mut.get("raw_value") or "").strip()
-            name = mut.get("name") or ""
-            el_id = mut.get("id") or ""
-            tag = mut.get("tag", "input")
-            ts = mut.get("timestamp", "")
-            step_idx = self._ir_find_nearest_step_index(steps, ts)
-            is_masked = self._ir_detect_masked_field(value, raw_value)
-            canonical = self._canonical_field_key(name or el_id or fp)
+            value = mut["value"]
+            tag = "input"
+            el_id = ""
+            name = ""
+            m = fp_re.match(fp)
+            if m:
+                tag = m.group("tag") or "input"
+                el_id = m.group("id") or ""
+                name = m.group("name") or ""
+            ts = mut["timestamp"]
+            is_masked = self._ir_detect_masked_field(value)
+
+            # Hotfix 22: the fingerprint by itself yields a canonical key
+            # like "mat_input_5" that the runtime resolver cannot match
+            # against the live page's aria-label / placeholder. Prefer
+            # the step whose target.element_id equals the mutation's
+            # `id` field — that step's aria-label is the one the runtime
+            # resolver will see. Fall back to nearest-by-timestamp when
+            # no id match exists.
+            step_idx = -1
+            if el_id:
+                id_token = f"#{el_id}"
+                for i, s in enumerate(steps):
+                    target = getattr(s, "target", None)
+                    if target is None:
+                        continue
+                    if (getattr(target, "element_id", "") or "") == el_id:
+                        step_idx = i
+                        break
+                    # Also match when the step's selector chain references
+                    # the element (datepicker toggle clicks → input id appears
+                    # in a sibling step's selector, but the underlying input
+                    # is the one we want labels from).
+                    candidates = getattr(target, "candidates", None) or []
+                    for c in candidates:
+                        sel = getattr(c, "selector", "") or ""
+                        if id_token in sel:
+                            step_idx = i
+                            break
+                    if step_idx >= 0:
+                        break
+            if step_idx < 0:
+                step_idx = self._ir_find_nearest_step_index(steps, ts)
+
+            aria_label = ""
+            placeholder = ""
+            label_text = ""
+            target_id = ""
+            if 0 <= step_idx < len(steps):
+                step = steps[step_idx]
+                target = getattr(step, "target", None)
+                if target is not None:
+                    aria_label = (getattr(target, "accessible_name", "") or "")
+                    placeholder = (getattr(target, "placeholder", "") or "")
+                    label_text = (getattr(target, "label", "") or "")
+                    target_id = (getattr(target, "element_id", "") or "")
+
+            # Pick the strongest semantic key available. The runtime
+            # resolver tries aria_label > label > placeholder > id, so
+            # we match its priority here.
+            canonical_source = (
+                aria_label or label_text or placeholder
+                or name or target_id or el_id or fp
+            )
+            canonical = self._canonical_field_key(canonical_source)
+
             entries.append({
-                "field_key": canonical, "value": value,
-                "intention": f"fill {name or el_id or fp} with '{value}' (reconstructed from setter_hook)",
-                "identifiers": {"name": name, "id": el_id, "fingerprint": fp,
-                                "tag": tag, "is_masked": is_masked},
-                "source": "setter_hook", "step_index": step_idx,
-                "fingerprint": fp, "is_masked": is_masked,
+                "field_key": canonical,
+                "value": value,
+                "intention": (
+                    f"fill {canonical_source} with '{value}' "
+                    f"(reconstructed from setter_hook)"
+                ),
+                "identifiers": {
+                    "name": name, "id": el_id or target_id,
+                    "aria_label": aria_label, "label": label_text,
+                    "placeholder": placeholder,
+                    "fingerprint": fp, "tag": tag,
+                    "is_masked": is_masked,
+                },
+                "source": "setter_hook",
+                "step_index": step_idx,
+                "fingerprint": fp,
+                "is_masked": is_masked,
             })
         return entries
 
