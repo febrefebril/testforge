@@ -19,6 +19,103 @@ from testforge.validation.intent_completeness import (
 )
 
 
+def _trunc(s: str, n: int = 60) -> str:
+    if not s:
+        return ""
+    s = " ".join(str(s).split())
+    return s if len(s) <= n else s[: n - 1] + "…"
+
+
+def _build_field_hint(field, stc, ordinal: int, total: int) -> list[str]:
+    """H2: build rich, multi-line context lines so the user identifies which
+    physical field on the recorded page is being asked about.
+
+    Returned lines render between the field header and the input() prompt.
+    Each piece is best-effort — anything that fails to resolve is omitted.
+    """
+    lines: list[str] = []
+    lines.append(f"     Progresso: {ordinal} de {total}")
+
+    step = None
+    prev_step = None
+    if stc is not None and field.step_index is not None and field.step_index >= 0:
+        try:
+            steps = list(getattr(stc, "steps", []) or [])
+            if 0 <= field.step_index < len(steps):
+                step = steps[field.step_index]
+            if field.step_index - 1 >= 0 and field.step_index - 1 < len(steps):
+                prev_step = steps[field.step_index - 1]
+        except Exception:
+            step = prev_step = None
+
+    target = getattr(step, "target", None) if step is not None else None
+
+    identifiers = []
+    if field.name:
+        identifiers.append(f"name='{_trunc(field.name, 40)}'")
+    if field.element_id:
+        identifiers.append(f"id='{_trunc(field.element_id, 40)}'")
+    label = field.label or (getattr(target, "label", "") if target else "")
+    if label:
+        identifiers.append(f"label='{_trunc(label, 50)}'")
+    if field.placeholder:
+        identifiers.append(f"placeholder='{_trunc(field.placeholder, 50)}'")
+    aria = ""
+    if target is not None:
+        aria = getattr(target, "accessible_name", "") or ""
+    if aria and aria not in (label, field.placeholder, field.name):
+        identifiers.append(f"aria-label='{_trunc(aria, 50)}'")
+    if identifiers:
+        lines.append("     Identificadores: " + " | ".join(identifiers))
+
+    if target is not None:
+        text = (getattr(target, "text", "") or "").strip()
+        if text and text not in (label, aria):
+            lines.append(f"     Texto visivel: '{_trunc(text, 80)}'")
+        ancestors = getattr(target, "ancestor_roles", None) or []
+        if ancestors:
+            lines.append(
+                f"     Contexto pai: {' > '.join(str(a) for a in ancestors[:5])}"
+            )
+        role = getattr(target, "role", "") or ""
+        tag = getattr(target, "tag", "") or ""
+        if role or tag:
+            kind = f"<{tag}>" if tag else ""
+            if role:
+                kind = f"{kind} role={role}" if kind else f"role={role}"
+            lines.append(f"     Elemento: {kind.strip()}")
+
+    if step is not None:
+        url = getattr(step, "url", "") or ""
+        page_title = getattr(step, "page_title", "") or ""
+        loc_bits = []
+        if url:
+            loc_bits.append(_trunc(url, 60))
+        if page_title:
+            loc_bits.append(f"\"{_trunc(page_title, 40)}\"")
+        if loc_bits:
+            lines.append("     Pagina: " + " — ".join(loc_bits))
+
+    if prev_step is not None:
+        prev_action = getattr(prev_step, "action", "") or "?"
+        prev_target = getattr(prev_step, "target", None)
+        prev_hint = ""
+        if prev_target is not None:
+            prev_hint = (
+                getattr(prev_target, "accessible_name", "")
+                or getattr(prev_target, "label", "")
+                or getattr(prev_target, "text", "")
+                or getattr(prev_target, "placeholder", "")
+                or ""
+            )
+        if prev_hint:
+            lines.append(
+                f"     Acao anterior: {prev_action} → '{_trunc(prev_hint, 60)}'"
+            )
+
+    return lines
+
+
 def prompt_missing_fields(
     rec_dir: str,
     recording_id: str,
@@ -43,21 +140,23 @@ def prompt_missing_fields(
         _update_recording_metadata(rec_dir, RecordingStatus.intent_complete)
         return True
 
-    print(f"\n[TestForge] 🔍 Intencao INCOMPLETA — {len(report.pending_fields)} campo(s) pendente(s)")
+    total_pending = len(report.pending_fields)
+    print(f"\n[TestForge] 🔍 Intencao INCOMPLETA — {total_pending} campo(s) pendente(s)")
+    print(f"[TestForge] 💡 Mostrando contexto enriquecido para distinguir campos repetidos")
     print()
 
     values_provided = {}
-    for field in report.pending_fields:
+    for ordinal, field in enumerate(report.pending_fields, start=1):
         label = field.label or field.field_key
         reason = field.reason or "campo sem valor capturado"
         selector_hint = field.selector or ""
 
-        print(f"  -- Campo #{field.step_index}: {label} --")
+        print(f"  -- Campo #{field.step_index} (step {field.step_index}): {label} --")
         print(f"     Motivo: {reason}")
+        for hint in _build_field_hint(field, stc, ordinal, total_pending):
+            print(hint)
         if selector_hint:
-            print(f"     Seletor: {selector_hint}")
-        if field.placeholder:
-            print(f"     Placeholder: {field.placeholder}")
+            print(f"     Seletor: {_trunc(selector_hint, 80)}")
 
         try:
             val = input(f"  Valor para '{label}' (Enter=vazio/pular): ").strip()

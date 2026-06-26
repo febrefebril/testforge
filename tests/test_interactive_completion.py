@@ -339,3 +339,69 @@ class TestInteractiveEdgeCases:
 
             assert data["metadata"]["status"] == "incomplete_intent"
             # No pending fields to include
+
+
+class TestH2EnrichedPrompt:
+    """Hotfix H2: prompt mostra contexto enriquecido para distinguir campos."""
+
+    def test_build_field_hint_minimal(self):
+        """Sem stc o hint ainda mostra progresso."""
+        from testforge.cli._interactive_completion import _build_field_hint
+        from testforge.validation.intent_completeness import FieldStatus
+        f = FieldStatus(field_key="x", label="Nome", step_index=2)
+        lines = _build_field_hint(f, stc=None, ordinal=1, total=3)
+        assert any("Progresso: 1 de 3" in l for l in lines)
+
+    def test_build_field_hint_with_stc_target(self):
+        """Com stc, hint mostra elemento, ancestor, preceding step."""
+        from testforge.cli._interactive_completion import _build_field_hint
+        from testforge.validation.intent_completeness import FieldStatus
+        from testforge.semantic.model import SemanticAction, SemanticTarget, SemanticTestCase
+
+        target = SemanticTarget(
+            label="Renda mensal",
+            placeholder="0,00",
+            tag="input",
+            role="textbox",
+            accessible_name="Renda",
+            text="Informe sua renda",
+            ancestor_roles=["form", "section"],
+        )
+        prev_target = SemanticTarget(accessible_name="Calcular", text="Calcular agora")
+        step = SemanticAction(
+            action="fill", target=target,
+            url="https://app/calculadora", page_title="Calculadora",
+        )
+        prev_step = SemanticAction(action="click", target=prev_target)
+        stc = SemanticTestCase(test_id="X", source_recording_id="X")
+        stc.steps = [prev_step, step]
+
+        f = FieldStatus(
+            field_key="renda",
+            label="Renda mensal",
+            placeholder="0,00",
+            step_index=1,
+            element_id="renda1",
+            name="renda",
+        )
+        lines = _build_field_hint(f, stc, ordinal=1, total=1)
+        text = "\n".join(lines)
+        assert "Progresso: 1 de 1" in text
+        assert "Renda" in text
+        assert "form > section" in text  # ancestor context
+        assert "calculadora" in text or "Calculadora" in text  # page
+        assert "click" in text  # previous action
+        assert "Calcular" in text  # previous target name
+
+    def test_build_field_hint_handles_missing_step(self):
+        """step_index fora do range nao quebra."""
+        from testforge.cli._interactive_completion import _build_field_hint
+        from testforge.validation.intent_completeness import FieldStatus
+        from testforge.semantic.model import SemanticTestCase
+
+        stc = SemanticTestCase(test_id="X", source_recording_id="X")
+        stc.steps = []
+        f = FieldStatus(field_key="x", label="campo", step_index=99)
+        lines = _build_field_hint(f, stc, ordinal=1, total=1)
+        # No crash, returns at least progress line
+        assert any("Progresso" in l for l in lines)
