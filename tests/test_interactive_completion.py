@@ -405,3 +405,129 @@ class TestH2EnrichedPrompt:
         lines = _build_field_hint(f, stc, ordinal=1, total=1)
         # No crash, returns at least progress line
         assert any("Progresso" in l for l in lines)
+
+
+class TestCS4aMergeUserSuppliedValues:
+    """CS-4a: writer/reader contract for field_value_map.json.
+
+    The --complete prompt writer (_save_field_value_map) stores data in
+    "fields" / "entries" / "_meta" shape. The normalizer reader
+    (_merge_user_supplied_values) used to iterate data.items() expecting
+    a flat key→payload shape and silently discarded everything. Real
+    consequence: fill [FAIL] in run-incremental for every field the
+    tester supplied via --complete.
+    """
+
+    def _write_field_value_map(self, rec_dir, payload):
+        path = os.path.join(rec_dir, "field_value_map.json")
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False)
+        return path
+
+    def _normalize_with_user_supplied(self, rec_dir, payload):
+        """Minimal harness: feed a recording with a single fill step
+        plus a field_value_map.json in the new shape; assert that
+        stc.field_values contains the supplied value."""
+        from testforge.semantic.recording_normalizer import RecordingNormalizer
+        # Minimal raw_events.jsonl + steps.jsonl so normalizer can run.
+        raw = [
+            {"event_id": "evt_00001", "type": "navigation",
+             "timestamp": "2026-06-26T15:00:00Z",
+             "url": "http://app/", "page_title": "App"},
+        ]
+        with open(os.path.join(rec_dir, "raw_events.jsonl"), "w") as f:
+            for e in raw:
+                f.write(json.dumps(e) + "\n")
+        with open(os.path.join(rec_dir, "recording_metadata.json"), "w") as f:
+            json.dump({"recording_id": "REC-CS4A", "application": "app",
+                       "base_url": "http://app/"}, f)
+        self._write_field_value_map(rec_dir, payload)
+        normalizer = RecordingNormalizer()
+        stc = normalizer.normalize(rec_dir, "ST-CS4A", "app", "http://app/")
+        return stc
+
+    def test_reader_consumes_entries_shape(self, tmp_path):
+        """The current writer shape — entries list — must be read."""
+        payload = {
+            "fields": {"cpf": "12345678900"},
+            "entries": [{
+                "field_key": "cpf", "value": "12345678900",
+                "intention": "fill CPF with '12345678900' (user supplied)",
+                "identifiers": {"aria_label": "CPF"},
+                "source": "user_supplied_cli", "confidence": 1.0,
+                "step_index": 3,
+            }],
+            "_meta": {"updated_at": "2026-06-26", "sources": ["user_supplied_cli"]},
+        }
+        stc = self._normalize_with_user_supplied(str(tmp_path), payload)
+        # canonical key for "cpf" is "cpf"
+        assert "cpf" in stc.field_values, f"got keys {list(stc.field_values.keys())}"
+        assert stc.field_values["cpf"].value == "12345678900"
+        assert stc.field_values["cpf"].source == "user_supplied_cli"
+
+    def test_reader_consumes_fields_shape_when_no_entries(self, tmp_path):
+        """The simpler 'fields' map shape (key → value) must also be read."""
+        payload = {
+            "fields": {"data_de_nascimento": "03/03/1994"},
+            "entries": [],
+            "_meta": {},
+        }
+        stc = self._normalize_with_user_supplied(str(tmp_path), payload)
+        assert "data_de_nascimento" in stc.field_values
+        assert stc.field_values["data_de_nascimento"].value == "03/03/1994"
+
+    def test_reader_consumes_legacy_flat_shape(self, tmp_path):
+        """Legacy shape — top-level key→payload — must still work."""
+        payload = {
+            "cpf": {
+                "value": "12345678900",
+                "source": "user_supplied_cli",
+                "intention": "legacy entry",
+                "identifiers": {"aria_label": "CPF"},
+                "step_index": 5,
+            },
+            "_meta": {"updated_at": "..."},
+        }
+        stc = self._normalize_with_user_supplied(str(tmp_path), payload)
+        assert "cpf" in stc.field_values
+        assert stc.field_values["cpf"].value == "12345678900"
+
+    def test_reader_skips_meta_and_reserved_keys(self, tmp_path):
+        """_meta / fields / entries must not be treated as field entries."""
+        payload = {
+            "_meta": {"updated_at": "...", "sources": ["x"]},
+            "fields": {},
+            "entries": [],
+        }
+        stc = self._normalize_with_user_supplied(str(tmp_path), payload)
+        # No fields supplied → field_values may have other auto-derived
+        # entries but none should be _meta / fields / entries.
+        for key in stc.field_values:
+            assert key not in {"_meta", "fields", "entries"}
+
+    def test_form_values_source_is_not_overwritten_by_user_supplied(self, tmp_path):
+        """Trusted form_values entries beat user_supplied — guard kept."""
+        from testforge.semantic.recording_normalizer import RecordingNormalizer
+        from testforge.semantic.model import FieldValueMap
+        rec_dir = str(tmp_path)
+        with open(os.path.join(rec_dir, "raw_events.jsonl"), "w") as f:
+            f.write('{"event_id":"evt_00001","type":"navigation","timestamp":"2026-06-26T15:00:00Z","url":"http://app/","page_title":"App"}\n')
+        with open(os.path.join(rec_dir, "recording_metadata.json"), "w") as f:
+            json.dump({"recording_id": "REC-CS4A2", "application": "app"}, f)
+        self._write_field_value_map(rec_dir, {
+            "entries": [{"field_key": "cpf", "value": "USER",
+                          "source": "user_supplied_cli"}],
+        })
+        normalizer = RecordingNormalizer()
+        # Pre-seed a form_values entry for cpf before merge by patching:
+        # call the merge directly on a stc with cpf already set.
+        from testforge.semantic.model import SemanticTestCase
+        stc = SemanticTestCase(test_id="ST-X", source_recording_id="X")
+        stc.field_values = {"cpf": FieldValueMap(
+            field_key="cpf", value="FORM", source="form_values", step_index=2,
+        )}
+        normalizer._current_recording_dir = rec_dir
+        normalizer._merge_user_supplied_values(stc)
+        # form_values must win
+        assert stc.field_values["cpf"].value == "FORM"
+        assert stc.field_values["cpf"].source == "form_values"

@@ -863,6 +863,30 @@ class RecordingNormalizer:
         self._merge_user_supplied_values(stc)
 
     def _merge_user_supplied_values(self, stc) -> None:
+        """CS-4a: read field_value_map.json written by `--complete` prompt.
+
+        The writer (`_save_field_value_map` in _interactive_completion.py)
+        stores values in two shapes:
+
+            { "fields": { "<key>": "<value>", ... },
+              "entries": [ {"field_key": ..., "value": ..., ...}, ... ],
+              "_meta": { ... } }
+
+        The previous reader iterated `data.items()` expecting a flat
+        `{ "<key>": {"value": ..., "source": ...}, ... }` map and so
+        skipped every entry (the dict's only keys are "fields",
+        "entries", "_meta" — none of which match the expected shape).
+        That silently lost every value the tester typed via --complete,
+        which surfaced in run-incremental as `fill [FAIL]` on
+        `input[aria-label="CPF"]` because stc.field_values had no CPF
+        entry, the runner fell through to el.fill on an empty string,
+        and the field stayed blank.
+
+        Fix: consume the "entries" list first (richest payload), then
+        the "fields" map (backward compat for any legacy writer). Skip
+        the "_meta" key explicitly so future format changes do not
+        accidentally pick it up.
+        """
         from .model import FieldValueMap
         rec_dir = getattr(self, "_current_recording_dir", "") or ""
         if not rec_dir:
@@ -876,31 +900,79 @@ class RecordingNormalizer:
             return
         if not isinstance(data, dict):
             return
+
+        merged = 0
+
+        def _apply(raw_key: str, value: str, *,
+                   source: str = "user_supplied_cli",
+                   intention: str = "",
+                   identifiers: Optional[dict] = None,
+                   step_index: int = -1) -> bool:
+            nonlocal merged
+            if not raw_key or not value:
+                return False
+            canonical = self._canonical_field_key(raw_key)
+            existing = stc.field_values.get(canonical)
+            if existing and existing.source == "form_values":
+                return False
+            stc.field_values[canonical] = FieldValueMap(
+                field_key=canonical,
+                value=str(value),
+                intention=intention or f"fill {raw_key} with '{value}' (user supplied)",
+                identifiers=identifiers or {},
+                source=source,
+                step_index=step_index,
+            )
+            merged += 1
+            return True
+
+        # 1. New shape: "entries" list with full metadata per item.
+        entries = data.get("entries") or []
+        if isinstance(entries, list):
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+                _apply(
+                    entry.get("field_key", ""),
+                    entry.get("value", ""),
+                    source=entry.get("source", "user_supplied_cli"),
+                    intention=entry.get("intention", ""),
+                    identifiers=entry.get("identifiers", {}) or {},
+                    step_index=entry.get("step_index", -1),
+                )
+
+        # 2. New shape: "fields" map (key → value) — covers entries that
+        #    might exist there without an "entries" partner.
+        fields = data.get("fields") or {}
+        if isinstance(fields, dict):
+            for raw_key, value in fields.items():
+                if not isinstance(value, str):
+                    continue
+                _apply(raw_key, value)
+
+        # 3. Legacy shape: top-level dict where each key is a field and
+        #    each value is a payload dict. Skip the reserved "_meta",
+        #    "fields", "entries" keys we already handled.
+        reserved = {"_meta", "fields", "entries"}
         for raw_key, payload in data.items():
-            if raw_key.startswith("_"):  # skip _meta
+            if raw_key in reserved or raw_key.startswith("_"):
                 continue
             if not isinstance(payload, dict):
                 continue
-            value = payload.get("value") or ""
-            if not value:
-                continue
-            source = payload.get("source", "user_supplied_cli")
-            canonical = self._canonical_field_key(raw_key)
-            existing = stc.field_values.get(canonical)
-            # Do not overwrite trusted form_values; everything else loses.
-            if existing and existing.source == "form_values":
-                continue
-            stc.field_values[canonical] = FieldValueMap(
-                field_key=canonical,
-                value=value,
-                intention=payload.get("intention",
-                                       f"fill {raw_key} with '{value}' (user supplied)"),
+            _apply(
+                raw_key,
+                payload.get("value", ""),
+                source=payload.get("source", "user_supplied_cli"),
+                intention=payload.get("intention", ""),
                 identifiers=payload.get("identifiers", {}) or {},
-                source=source,
                 step_index=payload.get("step_index", -1),
             )
-        logger.info("Merged %d user-supplied value(s) from field_value_map.json",
-                     sum(1 for k, v in data.items() if not k.startswith("_")))
+
+        if merged:
+            logger.info(
+                "Merged %d user-supplied value(s) from field_value_map.json",
+                merged,
+            )
 
         # Report
         if stc.field_values:
