@@ -125,3 +125,47 @@ class TestHotfix16FillInputClearAndDigits:
         ex = StepExecutor(page)
         assert ex._fill_input(page, label="Nome", value="Joao") is True
         el.fill.assert_called_once()
+
+
+class TestHotfix17PlaceholderMaskFallback:
+    """Hotfix 17: currency mask detected by placeholder when attribute missing."""
+
+    def _placeholder_input(self, placeholder):
+        page = MagicMock()
+        page.url = "http://localhost"
+        el = MagicMock()
+        el.count = MagicMock(return_value=1)
+        el.get_attribute = MagicMock(side_effect=lambda attr: (
+            placeholder if attr == "placeholder" else None
+        ))
+        page.locator = MagicMock(return_value=el)
+        return page, el
+
+    def test_caixa_r_placeholder_triggers_currency_path(self):
+        """Caixa SIOPI inputs use placeholder R$0,00 without currencymask attr."""
+        page, el = self._placeholder_input("R$0,00")
+        ex = StepExecutor(page)
+        ex._fill_input(page, label="Prestação", value="1.000,00")
+        # Should have typed raw digits, not the formatted string.
+        typed = [c.args[0] for c in el.press_sequentially.call_args_list]
+        assert typed == ["100000"], f"got {typed}"
+        # And cleared via triple-click first.
+        assert any(
+            c.kwargs.get("click_count") == 3
+            for c in el.click.call_args_list
+        )
+
+    def test_lowercase_0_00_placeholder_triggers_mask_path(self):
+        page, el = self._placeholder_input("0,00")
+        ex = StepExecutor(page)
+        ex._fill_input(page, label="Valor", value="5.000,50")
+        typed = [c.args[0] for c in el.press_sequentially.call_args_list]
+        assert typed == ["500050"], f"got {typed}"
+
+    def test_plain_text_placeholder_uses_fill(self):
+        page, el = self._placeholder_input("Nome completo")
+        ex = StepExecutor(page)
+        ex._fill_input(page, label="Nome", value="Joao Silva")
+        # No press_sequentially — non-masked path goes through el.fill
+        el.fill.assert_called_once()
+        el.press_sequentially.assert_not_called()

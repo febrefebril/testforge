@@ -262,11 +262,20 @@ class StepExecutor:
             try:
                 el = page.locator(sel_pattern)
                 if el.count() == 1:
+                    # Hotfix 17: also detect currency masks by placeholder
+                    # ("R$0,00", "0,00") because the Caixa SIOPI Material
+                    # inputs do not expose a `currencymask` attribute. The
+                    # working _execute_fill path already does this; the
+                    # fallback helpers were missing it, so hotfix 16's
+                    # clear-and-strip logic never ran for the production
+                    # inputs we care about.
                     has_mask = el.get_attribute("currencymask") is not None
                     placeholder = (el.get_attribute("placeholder") or "").lower()
                     is_date_mask = any(p in placeholder for p in (
                         "dd/mm", "mm/dd", "aaaa", "__/__/____", "dd/mm/aaaa",
                     ))
+                    if not has_mask and not is_date_mask:
+                        has_mask = any(p in placeholder for p in ("r$", "0,00"))
                     if has_mask or is_date_mask:
                         el.click()
                         page.wait_for_timeout(150)
@@ -300,13 +309,17 @@ class StepExecutor:
             try:
                 el = self.page.locator(f'input[aria-label="{key}"], textarea[aria-label="{key}"]')
                 if el.count() == 1:
-                    # Hotfix 16: see _fill_input for the rationale on the
-                    # triple-click clear and the regex-strip type value.
+                    # Hotfix 16/17: see _fill_input for the rationale on the
+                    # triple-click clear, regex-strip type value, and the
+                    # placeholder-based mask fallback for inputs that omit
+                    # the `currencymask` attribute (e.g. Caixa SIOPI).
                     has_mask = el.get_attribute("currencymask") is not None
                     placeholder = (el.get_attribute("placeholder") or "").lower()
                     is_date_mask = any(p in placeholder for p in (
                         "dd/mm", "mm/dd", "aaaa", "__/__/____", "dd/mm/aaaa",
                     ))
+                    if not has_mask and not is_date_mask:
+                        has_mask = any(p in placeholder for p in ("r$", "0,00"))
                     if has_mask or is_date_mask:
                         el.click()
                         self.page.wait_for_timeout(150)
@@ -345,12 +358,15 @@ class StepExecutor:
 
         try:
             el = self.page.locator(selector).first
-            # Hotfix 16: see _fill_input rationale (clear + regex-strip).
+            # Hotfix 16/17: see _fill_input rationale (clear + regex-strip
+            # + placeholder-based mask fallback).
             has_mask = el.get_attribute("currencymask") is not None
             placeholder = (el.get_attribute("placeholder") or "").lower()
             is_date_mask = any(p in placeholder for p in (
                 "dd/mm", "mm/dd", "aaaa", "__/__/____", "dd/mm/aaaa",
             ))
+            if not has_mask and not is_date_mask:
+                has_mask = any(p in placeholder for p in ("r$", "0,00"))
             if has_mask or is_date_mask:
                 el.click()
                 self.page.wait_for_timeout(150)
