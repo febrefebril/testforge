@@ -87,6 +87,34 @@ class StepExecutor:
             return ("", "")
 
         # Auxiliar: tenta correspondência contra um dict (field_value_map ou data_values)
+        def _unwrap(entry) -> tuple:
+            """CS-4c / hotfix 19: stc.field_values is keyed to FieldValueMap
+            dataclass instances, not plain dicts. The previous code path
+
+                if isinstance(entry, dict):
+                    return (entry["value"], entry["intention"])
+                return (str(entry), "")
+
+            silently took the str(entry) branch for every FieldValueMap
+            object and typed the dataclass __repr__ (e.g.
+            "FieldValueMap(field_key='...', value='1.000,00', ...)" —
+            ~370 chars with ~19 digits) into the masked input. The mask
+            stripped the digits, producing R$ 1.000.001.000.000.012,00
+            or similar. The user saw "concatenation" — it was actually
+            a repr serialization.
+
+            This unwrap handles dict, FieldValueMap-shaped objects
+            (anything with a `.value` attribute), and plain scalars.
+            """
+            if isinstance(entry, dict):
+                return (entry.get("value", "") or "",
+                        entry.get("intention", "") or "")
+            value = getattr(entry, "value", None)
+            if value is not None:
+                return (str(value),
+                        str(getattr(entry, "intention", "") or ""))
+            return (str(entry), "")
+
         def _match(identifiers: dict, target_dict: dict) -> tuple:
             # Tenta cada identificador em ordem de prioridade
             for id_type in ("name", "aria_label", "label", "placeholder", "id"):
@@ -95,23 +123,17 @@ class StepExecutor:
                     continue
                 # Exact match
                 if id_val in target_dict:
-                    entry = target_dict[id_val]
-                    if isinstance(entry, dict):
-                        return (entry.get("value", ""), entry.get("intention", ""))
-                    return (str(entry), "")
+                    return _unwrap(target_dict[id_val])
                 # Canonical match
                 cid = self._canonical(id_val)
                 for key in target_dict:
                     if self._canonical(key) == cid:
-                        entry = target_dict[key]
-                        if isinstance(entry, dict):
-                            return (entry.get("value", ""), entry.get("intention", ""))
-                        return (str(entry), "")
+                        return _unwrap(target_dict[key])
                 # Substring match (data_values only, not field_value_map)
                 if target_dict is data_values:
                     for key, val in target_dict.items():
                         if cid and (cid in self._canonical(key) or self._canonical(key) in cid):
-                            return (str(val), "")
+                            return _unwrap(val)
             return ("", "")
 
         if field_value_map:

@@ -105,14 +105,33 @@ class AngularMaterialHandler(ComponentHandler):
         Only the fill is the canonical intent. Calendar navigation is fragile because it
         depends on which month/year the calendar opens at, which changes between runs.
 
-        Handles two cases:
-        - Completed: toggle + nav + date fill → suppress toggle+nav, keep fill.
-        - Abandoned: toggle + nav + non-calendar click (user clicked away) → suppress
-          toggle+nav only; the click that closed the calendar is kept.
+        Three cases:
+
+        - **Fill follow-up**: toggle + nav + date fill → suppress toggle+nav,
+          keep fill. The fill is the canonical intent and reproduces deterministically.
+
+        - **Click-only completion** (e.g. Caixa SIOPI): the date input has a
+          mask that suppresses the input event, so no fill is ever recorded.
+          The user navigates the calendar with clicks and picks a day cell.
+          The LAST click in the sequence lands on a `mat-calendar-body-cell`
+          (the day picker). In this case the click sequence IS the canonical
+          intent — there is no other way to set the date — so we KEEP the
+          clicks. Suppressing them (the pre-hotfix-20 behavior) left the
+          date input empty at run time.
+
+        - **True abandoned**: user clicked outside the calendar without
+          picking a day → suppress the calendar nav clicks. The non-calendar
+          click that ended the sequence is kept.
         """
         import re
 
         _DP_MARKERS = ("mat-datepicker-toggle", "mat-calendar", "cdk-overlay", "data-mat-calendar")
+        # The day picker that completes a click-only date selection. After
+        # a user clicks one of these cells the value lands on the date
+        # input via the picker, no input event fires (mask suppresses it).
+        _DAY_CELL_MARKERS = (
+            "mat-calendar-body-cell", "mat-calendar-body-cell-content",
+        )
 
         def _step_sels(step) -> list:
             if not step.target or not step.target.candidates:
@@ -124,6 +143,22 @@ class AngularMaterialHandler(ComponentHandler):
 
         def _is_calendar_step(step) -> bool:
             return _has_dp_marker(step) or bool(step.context.get("overlay_step"))
+
+        def _is_day_cell_click(step) -> bool:
+            """The terminal click of a click-only date selection."""
+            if step.action != "click":
+                return False
+            if any(m in sel for sel in _step_sels(step) for m in _DAY_CELL_MARKERS):
+                return True
+            # Fallback: target text is a 1-2 digit number (day of month) and
+            # the step is inside the overlay. This catches the case where
+            # the selector chain does not carry mat-calendar-body-cell but
+            # the rendered cell still produced a numeric click target.
+            if step.context.get("overlay_step") and step.target is not None:
+                text = (getattr(step.target, "text", "") or "").strip()
+                if re.fullmatch(r"\d{1,2}", text):
+                    return True
+            return False
 
         def _is_date_value(val: str) -> bool:
             val = (val or "").strip()
@@ -142,6 +177,7 @@ class AngularMaterialHandler(ComponentHandler):
             # Found a datepicker-related click. Scan forward.
             seq_start = i
             found_fill = -1
+            last_calendar_click = -1  # hotfix 20: track last calendar click
             j = i + 1
 
             while j < len(steps) and j < i + 20:
@@ -157,20 +193,33 @@ class AngularMaterialHandler(ComponentHandler):
                     break
 
                 if s.action == "click" and not s.skip_reason:
-                    if not _is_calendar_step(s):
+                    if _is_calendar_step(s):
+                        last_calendar_click = j
+                    else:
                         # User clicked outside the calendar — sequence abandoned
                         break
 
                 j += 1
 
             if found_fill > seq_start:
-                # Completed sequence: suppress toggle + nav, keep date fill
+                # Completed via fill: suppress toggle + nav, keep date fill.
                 for k in range(seq_start, found_fill):
                     if not steps[k].skip_reason:
                         steps[k].skip_reason = "datepicker_dedup"
                 i = found_fill + 1
+            elif (
+                last_calendar_click > seq_start
+                and _is_day_cell_click(steps[last_calendar_click])
+            ):
+                # Hotfix 20: click-only completion (e.g. SIOPI). The last
+                # click was on a day cell — the picker delivers the date
+                # without any fill event. KEEP every click in the
+                # sequence; they ARE the canonical intent. Re-running them
+                # at runtime reproduces the recorded selection.
+                i = last_calendar_click + 1
             else:
-                # Abandoned sequence: suppress only the calendar steps in range
+                # True abandoned: suppress only the calendar steps in range.
+                # The non-calendar click that ended the sequence is kept.
                 for k in range(seq_start, j):
                     if not steps[k].skip_reason and _is_calendar_step(steps[k]):
                         steps[k].skip_reason = "datepicker_dedup"

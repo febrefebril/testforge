@@ -266,3 +266,98 @@ class TestCS1ConvergenceContract:
         step = make_fake_step("fill", "#x", value="500")
         StepExecutor(page)._execute_fill(step, ["#x"], data_values=None, field_value_map=None)
         assert 3 in click_counts(el)
+
+
+class TestHotfix19FieldValueMapDataclassUnwrap:
+    """Hotfix 19 / CS-4c: _resolve_field_value must unwrap FieldValueMap
+    dataclass instances, not str() them. The previous code typed the
+    dataclass __repr__ into masked inputs, producing ~378-char values
+    with ~19 digits that the mask rendered as junk."""
+
+    def test_unwraps_dataclass_entry_by_exact_key(self):
+        from testforge.runner.step_executor import StepExecutor
+        from testforge.semantic.model import FieldValueMap
+        from tests.helpers.incremental_fakes import make_fake_step
+        page = MagicMock()
+        ex = StepExecutor(page)
+        step = make_fake_step("click", "#x")
+        step.target.accessible_name = "Prestação desejada *"
+        fvm = {
+            "Prestação desejada *": FieldValueMap(
+                field_key="prestação_desejada_*",
+                value="1.000,00",
+                intention="fill Prestação desejada * with '1.000,00' (from final_state)",
+                identifiers={"placeholder": "R$0,00"},
+                source="final_state",
+                step_index=12,
+            ),
+        }
+        val, intention = ex._resolve_field_value(step, {}, fvm)
+        assert val == "1.000,00", f"got {val!r}"
+        assert "Prestação" in intention or intention == "fill Prestação desejada * with '1.000,00' (from final_state)"
+
+    def test_unwraps_dataclass_entry_by_canonical_key(self):
+        from testforge.runner.step_executor import StepExecutor
+        from testforge.semantic.model import FieldValueMap
+        from tests.helpers.incremental_fakes import make_fake_step
+        page = MagicMock()
+        ex = StepExecutor(page)
+        step = make_fake_step("click", "#x")
+        step.target.accessible_name = "Prestação desejada *"
+        # Key is the canonical form, target identifier is the raw form.
+        fvm = {
+            "prestação_desejada_*": FieldValueMap(
+                field_key="prestação_desejada_*",
+                value="1.000,00",
+                source="final_state",
+            ),
+        }
+        val, _ = ex._resolve_field_value(step, {}, fvm)
+        assert val == "1.000,00", f"got {val!r}"
+
+    def test_does_not_type_dataclass_repr(self):
+        """Regression guard: the resolved value must never be a
+        ~378-char dataclass __repr__."""
+        from testforge.runner.step_executor import StepExecutor
+        from testforge.semantic.model import FieldValueMap
+        from tests.helpers.incremental_fakes import make_fake_step
+        page = MagicMock()
+        ex = StepExecutor(page)
+        step = make_fake_step("click", "#x")
+        step.target.accessible_name = "Prestação desejada *"
+        fvm = {
+            "prestação_desejada_*": FieldValueMap(
+                field_key="prestação_desejada_*",
+                value="1.000,00",
+                intention="x" * 200,
+                identifiers={"a" * 50: "b" * 50},
+            ),
+        }
+        val, _ = ex._resolve_field_value(step, {}, fvm)
+        # __repr__ would be > 200 chars; the unwrapped value is 8.
+        assert len(val) == 8
+        assert "FieldValueMap" not in val
+
+    def test_dict_entry_still_works(self):
+        """Back-compat: plain dicts (legacy shape) still unwrap correctly."""
+        from testforge.runner.step_executor import StepExecutor
+        from tests.helpers.incremental_fakes import make_fake_step
+        page = MagicMock()
+        ex = StepExecutor(page)
+        step = make_fake_step("click", "#x")
+        step.target.accessible_name = "Renda"
+        fvm = {"Renda": {"value": "5000", "intention": "fill renda"}}
+        val, intention = ex._resolve_field_value(step, {}, fvm)
+        assert val == "5000"
+        assert intention == "fill renda"
+
+    def test_data_values_substring_match_unwraps(self):
+        from testforge.runner.step_executor import StepExecutor
+        from tests.helpers.incremental_fakes import make_fake_step
+        page = MagicMock()
+        ex = StepExecutor(page)
+        step = make_fake_step("click", "#x")
+        step.target.accessible_name = "Prestação"
+        data_values = {"Prestação desejada": "1.000,00"}
+        val, _ = ex._resolve_field_value(step, data_values, {})
+        assert val == "1.000,00"
