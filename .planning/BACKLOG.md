@@ -2,25 +2,45 @@
 
 Pós-Sprint 0 hotfixes. Decisões: branch `hotfix/sprint-0-recorder-fixes`, 2026-06-25.
 
+> **Leitura obrigatória antes de propor refactor**: [DECISIONS-LOG.md](DECISIONS-LOG.md).
+> **Plano ativo**: [CONSOLIDATION-SPRINT.md](CONSOLIDATION-SPRINT.md).
+
 ## Curto prazo — estabilizar antes de liberar piloto QA
 
 | ID | Item | Esforço | Status |
 |---|---|---|---|
-| A | Fix DX `run-incremental` — aceitar diretório, auto-resolver `test_*.py` | pequeno | pending |
-| B | Repro hotfix 7 (XHR pseudo-submit) com fluxo de submit real local | pequeno | pending |
-| C | Bug `test_step_executor::_execute_select` ausente — 2 testes vermelhos | pequeno | pending |
-| D | Smoke E2E completo (record → compile → run-incremental) fluxo controlado | pequeno | pending |
-| H1 | Browser-close = graceful stop (page/context `on('close')` → mesmo path Shift+S) | pequeno | pending |
-| H2 | Final `--complete` prompt enriquecido — mostrar label + neighboring text + screenshot crop para usuário identificar campo | médio | pending |
+| A | Fix DX `run-incremental` — aceitar diretório, auto-resolver `test_*.py` | pequeno | shipped (hotfix 8) |
+| B | Repro hotfix 7 (XHR pseudo-submit) com fluxo de submit real local | pequeno | shipped (hotfix 12) |
+| C | Bug `test_step_executor::_execute_select` ausente — 2 testes vermelhos | pequeno | shipped (hotfix 9) |
+| D | Smoke E2E completo (record → compile → run-incremental) fluxo controlado | pequeno | shipped (hotfix 13) |
+| H1 | Browser-close = graceful stop (page/context `on('close')` → mesmo path Shift+S) | pequeno | shipped (hotfix 10) |
+| H2 | Final `--complete` prompt enriquecido — mostrar label + neighboring text + screenshot crop para usuário identificar campo | médio | shipped (hotfix 11) |
+| H4 | Shift+S overlay UX — banner muda imediato, browser fecha antes do Gherkin prompt | pequeno | shipped (hotfix 14) |
+| P1 | Recordings + IncrementalRunner ancorados em `_PROJECT_ROOT`, finalize tolerante a page fechada | pequeno | shipped (hotfix 15) |
+| F1 | Fill helpers em `step_executor.py` — clear before type + raw digits + date mask | médio | shipped (hotfix 16) |
+| F2 | Currency mask por placeholder além de attribute | pequeno | shipped (hotfix 17) |
+
+## Sprint de consolidação — bloqueia piloto até concluir
+
+Detalhes: [CONSOLIDATION-SPRINT.md](CONSOLIDATION-SPRINT.md).
+
+| ID | Item | Esforço | Status |
+|---|---|---|---|
+| CS-1 | Consolidar 4 fill helpers em `_fill_masked` único | 3-4h | pending |
+| CS-2 | Pinar fixture Material currency/date mask sem `currencymask` attr | 2-3h | pending |
+| CS-3 | Path telemetry — span `fill.attempted` com `fill_path`, `mask_detect` | 1h | pending |
+| CS-4a | Investigar `fill [FAIL]` em valores `--complete` (divergência label record vs runtime) | 1h | pending |
+| CS-4b | Backlog ou fix: file upload `C:\fakepath\` — capturar real path via `page.on('filechooser')` | 1h cap | pending |
 
 ## Médio prazo — piloto QA + telemetria
 
 | ID | Item | Esforço | Status |
 |---|---|---|---|
-| E | Liberar branch para QA com diagnostic mode ligado | — | bloqueado por A-D, H1, H2 |
+| E | Liberar branch para QA com diagnostic mode ligado | — | bloqueado por CS-1..CS-3 |
 | F | Dashboard `.testforge/spans.jsonl` — heals L0/L1/L2/L3 por sessão, % asserts pass | médio | pending |
 | H3 | Inline overlay prompt — quando capture_quality detecta `typing_not_captured` mid-recording, abrir modal no overlay com ícone de atenção e input para usuário preencher valor faltante | médio | pending |
-| T1 | Pesquisa: quais dados de telemetria respondem "consegui gerar teste resiliente self-healing em ambiente multi-framework?" | pequeno | in_progress (research agent) |
+| H5 | File upload — capturar real path via `page.on('filechooser')`, copiar para `recordings/<rid>/uploads/`, runner usa `set_input_files` | médio | pending (parcial em CS-4b) |
+| T1 | Pesquisa: quais dados de telemetria respondem "consegui gerar teste resiliente self-healing em ambiente multi-framework?" | pequeno | shipped — ver TELEMETRY-PLAN.md |
 
 ## Longo prazo — gaps de pesquisa state-of-the-art
 
@@ -40,7 +60,11 @@ Priorização sugerida pós-piloto: G1 → G5 → G3 → G7 → G4 → G6 → G2
 
 ## Decisões registradas
 
+Histórico vivo em [DECISIONS-LOG.md](DECISIONS-LOG.md).
+
 - **Q1** (2026-06-25): fechar A-C antes de liberar.
-- **Q2** (2026-06-25): adicionar telemetria. Pesquisa T1 em andamento.
+- **Q2** (2026-06-25): adicionar telemetria. Pesquisa T1 concluída (`TELEMETRY-PLAN.md`).
 - **Q3** (2026-06-25): aguardar dados do piloto antes de atacar gaps G1-G7.
 - **Q4** (2026-06-25): validar fluxo XHR/postback (item B) localmente antes de QA.
+- **Q5** (2026-06-26): pausar novos hotfixes pontuais após hotfix 17. Rodar sprint de consolidação (`CONSOLIDATION-SPRINT.md`) que ataca a causa estrutural: 4 fill helpers duplicados em `step_executor.py`. Piloto bloqueado até CS-1..CS-3 verde.
+- **Q6** (2026-06-26): codegen do Playwright não substitui recorder (perde captura de masked inputs + asserts + ranking). Copiar cadeia de prioridade dele em G2 — separado, pós-piloto.
