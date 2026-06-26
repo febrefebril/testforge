@@ -41,7 +41,40 @@ Detalhes: [CONSOLIDATION-SPRINT.md](CONSOLIDATION-SPRINT.md).
 | E | Liberar branch para QA com diagnostic mode ligado | — | bloqueado por CS-1..CS-3 |
 | F | Dashboard `.testforge/spans.jsonl` — heals L0/L1/L2/L3 por sessão, % asserts pass | médio | pending |
 | H3 | Inline overlay prompt — quando capture_quality detecta `typing_not_captured` mid-recording, abrir modal no overlay com ícone de atenção e input para usuário preencher valor faltante | médio | pending |
-| H5 | File upload — capturar real path via `page.on('filechooser')`, copiar para `recordings/<rid>/uploads/`, runner usa `set_input_files` | médio | pending (parcial em CS-4b) |
+| H5 | File upload — capturar real path via `page.on('filechooser')`, copiar para `recordings/<rid>/uploads/`, runner usa `set_input_files` | médio | pending — CS-4b time-boxed out, design abaixo |
+
+### H5 — File upload design (CS-4b spillover)
+
+Pesquisa em git history (`git log -S "set_input_files"` etc.) confirmou: implementação anterior **nunca existiu no source**. Apenas `bug_lab/tests/test_bug_file_input.py` (commit `38d4966`) demonstrou o bug, mas o fix em recorder/compiler nunca pousou.
+
+**Problema técnico**: HTML5 file input expõe `value="C:\fakepath\name.ext"` por segurança. JS não vê o path real. Headed Playwright também não — `FileChooser` event dá o input element mas `chooser.set_files()` é input-only (replay), não output (read).
+
+**Solução proposta** (alinha com fluxo --complete existente):
+
+1. **Recorder** (`recorder_controller.py`):
+   - Atacha `page.on('filechooser')` quando inicia sessão
+   - Quando dispara, emite `raw_event{ type: "file_upload", target: <input>, file_name: chooser.element + JS read of files[0].name, no_path: true }`
+   - Marca step como `missing_fill` com `value_kind="file"`
+
+2. **Normalizer** (`recording_normalizer.py`):
+   - Reconhece `value_kind=file`
+   - Emite step com `action="set_input_files"` + `target=input` + `value="<file_name>"`
+   - field_value_map entry com `source=missing_fill`, `intention=upload <name>`
+
+3. **`--complete` prompt** (`_interactive_completion.py`):
+   - Para campos com `value_kind=file`: prompt diferente — "Caminho do arquivo para '<file_name>':" + glob support
+   - Copia arquivo para `recordings/<rid>/uploads/<basename>`
+   - field_value_map armazena `value=<basename>`
+
+4. **Compiler** (`semantic/compiler.py`):
+   - Quando step.action == "set_input_files": emite `page.set_input_files(selector, "recordings/<rid>/uploads/<basename>")`
+
+5. **Runner** (`step_executor.py`):
+   - Adiciona `_execute_set_input_files(step, selector)` que chama `page.set_input_files`
+
+6. **Fixture pinned**: `tests/test_pages/file_upload/index.html` + `tests/test_runner_file_upload.py`
+
+Esforço: 1-2 dias. Bloqueia QA piloto se sistema sob teste usa uploads. SIOPI Caixa não usa upload no fluxo testado — pode aguardar refactor sprint.
 | T1 | Pesquisa: quais dados de telemetria respondem "consegui gerar teste resiliente self-healing em ambiente multi-framework?" | pequeno | shipped — ver TELEMETRY-PLAN.md |
 
 ## Longo prazo — gaps de pesquisa state-of-the-art

@@ -99,6 +99,30 @@ Decision: defer to post-pilot. Pilot data will tell us whether the priority chai
 
 ---
 
+## 2026-06-26 — Consolidation sprint shipped (CS-1, CS-2, CS-3, CS-4a)
+
+**Status**: 4 of 5 sprint items shipped; CS-4b deferred to H5.
+
+**Outcome**:
+
+- **CS-1 + CS-3** (commit `882f009`): `_fill_masked` is the single fill primitive. The 4 helpers (`_execute_fill`, `_fill_input`, `_fill_by_aria_label`, `_try_data_fill`) delegate to it. `grep -c press_sequentially src/testforge/runner/step_executor.py` returns 1. The cross-helper contract test asserts the 4 helpers produce identical pressed digits for the same input. Path telemetry emits `fill.attempted` spans with `fill_path`, `mask_kind`, `mask_detect`, `cleared`, `value_len`. Future debugging sessions read `.testforge/spans.jsonl` to answer "which path ran" without re-running.
+- **CS-2** (commit `b030a6b`): `tests/test_pages/runner_fills/index.html` + `tests/test_runner_fill_paths.py` pin the SIOPI failure shape (Material currency without `currencymask` attr, date mask, CPF mask, plain text). 10 tests cover all 4 helpers against the 4 input kinds plus the rerun-no-concatenation regression case. Cost of bug discovery: 13s (test run) vs ~30 min (real run).
+- **CS-4a** (commit `aa27b54`): root cause of the `fill [FAIL] failed [input[aria-label="CPF"]]` reports. The writer (`_save_field_value_map`) stored data in `{fields, entries, _meta}` shape; the reader (`_merge_user_supplied_values`) iterated `data.items()` expecting flat `{key: payload}` shape and silently skipped everything. The reader now consumes the three shapes the writer produces (entries, fields, legacy). 5 new tests pin the contract.
+- **CS-4b** (deferred): the previous implementation referenced by the user **never existed in source** — git history search (`git log -S "set_input_files"`) only finds `bug_lab/tests/test_bug_file_input.py` from commit `38d4966`, which demonstrated the bug but did not fix recorder/compiler. Greenfield work, ~1-2 days. Design recorded in BACKLOG.md as H5. SIOPI does not use file upload in the current flow, so this can wait for the refactor sprint.
+
+**Net effect**:
+
+- ~120 LOC of duplicated mask logic deleted from `step_executor.py`.
+- 28 new tests (10 production-shaped + 13 unit + 5 contract). All green.
+- 1 known production bug (--complete fill FAIL) fixed at the root.
+- Telemetry now available for the next real-run debugging cycle.
+
+**Lesson reinforced**: every previous hotfix was "patch the helper the bug surfaced in". CS-1 deleted the structural cause. The cross-helper contract test guarantees no helper can silently diverge again.
+
+**Next**: re-run Caixa SIOPI to validate end-to-end. If passes, release pilot. Then refactor sprint (`REFACTOR-SPRINT.md`).
+
+---
+
 ## 2026-06-26 — Structural debt inventory + refactor sprint planned
 
 **Decision**: Catalog every anti-pattern found during the SIOPI debugging cycle in `DEBT-INVENTORY.md`. Run a dedicated refactor sprint **after** the consolidation sprint to address the P1 items (god class splits, path centralization, exception policy, click-to-fill magic, stable step_id, normalizer stage migration, LocatorStrategy enum).
