@@ -1,11 +1,34 @@
 """TestForge — Comando CLI run-incremental."""
 from __future__ import annotations
+import glob
 import os
 import sys
 
 
+def _resolve_script_path(script: str) -> str:
+    """Accept either a file or a directory; resolve to the test_*.py inside."""
+    if os.path.isdir(script):
+        candidates = sorted(glob.glob(os.path.join(script, "test_*.py")))
+        if not candidates:
+            raise FileNotFoundError(
+                f"Diretorio sem script test_*.py: {script}"
+            )
+        if len(candidates) > 1:
+            print(
+                f"[TestForge] Aviso: {len(candidates)} scripts encontrados, usando {candidates[0]}",
+                file=sys.stderr,
+            )
+        return candidates[0]
+    return script
+
+
 def cmd_run_incremental(args):
     from testforge.runner.incremental_runner import IncrementalRunner
+    try:
+        args.script = _resolve_script_path(args.script)
+    except FileNotFoundError as exc:
+        print(f"[TestForge] X {exc}", file=sys.stderr)
+        sys.exit(2)
     runner = IncrementalRunner(
         script_path=args.script,
         headless=args.headless,
