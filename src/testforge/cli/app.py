@@ -42,11 +42,16 @@ def _sanitize_name(name: str) -> str:
     return sanitized or "unnamed"
 
 
-def _make_context_kwargs(headless: bool) -> dict:
+def _make_context_kwargs(headless: bool, verify_ssl: bool = True) -> dict:
     """Return browser.new_context kwargs: fixed viewport in headless, no_viewport=True in headed."""
+    kwargs: dict = {}
     if headless:
-        return {"viewport": {"width": 1280, "height": 720}}
-    return {"no_viewport": True}
+        kwargs["viewport"] = {"width": 1280, "height": 720}
+    else:
+        kwargs["no_viewport"] = True
+    if not verify_ssl:
+        kwargs["ignore_https_errors"] = True
+    return kwargs
 
 
 def _validate_and_warn_url(url: str) -> bool:
@@ -360,9 +365,10 @@ def cmd_record(args):
 
     if args.url:
         _validate_and_warn_url(args.url)
+    _verify_ssl = getattr(args, 'verify_ssl', False)
     with sync_playwright() as pw:
-        browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
-        context = browser.new_context(**_make_context_kwargs(args.headless))
+        browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless, verify_ssl=_verify_ssl)
+        context = browser.new_context(**_make_context_kwargs(args.headless, verify_ssl=_verify_ssl))
         page = context.new_page()
         # Hotfix 15: anchor recordings at the project root, not CWD.
         recorder = RecorderController(
@@ -926,6 +932,7 @@ def cmd_run(args):
         total_steps=len(steps),
     )
 
+    _verify_ssl = getattr(args, 'verify_ssl', False)
     if not steps:
         # Fallback: executa via pytest subprocess (modo antigo)
         import subprocess
@@ -943,7 +950,7 @@ def cmd_run(args):
             print(f"[TestForge] [WARN] Script falhou — tentando healing...")
             # Tenta curar inline
             healed = _try_heal_inline(base_url, args.headless, error_text, script_path, recording_id,
-                                      getattr(args, 'browser', 'chromium'))
+                                      getattr(args, 'browser', 'chromium'), verify_ssl=_verify_ssl)
             if healed:
                 layer_used = "L3"
                 llm_used = True
@@ -958,8 +965,8 @@ def cmd_run(args):
         if _data_values:
             print(f"  Data: {len(_data_values)} valores carregados de {data_file}")
         with sync_playwright() as pw:
-            browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
-            _vp_kw = _make_context_kwargs(args.headless)
+            browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless, verify_ssl=_verify_ssl)
+            _vp_kw = _make_context_kwargs(args.headless, verify_ssl=_verify_ssl)
             page = browser.new_context(**_vp_kw).new_page()
 
             # Navegar
@@ -1479,12 +1486,13 @@ def _heal_step(page, step, error_msg: str, base_url: str, step_num: int,
 
 def _try_heal_inline(base_url: str, headless: bool, error_text: str,
                      script_path: str, recording_id: str,
-                     browser_type: str = "chromium") -> bool:
+                     browser_type: str = "chromium",
+                     verify_ssl: bool = True) -> bool:
     """Fallback: tenta curar script inteiro inline (modo antigo)."""
     try:
         with sync_playwright() as pw:
-            browser = launch_browser(pw, browser_type, headless=headless)
-            _vp_kw = _make_context_kwargs(headless)
+            browser = launch_browser(pw, browser_type, headless=headless, verify_ssl=verify_ssl)
+            _vp_kw = _make_context_kwargs(headless, verify_ssl=verify_ssl)
             page = browser.new_context(**_vp_kw).new_page()
             page.goto(base_url)
             page.wait_for_timeout(500)
@@ -1529,12 +1537,13 @@ def cmd_pipeline(args):
 
     # Step 1: Record
     print("\n📼 Fase 1: Gravacao")
+    _verify_ssl = getattr(args, 'verify_ssl', False)
     ts = time.strftime("%Y%m%d-%H%M%S")
     rid = f"PIPE-{ts}"
 
     with sync_playwright() as pw:
-        browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
-        _vp_kw = _make_context_kwargs(args.headless)
+        browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless, verify_ssl=_verify_ssl)
+        _vp_kw = _make_context_kwargs(args.headless, verify_ssl=_verify_ssl)
         page = browser.new_context(**_vp_kw).new_page()
         # Hotfix 15: anchor recordings at the project root, not CWD.
         recorder = RecorderController(
@@ -1580,7 +1589,7 @@ def cmd_pipeline(args):
 
         # Step 3: Run
         print("\n[PLAY] Fase 3: Execucao + Healing")
-        _vp_kw2 = _make_context_kwargs(args.headless)
+        _vp_kw2 = _make_context_kwargs(args.headless, verify_ssl=_verify_ssl)
         page2 = browser.new_context(**_vp_kw2).new_page()
 
         page2.goto(args.url)
@@ -1668,9 +1677,10 @@ def cmd_demo_heal(args):
     print("  Cenario: botao Pesquisar tem ID alterado apos gravacao")
     print()
 
+    _verify_ssl = getattr(args, 'verify_ssl', False)
     with sync_playwright() as pw:
-        browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
-        _vp_kw = _make_context_kwargs(args.headless)
+        browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless, verify_ssl=_verify_ssl)
+        _vp_kw = _make_context_kwargs(args.headless, verify_ssl=_verify_ssl)
         page = browser.new_context(**_vp_kw).new_page()
         # Hotfix 15: anchor recordings at the project root, not CWD.
         recorder = RecorderController(
@@ -1712,8 +1722,8 @@ def cmd_demo_heal(args):
 
     # Abrir pagina com mutacao
     with sync_playwright() as pw:
-        browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless)
-        _vp_kw = _make_context_kwargs(args.headless)
+        browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless, verify_ssl=_verify_ssl)
+        _vp_kw = _make_context_kwargs(args.headless, verify_ssl=_verify_ssl)
         page = browser.new_context(**_vp_kw).new_page()
 
         mutation_url = "http://localhost:8765/?mutation=change_id"
@@ -1997,6 +2007,8 @@ def main():
                      help="Suite de testes (ex: cadastro). Caminho Git: recordings/{system}/{suite}/{test_case}/")
     rec.add_argument("--test-case", dest="test_case", default="",
                      help="Caso de teste (default: valor de --name). Caminho Git: recordings/{system}/{suite}/{test_case}/")
+    rec.add_argument("--verify-ssl", action="store_true", default=False,
+                     help="Verificar certificado SSL (default: ignorar certificados SSL)")
     rec.set_defaults(func=cmd_record)
 
     # compile
@@ -2026,6 +2038,8 @@ def main():
                      help="Log payloads LLM + respostas brutas + validacao")
     run.add_argument("--save-output", action="store_true",
                      help="Salvar resumo da execucao em run_output.txt no diretorio do script")
+    run.add_argument("--verify-ssl", action="store_true", default=False,
+                     help="Verificar certificado SSL (default: ignorar certificados SSL)")
     run.set_defaults(func=cmd_run)
 
     # pipeline
@@ -2034,6 +2048,8 @@ def main():
     pipe.add_argument("--headless", action="store_true", help="Modo headless")
     pipe.add_argument("--browser", choices=["chromium", "chrome", "edge"], default="chromium",
                       help="Browser preferido (default: chromium)")
+    pipe.add_argument("--verify-ssl", action="store_true", default=False,
+                      help="Verificar certificado SSL (default: ignorar certificados SSL)")
     pipe.set_defaults(func=cmd_pipeline)
 
     # demo-heal
@@ -2085,6 +2101,8 @@ def main():
     diag.add_argument("--evidence-level", choices=["light", "full"], default="light")
     diag.add_argument("--replay-batched", action="store_true",
                        help="Replay check em batch (B4) ao inves de imediato (B1)")
+    diag.add_argument("--verify-ssl", action="store_true", default=False,
+                       help="Verificar certificado SSL (default: ignorar certificados SSL)")
     diag.add_argument("--pipeline-also", dest="pipeline_and_diagnostic_mode",
                        action="store_true",
                        help="Tambem roda compile/validate/run alem do diagnostico")

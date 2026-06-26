@@ -29,6 +29,7 @@ def cmd_run_incremental(args):
     except FileNotFoundError as exc:
         print(f"[TestForge] X {exc}", file=sys.stderr)
         sys.exit(2)
+    _verify_ssl = getattr(args, 'verify_ssl', False)
     runner = IncrementalRunner(
         script_path=args.script,
         headless=args.headless,
@@ -42,6 +43,7 @@ def cmd_run_incremental(args):
         shadow=args.shadow,
         capture=args.capture,
         debug_healing=getattr(args, 'debug_healing', False),
+        verify_ssl=_verify_ssl,
     )
     try:
         report = runner.run()
@@ -79,5 +81,7 @@ def register(sub):
                      help="Desabilitar captura de telemetria de execucao")
     inc.add_argument("--debug-healing", dest="debug_healing", action="store_true",
                      help="Log payloads LLM + respostas brutas em stderr")
+    inc.add_argument("--verify-ssl", action="store_true", default=False,
+                     help="Verificar certificado SSL (default: ignorar certificados SSL)")
     inc.set_defaults(func=cmd_run_incremental)
     return inc

@@ -52,6 +52,7 @@ class IncrementalRunner:
         output_root: str = "runs",
         capture: bool = True,
         debug_healing: bool = False,
+        verify_ssl: bool = True,
     ):
         self.script_path = script_path
         self.headless = headless
@@ -66,6 +67,7 @@ class IncrementalRunner:
         self.output_root = output_root
         self.capture_enabled = capture
         self.debug_healing = debug_healing
+        self.verify_ssl = verify_ssl
         self.replay_recorder = None
 
         self.page = None
@@ -754,9 +756,12 @@ class IncrementalRunner:
         )
 
         with sync_playwright() as pw:
-            browser = launch_browser(pw, self.browser_type, headless=self.headless)
+            browser = launch_browser(pw, self.browser_type, headless=self.headless, verify_ssl=self.verify_ssl)
             _vp = {"width": 1280, "height": 720} if self.headless else None
-            ctx = browser.new_context(viewport=_vp)
+            _ctx_kwargs: dict = {"viewport": _vp} if _vp else {}
+            if not self.verify_ssl:
+                _ctx_kwargs["ignore_https_errors"] = True
+            ctx = browser.new_context(**_ctx_kwargs)
             self.page = ctx.new_page()
 
             try:

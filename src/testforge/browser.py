@@ -36,7 +36,7 @@ def _gpu_args(headless=False):
     return args
 
 
-def launch_browser(pw, browser_type="chromium", headless=False, cdp_url=""):
+def launch_browser(pw, browser_type="chromium", headless=False, cdp_url="", verify_ssl=True):
     errors = []
 
     # P1: CDP via variável de ambiente
@@ -58,24 +58,26 @@ def launch_browser(pw, browser_type="chromium", headless=False, cdp_url=""):
             errors.append(f"cdp_param: {e}")
 
     gpu_args = _gpu_args(headless=headless)
+    ssl_args = [] if verify_ssl else ["--ignore-certificate-errors"]
+    launch_args = gpu_args + ssl_args
 
     if _is_windows() and browser_type in ("chromium", "edge"):
         strategies = [
-            ("msedge", {"channel": "msedge", "headless": headless, "args": gpu_args}),
-            ("chrome", {"channel": "chrome", "headless": headless, "args": gpu_args}),
-            ("chromium", {"headless": headless, "args": gpu_args}),
+            ("msedge", {"channel": "msedge", "headless": headless, "args": launch_args}),
+            ("chrome", {"channel": "chrome", "headless": headless, "args": launch_args}),
+            ("chromium", {"headless": headless, "args": launch_args}),
         ]
     elif browser_type == "chrome":
         strategies = [
-            ("chrome", {"channel": "chrome", "headless": headless, "args": gpu_args}),
-            ("msedge", {"channel": "msedge", "headless": headless, "args": gpu_args}),
-            ("chromium", {"headless": headless, "args": gpu_args}),
+            ("chrome", {"channel": "chrome", "headless": headless, "args": launch_args}),
+            ("msedge", {"channel": "msedge", "headless": headless, "args": launch_args}),
+            ("chromium", {"headless": headless, "args": launch_args}),
         ]
     elif browser_type == "edge":
         strategies = [
-            ("msedge", {"channel": "msedge", "headless": headless, "args": gpu_args}),
-            ("chrome", {"channel": "chrome", "headless": headless, "args": gpu_args}),
-            ("chromium", {"headless": headless, "args": gpu_args}),
+            ("msedge", {"channel": "msedge", "headless": headless, "args": launch_args}),
+            ("chrome", {"channel": "chrome", "headless": headless, "args": launch_args}),
+            ("chromium", {"headless": headless, "args": launch_args}),
         ]
     else:
         strategies = [
