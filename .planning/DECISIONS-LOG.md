@@ -634,6 +634,104 @@ counters, and the reset-per-`normalize()` contract.
 
 ---
 
+## 2026-06-27 — Capture fingerprint v1 + recording timeline audit
+
+User asked why we needed to re-record after this session's changes and
+flagged that the fear of "old recording → false bug" was real. Result:
+zero re-recording required for what landed this session, plus a small
+identity block embedded in every new recording so future-us can answer
+the same question without redoing the analysis.
+
+### Why no re-recording is needed for this session
+
+Audit of every commit since `cf8cdb9` (start of this session):
+
+| Commit | Touches recorder write format? |
+|---|---|
+| `9cb7a1d` H9+H16+P3 invariants | no — runner/gate/tests only |
+| `880cfad` DECISIONS-LOG | no — docs |
+| `dfd9db4` H17 batched replay-check | no — diagnostic timing only; artefacts written are identical |
+| `5377f7e` MARKET-SCAN | no — docs |
+| `8d6e948` keyboard.type spike | no — fixtures + smoke tests |
+| `b6e7a73` H22 Material fixture | no — new fixture; no recorder change |
+| `96bbd87` H22a IR priority | no — normalizer only |
+| `7ec46ad` H22b dedupe telemetry | no — normalizer only |
+
+Existing recordings are still readable by the current normalizer. H22a
+re-ranks how the *existing* artefacts are interpreted; it does not
+require new artefacts.
+
+### Fingerprint block (new in this commit)
+
+`src/testforge/recorder/capture_fingerprint.py` defines
+`CAPTURE_SCHEMA_VERSION = 1` plus a block written into every new
+`recording_metadata.json["fingerprint"]`:
+
+```json
+{
+    "capture_schema_version": 1,
+    "testforge_version": "0.x.y",
+    "overlay_inject_sha256": "<64 hex>",
+    "git_head_sha": "<40 hex>",
+    "recorded_at": "..."
+}
+```
+
+`RecordingNormalizer.normalize()` reads it via `verify_fingerprint()` and
+logs a single warning per recording when:
+
+- the block is missing → treated as legacy v0
+- `capture_schema_version` differs from current
+- `overlay_inject.js` hash differs from current
+
+The verification result is cached on `normalizer.fingerprint_check` so
+CLI callers can surface it in their summary output.
+
+### Bump policy for CAPTURE_SCHEMA_VERSION
+
+Bump **only** when the write format of a recording artefact changes:
+- new fields in `raw_events.jsonl` / `value_mutations.jsonl` /
+  `field_snapshots.jsonl` / `final_state_snapshot.json` / `steps.jsonl`
+- renames or shape changes of existing fields
+- changes to overlay JS that alter what fires `_persist_raw_event`
+
+Do NOT bump for: timing / retry / fallback / UI / overlay shortcuts /
+normalizer-only fixes. Last session that did change a write format was
+hotfix 12 (`552e05c`, 2026-06-26 02:57); everything since has been
+normalizer-side or perf-side.
+
+### Recording audit table
+
+Full per-recording bucket assignment in
+[.planning/RECORDING-FINGERPRINTS-AUDIT.md](RECORDING-FINGERPRINTS-AUDIT.md).
+Three buckets for existing artefacts:
+
+- 🟥 incompatible (pre-Bug3/Bug9 step counter + fill dedup)
+- 🟧 partial (post-SELECT, pre-pseudo-submit)
+- 🟨 stable (post-hotfix-12, pre-fingerprint)
+
+The 11 evidence recordings analysed earlier in EVIDENCE-ANALYSIS.md sit
+in 🟥/🟧 mostly. Some of the "missing capture" findings there may
+reflect known recorder gaps, not present-day bugs. H22c readiness
+measurement (setter_hook_uncontested counter) should be evaluated only
+on 🟨 or 🟩 recordings.
+
+### No mutation of existing recordings
+
+We do not backfill `recording_metadata.json` files in place. The
+verifier already treats missing fingerprint as legacy v0 and warns.
+The audit doc is the human-readable companion.
+
+### Tests
+
+`tests/test_capture_fingerprint.py` — 12 new tests covering: the block
+shape, schema version invariant, sha256 hex format, determinism between
+calls, embedding in new RecordingSession, finalize preservation,
+verify_fingerprint compatibility / legacy / schema-mismatch /
+overlay-sha-mismatch paths, normalizer caching of the check.
+
+---
+
 ## How to use this log
 
 - Read top to bottom before proposing a refactor.

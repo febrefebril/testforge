@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
+from .capture_fingerprint import compute_fingerprint
 from .recording_status import RecordingStatus, RecordingStatusHistory
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,10 @@ class RecordingSession:
     status_history: RecordingStatusHistory = field(
         default_factory=RecordingStatusHistory
     )
+    # H22 follow-up: identity block written into recording_metadata.json
+    # so the normalizer can later tell whether this recording was
+    # produced by a compatible recorder. Captured at session start.
+    fingerprint: dict = field(default_factory=dict)
 
     @property
     def recording_status(self) -> Optional[RecordingStatus]:
@@ -48,6 +53,7 @@ class RecordingSession:
                 self.recording_status.value if self.recording_status else None
             ),
             "status_history": self.status_history.to_dict() if self.status_history.entries else [],
+            "fingerprint": self.fingerprint,
         }
 
 
@@ -91,6 +97,7 @@ class RecordingSessionManager:
             started_at=datetime.now(timezone.utc).isoformat(),
             status="recording",
             session_dir=session_dir,
+            fingerprint=compute_fingerprint(),
         )
 
         session.status_history.record(

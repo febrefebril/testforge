@@ -263,6 +263,10 @@ class RecordingNormalizer:
         # H22b: fresh dedupe stats per call so consumers can read them
         # without state leaking across recordings.
         self.ir_dedupe_stats = self._fresh_dedupe_stats()
+        # H22 followup: warn if the recording was produced by a recorder
+        # with a different capture schema. Saves us from claiming bugs
+        # against artefacts the current recorder no longer produces.
+        self._verify_recording_fingerprint(recording_dir)
         # Phase 5: optional Pipes & Filters pipeline for the load + dedup
         # + compact stages. Output is byte-identical to the legacy path.
         if self._use_pipeline:
@@ -2342,6 +2346,24 @@ class RecordingNormalizer:
             _re.compile(r'^\d{2}/\d{2}/\d{4}$'),
         ]
         return any(p.match(value) for p in KNOWN_MASKS)
+
+    def _verify_recording_fingerprint(self, recording_dir: str) -> None:
+        """Read recording_metadata.json, compare its fingerprint block
+        against the current recorder, log a single warning + cache the
+        result on `self.fingerprint_check` for callers."""
+        from testforge.recorder.capture_fingerprint import verify_fingerprint
+        meta_path = os.path.join(recording_dir, "recording_metadata.json")
+        metadata: dict = {}
+        if os.path.exists(meta_path):
+            try:
+                with open(meta_path, encoding="utf-8") as f:
+                    metadata = json.load(f)
+            except Exception:
+                metadata = {}
+        result = verify_fingerprint(metadata)
+        self.fingerprint_check = result
+        for w in result.get("warnings", []):
+            logger.warning("recording fingerprint: %s", w)
 
     @staticmethod
     def _fresh_dedupe_stats() -> dict:
