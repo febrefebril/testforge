@@ -4,10 +4,32 @@ Pós-Sprint 0 hotfixes. Decisões: branch `hotfix/sprint-0-recorder-fixes`, 2026
 
 > **Leitura obrigatória antes de propor refactor**: [DECISIONS-LOG.md](DECISIONS-LOG.md).
 > **Leitura obrigatória antes de hotfix**: [REGRESSION-PATTERNS.md](REGRESSION-PATTERNS.md).
+> **Análise das 11 gravações de produção**: [EVIDENCE-ANALYSIS.md](EVIDENCE-ANALYSIS.md).
 > **Inventário de débito estrutural**: [DEBT-INVENTORY.md](DEBT-INVENTORY.md).
 > **Plano ativo**: [CONSOLIDATION-SPRINT.md](CONSOLIDATION-SPRINT.md).
 > **Próximo plano**: [REFACTOR-SPRINT.md](REFACTOR-SPRINT.md) (após piloto).
 > **Invariantes enforced em CI**: [tests/test_invariants.py](../tests/test_invariants.py).
+
+## Tickets descobertos na análise das evidências (2026-06-27)
+
+| ID | Item | Severidade | Bloqueia piloto? |
+|---|---|---|---|
+| H9 | `ignore_https_errors=True` no runner (cert intranet Caixa) | crítica | **SIM** |
+| H16 | verdict "pass" só com `steps.passed > 0 AND failed==0` | crítica | **SIM** |
+| H6 | `_hookValue` no overlay não dispara em Material masked inputs | alta | parcial |
+| H10 | SIMAX mat-select detection (recorder + normalizer + handler) | alta | SIMAX bloqueado |
+| H7 | Normalizer dedup multi-key (CPF raw + masked = 2 fills) | alta | login flows |
+| H11 | Timeout configurável + networkidle pre-fill | média | reduz flakiness |
+| H8 | Input debounce no recorder (CPF 6 keystrokes = 6 events) | média | qualidade gravação |
+| H13 | networkidle wait pós-click navigation (SPA) | média | SPA |
+| H14 | wait pre-assert | média | qualidade assert |
+| H19 | final_state schema com labels (P3 #5 ocorrência) | média | menos --complete |
+| H15 | verdict por classe de falha (sut_unreachable vs testforge_issue) | baixa | reporting |
+| H17 | not_evaluated → no submission_report | baixa | ruído |
+| H18 | publisher dedup por hash de raw_events | baixa | armazenamento |
+| H12 | Validar hotfix 12 em SIMAX (pseudo_submit=0 nas evidências) | baixa | sintoma |
+
+Detalhes: ver EVIDENCE-ANALYSIS.md por bug B1..B17.
 
 ## Curto prazo — estabilizar antes de liberar piloto QA
 

@@ -90,25 +90,33 @@ Each entry has:
 
 - **Name**: `unanchored-state`
 - **First seen**: 2026-06-25, commit `9eec732` (CWD vs `_PROJECT_ROOT`)
-- **Recurrence count**: 3 (hotfix 8, 15, CS-4a)
+- **Recurrence count**: **4** (hotfix 8, 15, CS-4a, **hotfix 22**)
 - **Symptoms**:
   - Producer and consumer of the same data structure disagree on its shape.
   - Recording artifacts saved relative to CWD but looked up via `_PROJECT_ROOT`.
   - A file's writer (e.g. `_save_field_value_map`) uses one JSON layout; the reader (e.g. `_merge_user_supplied_values`) expects another, and silently no-ops on every entry.
+  - A JS overlay emits `{value, fingerprint}` and the Python reader looks for `{new_value, tag, id, name, old_value}` and gets nothing.
+  - Two sides of a contract (`element_id` vs `id`) silently lose information at the boundary.
   - Tests of the writer pass. Tests of the reader pass. The integration silently loses data.
 - **AST/grep check**:
   - For paths: `grep -rn "Path.cwd()" src/testforge/ | grep -v "testforge.paths.py"` — should be 0 once `testforge.paths` lands (debt R-A3).
   - For data shapes: every writer and reader of a JSONL/JSON file must reference the same dataclass / TypedDict.
-- **Invariant test**: each on-disk artifact has one read/write round-trip test that uses the exact dataclass on both sides, never a hand-rolled dict.
+- **Invariant test**: each on-disk artifact has one read/write round-trip test that uses the exact dataclass on both sides, never a hand-rolled dict. See:
+  - `test_invariants.py::TestP3UnanchoredState::test_field_value_map_writer_reader_round_trip`
+  - `test_invariants.py::TestP3UnanchoredState::test_value_mutations_writer_reader_round_trip`
+  - `test_invariants.py::TestP3UnanchoredState::test_raw_event_target_to_semantic_target_round_trip`
 - **Past occurrences**:
 
-  | Date | SHA | Where | What |
-  |---|---|---|---|
-  | 2026-06-25 | `3140297` | cli/_run_incremental_patch.py | hotfix 8 — `run-incremental` rejected a dir path because consumer assumed a file |
-  | 2026-06-25 | `9eec732` | cli/app.py + runner | hotfix 15 — recording_root anchored at CWD by recorder but at PROJECT_ROOT by CLI lookup |
-  | 2026-06-26 | `aa27b54` | recording_normalizer.py | CS-4a — `field_value_map.json` writer/reader shape mismatch |
+  | Date | SHA | Where | What | Why this didn't stop the next one |
+  |---|---|---|---|---|
+  | 2026-06-25 | `3140297` | cli/_run_incremental_patch.py | hotfix 8 — `run-incremental` rejected a dir path because consumer assumed a file | Path resolution had no invariant test |
+  | 2026-06-25 | `9eec732` | cli/app.py + runner | hotfix 15 — recording_root anchored at CWD by recorder but at PROJECT_ROOT by CLI lookup | Centralization deferred to refactor sprint; instead we added more candidates |
+  | 2026-06-26 | `aa27b54` | recording_normalizer.py | CS-4a — `field_value_map.json` writer/reader shape mismatch | The round-trip test covered ONLY field_value_map, not the other JSONL artifacts |
+  | 2026-06-26 | `38d1ab4` | recording_normalizer.py | hotfix 22 — `value_mutations.jsonl` writer/reader mismatch AND `target.element_id` vs `target.id` key mismatch | The CS-4a invariant test only covered field_value_map.json; value_mutations and raw_event target were still unchecked |
 
-- **Lesson reinforced**: every JSON/JSONL artifact needs a single typed schema (dataclass + JSON serializer) and a round-trip test. Hand-rolled dict reads always drift.
+- **Lesson reinforced**: every JSON/JSONL artifact, every dict-passed-between-modules, needs a writer/reader round-trip test. CS-4a's invariant covered one file. Hotfix 22 found two more under the same pattern. After hotfix 22 the invariant now covers all three artifacts the recorder/normalizer share. The next P3 recurrence must show that a NEW artifact slipped past the invariant, not the same one returning.
+
+- **Hard rule (added 2026-06-26)**: any new on-disk artifact or any new dict shape passed between modules MUST land with a round-trip test in `test_invariants.py::TestP3UnanchoredState` in the same PR. No exceptions. Reviewers reject the PR otherwise.
 
 ---
 
