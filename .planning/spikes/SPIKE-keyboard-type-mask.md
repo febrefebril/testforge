@@ -137,50 +137,138 @@ So the trade is:
 
 **Verdict** is in the next section.
 
-## Verdict
+## Verdict (vanilla fixture only)
 
-**Inconclusive on the production blocker.**
+**Insufficient. Material-shape fixture needed (see H22 follow-up below).**
 
-On the vanilla currency-mask fixture, all three APIs produce the masked
-formatted value. The replacement plan (`keyboard.type()` instead of setter
-hook) is structurally sound for *that* class of mask. But this fixture is
-not where our pain lives — the hotfix history specifically targets Angular
-Material's `currencymask` directive behaviour, which is not reproduced
-here.
+On the vanilla mask fixture, all three APIs produce the masked formatted
+value. But the vanilla mask uses a permissive `input` listener; SIOPI's
+Angular Material `currencymask` directive uses per-instance setter
+overrides and key-event interception. Different failure mode.
 
-So this spike does NOT yet justify deleting `_hookValue` and the setter
-hook pipeline. To complete the spike we need a closer fixture:
+`press_sequentially` and `keyboard.type` are interchangeable at the
+Playwright dispatch layer (same result).
 
-1. **Option A**: stand up a real Angular Material currencymask sample
-   page (npm install @angular/material + ng2-currency-mask). 2-3 hours of
-   setup but produces a high-fidelity probe.
-2. **Option B**: capture a snapshot of the SIOPI calculator page (HTML +
-   `currencymask` directive source) as a local fixture. Same effect, no
-   npm install. ~1 hour.
-3. **Option C**: instrument the existing real SIOPI run; compare DOM
-   value after `keyboard.type` vs current setter-hook path. Requires
-   running against the live intranet.
+---
 
-Recommendation: **Option B**, because it can be committed to the repo as
-a deterministic fixture and reused for every future Material mask
-regression. Track as `H22 — Angular Material currencymask fixture`.
+## H22 — Material-shape fixture spike (run after the section above)
 
-What stays decided:
+**Fixture**: `tests/intent_lab/pages/material-currencymask/index.html`
+**Test**: `tests/test_pages/spikes/test_material_currencymask.py`
 
-- The vanilla-mask result removes one historical worry: `fill()` is not
-  inherently wrong for masked inputs that use a permissive `input`
-  listener. The hotfix history was right about the specific Material
-  directive case but wrong if generalised.
-- `press_sequentially` and `keyboard.type` are interchangeable at the
-  Playwright dispatch layer.
-- Once Option B fixture exists, this spike has a definitive answer.
+Built a fixture that reproduces the ng2-currency-mask pattern:
+- per-instance `Object.defineProperty(input, 'value', ...)`
+- `keydown` handler that `preventDefault()`s and emits formatted display
+  through the per-instance setter
 
-## What we did NOT verify
+Two distinct questions:
 
-- Angular Material `mat-input` + `currencymask` directive behaviour
-  (the actual production failure mode).
-- Paste, IME composition, autocomplete pre-fill — keystroke stream
-  coverage gaps.
+### Q1 — Replay: which API produces the right value?
 
-Both block any code deletion. Do not delete `_hookValue` until Option B
-runs.
+```
+fill                  → '' (empty)         ❌
+press_sequentially    → '10.000,00'        ✓
+keyboard.type         → '10.000,00'        ✓
+```
+
+**`fill()` is broken** against the per-instance override pattern. The
+exact failure mode matches hotfix 16 ("currency math wrong"). Why:
+Playwright's `fill()` writes to the value setter (now the instance
+override). The instance override strips non-digits, computes display,
+but Playwright's clear-then-set sequence ends in an unexpected state
+(empty here). This is precisely why the runner has `_fill_masked` →
+`press_sequentially` already.
+
+`press_sequentially` and `keyboard.type` both dispatch per-key events.
+The fixture's keydown handler processes each digit, emits formatted
+display via the prototype setter call inside its handler. Both work.
+
+### Q2 — Record: does the prototype hook see writes?
+
+Real output:
+
+```
+captured after masked typing: 4 writes
+  {'id': 'valor_imovel', 'value': '0,01'}
+  {'id': 'valor_imovel', 'value': '0,10'}
+  {'id': 'valor_imovel', 'value': '1,00'}
+  {'id': 'valor_imovel', 'value': '10,00'}
+captured after plain typing:  0 writes on #plain
+```
+
+**This is the most important finding of the whole spike.** Two facts:
+
+1. The hook **caught** the masked input writes — because my fixture's
+   mask explicitly delegates to the prototype setter (`protoDesc.set.call(input, displayed)`)
+   when rendering the visible value. So `_hookValue` does work for any
+   mask that takes that route.
+2. The hook **missed** the plain input typing entirely (0 captures on
+   `#plain` even though `keyboard.type('hello')` was sent). Real
+   browser-native typing **does not go through the value setter**.
+
+Translation to the production failure mode:
+
+| Scenario | Hook catches? |
+|---|---|
+| User types in plain input | **No** — native typing bypasses setter. |
+| User types in mask that delegates to proto setter | **Yes** — mask's writes reach the hook. |
+| User types in mask with instance-only setter (no proto delegate) | **No** — instance override shadows hook. |
+| Programmatic `element.value = X` | **Yes** — programmatic writes go through setter. |
+
+This invalidates the premise behind `value_mutations.jsonl` for
+capturing user typing. The hook only captures **JS-driven writes**
+(mask scripts re-formatting the value), never raw user keystrokes.
+
+For SIOPI calculadora's Material currencymask, if the directive uses
+an instance-level setter override that does NOT delegate back to the
+prototype (the common pattern), the hook misses everything. The user
+types, mask processes, screen updates — `value_mutations.jsonl` stays
+empty. That matches the EVIDENCE-ANALYSIS finding: 30%+ of `--complete`
+prompts are typing_not_captured.
+
+## Revised verdict
+
+**Setter hook is structurally insufficient. Stop relying on it as the
+primary value-capture path. But do not delete it yet — it is still the
+only source that survives for masks that DO delegate to the prototype.**
+
+The new capture model that the spike points at:
+
+1. **Primary**: `final_state_snapshot.json` (already written by the
+   overlay at session end). Reads `el.value` via the instance getter,
+   which returns whatever the mask considers canonical. Single source
+   of truth for end-of-session field values.
+2. **Secondary**: keystroke aggregation from `raw_events.jsonl`. We
+   already record keydown events. The normalizer can build "user typed
+   1000000" by counting digit keys between focus/blur.
+3. **Tertiary (today's path)**: `value_mutations.jsonl` via setter hook.
+   Keep for backwards compat and for the masks that delegate to proto.
+
+The normalizer should consult all three sources and prefer the most
+specific (final_state > keystrokes > value_mutations).
+
+## What this kills (eventually, in priority order)
+
+- **Primary reliance on value_mutations.jsonl for masked input
+  capture.** Tracked as **H22a**: revisit `_ir_value_mutations` weight
+  in the IntentReconstructor source priority table.
+- **`_hookValue` itself**: NOT yet. It still helps for masks that
+  delegate to proto. Reassess after H22a runs in production.
+- **The masking-specific normalizer paths**: half of them can fold into
+  the final_state path. Tracked as **H22b**.
+
+Estimated work: 2-3 days for H22a + H22b combined. Risk: medium — the
+keystroke aggregation path needs to detect paste, IME, autocomplete
+pre-fill correctly (it doesn't today).
+
+## What we still did NOT verify
+
+- The actual SIOPI page's directive implementation. Confirmed our
+  fixture pattern matches ng2-currency-mask. The SIOPI directive might
+  differ — but if it does, it can only be worse, not better, for the
+  prototype hook.
+- Paste behaviour, IME, autocomplete pre-fill. Three known gaps in the
+  keystroke aggregation path.
+- `keyboard.type` on inputs nested inside shadow roots. Untested.
+
+These do not change the verdict; they bound the H22a/H22b implementation.

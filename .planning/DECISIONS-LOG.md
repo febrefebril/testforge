@@ -477,6 +477,88 @@ context burden before any new spike or hotfix.
 
 ---
 
+## 2026-06-27 — H22 Material-shape fixture spike (CONCLUSIVE)
+
+Closes the gap left by the earlier `keyboard.type` spike (vanilla fixture
+did not reproduce SIOPI's failure mode).
+
+Full doc: [.planning/spikes/SPIKE-keyboard-type-mask.md](spikes/SPIKE-keyboard-type-mask.md) (H22 follow-up section).
+Test: `tests/test_pages/spikes/test_material_currencymask.py`.
+Fixture: `tests/intent_lab/pages/material-currencymask/index.html`.
+
+Built a fixture that reproduces ng2-currency-mask: per-instance
+`Object.defineProperty(input, 'value', ...)` plus a `keydown` handler
+that intercepts and emits formatted display.
+
+**Q1 — Replay (which API surfaces the masked value):**
+
+```
+fill                  → ''            ❌ (matches hotfix 16)
+press_sequentially    → '10.000,00'   ✓
+keyboard.type         → '10.000,00'   ✓
+```
+
+`fill()` is structurally broken against the per-instance override
+pattern. `press_sequentially` and `keyboard.type` are interchangeable.
+This pins exactly the failure mode the runner's `_fill_masked` already
+defended against.
+
+**Q2 — Record (does the prototype hook see writes):**
+
+```
+masked typing (with proto delegate): 4 captures
+plain typing on plain input:         0 captures
+```
+
+The decisive finding: **real keyboard typing on a plain input never
+fires the `value` setter at all**. Browser-native typing updates the
+input via internal state. `_hookValue` only captures **JS-driven writes**
+(mask scripts re-formatting the value), never raw user keystrokes.
+
+For SIOPI Material currencymask:
+- If the mask delegates writes through the prototype setter → hook
+  catches → `value_mutations.jsonl` populated. (Today's working path
+  for some masks.)
+- If the mask uses an instance-only setter without proto delegate →
+  hook misses → empty `value_mutations.jsonl`. (Today's SIOPI bug.)
+- For plain inputs → hook always misses real typing.
+
+This invalidates the premise that `value_mutations.jsonl` is the
+primary capture path for user input.
+
+### Decisions emitted
+
+1. **Stop treating `value_mutations.jsonl` as primary**. New source
+   priority in IntentReconstructor:
+
+   ```
+   final_state_snapshot  (highest — already written, single source of truth)
+   keystroke aggregation (raw_events.jsonl, count digit keys between focus/blur)
+   value_mutations       (lowest — only useful for masks that delegate to proto)
+   ```
+
+   Tracked as **H22a — re-rank source priority in `IntentReconstructor`**.
+
+2. **Do not delete `_hookValue` yet**. It is still the only source for
+   delegate-to-proto masks. Reassess after H22a runs in production
+   recordings.
+
+3. **`fill()` is forbidden for masked inputs**. Already encoded in
+   `_fill_masked` → `press_sequentially`. Pin explicitly in
+   REGRESSION-PATTERNS.md P1 as the canonical reason.
+
+4. **The half of the normalizer mask path that re-reads
+   `final_state_snapshot.json`** can be promoted to primary. Tracked
+   as **H22b — normalizer source-priority refactor**.
+
+### Estimate
+
+H22a + H22b combined: 2-3 days. Risk: medium — the keystroke
+aggregation must handle paste, IME composition, autocomplete pre-fill
+(three known gaps).
+
+---
+
 ## How to use this log
 
 - Read top to bottom before proposing a refactor.

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Material currencymask fixture (H22)</title>
+<style>
+  body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
+  .mat-form-field { display: block; margin: 1em 0; }
+  .mat-form-field-flex { display: flex; align-items: center; border: 1px solid #ccc; border-radius: 4px; padding: .5em; background: #fff; }
+  .mat-form-field-prefix { color: #666; margin-right: 4px; font-weight: 500; }
+  .mat-form-field-infix { flex: 1; }
+  .mat-form-field-infix input { width: 100%; border: none; outline: none; padding: .25em 0; font-size: 1em; text-align: right; }
+  .mat-form-field-label { font-size: .85em; color: #666; margin-bottom: .25em; }
+  .field-row { display: flex; gap: 16px; }
+  .field-row > * { flex: 1; }
+  pre { background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; }
+</style>
+</head>
+<body>
+  <h1>Material currencymask fixture (H22)</h1>
+  <p>Simulates Angular Material / ng2-currency-mask behaviour:</p>
+  <ul>
+    <li>Per-instance <code>Object.defineProperty(input, 'value', ...)</code> setter override.</li>
+    <li><code>keydown</code> listener that <code>preventDefault()</code>s real key events and emits formatted value via the per-instance setter.</li>
+    <li>Mimics SIOPI calculadora's masked R$ inputs.</li>
+  </ul>
+
+  <form id="form">
+    <div class="mat-form-field">
+      <div class="mat-form-field-label">Valor do imóvel *</div>
+      <div class="mat-form-field-flex">
+        <span class="mat-form-field-prefix">R$</span>
+        <div class="mat-form-field-infix">
+          <input id="valor_imovel" aria-label="Valor do imóvel *" placeholder="0,00" data-mask="currency">
+        </div>
+      </div>
+    </div>
+
+    <div class="mat-form-field">
+      <div class="mat-form-field-label">Renda mensal *</div>
+      <div class="mat-form-field-flex">
+        <span class="mat-form-field-prefix">R$</span>
+        <div class="mat-form-field-infix">
+          <input id="renda_mensal" aria-label="Renda mensal *" placeholder="0,00" data-mask="currency">
+        </div>
+      </div>
+    </div>
+
+    <div class="mat-form-field">
+      <div class="mat-form-field-label">Sem máscara</div>
+      <div class="mat-form-field-flex">
+        <div class="mat-form-field-infix">
+          <input id="plain" aria-label="Sem máscara">
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" id="submit">Simular</button>
+  </form>
+
+  <h3>Estado atual (live)</h3>
+  <pre id="dump"></pre>
+
+<script>
+(function() {
+  'use strict';
+
+  function _formatBRL(rawDigits) {
+    if (!rawDigits) return '';
+    var cents = parseInt(rawDigits, 10);
+    if (isNaN(cents)) return '';
+    var num = cents / 100;
+    return num.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  function _attachCurrencyMask(input) {
+    // ng2-currency-mask pattern: hide internal raw digit state, override
+    // the value setter on the INSTANCE (shadows the prototype setter that
+    // TestForge's overlay hooks). The "display" string is what the user
+    // sees and what reads of .value return.
+    var raw = '';
+    var displayed = '';
+
+    function _render() {
+      displayed = _formatBRL(raw);
+    }
+
+    // Per-instance defineProperty — shadows prototype.
+    Object.defineProperty(input, 'value', {
+      configurable: true,
+      get: function() { return displayed; },
+      set: function(v) {
+        // External writes (e.g. page.fill or value=...): treat them as
+        // "raw digits to be formatted" — like ng2-currency-mask does
+        // when you push a number through the model.
+        raw = String(v == null ? '' : v).replace(/\D/g, '');
+        _render();
+        // Update what's visible to the actual native input box. We use
+        // the prototype's original setter so the rendered text appears.
+        var proto = Object.getPrototypeOf(input);
+        var protoDesc = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype, 'value'
+        );
+        protoDesc.set.call(input, displayed);
+      }
+    });
+
+    input.addEventListener('keydown', function(e) {
+      // Allow tab/escape/arrows
+      if (e.key === 'Tab' || e.key === 'Escape' ||
+          e.key.startsWith('Arrow') || e.key === 'Shift' ||
+          e.key === 'Control' || e.key === 'Meta' || e.key === 'Alt') {
+        return;
+      }
+      // Backspace = drop last digit
+      if (e.key === 'Backspace') {
+        e.preventDefault();
+        raw = raw.slice(0, -1);
+        _render();
+        var proto = HTMLInputElement.prototype;
+        var protoDesc = Object.getOwnPropertyDescriptor(proto, 'value');
+        protoDesc.set.call(input, displayed);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+      }
+      // Only digits make it through.
+      if (/^\d$/.test(e.key)) {
+        e.preventDefault();
+        raw = (raw + e.key).slice(0, 15);
+        _render();
+        var proto = HTMLInputElement.prototype;
+        var protoDesc = Object.getOwnPropertyDescriptor(proto, 'value');
+        protoDesc.set.call(input, displayed);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+      }
+      // Block everything else (letters, punctuation, etc).
+      e.preventDefault();
+    });
+
+    // Expose for diagnostics:
+    input._tf_internal_raw = function() { return raw; };
+    input._tf_internal_display = function() { return displayed; };
+  }
+
+  document.querySelectorAll('input[data-mask="currency"]').forEach(_attachCurrencyMask);
+
+  // Live dump for visual confirmation.
+  function _dump() {
+    var lines = [];
+    document.querySelectorAll('input').forEach(function(el) {
+      lines.push(el.id + ': value=' + JSON.stringify(el.value));
+    });
+    document.getElementById('dump').textContent = lines.join('\n');
+  }
+  document.body.addEventListener('input', _dump);
+  _dump();
+
+  // Submit just dumps the form.
+  document.getElementById('form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    _dump();
+  });
+})();
+</script>
+</body>
+</html>
