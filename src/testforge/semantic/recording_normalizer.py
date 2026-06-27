@@ -324,9 +324,20 @@ class RecordingNormalizer:
             base_url=base_url,
         )
 
+        # H20: track scenario boundaries as we convert events. Each
+        # `scenario_boundary` raw event ends the current segment and
+        # starts the next one. The boundary itself is not a step.
+        _scenario_boundaries: list[dict] = []
         converted = 0
         for raw in raw_events:
             try:
+                if raw.get("type") == "scenario_boundary":
+                    _scenario_boundaries.append({
+                        "step_index": len(stc.steps),
+                        "name": (raw.get("scenario_name") or "").strip(),
+                        "timestamp": raw.get("timestamp", ""),
+                    })
+                    continue
                 action = self._convert_event(raw)
                 if action:
                     stc.steps.append(action)
@@ -335,7 +346,43 @@ class RecordingNormalizer:
                 logger.error("Failed to convert event id=%s: %s",
                               raw.get("event_id", "?"), exc, exc_info=True)
 
+        # Materialise segments. Default: one segment covering all steps.
+        # With N boundaries we get N+1 segments.
+        total_steps = len(stc.steps)
+        if _scenario_boundaries:
+            segs: list[dict] = []
+            prev_end = 0
+            for i, b in enumerate(_scenario_boundaries):
+                end = max(prev_end, min(b["step_index"], total_steps))
+                segs.append({
+                    "start_step": prev_end,
+                    "end_step_exclusive": end,
+                    "name": f"scenario_{len(segs) + 1}",
+                })
+                prev_end = end
+            # Last segment runs to the end. Pick its name from the most
+            # recent boundary that named the *next* scenario.
+            last_name = _scenario_boundaries[-1]["name"] or f"scenario_{len(segs) + 1}"
+            segs.append({
+                "start_step": prev_end,
+                "end_step_exclusive": total_steps,
+                "name": last_name,
+            })
+            # Drop empty segments (consecutive boundaries with no steps
+            # between them).
+            stc.scenario_segments = [
+                s for s in segs if s["end_step_exclusive"] > s["start_step"]
+            ]
+        else:
+            stc.scenario_segments = [{
+                "start_step": 0,
+                "end_step_exclusive": total_steps,
+                "name": "default",
+            }] if total_steps else []
+
         logger.debug("Converted %d/%d raw events to semantic actions", converted, after_compact)
+        if len(stc.scenario_segments) > 1:
+            logger.info("H20: %d scenario segments captured", len(stc.scenario_segments))
 
         # Carrega steps (asserts) se existirem
         steps_path = os.path.join(recording_dir, "steps.jsonl")
@@ -1583,6 +1630,36 @@ class RecordingNormalizer:
         # fell through to nearest-by-timestamp and the per-page fill
         # values landed under fingerprint keys (mat_input_N) instead of
         # the aria-label canonical keys. Read both keys for safety.
+        # B14/B17: surface the shadow host when the recorder noted that
+        # the element lived inside an open shadow root. Adds a high-
+        # priority candidate that scopes the locator through the host so
+        # Playwright doesn't have to pierce a deep tree blindly. Closed
+        # shadow roots arrive here as None and stay as a blind spot.
+        shadow_host = target_data.get("shadow_host")
+        if shadow_host and isinstance(shadow_host, dict):
+            host_sel = shadow_host.get("host_selector") or ""
+            if host_sel:
+                # The Playwright locator API treats `page.locator(host)
+                # .locator(child)` as automatically piercing open shadow
+                # roots. Encode the chain as a single string so the
+                # existing _sels-loop in the compiler still works.
+                inner = target_data.get("test_id") or target_data.get("element_id") or ""
+                if target_data.get("test_id"):
+                    inner_sel = f'[data-testid="{target_data["test_id"]}"]'
+                elif target_data.get("element_id"):
+                    inner_sel = f'#{target_data["element_id"]}'
+                elif target_data.get("accessible_name"):
+                    inner_sel = f'[aria-label="{target_data["accessible_name"]}"]'
+                else:
+                    inner_sel = (target_data.get("tag") or "*")
+                shadow_chain = f"{host_sel} >> {inner_sel}"
+                candidates.insert(0, LocatorCandidate(
+                    "shadow_host_chain",
+                    shadow_chain,
+                    0.93,
+                    f"shadow host {host_sel} -> {inner_sel}",
+                ))
+
         return SemanticTarget(
             role=target_data.get("role"),
             accessible_name=target_data.get("accessible_name"),
@@ -1597,6 +1674,7 @@ class RecordingNormalizer:
             candidates=candidates,
             fingerprint=fingerprint,
             intent_text=intent_text,
+            shadow_host=shadow_host if isinstance(shadow_host, dict) else None,
         )
 
     def _steps_identical(self, a: SemanticAction, b: SemanticAction) -> bool:
@@ -1858,6 +1936,10 @@ class RecordingNormalizer:
     # and the 2026-06-27 H22 entry in DECISIONS-LOG.md.
     IR_SOURCE_PRIORITY = {
         "form_values": 100,
+        # H21: user typed the value in the recorder's inline prompt right
+        # after the mask intercepted it. Highest single-source confidence
+        # short of a real form submit.
+        "user_supplied_inline": 90,
         "fill_event": 80,
         "final_state": 79,      # H22a: promoted from 55, now above setter_hook
         "setter_hook": 78,
@@ -1877,7 +1959,65 @@ class RecordingNormalizer:
         entries.extend(self._ir_network(recording_dir, steps))
         entries.extend(self._ir_final_state(recording_dir, steps))
         entries.extend(self._ir_polling(recording_dir, steps))
+        entries.extend(self._ir_inline_field_values(recording_dir, steps))
         return self._ir_dedupe_entries(entries)
+
+    def _ir_inline_field_values(self, recording_dir: str, steps: list) -> list[dict]:
+        """H21: read inline_field_value events from raw_events.jsonl
+        (emitted by the overlay when the user supplied a value through
+        the mask-interception prompt). Source = user_supplied_inline."""
+        path = os.path.join(recording_dir, "raw_events.jsonl")
+        if not os.path.exists(path):
+            return []
+        entries: list[dict] = []
+        try:
+            with open(path, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        ev = json.loads(line)
+                    except Exception:
+                        continue
+                    if ev.get("type") != "inline_field_value":
+                        continue
+                    value = (ev.get("value") or "").strip()
+                    if not value:
+                        continue
+                    label = (ev.get("label") or "").strip()
+                    name = (ev.get("name") or "").strip()
+                    placeholder = (ev.get("placeholder") or "").strip()
+                    aria_label = (ev.get("aria_label") or "").strip()
+                    element_id = (ev.get("element_id") or "").strip()
+                    fp = (ev.get("fingerprint") or "").strip()
+                    canonical = self._canonical_field_key(
+                        label or aria_label or name or placeholder or element_id or fp
+                    )
+                    display = label or aria_label or placeholder or name or element_id or fp
+                    step_idx = self._ir_find_nearest_step_index(
+                        steps, ev.get("timestamp", "")
+                    )
+                    entries.append({
+                        "field_key": canonical,
+                        "value": value,
+                        "intention": f"fill {display} with '{value}' (user supplied inline)",
+                        "identifiers": {
+                            "label": label,
+                            "aria_label": aria_label,
+                            "placeholder": placeholder,
+                            "name": name,
+                            "id": element_id,
+                            "fingerprint": fp,
+                            "tag": ev.get("tag") or "",
+                        },
+                        "source": "user_supplied_inline",
+                        "step_index": step_idx,
+                        "fingerprint": fp,
+                    })
+        except Exception:
+            return entries
+        return entries
 
     # ── Polling ──────────────────────────────────────────────────────────────
 

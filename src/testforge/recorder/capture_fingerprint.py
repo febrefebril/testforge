@@ -46,7 +46,22 @@ logger = logging.getLogger(__name__)
 #        block and is treated as v0.
 #   v1 — first explicit fingerprint. Capture format unchanged from
 #        post-hotfix-14 recorder. Establishes the baseline.
-CAPTURE_SCHEMA_VERSION = 1
+#   v2 — adds target.shadow_host to raw_events.jsonl entries written
+#        by _extractTarget (overlay_inject.js). Provides
+#        {host_selector, host_tag, host_id, mode} when the captured
+#        element lives inside an open shadow root; absent (null) on the
+#        document tree or inside closed roots. Recorder bumped on
+#        2026-06-27.
+#   v3 — adds the `scenario_boundary` raw event type produced by
+#        Shift+N (H20). Carries {type, timestamp, url, page_title,
+#        scenario_name}; consumed by the normalizer to partition the
+#        step stream into SemanticTestCase.scenario_segments. Same day.
+#   v4 — adds the `inline_field_value` raw event type produced by H21
+#        (overlay's mask-interception prompt). Carries {fingerprint,
+#        label, placeholder, aria_label, element_id, name, tag, value,
+#        source}; consumed by the normalizer as the new
+#        user_supplied_inline source. Same day.
+CAPTURE_SCHEMA_VERSION = 4
 
 
 def _overlay_path() -> Path:

@@ -47,6 +47,11 @@ class SemanticTarget:
     ax_path: list = field(default_factory=list)
     ancestor_roles: list = field(default_factory=list)
     intent_text: Optional[str] = None
+    # B14/B17: open shadow-root host descriptor, when the captured
+    # element lives inside a shadow tree. Shape:
+    #   {host_selector, host_tag, host_id, mode}
+    # None when on the document tree or inside a closed shadow root.
+    shadow_host: Optional[dict] = None
 
 
 @dataclass
@@ -88,6 +93,11 @@ class SemanticTestCase:
     steps: list = field(default_factory=list)
     blind_spots: list = field(default_factory=list)
     field_values: dict = field(default_factory=dict)  # key -> FieldValueMap
+    # H20: user-marked scenario partitions. Each entry is
+    # {start_step, end_step_exclusive, name} indexing into `steps`.
+    # When no Shift+N was pressed, there is exactly one segment that
+    # spans every step.
+    scenario_segments: list = field(default_factory=list)
 
     def to_dict(self) -> dict:
         result = {

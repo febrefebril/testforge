@@ -52,6 +52,38 @@
   } catch(_e) {}
 
   // ---- Target extraction (identity attributes only) ----
+  // Shadow DOM walker (B14/B17). When the element lives inside an open
+  // shadow root, record the host's CSS selector so the runner can do
+  // `page.locator(host).locator(child)` instead of blind-piercing.
+  // Closed shadow roots cannot be walked from outside — flagged but
+  // not resolved.
+  function _findShadowHost(el) {
+    if (!el) return null;
+    var cur = el;
+    while (cur) {
+      var root = cur.getRootNode && cur.getRootNode();
+      if (root && root !== document && root.host) {
+        // Open shadow root: root.host is the shadow host element.
+        var host = root.host;
+        var sel = host.tagName.toLowerCase();
+        if (host.id) sel += '#' + host.id;
+        else if (typeof host.className === 'string' && host.className.trim()) {
+          var firstClass = host.className.trim().split(/\s+/)[0];
+          if (firstClass && !firstClass.startsWith('tf-')) sel += '.' + firstClass;
+        }
+        return {
+          host_selector: sel,
+          host_tag: host.tagName.toLowerCase(),
+          host_id: host.id || null,
+          mode: root.mode || 'open',
+        };
+      }
+      cur = cur.parentNode || (cur.host || null);
+      if (cur === document) return null;
+    }
+    return null;
+  }
+
   function _extractTarget(el) {
     if (!el || el === document.body || el === document.documentElement) return null;
     var rect = el.getBoundingClientRect ? el.getBoundingClientRect() : {};
@@ -81,6 +113,7 @@
       cssParts.unshift(s);
       cur = cur.parentElement;
     }
+    var shadow = _findShadowHost(el);
     return {
       tag: (el.tagName||'').toLowerCase(),
       text: elText,
@@ -97,7 +130,12 @@
       value: (el.value||'').substring(0,100) || null,
       href: el.getAttribute('href') || null,
       onclick: el.getAttribute('onclick') || null,
-      css_path: cssParts.join(' > ') || ''
+      css_path: cssParts.join(' > ') || '',
+      // Shadow DOM context (B14/B17). Mabl-style "shadow_parent" so the
+      // runner can do page.locator(host).locator(child) when the element
+      // lives inside an OPEN shadow root. Closed roots can't be walked
+      // from outside; expect shadow=null in that case.
+      shadow_host: shadow
     };
   }
 
@@ -212,6 +250,73 @@
       }));
     } catch(_e) { /* ignore oversized */ }
   }
+
+  // ---- H21: inline value prompt on mask-intercepted typing ----
+  // Tracks keystroke counts per <input>/<textarea>. On blur, if the
+  // input is empty despite >= 2 keystrokes, the mask almost certainly
+  // intercepted the value — ask the user inline so they don't have to
+  // recall every masked field at the end via --complete. Source on the
+  // resulting field_value_map entry is `user_supplied_inline`.
+  (function _h21_install_inline_prompt() {
+    var _keystrokeCount = new WeakMap();
+    document.addEventListener('keydown', function(e) {
+      var el = e.target;
+      if (!el) return;
+      var tag = (el.tagName || '').toLowerCase();
+      if (tag !== 'input' && tag !== 'textarea') return;
+      // Skip non-character keys.
+      if (e.key && e.key.length === 1) {
+        _keystrokeCount.set(el, (_keystrokeCount.get(el) || 0) + 1);
+      } else if (e.key === 'Backspace' || e.key === 'Delete') {
+        _keystrokeCount.set(el, (_keystrokeCount.get(el) || 0) + 1);
+      }
+    }, true);
+    document.addEventListener('blur', function(e) {
+      var el = e.target;
+      if (!el) return;
+      var tag = (el.tagName || '').toLowerCase();
+      if (tag !== 'input' && tag !== 'textarea') return;
+      var keys = _keystrokeCount.get(el) || 0;
+      if (keys < 2) return;
+      var raw_value = '';
+      try { raw_value = (el.value || '').trim(); } catch (_e) { raw_value = ''; }
+      if (raw_value) { _keystrokeCount.set(el, 0); return; }
+      // Empty value after >= 2 keystrokes → mask intercepted. Prompt
+      // the user inline.
+      var labelEl = el.id ? document.querySelector('label[for="' + el.id + '"]') : null;
+      var label = (labelEl && labelEl.textContent && labelEl.textContent.trim())
+        || el.getAttribute('aria-label')
+        || el.getAttribute('placeholder')
+        || el.name
+        || el.id
+        || tag;
+      var typed = '';
+      try {
+        typed = window.prompt(
+          'Valor para "' + label.substring(0, 60) + '" (mascara interceptou):',
+          ''
+        );
+      } catch (_e) { typed = null; }
+      _keystrokeCount.set(el, 0);
+      if (!typed) return;
+      var fingerprint = tag + '#' + (el.id || '') + '[name=' + (el.name || '') + ']';
+      if (window.__tfEventQueue) {
+        window.__tfEventQueue.push({
+          type: 'inline_field_value',
+          timestamp: new Date().toISOString(),
+          fingerprint: fingerprint,
+          label: label.substring(0, 200),
+          placeholder: el.getAttribute('placeholder') || '',
+          aria_label: el.getAttribute('aria-label') || '',
+          element_id: el.id || '',
+          name: el.name || '',
+          tag: tag,
+          value: String(typed).substring(0, 200),
+          source: 'user_supplied_inline',
+        });
+      }
+    }, true);
+  })();
 
   // ---- Value mutation setter hooks ----
   function _hookValue(proto) {
@@ -569,6 +674,33 @@
         break;
       case 'M':
         window.__tfDragMode = !window.__tfDragMode;
+        break;
+      case 'N':
+        // H20: scenario boundary. Pushes a synthetic event into the
+        // recorded stream so the normalizer can split the recording
+        // into N independent SemanticTestCase instances. A simple
+        // prompt() asks for an optional scenario name; the next
+        // segment inherits that name. Empty/cancel → auto-numbered.
+        var _scenarioName = '';
+        try {
+          _scenarioName = (window.prompt(
+            'Nome do próximo cenário (Enter para auto-numerar):'
+          ) || '').trim().substring(0, 80);
+        } catch (_e) { /* prompt blocked → auto-numbered */ }
+        if (window.__tfEventQueue) {
+          window.__tfEventQueue.push({
+            type: 'scenario_boundary',
+            timestamp: new Date().toISOString(),
+            url: window.location.href,
+            page_title: document.title || '',
+            scenario_name: _scenarioName,
+          });
+        }
+        _showToast(
+          _scenarioName
+            ? ('Cenário marcado: ' + _scenarioName)
+            : 'Cenário marcado (auto-numerar)'
+        );
         break;
     }
   }, true);
