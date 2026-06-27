@@ -29,11 +29,12 @@ from .step_postcondition import StepPostconditionValidator
 from .incremental_ui import IncrementalUI
 
 
-_DANGEROUS_LOCATORS = {
-    "body", "html", "button", "input", "select", "a", "div", "span",
-    "text=selecione", "text=ok", "text=cancelar", "text=sim",
-    "text=nao",
-}
+# B19/B20: centralised in runner/dangerous_locator. Re-exported here so
+# external callers that imported _DANGEROUS_LOCATORS keep working.
+from .dangerous_locator import (
+    DANGEROUS_LOCATORS as _DANGEROUS_LOCATORS,
+    is_dangerously_generic as _shared_is_dangerously_generic,
+)
 
 
 class IncrementalRunner:
@@ -316,16 +317,9 @@ class IncrementalRunner:
 
     @staticmethod
     def _is_dangerously_generic(locator):
-        if not locator:
-            return True
-        n = locator.strip().lower()
-        if n in _DANGEROUS_LOCATORS:
-            return True
-        if n.startswith("/html/") or n.startswith("xpath=/html/"):
-            return True
-        if "nth-child" in n and len(n) < 30:
-            return True
-        return False
+        # B19: delegate to the shared filter so the legacy `run` path
+        # gets the same protection (B20).
+        return _shared_is_dangerously_generic(locator)
 
     @staticmethod
     def _is_incompatible_strategy(step, strategy):

@@ -408,7 +408,9 @@ def cmd_record(args):
         # Sprint 0 mode resolution
         _diag = getattr(args, "diagnostic_mode", False) or \
                 getattr(args, "pipeline_and_diagnostic_mode", False)
-        _replay_mode = "batched" if getattr(args, "replay_batched", False) else "immediate"
+        # H17: default = "batched" (immediate caused 5-20s overhead on SIMAX).
+        # --replay-immediate is the explicit opt-in for the legacy behaviour.
+        _replay_mode = "immediate" if getattr(args, "replay_immediate", False) else "batched"
         session = recorder.start(
             recording_id=rid,
             application=args.app or "web",
@@ -1317,17 +1319,61 @@ def cmd_run(args):
                         )
 
                         if outcome.status == ProgressResult.PASSED_STEP:
-                            healed_steps += 1
-                            healed = True
-                            step_report.healing_success = True
-                            # BUG-011: healing aplicado com sucesso
-                            metrics.record_step(
-                                StepOutcome.HEALING_APPLIED,
-                                step_num=step_num, action=action,
-                                family_code=family_code,
-                                healing_layer=healing_layer,
-                                selector=selector_used,
+                            # B19/B20: validate the cure isn't dangerously
+                            # generic before counting as healed. Otherwise
+                            # the legacy `run` happily ships heals like
+                            # `a[href="/"]` repeatedly (oracle approves
+                            # because the home link exists on every page).
+                            from testforge.runner.dangerous_locator import (
+                                is_dangerously_generic,
                             )
+                            proposed = (
+                                outcome.proposal.new_locator
+                                if outcome.proposal else ""
+                            )
+                            if is_dangerously_generic(proposed):
+                                # Reject. Demote outcome so the rest of
+                                # the loop treats this step as a failure.
+                                print(
+                                    f"    Curador: REJEITADO — locator "
+                                    f"generico/perigoso: {proposed!r}"
+                                )
+                                step_report.healing_success = False
+                                if step_report.healing_proposal_locator:
+                                    step_report.healing_proposal_locator = (
+                                        proposed + " (REJECTED:generic)"
+                                    )
+                                metrics.record_step(
+                                    StepOutcome.HEALING_REJECTED,
+                                    step_num=step_num, action=action,
+                                    family_code=family_code,
+                                    healing_layer=healing_layer,
+                                    selector=selector_used,
+                                )
+                                if step.blocking:
+                                    failed_step_indices.add(i)
+                            else:
+                                healed_steps += 1
+                                healed = True
+                                step_report.healing_success = True
+                                # BUG-011: healing aplicado com sucesso
+                                metrics.record_step(
+                                    StepOutcome.HEALING_APPLIED,
+                                    step_num=step_num, action=action,
+                                    family_code=family_code,
+                                    healing_layer=healing_layer,
+                                    selector=selector_used,
+                                )
+                                # B21: also record validated so the
+                                # per-step Validados counter is non-zero
+                                # when heals genuinely pass.
+                                metrics.record_step(
+                                    StepOutcome.ORACLE_VALIDATED,
+                                    step_num=step_num, action=action,
+                                    family_code=family_code,
+                                    healing_layer=healing_layer,
+                                    selector=selector_used,
+                                )
                         else:
                             # BUG-011: healing rejeitado/falhou
                             metrics.record_step(
@@ -2000,7 +2046,9 @@ def main():
     rec.add_argument("--pipeline-and-diagnostic-mode", action="store_true",
                      help="(Sprint 0) Diagnostic + pipeline normal (compile/validate/run) rodando juntos.")
     rec.add_argument("--replay-batched", action="store_true",
-                     help="(Sprint 0) Replay check em batch (B4) ao inves de imediato (B1).")
+                     help="(Sprint 0) DEPRECATED — batched é o default desde H17. Aceito por compat.")
+    rec.add_argument("--replay-immediate", action="store_true",
+                     help="(Sprint 0) Opt-in para o modo legacy: probes síncronos por evento. Bloqueia overlay no SIMAX.")
     rec.add_argument("--system", default="",
                      help="Sistema/aplicacao (ex: SIOPI). Caminho Git: recordings/{system}/{suite}/{test_case}/")
     rec.add_argument("--suite", default="",
@@ -2100,7 +2148,9 @@ def main():
     diag.add_argument("--test-case", dest="test_case", default="")
     diag.add_argument("--evidence-level", choices=["light", "full"], default="light")
     diag.add_argument("--replay-batched", action="store_true",
-                       help="Replay check em batch (B4) ao inves de imediato (B1)")
+                       help="DEPRECATED — batched é o default desde H17. Aceito por compat.")
+    diag.add_argument("--replay-immediate", action="store_true",
+                       help="Opt-in para o modo legacy: probes síncronos por evento.")
     diag.add_argument("--verify-ssl", action="store_true", default=False,
                        help="Verificar certificado SSL (default: ignorar certificados SSL)")
     diag.add_argument("--pipeline-also", dest="pipeline_and_diagnostic_mode",

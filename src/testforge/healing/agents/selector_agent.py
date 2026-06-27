@@ -167,22 +167,63 @@ class SelectorAgent:
         return None
 
     def _try_href(self, payload: EvidencePayload) -> Optional[LLMHealingProposal]:
-        """Extract href from <a> in DOM snapshot — stable across Tailwind class changes."""
+        """Extract href from <a> in DOM snapshot — stable across Tailwind
+        class changes.
+
+        B18 (2026-06-27): the previous version grepped the FIRST `<a href>`
+        in the DOM, which on SIOPI was the logo link (`<a href="/">`).
+        Every step that failed got the same cure, oracle approved because
+        the home link existed on every page, and `run` shipped 26
+        consecutive false-positive heals. Now we:
+        - skip site-root / fragment / javascript hrefs (dangerous);
+        - require the anchor's text to contain the original target text
+          (semantic match) — without it, an anchor cure is a guess.
+        - drop confidence to a level the dangerous-locator filter would
+          still reject if the match is shallow.
+        """
+        ctx = payload.step_context
+        target_text = (ctx.get("text") or "").strip().lower()
+        if not target_text or len(target_text) < 3:
+            # Without a target text to match, we cannot tell a meaningful
+            # anchor from the logo. Refuse to propose.
+            return None
         dom = payload.dom_snapshot
-        m = re.search(r'<a\b[^>]+\bhref\s*=\s*["\']([^"\']+)["\'][^>]*>', dom, re.IGNORECASE)
-        if not m:
-            return None
-        href = m.group(1).strip()
-        if not href or href.startswith("javascript:") or href.startswith("#"):
-            return None
-        score = 0.87 if (href.startswith("/") or href.startswith("http")) else 0.65
-        return LLMHealingProposal(
-            taxonomy_id="SEL-004", family="FAM-01",
-            strategy="semantic_locator_conversion",
-            new_locator=f'a[href="{href}"]',
-            confidence=score,
-            rationale=f"href estavel para link de navegacao: {href}",
+        # Match anchors with their inner text so we can require a
+        # textual overlap with the original target.
+        candidates = re.findall(
+            r'<a\b[^>]+\bhref\s*=\s*["\']([^"\']+)["\'][^>]*>([\s\S]*?)</a>',
+            dom, re.IGNORECASE,
         )
+        for href, inner in candidates:
+            href = (href or "").strip()
+            if not href or href in {"/", "#", ""}:
+                continue
+            if href.startswith("javascript:") or href.startswith("#"):
+                continue
+            if href.startswith("/home"):
+                continue
+            # Inner text — strip HTML tags + collapse whitespace.
+            inner_text = re.sub(r"<[^>]+>", " ", inner)
+            inner_text = re.sub(r"\s+", " ", inner_text).strip().lower()
+            if not inner_text:
+                continue
+            overlap = target_text in inner_text or inner_text in target_text
+            if not overlap:
+                continue
+            # Confidence reflects depth of match: very short text overlap
+            # is suspicious.
+            score = 0.82 if len(inner_text) >= 6 else 0.65
+            return LLMHealingProposal(
+                taxonomy_id="SEL-004", family="FAM-01",
+                strategy="semantic_locator_conversion",
+                new_locator=f'a[href="{href}"]',
+                confidence=score,
+                rationale=(
+                    f"href '{href}' com texto que casa com alvo "
+                    f"'{target_text[:40]}'"
+                ),
+            )
+        return None
 
     def _try_text(self, text_val: str) -> Optional[LLMHealingProposal]:
         if text_val and len(text_val) >= 2:

@@ -68,7 +68,7 @@ class RecorderController:
         test_case: str = "",
         use_cdp: bool = False,
         diagnostic_mode: bool = False,
-        replay_mode: str = "immediate",
+        replay_mode: str = "batched",   # H17: was "immediate"
     ) -> RecordingSession:
         session = self._session_manager.start(recording_id, application, base_url)
         self._store = RawRecordingStore(session.session_dir)
