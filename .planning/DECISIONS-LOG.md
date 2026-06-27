@@ -181,6 +181,53 @@ Decision: defer to post-pilot. Pilot data will tell us whether the priority chai
 
 ---
 
+## 2026-06-27 — Evidence analysis of 11 production recordings (Caixa)
+
+**Decision**: User shipped `evidencias/recordings.zip` with 11 production recordings across 5 Caixa systems (SIOPI, SIMAX, SISGH, SIFAP, SIPBS-revendedor). Read every recording end-to-end, file findings as bugs B1-B17, and triage into BACKLOG as H6-H19. Full report in `.planning/EVIDENCE-ANALYSIS.md`.
+
+**Why**: Before this session the hotfix loop was driven by single-run anecdotes. With 11 real recordings we can rank fixes by impact (how many recordings each bug blocks) instead of recency.
+
+**Findings**:
+
+- **0 of 11 recordings ran end-to-end** before this session.
+- **17 distinct bugs** identified, mapped to **14 backlog tickets** (H6-H19).
+- **2 critical pilot blockers** isolated: H9 (HTTPS cert errors on intranet) and H16 (verdict=pass false-positive with steps=0).
+- **P3 `unanchored-state` hit its 5th recurrence** in 2 days — B16 (final_state_snapshot schema dropped labels). Hard rule now: every artifact on disk must have a writer↔reader round-trip test.
+
+**Outcome**: pilot-blocker fixes shipped same session (next entry). Remaining tickets H6/H7/H10/H19 prioritized by recurrence count across the 11 recordings, not by chronological order of discovery.
+
+---
+
+## 2026-06-27 — Sprint 0 pilot unblock: H9 + H16 + P3 invariants (commit `9cb7a1d`)
+
+**Decision**: Ship the two pilot-blocking fixes plus the 3 round-trip invariants promised by the P3 hard rule. Defer the larger investigations (H6 mask hook, H10 mat-select handler) to the next session.
+
+**H9 — verify_ssl default**:
+
+- `IncrementalRunner.verify_ssl` default flipped from `True` to `False`. CLI already passed `False`; only direct constructor callers were affected, but those exist (replay tests, scripts).
+- Bug discovered in `browser.launch_browser`: the Linux+chromium fallback branch passed `{"headless": ...}` without the `args=launch_args` payload that carries `--ignore-certificate-errors`. Only Windows + chrome/edge branches got the ssl arg. Fix: every branch now passes `launch_args`. Pinned by `tests/test_h9_https_default.py::test_verify_ssl_false_adds_ignore_certificate_errors_arg`.
+- 3 of 11 production recordings died at step 1 with `ERR_CERT_AUTHORITY_INVALID` against `*.apps.nprd.caixa`. With this fix the intranet hosts load.
+
+**H16 — verdict semantics**:
+
+- New rule: `verdict == "pass"` requires all 5 criteria green **AND** `(passed + healed) > 0` **AND** `(failed + healing_rejected) == 0`.
+- New enum value `ReadinessVerdict.GATED_ONLY` for "criteria green but zero executable steps ran". Surfaces a warning so dashboards stop showing greens for recordings nothing exercised. Direct evidence: `deve_logar_no_gas_do_povo_3` reported `verdict=pass` with `steps=0`.
+- `healing_rejected` now counts as a hard failure (was `NEEDS_REVIEW`). Pilot QA cannot trust verdicts when rejected healing is treated as "review later".
+- Legacy test renamed to `test_healing_rejected_now_fails` to make the contract change explicit instead of silently flipping the assertion.
+- 11 new tests in `tests/test_verdict_semantics.py` cover gated_only, pass, fail, criteria failures, warning emission, markdown rendering.
+
+**P3 round-trip invariants** (3 new in `tests/test_invariants.py`):
+
+1. `test_value_mutations_writer_reader_round_trip` — overlay JS schema (`{type, fingerprint, value}`) survives `_ir_value_mutations`. Pins hotfix 22.
+2. `test_raw_event_target_to_semantic_target_round_trip` — `element_id` key from overlay → `SemanticTarget.element_id`. Pins hotfix 22b. Back-compat `id` key still works.
+3. `test_final_state_snapshot_writer_reader_round_trip` — `fields[*].identifiers.label` from `_captureFinalState` JS writer survives `_ir_final_state` reader. `field_key` resolves to human-readable identifier instead of raw `mat-input-N`. Pins B16.
+
+**Outcome**: commit `9cb7a1d` green on touched modules + 21 new pinning tests. Pre-existing failures in `test_phase_b_evidence.py` / `test_phase_b_pr3_polling_masked.py` confirmed unrelated (legacy `new_value`/`old_value` schema, predates hotfix 22). Pilot QA is unblocked for re-test.
+
+**Lesson reinforced**: when the same pattern hits its 5th recurrence, do not just file another hotfix. Tighten the invariant test until the next instance is rejected at CI. Took ~90 minutes for both blocker fixes plus the 3 invariants.
+
+---
+
 ## How to use this log
 
 - Read top to bottom before proposing a refactor.
