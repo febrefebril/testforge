@@ -28,9 +28,20 @@ def _tester_hash() -> str:
 class DiagnosticSession:
     """High-level wrapper. Threads framework, capture, replay, gherkin."""
 
+    # H17 perf: probe only the small set of user-actionable event types.
+    # Recorder fires _persist_raw_event for every browser event (focus,
+    # blur, mouseover, keystroke, change, …). Probing each one was
+    # bottlenecking SIMAX recording — 10 user-steps produced 50-100 raw
+    # events, each triggering a 50-200 ms locator.count(). Limit to the
+    # actions that actually need selector verification.
+    _PROBEABLE_EVENT_TYPES = frozenset({
+        "click", "fill", "select", "select_option",
+        "submit", "assert", "press", "navigation_intent",
+    })
+
     def __init__(self, page, cdp_session=None,
                  session_dir: str = ".testforge/diagnostic/default",
-                 replay_mode: str = "immediate",
+                 replay_mode: str = "batched",
                  gherkin_lang: str = "pt") -> None:
         self._page = page
         self._cdp = cdp_session
@@ -113,8 +124,9 @@ class DiagnosticSession:
                 action=action, target=target_data or {},
                 value=raw_event.get("value"),
             )
-        # Replay check
-        if self._replay is not None and candidates:
+        # Replay check (H17 perf: only for user-actionable events;
+        # focus/blur/mouseover/keystroke produce too many raw events).
+        if self._replay is not None and candidates and action in self._PROBEABLE_EVENT_TYPES:
             rec = self._replay.check(payload.get("step_id") or raw_event.get("event_id"),
                                        candidates)
             if rec is not None:
@@ -162,6 +174,10 @@ class DiagnosticSession:
             for rec in self._replay.drain():
                 if self._store is not None:
                     self._store.append_replay(rec)
+                if rec.get("resolved"):
+                    self._totals["selectors_immediate_ok"] += 1
+                else:
+                    self._totals["selectors_immediate_fail"] += 1
         # Write Gherkin
         feature_path = ""
         if self._gherkin is not None:

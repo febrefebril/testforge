@@ -228,6 +228,138 @@ Decision: defer to post-pilot. Pilot data will tell us whether the priority chai
 
 ---
 
+## 2026-06-27 — Session conclusions: 6-scenario blob, inline prompt, replay-check perf
+
+After the H9+H16+P3 commit the user re-ran a fresh SIOPI recording
+(`test-pos-hotfix8`) and stopped at 15/78 steps. Three findings shifted my
+understanding of the pipeline blockers.
+
+### Finding 1 — 78 raw steps ≠ retries, they are 6 distinct scenarios
+
+User testing every path of the SIOPI calculadora:
+- "Calculadora poder de compra" (entry)
+- "Valor + renda"
+- "Renda apenas" / "Prestação desejada"
+- "Imóvel quitado"
+- "Ainda financiado"
+- "calculadora-egi" branch
+
+Today's pipeline treats them as one linear SemanticTestCase. A failure on
+step 15 of scenario 1 blocks the runner from reaching scenarios 2-6.
+Verdict is single — 0/6 even when 5 scenarios would have passed.
+
+**Decision (deferred to next sprint)**: add a recorder primitive
+`Shift+N` (or equivalent) that marks scenario boundaries. Normalizer
+splits at each marker → N SemanticTestCase. Runner executes scenarios
+independently. Verdict per scenario. Gherkin auto-derive already
+emits `Cenario:` labels — the metadata is on the floor, we just don't
+consume it.
+
+**Not now**: tests are not passing end-to-end yet, and the simple-Gherkin
+format goal would benefit from this anyway. Documented in BACKLOG (H20)
+after we restore one passing end-to-end recording.
+
+### Finding 2 — `--complete` retroactive prompt is the wrong UX
+
+Today: when typing isn't captured (mask intercepts), the field goes to
+the `--complete` prompt at the end. User has to recall what they typed
+across 40+ fields with no DOM context.
+
+In `test-pos-hotfix8`: 2 user values (`100000`, `2000`) got keys
+`step_52` and `step_53` because the merge layer cannot rebind a
+user-supplied value to its target's element_id / label.
+
+**Decision (deferred to next sprint)**: inline pump.
+- When mask intercepts the value, the recorder pauses, the overlay
+  shows the field's label + selector context, the user types the
+  value once, and recording resumes. `field_value_map` writes
+  `source="user_supplied_inline"` keyed by the target's stable key
+  (label or element_id), not by step index.
+- Side effect: `--complete` becomes a fallback for retroactive cases
+  (old recordings, batch import) rather than the primary entry point.
+
+We had discussed this earlier this month and it was never written down.
+This entry is the documentation. Filed as H21 in BACKLOG.
+
+### Finding 3 — `replay_check` `immediate` mode causes SIMAX slowness
+
+User observed SIMAX recordings take "an eternity" even at 10 user-steps.
+Root-cause investigation in `diagnostic/replay_check.py` +
+`diagnostic/session.py`:
+
+1. `_persist_raw_event` (recorder_controller) fires `assess_event` for
+   every raw browser event — focus, blur, mouseover, keystroke, change,
+   navigation — not only the user-actionable subset. 10 user-steps in
+   SIMAX expand into 50-100 raw events because mat-select / CDK overlay
+   emit many sub-events.
+2. `replay_mode` default was `"immediate"`. Each raw event triggered a
+   synchronous `LocatorResolver.resolve()` on the recorder thread.
+   `locator.count()` round-trip is 50-200 ms on SPAs.
+3. `_do_check` constructed a fresh `LocatorResolver` per probe — no L0
+   cache sharing across events.
+4. Intent key was `replay_check:{event_id}`, unique per event, so the
+   in-memory cache was useless even if reused.
+5. SQLite catalog `record_success`/`record_failure` ran synchronously
+   per probe (disk I/O).
+
+**Decision (applied now)**:
+- `DiagnosticSession.__init__(replay_mode="batched")` is the new
+  default. Drain at finalize.
+- `ReplayCheck.__init__(mode="batched")` is the new default.
+- Probe only the user-actionable event subset
+  (`click, fill, select, select_option, submit, assert, press,
+  navigation_intent`). Other events get no probe.
+- Reuse a single `LocatorResolver` instance per `ReplayCheck`. L0
+  cache survives across events.
+- Drain in `finalize()` updates `selectors_immediate_*` totals so
+  the final report stays accurate.
+
+Open items (deferred):
+- Stable intent key (target hash or label, not event_id) so the
+  cache actually hits. Risk: collisions across navigations. Need
+  scoping by URL.
+- Skip SQLite writes in record-time probes (catalog should only
+  learn from real runner outcomes, not record-time guesses).
+
+### Process note — market scan before next big decision
+
+User explicitly asked: before any major architecture change, do a
+market scan first. Look at how Mabl, Stagehand, Playwright codegen,
+Cypress Studio, Cucumber Studio, Cucumber.js + Playwright, and
+Karate-UI handle these problems. Decide on a library or pattern
+rather than rebuild from scratch.
+
+**Decision**: next session begins with a research pass
+(`.planning/MARKET-SCAN.md`). Scope: scenario segmentation, inline
+value prompts, record-time replay verification, multi-instance
+field identity, shadow DOM strategies. Output: which existing tool
+solves each problem and which we must own.
+
+This is now policy: no R-prefixed root cause becomes a hotfix until
+the market scan covers it.
+
+### Why this matters
+
+11 production recordings, 0 end-to-end. The blockers are no longer
+single-symbol bugs — they are pipeline-shape problems (linear vs
+scenarios, retroactive vs inline prompts, immediate vs batched
+verification). Hotfixes that patch symptoms will not converge until
+the pipeline shape changes.
+
+This session shipped two fixes (verdict semantics, replay-check
+performance) plus three documented decisions. Tests pass on all
+touched modules.
+
+### Tooling debt observed
+
+User flagged context loss between sessions as recurring cost. Asked
+for a harness with persistent indexes + RAG so future sessions do not
+re-derive what we already learned. Not solvable inside this repo
+today — flagged as a project-level debt item. The on-disk artifacts
+(`.planning/`, MEMORY.md) are the current best-effort substitute.
+
+---
+
 ## How to use this log
 
 - Read top to bottom before proposing a refactor.

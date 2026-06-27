@@ -23,13 +23,19 @@ logger = logging.getLogger(__name__)
 
 
 class ReplayCheck:
-    def __init__(self, page, mode: str = "immediate",
+    # H17 perf: default to batched. Immediate mode probes synchronously on the
+    # recorder thread; on SIMAX (mat-select expansion → many DOM events) it
+    # blocked the overlay for 5-20s of cumulative probes per recording.
+    def __init__(self, page, mode: str = "batched",
                  probe_timeout_ms: int = 600) -> None:
         self._page = page
-        self._mode = mode if mode in ("immediate", "batched") else "immediate"
+        self._mode = mode if mode in ("immediate", "batched") else "batched"
         self._probe_timeout_ms = probe_timeout_ms
         self._pending: list[tuple[str, list]] = []
         self._records: list[dict] = []
+        # Reuse a single LocatorResolver across probes so the in-memory
+        # L0 cache survives between events.
+        self._resolver = None
 
     # ------------------------------------------------------------------
     def check(self, step_id: str, candidates: list) -> Optional[dict]:
@@ -57,8 +63,11 @@ class ReplayCheck:
     def _do_check(self, step_id: str, candidates: list) -> dict:
         from ..runtime.resolver import LocatorResolver
         from ..runtime.errors import LocatorNotFoundError
-        resolver = LocatorResolver(self._page,
-                                    probe_timeout_ms=self._probe_timeout_ms)
+        if self._resolver is None:
+            self._resolver = LocatorResolver(
+                self._page, probe_timeout_ms=self._probe_timeout_ms,
+            )
+        resolver = self._resolver
         t0 = time.perf_counter()
         primary_selector = self._first_selector(candidates)
         attempted_dicts = [self._candidate_dict(c) for c in candidates]
