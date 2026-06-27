@@ -559,6 +559,81 @@ aggregation must handle paste, IME composition, autocomplete pre-fill
 
 ---
 
+## 2026-06-27 — H22b: dedupe telemetry on RecordingNormalizer
+
+After H22a re-ranked the source priority table, the open question
+became "is `setter_hook` still load-bearing once `final_state` is
+primary?" H22b adds per-call telemetry on the normalizer so the
+answer can be measured instead of guessed.
+
+### What landed
+
+`RecordingNormalizer` now carries `ir_dedupe_stats: dict` per instance,
+reset on every `normalize()` call. Five counters:
+
+```
+loser_counts                          {source: int}
+winner_counts                         {source: int}
+setter_hook_dominated_by_final_state  int
+setter_hook_uncontested               int
+final_state_uncontested               int
+```
+
+`_ir_dedupe_entries` increments them as it picks winners between
+sources for the same `field_key`. Stats are instance-local, not class-
+level — a deliberate departure from the earlier P2 mutable-default
+trap.
+
+### What this unblocks
+
+When the next SIOPI / SIMAX recording runs through the normalizer, we
+will know:
+
+- how many times `final_state` beat `setter_hook` (= cases where the
+  hook was redundant).
+- how many times `setter_hook` was the *only* source that produced a
+  value for a field (= the remaining justification for keeping the
+  hook).
+- the same for `final_state` (= cases where the hook was structurally
+  missing).
+
+If `setter_hook_uncontested` stays at 0 across several real recordings,
+H22c (delete `_hookValue` + `value_mutations.jsonl` pipeline) becomes
+an evidence-based call rather than a speculative one.
+
+### What this does NOT do
+
+- No persistence of stats to disk (yet). They sit on the instance. A
+  follow-up can write to `<recording>/normalizer_stats.json` and the
+  pilot dashboard can aggregate.
+- No CLI surfacing of the stats in `testforge run-incremental` or
+  `testforge compile`. Wire-up is trivial when we want it.
+- No new IR source. Keystroke aggregation (the original H22b spec from
+  the spike doc) needs `keydown` capture in `overlay_inject.js` first,
+  which is invasive enough to deserve its own ticket. Filed as **H22d**.
+
+### H22c readiness criteria
+
+`_hookValue` and `value_mutations.jsonl` can be deleted once:
+
+1. `setter_hook_uncontested == 0` in 3 consecutive real recordings.
+2. No regression in the existing P3 invariant for value_mutations
+   round-trip (or that invariant is explicitly retired).
+3. `_resolve_field_value` confirmed to work end-to-end using only
+   `final_state`-sourced field_value_map entries on the SIOPI
+   calculadora flow.
+
+Estimate (post-readiness): ~1 day of mechanical deletion plus invariant
+cleanup.
+
+### Tests
+
+`tests/test_h22b_dedupe_telemetry.py` — 7 new tests covering the
+stats shape, the per-instance isolation, the dominated/uncontested
+counters, and the reset-per-`normalize()` contract.
+
+---
+
 ## How to use this log
 
 - Read top to bottom before proposing a refactor.

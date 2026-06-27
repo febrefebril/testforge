@@ -234,6 +234,10 @@ class RecordingNormalizer:
         if self._use_v2:
             from .locator import LocatorExtractor
             self._v2_extractor = LocatorExtractor()
+        # H22b: per-instance dedupe diagnostics. Read by tests + the
+        # future CLI command that surfaces how often setter_hook still
+        # contributes after H22a. Reset on each `normalize()` call.
+        self.ir_dedupe_stats: dict = self._fresh_dedupe_stats()
 
     def _build_load_dedup_compact_pipeline(self):
         """Phase 5: lazy-construct Pipes&Filters pipeline.
@@ -256,6 +260,9 @@ class RecordingNormalizer:
         # can locate field_value_map.json without changing the public method
         # signature consumed by every caller.
         self._current_recording_dir = recording_dir
+        # H22b: fresh dedupe stats per call so consumers can read them
+        # without state leaking across recordings.
+        self.ir_dedupe_stats = self._fresh_dedupe_stats()
         # Phase 5: optional Pipes & Filters pipeline for the load + dedup
         # + compact stages. Output is byte-identical to the legacy path.
         if self._use_pipeline:
@@ -2337,22 +2344,68 @@ class RecordingNormalizer:
         return any(p.match(value) for p in KNOWN_MASKS)
 
     @staticmethod
-    def _ir_dedupe_entries(entries: list[dict]) -> list[dict]:
+    def _fresh_dedupe_stats() -> dict:
+        return {
+            "loser_counts": {},
+            "winner_counts": {},
+            "setter_hook_dominated_by_final_state": 0,
+            "final_state_uncontested": 0,
+            "setter_hook_uncontested": 0,
+        }
+
+    def _ir_dedupe_entries(self, entries: list[dict]) -> list[dict]:
+        """Dedupe by field_key, keeping the highest-priority source.
+
+        H22b: records per-call diagnostics on `self.ir_dedupe_stats` so
+        we can measure whether `setter_hook` is still load-bearing now
+        that `final_state` is primary. Stats inform the H22c decision
+        (delete _hookValue entirely).
+        """
         best: dict[str, dict] = {}
+        # Count uncontested entries (sources that landed first with no
+        # competitor) before dedupe collapses them.
+        seen_sources_per_key: dict[str, set] = {}
         for entry in entries:
             key = entry.get("field_key", "")
             if not key or not entry.get("value"):
                 continue
+            src = entry.get("source", "")
+            seen_sources_per_key.setdefault(key, set()).add(src)
             existing = best.get(key)
             if not existing:
                 best[key] = entry
                 continue
-            old_p = RecordingNormalizer.IR_SOURCE_PRIORITY.get(existing.get("source", ""), 0)
-            new_p = RecordingNormalizer.IR_SOURCE_PRIORITY.get(entry.get("source", ""), 0)
+            old_src = existing.get("source", "")
+            old_p = RecordingNormalizer.IR_SOURCE_PRIORITY.get(old_src, 0)
+            new_p = RecordingNormalizer.IR_SOURCE_PRIORITY.get(src, 0)
             if new_p > old_p:
+                self.ir_dedupe_stats["loser_counts"][old_src] = (
+                    self.ir_dedupe_stats["loser_counts"].get(old_src, 0) + 1
+                )
+                self.ir_dedupe_stats["winner_counts"][src] = (
+                    self.ir_dedupe_stats["winner_counts"].get(src, 0) + 1
+                )
+                if old_src == "setter_hook" and src == "final_state":
+                    self.ir_dedupe_stats["setter_hook_dominated_by_final_state"] += 1
                 best[key] = entry
             elif new_p == old_p and len(entry.get("value", "")) >= len(existing.get("value", "")):
                 best[key] = entry
+            else:
+                self.ir_dedupe_stats["loser_counts"][src] = (
+                    self.ir_dedupe_stats["loser_counts"].get(src, 0) + 1
+                )
+                self.ir_dedupe_stats["winner_counts"][old_src] = (
+                    self.ir_dedupe_stats["winner_counts"].get(old_src, 0) + 1
+                )
+                if src == "setter_hook" and old_src == "final_state":
+                    self.ir_dedupe_stats["setter_hook_dominated_by_final_state"] += 1
+        # After everything is settled, count fields that final_state or
+        # setter_hook owned alone (no competitor present for the key).
+        for key, srcs in seen_sources_per_key.items():
+            if srcs == {"final_state"}:
+                self.ir_dedupe_stats["final_state_uncontested"] += 1
+            elif srcs == {"setter_hook"}:
+                self.ir_dedupe_stats["setter_hook_uncontested"] += 1
         return list(best.values())
 
     @staticmethod
