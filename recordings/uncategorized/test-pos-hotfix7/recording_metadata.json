@@ -1,0 +1,38 @@
+{
+  "recording_id": "test-pos-hotfix7",
+  "application": "SIOPI",
+  "base_url": "https://simuladorhabitacao.caixa.gov.br/home",
+  "started_at": "2026-06-27T19:53:16.911367+00:00",
+  "finished_at": "2026-06-27T19:55:34.952048+00:00",
+  "status": "intent_complete",
+  "recording_status": "intent_complete",
+  "status_history": [
+    {
+      "status": "recording",
+      "timestamp": "2026-06-27T19:53:16.911393+00:00",
+      "reason": "Recording started",
+      "metadata": {
+        "application": "SIOPI",
+        "base_url": "https://simuladorhabitacao.caixa.gov.br/home"
+      }
+    },
+    {
+      "status": "stopped",
+      "timestamp": "2026-06-27T19:55:34.952089+00:00",
+      "reason": "Recording stopped by user",
+      "metadata": {}
+    },
+    {
+      "status": "completed_raw",
+      "timestamp": "2026-06-27T19:55:34.960696+00:00",
+      "reason": "Recording finalized",
+      "metadata": {}
+    },
+    {
+      "status": "intent_complete",
+      "timestamp": "2026-06-27T19:55:34.991215+00:00",
+      "reason": "compile --check: intent_complete",
+      "metadata": {}
+    }
+  ]
+}
