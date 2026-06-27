@@ -781,15 +781,9 @@ class RecordingNormalizer:
                         }
                     else:
                         existing = fill_registry[canonical]
-                        # Only replace if existing is lower priority or empty
-                        _source_priority = {
-                            "form_values": 100, "fill_event": 80, "setter_hook": 78,
-                            "checked_transition": 72, "snapshot_diff": 70,
-                            "network_payload": 60, "final_state": 55,
-                            "polling": 50, "missing_fill": 10,
-                        }
-                        existing_priority = _source_priority.get(existing["source"], 0)
-                        new_priority = _source_priority.get(source, 0)
+                        # H22a: single source of truth in IR_SOURCE_PRIORITY.
+                        existing_priority = RecordingNormalizer.IR_SOURCE_PRIORITY.get(existing["source"], 0)
+                        new_priority = RecordingNormalizer.IR_SOURCE_PRIORITY.get(source, 0)
                         if new_priority > existing_priority or not existing["value"]:
                             existing["value"] = value
                             existing["intention"] = intention
@@ -799,12 +793,8 @@ class RecordingNormalizer:
 
         # Secondary dedup: same physical field with different canonical keys (by element_id).
         # fill_event keys by placeholder, setter_hook keys by element_id — same element, two entries.
-        _source_priority_map = {
-            "form_values": 100, "fill_event": 80, "setter_hook": 78,
-            "checked_transition": 72, "snapshot_diff": 70,
-            "network_payload": 60, "final_state": 55,
-            "polling": 50, "missing_fill": 10,
-        }
+        # H22a: single source of truth in IR_SOURCE_PRIORITY.
+        _source_priority_map = RecordingNormalizer.IR_SOURCE_PRIORITY
         el_id_to_key: dict[str, str] = {}
         keys_to_drop: set = set()
         # Track loser→winner pairs so we can merge identifiers after deciding
@@ -1837,14 +1827,32 @@ class RecordingNormalizer:
 
     # ── IntentReconstruction (merged from intent_reconstructor.py) ──────────
 
+    # H22a (2026-06-27): final_state promoted above setter_hook.
+    #
+    # The Material currencymask spike showed that real keyboard typing
+    # never fires the value setter (browser-native typing bypasses it).
+    # `setter_hook` (value_mutations.jsonl) only captures JS-driven
+    # writes from masks that delegate to the prototype setter. For the
+    # instance-only override pattern (ng2-currency-mask, SIOPI), it
+    # captures nothing.
+    #
+    # `final_state` (final_state_snapshot.json) reads `el.value` at
+    # session end, which goes through whatever instance getter the mask
+    # exposes — so it returns the canonical formatted value regardless
+    # of how the mask is wired. It is therefore a higher-fidelity
+    # primary source for any input the user has actually finished
+    # typing into.
+    #
+    # See .planning/spikes/SPIKE-keyboard-type-mask.md (H22 section)
+    # and the 2026-06-27 H22 entry in DECISIONS-LOG.md.
     IR_SOURCE_PRIORITY = {
         "form_values": 100,
         "fill_event": 80,
+        "final_state": 79,      # H22a: promoted from 55, now above setter_hook
         "setter_hook": 78,
         "checked_transition": 72,
         "snapshot_diff": 70,
         "network_payload": 60,
-        "final_state": 55,
         "polling": 50,
         "missing_fill": 10,
     }
