@@ -81,9 +81,9 @@ def launch_browser(pw, browser_type="chromium", headless=False, cdp_url="", veri
         ]
     else:
         strategies = [
-            ("chromium", {"headless": headless}),
-            ("msedge", {"channel": "msedge", "headless": headless}),
-            ("chrome", {"channel": "chrome", "headless": headless}),
+            ("chromium", {"headless": headless, "args": launch_args}),
+            ("msedge", {"channel": "msedge", "headless": headless, "args": launch_args}),
+            ("chrome", {"channel": "chrome", "headless": headless, "args": launch_args}),
         ]
 
     for name, kwargs in strategies:

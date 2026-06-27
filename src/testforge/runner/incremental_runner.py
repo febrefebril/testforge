@@ -52,7 +52,7 @@ class IncrementalRunner:
         output_root: str = "runs",
         capture: bool = True,
         debug_healing: bool = False,
-        verify_ssl: bool = True,
+        verify_ssl: bool = False,
     ):
         self.script_path = script_path
         self.headless = headless

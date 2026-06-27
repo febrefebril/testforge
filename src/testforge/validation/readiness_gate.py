@@ -26,6 +26,9 @@ class ReadinessVerdict(str, Enum):
     PASS = "pass"
     FAIL = "fail"
     NEEDS_REVIEW = "needs_review"
+    # H16: criteria pass but zero executable steps ran — gate-only signal.
+    # Prevents dashboard false-greens when nothing was actually exercised.
+    GATED_ONLY = "gated_only"
 
 
 @dataclass
@@ -172,6 +175,13 @@ class ReadinessReport:
                 f"## [OK] Ready for Team",
                 f"",
                 f"This recording passed all readiness criteria and can be used by the team.",
+            ])
+        elif self.verdict == ReadinessVerdict.GATED_ONLY:
+            lines.extend([
+                f"## [GATED] Gate Passed — No Execution Evidence",
+                f"",
+                f"Criteria green but zero executable steps ran. Run 'testforge run-incremental' "
+                f"before marking ready for team.",
             ])
         elif self.verdict == ReadinessVerdict.NEEDS_REVIEW:
             lines.extend([
@@ -365,6 +375,12 @@ class RecordingReadinessGate:
             report.healing_oracles_passed = True  # No healing == trivially passed
 
         # ---------- Final verdict ----------
+        # H16: verdict=pass requires ALL of:
+        #   1. every criterion green
+        #   2. at least one executable step succeeded (passed or healed_validated)
+        #   3. zero failed or healing_rejected steps
+        # Otherwise: gated_only (criteria green, nothing executed), fail (failures),
+        # or needs_review (criteria green but no execution evidence).
         all_criteria = [
             report.completeness_passed,
             report.all_steps_passed,
@@ -372,25 +388,33 @@ class RecordingReadinessGate:
             report.user_supplied_values_validated,
             report.healing_oracles_passed,
         ]
+        criteria_green = all(all_criteria)
+        successful_steps = report.passed_steps + report.healed_steps
+        any_failed = report.failed_steps > 0
 
-        if all(all_criteria) and step_results:
+        if criteria_green and successful_steps > 0 and not any_failed:
             report.verdict = ReadinessVerdict.PASS
             report.status = RecordingStatus.ready_for_team
-        elif all(all_criteria) and not step_results:
-            report.verdict = ReadinessVerdict.NEEDS_REVIEW
+        elif criteria_green and successful_steps == 0 and not any_failed:
+            report.verdict = ReadinessVerdict.GATED_ONLY
             report.status = RecordingStatus.needs_review
-        elif report.failures:
-            # Determine if it's NEEDS_REVIEW or FAIL based on severity
+            report.warnings.append(
+                "Gate passed but no executable step ran — dashboard cannot claim end-to-end success"
+            )
+        elif any_failed or report.failures:
             has_blocking_failures = any(
                 "blocking" in f.lower() or "completeness" in f.lower()
                 for f in report.failures
             )
-            if has_blocking_failures:
+            if has_blocking_failures or any_failed:
                 report.verdict = ReadinessVerdict.FAIL
                 report.status = RecordingStatus.incomplete_intent
             else:
                 report.verdict = ReadinessVerdict.NEEDS_REVIEW
                 report.status = RecordingStatus.needs_review
+        else:
+            report.verdict = ReadinessVerdict.NEEDS_REVIEW
+            report.status = RecordingStatus.needs_review
 
         return report
 

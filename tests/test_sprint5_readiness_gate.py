@@ -370,20 +370,24 @@ class TestCT_AUTO_5_4:
         assert len(report.missing_fields) >= 1
         assert any(f.get("field_key") == "uf" for f in report.missing_fields)
 
-    def test_needs_review_instead_of_fail(self, gate):
-        """Non-blocking failures => NEEDS_REVIEW, not FAIL."""
+    def test_healing_rejected_now_fails(self, gate):
+        """H16: healing_rejected counts as failure → verdict FAIL.
+
+        Previously this returned NEEDS_REVIEW which let dashboards show
+        a non-red signal for unhealed steps. H16 promotes rejected healing
+        to a hard failure so the pilot QA can trust verdicts.
+        """
         steps = [
             MockStepResult(step_num=1, action="click", status="passed"),
             MockStepResult(step_num=2, action="fill", status="healing_rejected",
                            error_message="Healing rejected"),
         ]
-        # Use complete report so completeness passes
         report = gate.evaluate(
-            recording_id="rec-needs-review",
+            recording_id="rec-healing-rejected",
             application="web",
             base_url="http://localhost",
             completeness_report=_make_complete_report(),
             step_results=steps,
         )
-        assert report.verdict == ReadinessVerdict.NEEDS_REVIEW
-        assert report.status == RecordingStatus.needs_review
+        assert report.verdict == ReadinessVerdict.FAIL
+        assert report.status == RecordingStatus.incomplete_intent

@@ -149,6 +149,126 @@ class TestP3UnanchoredState:
         )
         assert stc.field_values["cpf"].value == "12345678900"
 
+    def test_value_mutations_writer_reader_round_trip(self, tmp_path):
+        """Hotfix 22 shape: the overlay JS writes value_mutations.jsonl
+        with `{type, timestamp, fingerprint, value}`; the normalizer's
+        `_ir_value_mutations` reads it. Both must agree on the `value`
+        key (not `new_value`) and the fingerprint format
+        `tag#id[name=]`. Pre-hotfix the reader returned an empty list
+        and every masked field looked like `typing_not_captured`."""
+        import json
+        from testforge.semantic.recording_normalizer import RecordingNormalizer
+
+        path = tmp_path / "value_mutations.jsonl"
+        with open(path, "w", encoding="utf-8") as f:
+            for record in [
+                {"type": "value_mutation", "timestamp": "2026-06-27T10:00:00Z",
+                 "fingerprint": "input#mat-input-1[name=]", "value": "100,00"},
+                {"type": "value_mutation", "timestamp": "2026-06-27T10:00:01Z",
+                 "fingerprint": "input#mat-input-1[name=]", "value": "1.000,00"},
+            ]:
+                f.write(json.dumps(record) + "\n")
+
+        entries = RecordingNormalizer()._ir_value_mutations(str(tmp_path), [])
+        assert len(entries) >= 1, (
+            "value_mutations reader returned 0 entries from a non-empty "
+            "writer file — writer/reader schema drifted. "
+            "See .planning/REGRESSION-PATTERNS.md#P3, hotfix 22."
+        )
+        assert entries[0]["value"] == "1.000,00"
+        ids = entries[0]["identifiers"]
+        assert ids["id"] == "mat-input-1"
+        assert ids["tag"] == "input"
+
+    def test_raw_event_target_to_semantic_target_round_trip(self):
+        """Hotfix 22b shape: the overlay JS `_extractTarget` emits the
+        target dict with `element_id`; `_build_target` used to look for
+        `id` only. The contract must read both keys so SemanticTarget
+        always carries the canonical element id."""
+        from testforge.semantic.recording_normalizer import RecordingNormalizer
+
+        n = RecordingNormalizer()
+        overlay_target = {
+            "tag": "input",
+            "accessible_name": "Prestação desejada *",
+            "placeholder": "R$0,00",
+            "element_id": "mat-input-1",  # overlay schema
+            "css_path": "input#mat-input-1",
+        }
+        target = n._build_target(overlay_target)
+        assert target.element_id == "mat-input-1", (
+            "_build_target dropped element_id from the overlay schema. "
+            "Without it, value_mutations cannot correlate to the step. "
+            "See .planning/REGRESSION-PATTERNS.md#P3, hotfix 22b."
+        )
+        # Back-compat shape must still populate the same field
+        target_legacy = n._build_target({"tag": "input", "id": "legacy-id"})
+        assert target_legacy.element_id == "legacy-id"
+
+    def test_final_state_snapshot_writer_reader_round_trip(self, tmp_path):
+        """B16 shape: the overlay JS `_captureFinalState` writes
+        final_state_snapshot.json with `fields[*].identifiers.label`;
+        the normalizer's `_ir_final_state` reads it and must surface the
+        label so the field_key resolves to a meaningful name (not the
+        raw fingerprint like `mat-input-2`).
+
+        Pre-fix B16: the writer dropped label, so the field_key collapsed
+        to the fingerprint and the --complete prompt asked for fields
+        the user already typed."""
+        import json
+        from testforge.semantic.recording_normalizer import RecordingNormalizer
+
+        # Schema mirrors overlay_inject.js:_snapshotFields (input branch).
+        payload = {
+            "reason": "session_end",
+            "timestamp": "2026-06-27T10:05:00Z",
+            "url": "https://example.test/form",
+            "page_title": "Form",
+            "fields": [
+                {
+                    "fingerprint": "input#mat-input-2[name=cpf]",
+                    "identifiers": {
+                        "id": "mat-input-2",
+                        "name": "cpf",
+                        "label": "CPF",
+                        "placeholder": "000.000.000-00",
+                        "aria-label": None,
+                    },
+                    "tag": "input",
+                    "type": "text",
+                    "value": "539.867.177-49",
+                    "checked": None,
+                    "visibility": "visible",
+                    "enabled": True,
+                },
+            ],
+        }
+        (tmp_path / "final_state_snapshot.json").write_text(
+            json.dumps(payload), encoding="utf-8"
+        )
+
+        entries = RecordingNormalizer()._ir_final_state(str(tmp_path), [])
+        assert len(entries) == 1, (
+            "_ir_final_state dropped the snapshot entry. "
+            "See .planning/REGRESSION-PATTERNS.md#P3, B16."
+        )
+        entry = entries[0]
+        # Label survives round-trip
+        assert entry["identifiers"]["label"] == "CPF", (
+            "Label was dropped between writer and reader. The field_key "
+            "will collapse to the fingerprint and the --complete prompt "
+            "will demand fields the user already typed. "
+            "See .planning/REGRESSION-PATTERNS.md#P3, B16."
+        )
+        # Canonical field_key is derived from a human-readable identifier,
+        # not the opaque mat-input-N fingerprint.
+        assert "mat-input" not in entry["field_key"], (
+            f"field_key={entry['field_key']!r} still carries the raw "
+            "fingerprint id. Canonicalisation must prefer label/name."
+        )
+        assert entry["value"] == "539.867.177-49"
+        assert entry["source"] == "final_state"
+
 
 # ---------------------------------------------------------------------------
 # P4 — feature-flag-rot
