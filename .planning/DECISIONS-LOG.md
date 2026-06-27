@@ -360,6 +360,123 @@ today — flagged as a project-level debt item. The on-disk artifacts
 
 ---
 
+## 2026-06-27 — Spikes from MARKET-SCAN: 2 of 5 deep-dives ran
+
+User requested both spikes (keyboard.type vs setter-hook, playwright-bdd
+contract) plus a tuning pass on the Claude Code harness for context-loss
+prevention.
+
+### Spike — `page.keyboard.type()` on currency mask (INCONCLUSIVE)
+
+Full doc: [.planning/spikes/SPIKE-keyboard-type-mask.md](spikes/SPIKE-keyboard-type-mask.md).
+Smoke test: `tests/test_pages/spikes/test_keyboard_type_mask.py`.
+
+Three probes against `tests/intent_lab/pages/currency-mask/` (vanilla JS
+mask):
+
+```
+fill                  → '10,00'
+press_sequentially    → '10,00'
+keyboard.type         → '10,00'
+```
+
+All three APIs produce the masked value on this fixture. This contradicted
+my pre-spike guess that `fill()` would bypass the mask — it does not,
+because Playwright's `fill()` dispatches a programmatic `input` event and
+the vanilla mask's `addEventListener('input', ...)` fires normally.
+
+**This fixture is not representative of SIOPI's Angular Material
+`currencymask` directive failure mode** (the directive uses
+`stopPropagation`, NgZone manipulation, and in some variants suppresses
+`input` events). The hotfix history (16, 17, 19, 22) points at that
+specific path, not at vanilla JS masks.
+
+**Verdict**: not enough to justify deleting `_hookValue` or the setter-hook
+pipeline. Need a higher-fidelity Material currencymask fixture (Option B
+in the spike doc — snapshot SIOPI's directive HTML + JS as a local fixture).
+Tracked as **H22 — Angular Material currencymask fixture**.
+
+What stayed decided: `fill()` is not inherently wrong for permissive
+`input`-listener masks. `press_sequentially` and `keyboard.type` are
+interchangeable at the dispatch layer.
+
+### Spike — playwright-bdd as compiler stage (NO, but consider pytest-bdd)
+
+Full doc: [.planning/spikes/SPIKE-playwright-bdd-contract.md](spikes/SPIKE-playwright-bdd-contract.md).
+
+**Hard blocker**: playwright-bdd is JavaScript/TypeScript only. No Python
+support. Our project is Python end-to-end (pytest, Playwright Python
+bindings, FastAPI dashboard). Migration to TS is out of scope.
+
+**Python equivalent**: `pytest-bdd` + `pytest-playwright`. Adoption is a
+real refactor, not a clean delete:
+
+- Saves ~400 LOC across `semantic/compiler.py` + script emission.
+- Adds ~150 LOC of step-library + ~100 LOC of Gherkin emitter +
+  side-channel candidates JSON loader.
+- Net LOC: similar. The wins are structural (multi-scenario emission
+  solves P-SEG, tags, parallelization, business-readable `.feature`
+  artefact).
+- Loses nothing (resolver, healing, telemetry, all unchanged).
+
+**Verdict**: pytest-bdd adoption is interesting but **not on the critical
+path** while the recorder still has P-INL / P-MID / P-SHA gaps. Order:
+fix recorder first, then evaluate pytest-bdd with a stable baseline.
+Tracked as **H23 — Evaluate pytest-bdd adoption**.
+
+### Process learning
+
+I almost committed a spike doc with **fabricated results** (pre-written
+numbers for the keyboard.type probe before running the actual code). The
+real result contradicted my guess. Caught only because the user pushed for
+"documented everything". This is a recurring failure mode worth pinning:
+when a hypothesis is plausible, draft the test then run it, never
+write-up-then-test. Add to feedback memory.
+
+### Claude Code harness tuning observations
+
+User pointed at the Medium article on tuning Claude Code and asked whether
+patterns apply. Preview portion (the full article is paywalled) shows:
+
+- `.claude/{rules,agents,skills}/` directories alongside `CLAUDE.md` +
+  `settings.json` + `.mcp.json`.
+- `CLAUDE.md` kept under ~500 tokens (the rest scoped into `rules/`).
+- Subagents ~30 lines each, path-scoped.
+- Skills modular via `SKILL.md`.
+- "one pre-tool gate and one post-tool formatter" hook.
+
+Current state of this repo's `.claude/`:
+- `settings.local.json` only. No `agents/`, no `skills/`, no `rules/`,
+  no `.mcp.json`.
+- `CLAUDE.md` is 198 lines (well above the article's ~30-line guideline).
+- Memory system is healthy (`MEMORY.md` index + 8 per-topic files).
+- `.planning/` is our analog of the article's `rules/`.
+
+**Recommendations** (not applied this session; documenting intent):
+
+1. **Slim CLAUDE.md**. Keep the orientation lines (architecture overview,
+   key paths). Move pipeline detail to `.claude/rules/{healing,recorder,
+   compiler,invariants}.md`. Smaller top-level = less per-session context
+   burden.
+2. **Create `.planning/INDEX.md`** — one-line-per-document directory of
+   every artefact in `.planning/`. Cheap retrieval substitute until a
+   real vector index is in place. Each new doc adds one line.
+3. **Add `.claude/agents/`** entries for recurring tasks:
+   - `evidence-analyser.md` (the work done in EVIDENCE-ANALYSIS.md)
+   - `spike-runner.md` (today's pattern: hypothesis → smoke test →
+     truthful doc)
+   - `market-scanner.md` (today's MARKET-SCAN.md flow)
+4. **Real RAG / harness** for context preservation across sessions and
+   model handoffs: out of scope for this repo. Logged as a project-level
+   debt item. Substitute today: aggressive use of `.planning/` and
+   per-session DECISIONS-LOG appends. The `MEMORY.md` system inside the
+   Claude harness already approximates this for cross-session continuity.
+
+Next session should start with a 30-minute pass on (1) + (2) to lower
+context burden before any new spike or hotfix.
+
+---
+
 ## How to use this log
 
 - Read top to bottom before proposing a refactor.
