@@ -225,19 +225,45 @@ class SelectorAgent:
             )
         return None
 
+    # B24/B25: minimum length for a text= fallback to be considered
+    # semantically meaningful. "JAN", "1992", "1" all match calendar
+    # widgets in unpredictable spots; raise the bar so we do not propose
+    # them as cures. 6 characters covers most month names, button
+    # labels, and labels like "Calcular" / "Confirmar".
+    _MIN_TEXT_FALLBACK_LEN = 6
+
+    # Very common UI words that are not specific enough to identify a
+    # control even at meaningful length. Reject them outright.
+    _GENERIC_TEXT_BLOCKLIST = frozenset({
+        "ok", "cancelar", "fechar", "voltar", "continuar", "salvar",
+        "confirmar", "enviar", "home", "menu", "sim", "nao", "não",
+        "selecione", "calcular", "calculate",
+    })
+
     def _try_text(self, text_val: str) -> Optional[LLMHealingProposal]:
-        if text_val and len(text_val) >= 2:
-            # Use exact text match (quoted) to avoid matching parent elements
-            # that contain the same text (e.g. <p> wrapping a <button>)
-            escaped = text_val[:80].replace('"', '\\"')
-            return LLMHealingProposal(
-                taxonomy_id="SEL-004", family="FAM-01",
-                strategy="has_text_fallback",
-                new_locator=f'text="{escaped}"',
-                confidence=0.70,
-                rationale=f"Fallback por texto visivel (exato): '{text_val[:80]}'",
-            )
-        return None
+        if not text_val:
+            return None
+        cleaned = text_val.strip()
+        if len(cleaned) < self._MIN_TEXT_FALLBACK_LEN:
+            return None
+        # Reject text matches that are entirely numeric — calendar
+        # cells, year labels, page numbers are all ambiguous targets.
+        if cleaned.replace(",", "").replace(".", "").replace("/", "").isdigit():
+            return None
+        # Reject the generic UI vocabulary even at meaningful length.
+        if cleaned.lower() in self._GENERIC_TEXT_BLOCKLIST:
+            return None
+        # Use exact text match (quoted) to avoid matching parent
+        # elements that contain the same text (e.g. <p> wrapping a
+        # <button>).
+        escaped = cleaned[:80].replace('"', '\\"')
+        return LLMHealingProposal(
+            taxonomy_id="SEL-004", family="FAM-01",
+            strategy="has_text_fallback",
+            new_locator=f'text="{escaped}"',
+            confidence=0.70,
+            rationale=f"Fallback por texto visivel (exato): '{cleaned[:80]}'",
+        )
 
     def _llm_fallback(
         self, payload: EvidencePayload, error_message: str,

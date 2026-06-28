@@ -193,13 +193,32 @@ class CuradorAutomatico:
     def _try_layer0_catalog(
         self, family: str, step_data: dict, error_message: str,
     ) -> Optional[CurationOutcome]:
-        """L0: Match exact recipe from HealingCatalog."""
+        """L0: Match exact recipe from HealingCatalog.
+
+        B23: always attach an LLMHealingProposal mirroring the recipe's
+        solution. Earlier L0 hits returned `proposal=None`, which made
+        downstream display + dangerous-locator validation treat the cure
+        as an empty selector (`''`). The legacy run path then printed
+        `Curador: PASSED_STEP [L0]` immediately followed by
+        `REJEITADO — locator generico/perigoso: ''`.
+        """
         recipes = self._catalog.match_recipes(error_message, family=family)
         high_confidence = [r for r in recipes if r.priority >= 5]
         if not high_confidence:
             return None
 
         best = high_confidence[0]
+
+        def _proposal_from_recipe() -> LLMHealingProposal:
+            return LLMHealingProposal(
+                taxonomy_id=getattr(best, "taxonomy_id", "") or "",
+                family=family or "",
+                strategy=best.solution_strategy or "catalog",
+                new_locator=best.solution_selector or "",
+                confidence=0.95,
+                rationale=f"L0 catalog recipe {best.recipe_id}",
+            )
+
         if not self._step_runner:
             # No runner — return as passed (catalog entry is trusted)
             self._catalog.record_usage(best.recipe_id)
@@ -208,6 +227,7 @@ class CuradorAutomatico:
                 entry_id=best.recipe_id,
                 layer_used="L0",
                 family=family,
+                proposal=_proposal_from_recipe(),
             )
 
         # Execute with catalog fix
@@ -220,6 +240,7 @@ class CuradorAutomatico:
                 entry_id=best.recipe_id,
                 layer_used="L0",
                 family=family,
+                proposal=_proposal_from_recipe(),
             )
 
         return None  # Fall through to L1

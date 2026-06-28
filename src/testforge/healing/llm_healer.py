@@ -136,9 +136,16 @@ def _parse_response(text: str) -> Optional[LLMHealingProposal]:
     except json.JSONDecodeError:
         return None
 
-    # Accept 'selector' as alias for 'new_locator'
-    if "selector" in data and "new_locator" not in data:
-        data["new_locator"] = data["selector"]
+    # B27: accept all key variants the LLM has been observed to emit.
+    # Order matters — first non-empty value wins.
+    _locator_aliases = ("new_locator", "selector", "new_selector",
+                        "css_selector", "locator")
+    if not data.get("new_locator"):
+        for _k in _locator_aliases:
+            _v = data.get(_k)
+            if isinstance(_v, str) and _v.strip():
+                data["new_locator"] = _v.strip()
+                break
 
     # Fill in defaults for missing fields
     if "taxonomy_id" not in data:
