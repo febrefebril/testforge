@@ -27,6 +27,12 @@ class MetricsSnapshot:
     aplicados: int = 0
     validados: int = 0
     rejeitados: int = 0
+    # assert_hit_rate (2026-06-29, decommission Sprint 3): metrica de
+    # sucesso real do piloto. Steps intermediarios podem curar para tela
+    # errada e ainda contar como aplicados — o que importa eh se o assert
+    # final, que carrega a expectativa do usuario, foi atingido.
+    asserts_total: int = 0
+    asserts_hit: int = 0
 
     @property
     def false_heal_rate(self) -> float:
@@ -54,6 +60,17 @@ class MetricsSnapshot:
             return 0.0
         return (self.aplicados + self.validados) / total_outcomes
 
+    @property
+    def assert_hit_rate(self) -> float:
+        """Razao asserts_validados / total_asserts no script.
+
+        Sucesso real do piloto. Diferente de healing_success_rate porque
+        ignora steps intermediarios — so importa se chegamos no objetivo
+        do teste (o assert que o usuario gravou)."""
+        if self.asserts_total == 0:
+            return 0.0
+        return self.asserts_hit / self.asserts_total
+
     def to_dict(self) -> dict:
         return {
             "total_runs": self.total_runs,
@@ -73,6 +90,9 @@ class MetricsSnapshot:
             "validados": self.validados,
             "rejeitados": self.rejeitados,
             "healing_success_rate": round(self.healing_success_rate, 4),
+            "asserts_total": self.asserts_total,
+            "asserts_hit": self.asserts_hit,
+            "assert_hit_rate": round(self.assert_hit_rate, 4),
         }
 
 
@@ -126,6 +146,16 @@ class MetricsRepository:
             "selector": selector[:80] if selector else "",
         })
 
+    def record_assert(self, hit: bool) -> None:
+        """Registra resultado de um assert step. `hit=True` significa que o
+        assert passou (com ou sem healing); `hit=False` significa que falhou
+        ou foi rejeitado. Alimenta assert_hit_rate — metrica de sucesso real
+        do piloto.
+        """
+        self._snapshot.asserts_total += 1
+        if hit:
+            self._snapshot.asserts_hit += 1
+
     @property
     def snapshot(self) -> MetricsSnapshot:
         return self._snapshot
@@ -160,5 +190,10 @@ class MetricsRepository:
                 f"Validados:          {s.validados}",
                 f"Rejeitados:         {s.rejeitados}",
                 f"Healing success:    {s.healing_success_rate:.2%}",
+                f"",
+                f"--- Assert hit rate (sucesso real do piloto) ---",
+                f"Asserts no script:  {s.asserts_total}",
+                f"Asserts validados:  {s.asserts_hit}",
+                f"Assert hit rate:    {s.assert_hit_rate:.2%}",
             ])
         return "\n".join(lines)

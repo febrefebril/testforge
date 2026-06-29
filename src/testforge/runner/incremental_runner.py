@@ -863,11 +863,22 @@ class IncrementalRunner:
         totals = self._compute_totals()
         return self._finalize_report(totals)
 
+    _ASSERT_HIT_STATUSES = ("passed", "healed_validated", "shadow_healed")
+
     def _compute_totals(self):
         t = {"total": len(self.step_results)}
         for k in ("passed", "healed_validated", "healing_rejected",
                   "failed", "blocked", "skipped", "shadow_healed"):
             t[k] = sum(1 for r in self.step_results if r.status == k)
+        # Sprint 3 do decommission plan (2026-06-29): assert_hit_rate. Soma
+        # asserts no script + asserts atingidos. Alimenta MetricsRepository
+        # antes do _finalize_report consolidar.
+        asserts = [r for r in self.step_results if r.action == "assert"]
+        t["asserts_total"] = len(asserts)
+        t["asserts_hit"] = sum(1 for r in asserts if r.status in self._ASSERT_HIT_STATUSES)
+        if self.metrics:
+            for r in asserts:
+                self.metrics.record_assert(hit=r.status in self._ASSERT_HIT_STATUSES)
         return t
 
     def _finalize_report(self, totals):
