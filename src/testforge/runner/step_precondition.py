@@ -1,7 +1,7 @@
 """TestForge — StepPreconditionValidator.
 
-Valida se um step pode ser executado: actionability, dependências,
-selector ausente, candidato primário, e regras específicas por ação.
+Valida se um step pode ser executado: actionability, dependencias,
+selector ausente, candidato primario, e regras especificas por acao.
 """
 from __future__ import annotations
 from typing import Optional
@@ -10,7 +10,7 @@ from .step_result import PreconditionResult
 
 
 class StepPreconditionValidator:
-    """Valida pré-condições por step antes da execução."""
+    """Valida pre-condicoes por step antes da execucao."""
 
     def __init__(self, page, actionability_validator=None):
         self.page = page
@@ -77,7 +77,7 @@ class StepPreconditionValidator:
             return self._validate_assert(step, selector, result)
 
         result.passed = True
-        result.message = f"no specific precondition for action={action}"
+        result.message = f"nenhuma pre-condicao especifica para acao={action}"
         return result
 
     def _validate_click(self, step, selector, result):

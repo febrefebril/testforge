@@ -1,20 +1,19 @@
-"""B18+B19+B20 — protection against the SIOPI false-positive cascade.
+"""B18+B19+B20 — protecao contra cascata de falso-positivo SIOPI.
 
-A SIOPI run produced 26 consecutive L2 heals all resolving to
-`a[href="/"]` (the site root link), oracle-approved as success because
-the link existed on every page. Three structural causes:
+Uma execucao SIOPI produziu 26 curas L2 consecutivas resolvendo para
+`a[href="/"]` (link raiz do site), aprovado pelo oraculo como sucesso porque
+o link existia em todas as paginas. Tres causas estruturais:
 
-  B18  selector_agent._try_href grepped the first <a href> in the DOM,
-       which was the SIOPI logo (`<a href="/">`).
-  B19  the dangerous-locator deny-list did not cover `a[href="/"]`.
-  B20  the legacy `run` path didn't apply the dangerous-locator filter
-       at all.
+  B18  selector_agent._try_href capturava o primeiro <a href> no DOM,
+       que era o logo SIOPI (`<a href="/">`).
+  B19  a lista de negacao de localizadores perigosos nao cobria `a[href="/"]`.
+  B20  o caminho legado `run` nao aplicava o filtro de localizador perigoso.
 
-This file pins:
-  * a[href="/"] is treated as dangerously generic.
-  * Several related generic anchors are caught too.
-  * selector_agent._try_href requires a semantic text overlap before
-    proposing an anchor cure.
+Este arquivo fixa:
+  * a[href="/"] e tratado como genericamente perigoso.
+  * Varios anchors genericos relacionados tambem sao capturados.
+  * selector_agent._try_href exige sobreposicao de texto semantico antes
+    de propor uma cura por anchor.
 """
 from __future__ import annotations
 
@@ -30,7 +29,7 @@ from testforge.runner.dangerous_locator import (
 from testforge.healing.agents.selector_agent import SelectorAgent
 
 
-# ---- B19: dangerous-locator deny-list ----------------------------------------
+# ---- B19: lista de negacao de localizadores perigosos --------------------------
 
 
 class TestDangerousLocatorList:
@@ -49,7 +48,7 @@ class TestDangerousLocatorList:
     ])
     def test_known_generic_selectors_are_rejected(self, selector):
         assert is_dangerously_generic(selector), (
-            f"Expected {selector!r} to be rejected as dangerously generic"
+            f"Esperado {selector!r} ser rejeitado como genericamente perigoso"
         )
 
     @pytest.mark.parametrize("selector", [
@@ -60,7 +59,7 @@ class TestDangerousLocatorList:
     ])
     def test_specific_selectors_are_accepted(self, selector):
         assert not is_dangerously_generic(selector), (
-            f"Expected {selector!r} to be accepted"
+            f"Esperado {selector!r} ser aceito"
         )
 
     def test_empty_or_none_is_dangerous(self):
@@ -72,9 +71,9 @@ class TestDangerousLocatorList:
         assert is_dangerously_generic('xpath=/html/body/div')
 
     def test_short_nth_child_is_dangerous(self):
-        # Real SIOPI failure: 'a:nth-child(1)' as a cure proposal.
+        # Falha SIOPI real: 'a:nth-child(1)' como proposta de cura.
         assert is_dangerously_generic("a:nth-child(1)")
-        # But a longer chain is allowed (qualifier present).
+        # Mas uma cadeia mais longa e permitida (qualificador presente).
         assert not is_dangerously_generic(
             'div#formInit > div.bg-neutral-1 > a:nth-child(1)'
         )
@@ -82,17 +81,17 @@ class TestDangerousLocatorList:
 
 class TestDangerousSetIsFrozen:
     def test_set_is_frozenset(self):
-        # B19 invariant: deny-list is immutable. Tests cannot poison it
-        # for sibling tests.
+        # Invariante B19: lista de negacao e imutavel. Testes nao podem
+        # envenena-la para testes irmaos.
         assert isinstance(DANGEROUS_LOCATORS, frozenset)
 
 
-# ---- B18: selector_agent._try_href requires semantic overlap -----------------
+# ---- B18: selector_agent._try_href exige sobreposicao semantica -----------------
 
 
 @dataclass
 class _Payload:
-    """Minimal stand-in for EvidencePayload used by SelectorAgent._try_href."""
+    """Substituto minimo para EvidencePayload usado por SelectorAgent._try_href."""
     dom_snapshot: str = ""
     step_context: dict = field(default_factory=dict)
     is_sufficient: bool = True
@@ -104,9 +103,9 @@ def _agent() -> SelectorAgent:
 
 class TestTryHrefRequiresSemanticMatch:
     def test_site_root_anchor_no_longer_proposed(self):
-        """The exact SIOPI failure mode: DOM has `<a href="/">`,
-        step_context.text is something specific like "Calculadora poder
-        de compra". The agent must NOT propose `a[href="/"]`."""
+        """Modo de falha SIOPI exato: DOM tem `<a href="/">`,
+        step_context.text e algo especifico como "Calculadora poder
+        de compra". O agente NAO deve propor `a[href="/"]`."""
         dom = (
             '<header><a href="/"><img alt="logo"/></a></header>'
             '<main><a href="/calculadora-egi">Calculadora poder de compra</a></main>'
@@ -119,18 +118,18 @@ class TestTryHrefRequiresSemanticMatch:
             },
         )
         result = _agent()._try_href(payload)
-        # Either: returns a specific match (a[href="/calculadora-egi"])
-        # or returns None (if logic conservatively refused).
+        # Ou: retorna uma correspondencia especifica (a[href="/calculadora-egi"])
+        # ou retorna None (se a logica conservadoramente recusou).
         if result is not None:
             assert 'href="/"' not in result.new_locator, (
-                f"Agent proposed the dangerous site-root anchor: "
+                f"Agente propos o anchor perigoso de raiz do site: "
                 f"{result.new_locator!r}"
             )
             assert result.new_locator == 'a[href="/calculadora-egi"]'
 
     def test_empty_target_text_refuses_to_propose(self):
-        """Without target text, we can't tell a meaningful link from
-        the site logo. Refuse to propose anything."""
+        """Sem texto alvo, nao podemos distinguir um link significativo
+        do logo do site. Recusar propor qualquer coisa."""
         dom = '<header><a href="/">Home</a></header>'
         payload = _Payload(
             dom_snapshot=dom,
@@ -144,13 +143,13 @@ class TestTryHrefRequiresSemanticMatch:
             dom_snapshot=dom,
             step_context={"text": "X", "selector": "div"},
         )
-        # Less than 3 chars — too ambiguous.
+        # Menos de 3 caracteres — muito ambíguo.
         assert _agent()._try_href(payload) is None
 
     def test_no_semantic_match_returns_none(self):
         dom = (
             '<a href="/">Home</a>'
-            '<a href="/about">Sobre nós</a>'
+            '<a href="/about">Sobre nos</a>'
         )
         payload = _Payload(
             dom_snapshot=dom,
@@ -160,8 +159,8 @@ class TestTryHrefRequiresSemanticMatch:
             },
         )
         assert _agent()._try_href(payload) is None, (
-            "No anchor in the DOM matches the target text — agent "
-            "must not propose anything."
+            "Nenhum anchor no DOM corresponde ao texto alvo — agente "
+            "nao deve propor nada."
         )
 
     def test_matching_anchor_is_proposed(self):
@@ -179,5 +178,5 @@ class TestTryHrefRequiresSemanticMatch:
         result = _agent()._try_href(payload)
         assert result is not None
         assert result.new_locator == 'a[href="/calc-egi"]'
-        # Confidence stays in a reasonable band.
+        # Confianca permanece em uma faixa razoavel.
         assert 0.6 <= result.confidence <= 0.9

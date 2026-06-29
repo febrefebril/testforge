@@ -171,16 +171,16 @@ class TestGenerateSummary:
 
 class TestCopyArtifacts:
     def _make_recording(self, base_dir: str, rid: str) -> str:
-        """Create minimal recording directory structure."""
+        """Cria estrutura minima de diretorio de gravacao."""
         rec_dir = os.path.join(base_dir, rid)
         os.makedirs(rec_dir, exist_ok=True)
 
-        # Create flat files
+        # Cria arquivos simples
         for fname in ["recording_metadata.json", "raw_events.jsonl", "steps.jsonl"]:
             with open(os.path.join(rec_dir, fname), "w") as f:
                 f.write("{}\n")
 
-        # Create dom_snapshots
+        # Cria dom_snapshots
         dom_dir = os.path.join(rec_dir, "dom_snapshots")
         os.makedirs(dom_dir, exist_ok=True)
         with open(os.path.join(dom_dir, "event_1.html"), "w") as f:
@@ -191,7 +191,7 @@ class TestCopyArtifacts:
     def test_copies_flat_recording_files(self):
         publisher = GitPublisher("https://example.com", "token")
         with tempfile.TemporaryDirectory() as tmp:
-            # Setup
+            # Configuracao
             recordings_dir = os.path.join(tmp, "recordings")
             os.makedirs(recordings_dir)
             rid = self._make_recording(recordings_dir, "REC-001")
@@ -199,10 +199,10 @@ class TestCopyArtifacts:
             dest_dir = os.path.join(repo_dir, "recordings", rid)
             os.makedirs(dest_dir, exist_ok=True)
 
-            # Act
+            # Acao
             copied = publisher._copy_artifacts(repo_dir, rid, recordings_dir, "")
 
-            # Assert
+            # Verificacao
             assert "recording_metadata.json" in copied
             assert os.path.exists(os.path.join(dest_dir, "recording_metadata.json"))
             assert "steps.jsonl" in copied
@@ -217,10 +217,10 @@ class TestCopyArtifacts:
             dest_dir = os.path.join(repo_dir, "recordings", rid)
             os.makedirs(dest_dir, exist_ok=True)
 
-            # Test that network_log.json (not created by _make_recording) is skipped
+            # Testa se network_log.json (nao criado por _make_recording) e ignorado
             copied = publisher._copy_artifacts(repo_dir, rid, recordings_dir, "")
 
-            # Should not crash and should not list missing file
+            # Nao deve quebrar nem listar arquivo ausente
             assert "network_log.json" not in copied
 
     def test_copies_dom_snapshots_directory(self):
@@ -235,7 +235,7 @@ class TestCopyArtifacts:
 
             copied = publisher._copy_artifacts(repo_dir, rid, recordings_dir, "")
 
-            # Check dom_snapshots copied
+            # Verifica dom_snapshots copiados
             assert "dom_snapshots/" in copied
             assert os.path.isdir(os.path.join(dest_dir, "dom_snapshots"))
             assert os.path.exists(os.path.join(dest_dir, "dom_snapshots", "event_1.html"))
@@ -247,7 +247,7 @@ class TestCopyArtifacts:
             os.makedirs(recordings_dir)
             rid = self._make_recording(recordings_dir, "REC-001")
 
-            # Create empty screenshots dir
+            # Cria diretorio vazio de screenshots
             screenshots_dir = os.path.join(recordings_dir, rid, "screenshots")
             os.makedirs(screenshots_dir, exist_ok=True)
 
@@ -257,7 +257,7 @@ class TestCopyArtifacts:
 
             copied = publisher._copy_artifacts(repo_dir, rid, recordings_dir, "")
 
-            # Empty screenshots should not be copied
+            # Screenshots vazios nao devem ser copiados
             assert "screenshots/" not in copied
             assert not os.path.exists(os.path.join(dest_dir, "screenshots"))
 
@@ -282,7 +282,7 @@ class TestCopyArtifacts:
 
             copied = publisher._copy_artifacts(repo_dir, rid, recordings_dir, semantic_tests_dir)
 
-            # Check semantic files copied
+            # Verifica arquivos semanticos copiados
             assert "test_REC_001.py" in copied
             assert "semantic_steps.jsonl" in copied
 
@@ -305,11 +305,11 @@ class TestCopyArtifacts:
 
 class TestPublish:
     def _make_recording(self, base_dir: str, rid: str, with_semantic: bool = False) -> str:
-        """Create minimal recording directory structure."""
+        """Cria estrutura minima de diretorio de gravacao."""
         rec_dir = os.path.join(base_dir, rid)
         os.makedirs(rec_dir, exist_ok=True)
 
-        # Create metadata
+        # Cria metadados
         metadata = {
             "recording_id": rid,
             "application": "web",
@@ -322,19 +322,19 @@ class TestPublish:
         with open(os.path.join(rec_dir, "recording_metadata.json"), "w") as f:
             json.dump(metadata, f)
 
-        # Create flat files
+        # Cria arquivos simples
         for fname in ["raw_events.jsonl", "steps.jsonl"]:
             with open(os.path.join(rec_dir, fname), "w") as f:
                 f.write("{}\n")
 
-        # Create dom_snapshots
+        # Cria dom_snapshots
         dom_dir = os.path.join(rec_dir, "dom_snapshots")
         os.makedirs(dom_dir, exist_ok=True)
         with open(os.path.join(dom_dir, "event_1.html"), "w") as f:
             f.write("<html></html>")
 
         if with_semantic:
-            # Placeholder for semantic test
+            # Placeholder para teste semantico
             pass
 
         return rid
@@ -353,13 +353,13 @@ class TestPublish:
             os.makedirs(recordings_dir)
             rid = self._make_recording(recordings_dir, "REC-001")
 
-            # Mock subprocess to simulate successful clone but no staged changes
+            # Simula subprocess para clonagem bem-sucedida sem alteracoes staged
             with mock.patch.object(publisher, "_clone_shallow"):
                 with mock.patch.object(
                     publisher, "_copy_artifacts", return_value=[]
                 ):
                     with mock.patch.object(publisher, "_git") as mock_git:
-                        # Simulate diff --cached returning empty
+                        # Simula diff --cached retornando vazio
                         def git_side_effect(*args, **kwargs):
                             if args[0] == "diff":
                                 return ""
@@ -371,7 +371,7 @@ class TestPublish:
 
                         result = publisher.publish(rid, recordings_dir, tmp)
 
-                        # Should still succeed with empty sha if nothing staged
+                        # Deve ainda suceder com sha vazio se nada foi staged
                         assert result.success is True
 
     def test_publish_does_not_leak_token_in_failure_result(self):
@@ -381,7 +381,7 @@ class TestPublish:
             os.makedirs(recordings_dir)
             rid = self._make_recording(recordings_dir, "REC-001")
 
-            # Mock to raise an exception with token in it
+            # Simula excecao com token presente
             with mock.patch.object(
                 publisher,
                 "_clone_shallow",
@@ -540,7 +540,7 @@ class TestLocalPublish:
         assert "metadata not found" in result.error
 
     def test_local_publish_without_git_root_returns_failure(self, tmp_path):
-        """If git_root is empty, _local_publish must return a clear failure."""
+        """Se git_root estiver vazio, _local_publish deve retornar falha explicita."""
         pub = GitPublisher(url="", token="", local_mode=True, git_root="", branch="main", remote="origin")
         recordings_dir = str(tmp_path / "recordings_src")
         os.makedirs(recordings_dir)
@@ -550,11 +550,11 @@ class TestLocalPublish:
 
 
 class TestFromConfigBugFixes:
-    """Regression tests for the UnboundLocalError in from_config."""
+    """Testes de regressao para UnboundLocalError em from_config."""
 
     def test_config_at_cwd_no_unboundlocal_error(self, tmp_path):
-        """Bug: when .testforge/config.yml is directly in cwd, git_root was never
-        assigned → UnboundLocalError on return. Must not raise."""
+        """Bug: quando .testforge/config.yml esta diretamente no cwd, git_root nunca era
+        atribuido → UnboundLocalError no retorno. Nao deve lancar."""
         (tmp_path / ".git").mkdir()
         tf = tmp_path / ".testforge"
         tf.mkdir()
@@ -563,7 +563,7 @@ class TestFromConfigBugFixes:
         assert pub is not None
 
     def test_git_root_resolved_when_config_at_cwd(self, tmp_path):
-        """git_root must point to the repo root even when config is at cwd."""
+        """git_root deve apontar para raiz do repo mesmo quando config esta no cwd."""
         (tmp_path / ".git").mkdir()
         tf = tmp_path / ".testforge"
         tf.mkdir()
@@ -572,7 +572,7 @@ class TestFromConfigBugFixes:
         assert pub._git_root == str(tmp_path)
 
     def test_git_root_resolved_via_walk_up(self, tmp_path):
-        """git_root is found when cwd is a subdirectory without its own config."""
+        """git_root encontrado quando cwd e um subdiretorio sem config propria."""
         (tmp_path / ".git").mkdir()
         tf = tmp_path / ".testforge"
         tf.mkdir()
@@ -584,7 +584,7 @@ class TestFromConfigBugFixes:
         assert pub._git_root == str(tmp_path)
 
     def test_from_config_with_url_sets_remote_mode(self, tmp_path):
-        """When url is set in config, local_mode must be False."""
+        """Quando url esta definida no config, local_mode deve ser False."""
         (tmp_path / ".git").mkdir()
         tf = tmp_path / ".testforge"
         tf.mkdir()
@@ -598,10 +598,10 @@ class TestFromConfigBugFixes:
 
 
 class TestCmdSendUsesConfig:
-    """Ensure cmd_send falls back to config file, not only env vars."""
+    """Garante que cmd_send usa config file, nao apenas env vars."""
 
     def test_cmd_send_uses_from_config_when_no_env(self, tmp_path):
-        """cmd_send must pick up config.yml when TESTFORGE_GIT_URL is not set."""
+        """cmd_send deve usar config.yml quando TESTFORGE_GIT_URL nao estiver definido."""
         (tmp_path / ".git").mkdir()
         tf = tmp_path / ".testforge"
         tf.mkdir()
@@ -620,10 +620,10 @@ class TestCmdSendUsesConfig:
 
 
 class TestCloneShallowAuthErrors:
-    """_clone_shallow must not mask authentication errors."""
+    """_clone_shallow nao deve mascarar erros de autenticacao."""
 
     def test_auth_error_propagates_not_masked(self):
-        """Authentication failure (401/403) must not trigger branch-not-found fallback."""
+        """Falha de autenticacao (401/403) nao deve acionar fallback de branch-nao-encontrada."""
         publisher = GitPublisher("https://example.com", "bad-token")
         auth_error = subprocess.CalledProcessError(
             128, ["git", "clone"],
@@ -640,11 +640,11 @@ class TestCloneShallowAuthErrors:
                 with pytest.raises(subprocess.CalledProcessError):
                     publisher._clone_shallow(tmp)
 
-        # Must not retry — only one git call attempted
+        # Nao deve tentar novamente — apenas uma chamada git
         assert call_count[0] == 1
 
     def test_branch_not_found_triggers_fallback_clone(self):
-        """Branch-not-found must retry with default branch clone."""
+        """Branch-nao-encontrada deve tentar novamente com clone da branch padrao."""
         publisher = GitPublisher("https://example.com", "valid-token", branch="qa-branch")
         call_count = [0]
 
@@ -664,7 +664,7 @@ class TestCloneShallowAuthErrors:
         assert call_count[0] >= 2
 
     def test_403_propagates(self):
-        """HTTP 403 error must not trigger fallback."""
+        """Erro HTTP 403 nao deve acionar fallback."""
         publisher = GitPublisher("https://example.com", "token")
         call_count = [0]
 
@@ -684,7 +684,7 @@ class TestCloneShallowAuthErrors:
 
 
 class TestGitCommandLogging:
-    """_git must log commands and scrub tokens from all output."""
+    """_git deve logar comandos e limpar tokens de toda saida."""
 
     def test_git_logs_debug_on_success(self, caplog):
         publisher = GitPublisher("https://example.com", "token")
@@ -695,7 +695,7 @@ class TestGitCommandLogging:
         assert any("rev-parse" in r.message for r in caplog.records)
 
     def test_git_scrubs_token_in_logged_args(self, caplog):
-        """Token embedded in a URL arg must not appear in any log record."""
+        """Token embutido em argumento URL nao deve aparecer em registro de log."""
         publisher = GitPublisher("https://example.com", "super-secret-token")
         with caplog.at_level(logging.DEBUG, logger="testforge.publisher"):
             with mock.patch("subprocess.run") as mock_run:
@@ -719,7 +719,7 @@ class TestGitCommandLogging:
         assert any("falhou" in r.message for r in caplog.records)
 
     def test_git_error_does_not_leak_token_in_exception(self):
-        """Token in stderr must be scrubbed before raising CalledProcessError."""
+        """Token em stderr deve ser limpo antes de lancar CalledProcessError."""
         publisher = GitPublisher("https://example.com", "my-secret")
         with mock.patch("subprocess.run") as mock_run:
             mock_run.return_value = mock.Mock(

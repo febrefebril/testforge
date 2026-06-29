@@ -20,7 +20,7 @@ class TestIsSubmitTriggerJS:
 
     @pytest.fixture
     def page_with_overlay(self, page: Page):
-        """Inject overlay JS into a blank page so _tf_isSubmitTrigger is available."""
+        """Injeta JS do overlay em pagina em branco para disponibilizar _tf_isSubmitTrigger."""
         page.set_content("""
             <html><body>
             <form id="f1" action="/post" method="POST">
@@ -48,12 +48,12 @@ class TestIsSubmitTriggerJS:
             </form>
             </body></html>
         """)
-        # Inject overlay JS
+        # Injeta JS do overlay
         from testforge.recorder.recorder_controller import RecorderController
         page.evaluate(RecorderController._OVERLAY_JS)
         return page
 
-    # ---- Native submit elements ----
+    # ---- Elementos de submit nativos ----
 
     def test_input_submit_is_trigger(self, page_with_overlay):
         result = page_with_overlay.evaluate(
@@ -86,13 +86,13 @@ class TestIsSubmitTriggerJS:
         assert result is False
 
     def test_button_default_type_is_trigger(self, page_with_overlay):
-        """button without explicit type defaults to submit."""
+        """button sem type explicito padrao e submit."""
         result = page_with_overlay.evaluate(
             "() => _tf_isSubmitTrigger(document.getElementById('btn-default'))"
         )
         assert result is True
 
-    # ---- ASP.NET __doPostBack ----
+    # ---- __doPostBack do ASP.NET ----
 
     def test_dopostback_href_is_trigger(self, page_with_overlay):
         result = page_with_overlay.evaluate(
@@ -106,7 +106,7 @@ class TestIsSubmitTriggerJS:
         )
         assert result is True
 
-    # ---- ASP.NET WebForm_DoPostBackWithOptions ----
+    # ---- WebForm_DoPostBackWithOptions do ASP.NET ----
 
     def test_webform_href_is_trigger(self, page_with_overlay):
         result = page_with_overlay.evaluate(
@@ -120,7 +120,7 @@ class TestIsSubmitTriggerJS:
         )
         assert result is True
 
-    # ---- ASP classic document.forms[].submit() ----
+    # ---- document.forms[].submit() do ASP classic ----
 
     def test_asp_classic_href_is_trigger(self, page_with_overlay):
         result = page_with_overlay.evaluate(
@@ -134,7 +134,7 @@ class TestIsSubmitTriggerJS:
         )
         assert result is True
 
-    # ---- Non-trigger elements ----
+    # ---- Elementos nao-acionadores ----
 
     def test_regular_link_is_not_trigger(self, page_with_overlay):
         result = page_with_overlay.evaluate(
@@ -155,7 +155,7 @@ class TestIsSubmitTriggerJS:
         assert result is False
 
     def test_document_location_is_not_trigger(self, page_with_overlay):
-        """document.location is NOT a form submission — it's page navigation."""
+        """document.location NAO e um envio de formulario — e navegacao de pagina."""
         result = page_with_overlay.evaluate(
             "() => _tf_isSubmitTrigger(document.getElementById('link-location'))"
         )
@@ -187,10 +187,10 @@ class TestClickVsSubmitIntegration:
 
     @pytest.fixture
     def submit_page(self, page: Page):
-        """Load the fam-submit test page with recorder overlay injected via add_init_script.
-        
-        Uses add_init_script so the overlay persists across page navigations,
-        enabling postback detection on subsequent pages.
+        """Carrega pagina de teste fam-submit com overlay do recorder injetado via add_init_script.
+
+        Usa add_init_script para o overlay persistir entre navegacoes,
+        permitindo deteccao de postback em paginas subsequentes.
         """
         from testforge.recorder.recorder_controller import RecorderController
         page.add_init_script(RecorderController._OVERLAY_JS)
@@ -201,12 +201,12 @@ class TestClickVsSubmitIntegration:
         page.goto(f"file://{page_dir}/index.html")
         page.evaluate("_tf_showOverlay()")
         page.wait_for_timeout(200)
-        # Clear initial events (navigation + overlay startup)
+        # Limpa eventos iniciais (navegacao + inicializacao do overlay)
         page.evaluate("window.__tfEventQueue = []")
         return page
 
     def _get_events(self, page: Page) -> list:
-        """Read and clear event queue from JS."""
+        """Le e limpa fila de eventos do JS."""
         return page.evaluate("""() => {
             var q = window.__tfEventQueue || [];
             window.__tfEventQueue = [];
@@ -214,162 +214,162 @@ class TestClickVsSubmitIntegration:
         }""")
 
     def test_input_submit_records_as_submit(self, submit_page):
-        """Click on input[type=submit] records 'submit' event."""
+        """Clique em input[type=submit] registra evento 'submit'."""
         submit_page.click("#btn-submit-input")
         submit_page.wait_for_timeout(100)
         events = self._get_events(submit_page)
-        assert len(events) >= 1, f"No events captured: {events}"
+        assert len(events) >= 1, f"Nenhum evento capturado: {events}"
         event_types = [e["type"] for e in events]
-        assert "submit" in event_types, f"Expected 'submit' in {event_types}"
+        assert "submit" in event_types, f"Esperado 'submit' em {event_types}"
 
     def test_button_submit_records_as_submit(self, submit_page):
-        """Click on button[type=submit] records 'submit' event."""
+        """Clique em button[type=submit] registra evento 'submit'."""
         submit_page.click("#btn-submit-button")
         submit_page.wait_for_timeout(100)
         events = self._get_events(submit_page)
         event_types = [e["type"] for e in events]
-        assert "submit" in event_types, f"Expected 'submit' in {event_types}"
+        assert "submit" in event_types, f"Esperado 'submit' em {event_types}"
 
     def test_regular_button_records_as_click(self, submit_page):
-        """Click on button[type=button] records 'click' event, NOT submit."""
+        """Clique em button[type=button] registra evento 'click', NAO submit."""
         submit_page.click("#btn-regular-button")
         submit_page.wait_for_timeout(100)
         events = self._get_events(submit_page)
         event_types = [e["type"] for e in events]
         assert "submit" not in event_types, (
-            f"Button type=button should NOT be submit! Got: {event_types}"
+            f"Button type=button NAO deveria ser submit! Obtido: {event_types}"
         )
-        assert "click" in event_types, f"Expected 'click' in {event_types}"
+        assert "click" in event_types, f"Esperado 'click' em {event_types}"
 
     def test_span_inside_form_records_as_click(self, submit_page):
-        """Click on span inside form records 'click', NOT submit."""
+        """Clique em span dentro de form registra 'click', NAO submit."""
         submit_page.click("#span-in-form")
         submit_page.wait_for_timeout(100)
         events = self._get_events(submit_page)
         event_types = [e["type"] for e in events]
         assert "submit" not in event_types, (
-            f"Span inside form should NOT be submit! Got: {event_types}"
+            f"Span dentro de form NAO deveria ser submit! Obtido: {event_types}"
         )
-        assert "click" in event_types, f"Expected 'click' in {event_types}"
+        assert "click" in event_types, f"Esperado 'click' em {event_types}"
 
     def test_asp_classic_link_produces_postback(self, submit_page):
-        """Click on ASP classic document.forms submit link navigates → submit event survives.
-        
-        The submit event is now saved via beforeunload handler to sessionStorage
-        and restored on the new page with postback metadata (is_postback:true,
-        submit_method). The normalizer treats this as a click with is_submit context.
-        No separate postback event is generated — the submit event is the authoritative
-        record of the user action, with postback as metadata.
+        """Clique no link submit document.forms do ASP classic navega → evento submit sobrevive.
+
+        O evento submit agora e salvo via handler beforeunload no sessionStorage
+        e restaurado na nova pagina com metadados de postback (is_postback:true,
+        submit_method). O normalizador trata isso como click com contexto is_submit.
+        Nenhum evento postback separado e gerado — o evento submit e o registro
+        autoritativo da acao do usuario, com postback como metadado.
         """
         submit_page.click("#link-asp-classic-href")
         submit_page.wait_for_timeout(100)
         events = self._get_events(submit_page)
         event_types = [e["type"] for e in events]
-        # Submit event survives navigation via beforeunload → sessionStorage.
-        # It carries is_postback:true metadata instead of a separate postback event.
+        # Evento submit sobrevive a navegacao via beforeunload → sessionStorage.
+        # Carrega metadado is_postback:true em vez de um evento postback separado.
         assert "submit" in event_types, (
-            f"ASP classic href should produce submit event (survived navigation). Got: {event_types}"
+            f"ASP classic href deveria produzir evento submit (sobreviveu navegacao). Obtido: {event_types}"
         )
-        # Verify the restored submit event has postback metadata
+        # Verifica se o evento submit restaurado tem metadados de postback
         submit_events = [e for e in events if e["type"] == "submit"]
         assert len(submit_events) == 1, (
-            f"Expected exactly 1 submit event, got: {events}"
+            f"Esperado exatamente 1 evento submit, obtido: {events}"
         )
         postback_submit = submit_events[0]
         assert postback_submit.get("is_postback") is True, (
-            f"Restored submit should have is_postback=true. Got: {postback_submit}"
+            f"Submit restaurado deveria ter is_postback=true. Obtido: {postback_submit}"
         )
         assert postback_submit.get("submit_method") == "POST", (
-            f"Expected POST method, got: {postback_submit.get('submit_method')}"
+            f"Esperado metodo POST, obtido: {postback_submit.get('submit_method')}"
         )
 
     def test_dopostback_link_records_as_submit(self, submit_page):
-        """Click on __doPostBack link records 'submit'."""
+        """Clique em link __doPostBack registra 'submit'."""
         submit_page.click("#link-postback-href")
         submit_page.wait_for_timeout(100)
         events = self._get_events(submit_page)
         event_types = [e["type"] for e in events]
         assert "submit" in event_types, (
-            f"__doPostBack href should be submit! Got: {event_types}"
+            f"__doPostBack href deveria ser submit! Obtido: {event_types}"
         )
 
     def test_dopostback_onclick_records_as_submit(self, submit_page):
-        """Click on link with __doPostBack in onclick records 'submit'."""
+        """Clique em link com __doPostBack no onclick registra 'submit'."""
         submit_page.click("#link-postback-onclick")
         submit_page.wait_for_timeout(100)
         events = self._get_events(submit_page)
         event_types = [e["type"] for e in events]
         assert "submit" in event_types, (
-            f"__doPostBack onclick should be submit! Got: {event_types}"
+            f"__doPostBack onclick deveria ser submit! Obtido: {event_types}"
         )
 
     def test_asp_classic_onclick_records_as_submit(self, submit_page):
-        """Click on link with document.forms submit in onclick records 'submit'."""
+        """Clique em link com document.forms submit no onclick registra 'submit'."""
         submit_page.click("#link-asp-classic-onclick")
         submit_page.wait_for_timeout(100)
         events = self._get_events(submit_page)
         event_types = [e["type"] for e in events]
         assert "submit" in event_types, (
-            f"ASP classic onclick should be submit! Got: {event_types}"
+            f"ASP classic onclick deveria ser submit! Obtido: {event_types}"
         )
 
     def test_div_inside_form_records_as_click(self, submit_page):
-        """Click on div inside form records 'click', NOT submit."""
+        """Clique em div dentro de form registra 'click', NAO submit."""
         submit_page.click("#div-in-form")
         submit_page.wait_for_timeout(100)
         events = self._get_events(submit_page)
         event_types = [e["type"] for e in events]
         assert "submit" not in event_types, (
-            f"Div inside form should NOT be submit! Got: {event_types}"
+            f"Div dentro de form NAO deveria ser submit! Obtido: {event_types}"
         )
-        assert "click" in event_types, f"Expected 'click' in {event_types}"
+        assert "click" in event_types, f"Esperado 'click' em {event_types}"
 
     def test_link_inside_form_records_as_click_not_submit(self, submit_page):
-        """Click on regular link inside a form records 'click', NOT submit."""
+        """Clique em link comum dentro de form registra 'click', NAO submit."""
         submit_page.click("#link-inside-form")
         submit_page.wait_for_timeout(100)
         events = self._get_events(submit_page)
         event_types = [e["type"] for e in events]
         assert "submit" not in event_types, (
-            f"Regular link inside form should be click! Got: {event_types}"
+            f"Link comum dentro de form deveria ser click! Obtido: {event_types}"
         )
-        assert "click" in event_types, f"Expected 'click' in {event_types}"
+        assert "click" in event_types, f"Esperado 'click' em {event_types}"
 
     def test_alert_link_records_as_click_not_submit(self, submit_page):
-        """Click on javascript:alert link records 'click', NOT submit."""
+        """Clique em link javascript:alert registra 'click', NAO submit."""
         submit_page.click("#link-alert")
         submit_page.wait_for_timeout(100)
         events = self._get_events(submit_page)
         event_types = [e["type"] for e in events]
         assert "submit" not in event_types, (
-            f"Alert link should NOT be submit! Got: {event_types}"
+            f"Link alert NAO deveria ser submit! Obtido: {event_types}"
         )
-        assert "click" in event_types, f"Expected 'click' in {event_types}"
+        assert "click" in event_types, f"Esperado 'click' em {event_types}"
 
     def test_void_link_records_as_click_not_submit(self, submit_page):
-        """Click on javascript:void(0) link records 'click', NOT submit."""
+        """Clique em link javascript:void(0) registra 'click', NAO submit."""
         submit_page.click("#link-void")
         submit_page.wait_for_timeout(100)
         events = self._get_events(submit_page)
         event_types = [e["type"] for e in events]
         assert "submit" not in event_types, (
-            f"Void link should NOT be submit! Got: {event_types}"
+            f"Link void NAO deveria ser submit! Obtido: {event_types}"
         )
-        assert "click" in event_types, f"Expected 'click' in {event_types}"
+        assert "click" in event_types, f"Esperado 'click' em {event_types}"
 
     def test_document_location_link_records_as_click(self, submit_page):
-        """Click on document.location link records 'click' (not submit — it navigates, doesn't post)."""
+        """Clique em link document.location registra 'click' (nao submit — navega, nao posta)."""
         submit_page.click("#link-doc-location")
         submit_page.wait_for_timeout(100)
         events = self._get_events(submit_page)
         event_types = [e["type"] for e in events]
         assert "submit" not in event_types, (
-            f"document.location should NOT be submit! Got: {event_types}"
+            f"document.location NAO deveria ser submit! Obtido: {event_types}"
         )
-        assert "click" in event_types, f"Expected 'click' in {event_types}"
+        assert "click" in event_types, f"Esperado 'click' em {event_types}"
 
     def test_link_records_target_info(self, submit_page):
-        """Regular click records target info with tag and text."""
+        """Click comum registra info do target com tag e texto."""
         submit_page.click("#link-regular")
         submit_page.wait_for_timeout(100)
         events = self._get_events(submit_page)
@@ -380,17 +380,17 @@ class TestClickVsSubmitIntegration:
         assert "Regular" in click_event["target"].get("text", "")
 
     def test_submit_records_target_info(self, submit_page):
-        """Submit event records target info with element details."""
+        """Evento submit registra info do target com detalhes do elemento."""
         submit_page.click("#btn-submit-input")
         submit_page.wait_for_timeout(100)
         events = self._get_events(submit_page)
         submit_events = [e for e in events if e["type"] == "submit"]
-        assert len(submit_events) >= 1, f"No submit events in {events}"
+        assert len(submit_events) >= 1, f"Nenhum evento submit em {events}"
         target = submit_events[0].get("target") or {}
-        assert target.get("tag") == "input", f"Expected input tag, got {target}"
+        assert target.get("tag") == "input", f"Esperado tag input, obtido {target}"
 
     def test_extract_target_captures_onclick(self, submit_page):
-        """_tf_extractTarget captures onclick attribute for postback elements."""
+        """_tf_extractTarget captura atributo onclick para elementos postback."""
         result = submit_page.evaluate("""() => {
             var el = document.getElementById('link-postback-onclick');
             return _tf_extractTarget(el);
@@ -400,7 +400,7 @@ class TestClickVsSubmitIntegration:
         assert "__doPostBack" in (result.get("onclick") or "")
 
     def test_extract_target_captures_href(self, submit_page):
-        """_tf_extractTarget captures href attribute."""
+        """_tf_extractTarget captura atributo href."""
         result = submit_page.evaluate("""() => {
             var el = document.getElementById('link-postback-href');
             return _tf_extractTarget(el);
@@ -411,7 +411,7 @@ class TestClickVsSubmitIntegration:
 
 
 # ---------------------------------------------------------------------------
-# Testes de postback detection (page load after submit)
+# Testes de deteccao de postback (carregamento de pagina apos submit)
 # ---------------------------------------------------------------------------
 
 class TestPostbackDetection:
@@ -419,7 +419,7 @@ class TestPostbackDetection:
 
     @pytest.fixture
     def submit_page(self, page: Page):
-        """Load fam-submit page with add_init_script for persistent overlay."""
+        """Carrega pagina fam-submit com add_init_script para overlay persistente."""
         from testforge.recorder.recorder_controller import RecorderController
         page.add_init_script(RecorderController._OVERLAY_JS)
         import os as _os
@@ -429,7 +429,7 @@ class TestPostbackDetection:
         page.goto(f"file://{page_dir}/index.html")
         page.evaluate("_tf_showOverlay()")
         page.wait_for_timeout(200)
-        # Clear initial events
+        # Limpa eventos iniciais
         page.evaluate("window.__tfEventQueue = []")
         return page
 
@@ -443,29 +443,29 @@ class TestPostbackDetection:
     def test_pending_submit_flag_set_on_submit_click(self, submit_page):
         """Apos clicar em submit, __tfPendingSubmit deve ser setado."""
         pending_before = submit_page.evaluate("() => window.__tfPendingSubmit")
-        assert pending_before is None, f"Pending should be None before submit click"
+        assert pending_before is None, f"Pending deveria ser None antes do click em submit"
 
         submit_page.click("#btn-submit-input")
         submit_page.wait_for_timeout(100)
 
         pending_after = submit_page.evaluate("() => window.__tfPendingSubmit")
         assert pending_after is not None, (
-            f"Pending submit should be set after submit click"
+            f"Pending submit deveria ser definido apos click em submit"
         )
-        # The form uses POST
+        # O form usa POST
         assert pending_after.get("method") in ("POST", ""), (
-            f"Expected POST method, got: {pending_after}"
+            f"Esperado metodo POST, obtido: {pending_after}"
         )
 
     def test_no_pending_submit_on_regular_click(self, submit_page):
         """Clicar em elemento nao-submit NAO deve setar __tfPendingSubmit."""
-        submit_page.evaluate("window.__tfPendingSubmit = null")  # ensure clean
+        submit_page.evaluate("window.__tfPendingSubmit = null")  # garante estado limpo
         submit_page.click("#link-regular")
         submit_page.wait_for_timeout(100)
 
         pending = submit_page.evaluate("() => window.__tfPendingSubmit")
         assert pending is None, (
-            f"Pending submit should be None after regular click, got: {pending}"
+            f"Pending submit deveria ser None apos click comum, obtido: {pending}"
         )
 
     def test_no_pending_submit_on_div_in_form_click(self, submit_page):
@@ -476,7 +476,7 @@ class TestPostbackDetection:
 
         pending = submit_page.evaluate("() => window.__tfPendingSubmit")
         assert pending is None, (
-            f"Pending submit should be None after div-in-form click, got: {pending}"
+            f"Pending submit deveria ser None apos click em div-in-form, obtido: {pending}"
         )
 
 
@@ -489,7 +489,7 @@ class TestBeforeunloadEventPersistence:
 
     @pytest.fixture
     def submit_page(self, page: Page):
-        """Load fam-submit page with add_init_script for persistent overlay."""
+        """Carrega pagina fam-submit com add_init_script para overlay persistente."""
         from testforge.recorder.recorder_controller import RecorderController
         page.add_init_script(RecorderController._OVERLAY_JS)
         import os as _os
@@ -511,7 +511,7 @@ class TestBeforeunloadEventPersistence:
 
     def test_beforeunload_persists_events_to_session_storage(self, submit_page):
         """beforeunload handler salva eventos no sessionStorage antes de navegar."""
-        # Push a known event
+        # Adiciona um evento conhecido
         submit_page.evaluate("""() => {
             window.__tfEventQueue.push({
                 event_id: 'evt_test',
@@ -525,13 +525,13 @@ class TestBeforeunloadEventPersistence:
             sessionStorage.setItem('__tfUnflushedEvents', JSON.stringify(window.__tfEventQueue));
         }""")
         stored = submit_page.evaluate("() => sessionStorage.getItem('__tfUnflushedEvents')")
-        assert stored is not None, "beforeunload should persist events to sessionStorage"
+        assert stored is not None, "beforeunload deveria persistir eventos no sessionStorage"
         parsed = __import__("json").loads(stored)
         assert len(parsed) == 1
         assert parsed[0]["type"] == "click"
 
     def test_restored_submit_event_has_postback_metadata(self, submit_page):
-        """Submit event restored from sessionStorage has is_postback and submit_method."""
+        """Evento submit restaurado do sessionStorage tem is_postback e submit_method."""
         submit_page.evaluate("""() => {
             sessionStorage.setItem('__tfPendingSubmit', JSON.stringify({
                 url: 'page2.html', method: 'POST', timestamp: Date.now()
@@ -546,22 +546,22 @@ class TestBeforeunloadEventPersistence:
                 value: null
             }]));
         }""")
-        # Reload to trigger init block restoration
+        # Recarrega para acionar restauracao do bloco init
         submit_page.reload()
         submit_page.wait_for_timeout(300)
         events = self._get_events(submit_page)
         submit_events = [e for e in events if e["type"] == "submit"]
         assert len(submit_events) >= 1, (
-            f"Should have restored submit event. Got: {events}"
+            f"Deveria ter restaurado evento submit. Obtido: {events}"
         )
         restored = submit_events[0]
         assert restored.get("is_postback") is True, (
-            f"Restored submit should have is_postback=true. Got keys: {list(restored.keys())}"
+            f"Submit restaurado deveria ter is_postback=true. Chaves obtidas: {list(restored.keys())}"
         )
         assert restored.get("submit_method") == "POST"
 
     def test_restored_submit_event_has_target_info(self, submit_page):
-        """Submit event restored preserves target information."""
+        """Evento submit restaurado preserva informacoes do target."""
         submit_page.evaluate("""() => {
             sessionStorage.setItem('__tfPendingSubmit', JSON.stringify({
                 url: 'page2.html', method: 'GET', timestamp: Date.now()
@@ -587,18 +587,18 @@ class TestBeforeunloadEventPersistence:
         assert target.get("id") == "btn-save"
 
     def test_regular_navigation_does_not_get_postback_metadata(self, submit_page):
-        """Regular navigation (click on non-submit link) should NOT get is_postback."""
-        # Navigate to page2 via regular link
+        """Navegacao comum (click em link nao-submit) NAO deveria obter is_postback."""
+        # Navega para page2 via link comum
         submit_page.evaluate("window.__tfEventQueue = []")
         submit_page.click("#link-regular")
         submit_page.wait_for_timeout(300)
-        # Check sessionStorage cleanup on new page
+        # Verifica limpeza do sessionStorage na nova pagina
         pending = submit_page.evaluate("() => sessionStorage.getItem('__tfPendingSubmit')")
-        assert pending is None, "Regular navigation should not leave pending submit"
+        assert pending is None, "Navegacao comum nao deveria deixar pending submit"
 
 
 # ---------------------------------------------------------------------------
-# Testes do normalizador: postback skipped, submit → click, restored submit
+# Testes do normalizador: postback ignorado, submit → click, submit restaurado
 # ---------------------------------------------------------------------------
 
 class TestPostbackNormalization:
@@ -616,7 +616,7 @@ class TestPostbackNormalization:
             "is_postback": True,
             "submit_method": "POST",
         })
-        assert result is None, "postback events should be skipped"
+        assert result is None, "eventos postback devem ser ignorados"
 
     def test_submit_event_converts_to_click_action(self):
         """submit events sao convertidos para action='click'."""
@@ -631,8 +631,8 @@ class TestPostbackNormalization:
             "value": None,
             "submit_method": "POST",
         })
-        assert result is not None, "submit event should produce an action"
-        assert result.action == "click", f"Expected 'click', got '{result.action}'"
+        assert result is not None, "evento submit deveria produzir uma acao"
+        assert result.action == "click", f"Esperado 'click', obtido '{result.action}'"
         assert result.context.get("is_submit") is True
         assert result.context.get("submit_method") == "POST"
 
@@ -651,7 +651,7 @@ class TestPostbackNormalization:
             "submit_method": "POST",
             "postback_url": "http://localhost/page2",
         })
-        assert result is not None, "restored submit should produce an action"
+        assert result is not None, "submit restaurado deveria produzir uma acao"
         assert result.action == "click"
         assert result.context.get("is_submit") is True
         assert result.context.get("is_postback") is True
@@ -708,7 +708,7 @@ class TestRawEventPostbackFields:
         )
         d = evt.to_dict()
         assert d["submit_method"] == "GET"
-        # is_postback should default to False for submit events
+        # is_postback deve padrao ser False para eventos submit
         assert d.get("is_postback") is not True
 
     def test_restored_submit_event_has_postback_fields(self):
@@ -736,5 +736,5 @@ class TestRawEventPostbackFields:
             event_type="click",
         )
         d = evt.to_dict()
-        assert "is_postback" not in d  # False is omitted
-        assert "submit_method" not in d  # None is omitted
+        assert "is_postback" not in d  # False e omitido
+        assert "submit_method" not in d  # None e omitido

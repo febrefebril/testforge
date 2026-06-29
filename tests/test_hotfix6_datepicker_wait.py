@@ -1,4 +1,4 @@
-"""Hotfix 6 — wait for CDK overlay before clicking datepicker dates."""
+"""Hotfix 6 — aguardar overlay CDK antes de clicar em datas do datepicker."""
 from __future__ import annotations
 
 from unittest.mock import MagicMock

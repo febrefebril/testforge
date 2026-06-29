@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class DiagnosticTelemetryStore:
-    """JSONL persistence + Phase 6 span emission."""
+    """Persistencia JSONL + emissao de span Fase 6."""
 
     def __init__(self, session_dir: str) -> None:
         self._dir = session_dir
@@ -47,17 +47,17 @@ class DiagnosticTelemetryStore:
 
     # ------------------------------------------------------------------
     def append_step(self, payload: dict) -> None:
-        """Write one step row + emit OTel-shape span."""
+        """Escreve uma linha de passo + emite span OTel-shape."""
         self._append_json(self._steps_path, payload)
         self._emit_span("diagnostic.step", payload)
 
     def append_replay(self, payload: dict) -> None:
-        """Write one replay-check row + emit span."""
+        """Escreve uma linha de replay-check + emite span."""
         self._append_json(self._replay_path, payload)
         self._emit_span("diagnostic.replay", payload)
 
     def write_session(self, payload: dict) -> None:
-        """Overwrite session.json with the final summary."""
+        """Sobrescreve session.json com o sumario final."""
         Path(self._session_path).write_text(
             json.dumps(payload, ensure_ascii=False, indent=2,
                         default=str),
@@ -65,7 +65,7 @@ class DiagnosticTelemetryStore:
         )
 
     def files(self) -> dict:
-        """Inventory paths (used by the publisher in commit 6)."""
+        """Inventario de caminhos (usado pelo publisher no commit 6)."""
         return {
             "session": self._session_path if os.path.exists(self._session_path) else None,
             "steps": self._steps_path if os.path.exists(self._steps_path) else None,

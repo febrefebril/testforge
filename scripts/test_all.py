@@ -30,10 +30,10 @@ RESULTS = []
 def check(name: str, condition: bool, detail: str = ""):
     global PASS, FAIL
     if condition:
-        RESULTS.append(f"  ✓ {name}")
+        RESULTS.append(f"  [OK] {name}")
         PASS += 1
     else:
-        RESULTS.append(f"  ✗ {name}: {detail}")
+        RESULTS.append(f"  [X] {name}: {detail}")
         FAIL += 1
 
 
@@ -58,7 +58,7 @@ def main():
     print("=" * 60)
 
     # ── Setup ──
-    print("\n🧪 Fase 1: Setup")
+    print("\n[TESTE] Fase 1: Setup")
     cleanup()
 
     check("Servidor fake-bank acessivel",
@@ -69,14 +69,14 @@ def main():
           os.system(f"{sys.executable} -c 'from playwright.sync_api import sync_playwright'") == 0)
 
     # ── Testes Unitarios ──
-    print("\n🧪 Fase 2: Testes Unitarios (pytest)")
+    print("\n[TESTE] Fase 2: Testes Unitarios (pytest)")
     if run_pytest():
-        check("pytest tests/", True, "")
+        check("pytest tests/ passou", True, "")
     else:
         check("pytest tests/", False, "Alguns testes falharam — rode manualmente")
 
     # ── Pipeline E2E ──
-    print("\n🧪 Fase 3: Pipeline Completa E2E")
+    print("\n[TESTE] Fase 3: Pipeline Completa E2E")
 
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
@@ -118,8 +118,8 @@ def main():
             events = [json.loads(l) for l in f]
         check("  3.1 Recorder: eventos capturados", len(events) >= 2,
               f"Esperado >=2, obteve {len(events)}")
-        check("  3.1 Recorder: fill event", "fill" in [e["type"] for e in events])
-        check("  3.1 Recorder: click event", "click" in [e["type"] for e in events])
+        check("  3.1 Recorder: evento fill", "fill" in [e["type"] for e in events])
+        check("  3.1 Recorder: evento click", "click" in [e["type"] for e in events])
 
         steps = f"{rec_dir}/steps.jsonl"
         if os.path.exists(steps):
@@ -128,7 +128,7 @@ def main():
             check(f"  3.1 Recorder: assert textual", any(s.get("assert_type") == "textual" for s in st))
 
         # -- 3.2 Evidence --
-        print("  3.2 Evidence Collector...")
+        print("  3.2 Coletor de Evidencias...")
         evidence = EvidenceCollector(page)
         evidence.start("FULLTEST-001")
         evidence.capture_screenshot("final", "after")
@@ -146,13 +146,13 @@ def main():
         # EvidenceStore
         store = EvidenceStore()
         runs = store.list_runs()
-        check("  3.2 EvidenceStore: list runs", "FULLTEST-001" in runs)
+        check("  3.2 EvidenceStore: listar runs", "FULLTEST-001" in runs)
 
         # -- 3.3 MIS + Compiler --
-        print("  3.3 MIS + Compiler...")
+        print("  3.3 MIS + Compilador...")
         normalizer = RecordingNormalizer()
         stc = normalizer.normalize(rec_dir, "ST-FULLTEST", "fake-bank", APP_URL)
-        check("  3.3 MIS: semantic test case", len(stc.steps) >= 2, f"Esperado >=2, obteve {len(stc.steps)}")
+        check("  3.3 MIS: caso de teste semantico", len(stc.steps) >= 2, f"Esperado >=2, obteve {len(stc.steps)}")
 
         compiler = PlaywrightCompiler()
         script_path = compiler.compile(stc, "semantic_tests/ST-FULLTEST")
@@ -182,11 +182,11 @@ def main():
         check("  3.4 Gate: promovido", decision.allowed, f"Estado: {decision.state.value}")
 
         # -- 3.5 Taxonomy + Fallback --
-        print("  3.5 Taxonomy + Fallback...")
+        print("  3.5 Taxonomia + Fallback...")
         classifier = FailureClassifier()
         c1 = classifier.classify("element not found", {"count": 0})
         check("  3.5 Taxonomia: LOCATOR_NOT_FOUND", c1.code == "LOCATOR_NOT_FOUND")
-        check("  3.5 Taxonomia: recoverable", c1.recoverable)
+        check("  3.5 Taxonomia: recuperavel", c1.recoverable)
 
         c2 = classifier.classify("element is obscured by overlay")
         check("  3.5 Taxonomia: ACTIONABILITY_OBSCURED", c2.code == "ACTIONABILITY_OBSCURED")
@@ -223,11 +223,11 @@ def main():
         print(r)
     print()
     print(f"  {PASS} passaram, {FAIL} falharam")
-    print(f"  Pipeline: BMAD → GSD → GIT")
+    print(f"  Pipeline: BMAD [SETA] GSD [SETA] GIT")
     if FAIL == 0:
-        print("  ✅ TODOS OS TESTES PASSARAM!")
+        print("  [OK] TODOS OS TESTES PASSARAM!")
     else:
-        print(f"  ⚠ {FAIL} falhas encontradas")
+        print(f"  [AVISO] {FAIL} falhas encontradas")
 
 
 if __name__ == "__main__":

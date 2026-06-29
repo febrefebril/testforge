@@ -1,20 +1,20 @@
-"""B14/B17 — shadow DOM walker + chain locator.
+"""B14/B17 — navegador shadow DOM + localizador encadeado.
 
-When the recorder captures an element living inside an open shadow root,
-it now records the host descriptor (`shadow_host`) on the target. The
-normalizer surfaces it as the highest-priority LocatorCandidate so the
-runner can do `page.locator(host).locator(child)` (Playwright pierces
-open roots automatically when given a chained selector).
+Quando o gravador captura um elemento dentro de uma shadow root aberta,
+ele agora registra o descritor do host (`shadow_host`) no alvo. O
+normalizador o apresenta como LocatorCandidate de maior prioridade para que o
+executor possa fazer `page.locator(host).locator(child)` (Playwright atravessa
+roots abertas automaticamente quando recebe um seletor encadeado).
 
-Closed shadow roots are still blind spots — the recorder cannot walk
-into them from outside.
+Shadow roots fechadas ainda sao pontos cegos — o gravador nao consegue
+entrar nelas de fora.
 
-This file pins:
-1. SemanticTarget carries the shadow_host descriptor.
-2. _build_target inserts a high-priority shadow_host_chain candidate.
-3. The chain selector format is `host >> inner`.
-4. Recordings without shadow_host get no extra candidate (no regression
-   for normal pages).
+Este arquivo fixa:
+1. SemanticTarget carrega o descritor shadow_host.
+2. _build_target insere um candidato shadow_host_chain de alta prioridade.
+3. O formato do seletor encadeado e `host >> inner`.
+4. Gravacoes sem shadow_host nao recebem candidato extra (sem regressao
+   para paginas normais).
 """
 from __future__ import annotations
 
@@ -55,19 +55,19 @@ class TestBuildTargetEmitsShadowChain:
         })
         assert target.shadow_host is not None
         assert target.shadow_host["host_selector"] == "x-card#cpf-card"
-        # The first candidate must be the shadow chain — Playwright should
-        # try it before any naive CSS path.
-        assert target.candidates, "Expected at least one candidate"
+        # O primeiro candidato deve ser a cadeia shadow — Playwright deve
+        # testa-lo antes de qualquer caminho CSS simples.
+        assert target.candidates, "Esperado ao menos um candidato"
         first = target.candidates[0]
         assert first.strategy == "shadow_host_chain", (
-            f"First candidate should be shadow_host_chain, got "
+            f"Primeiro candidato deveria ser shadow_host_chain, veio "
             f"{first.strategy} ({first.selector})"
         )
         assert ">>" in first.selector, (
-            f"Chain selector must use '>>' format, got {first.selector!r}"
+            f"Seletor encadeado deve usar formato '>>', veio {first.selector!r}"
         )
         assert first.selector.startswith("x-card#cpf-card"), (
-            f"Chain must start with host selector, got {first.selector!r}"
+            f"Cadeia deve comecar com seletor do host, veio {first.selector!r}"
         )
 
     def test_shadow_chain_prefers_test_id_inner(self):
@@ -102,16 +102,16 @@ class TestBuildTargetEmitsShadowChain:
         target = self._n()._build_target({
             "tag": "input",
             "accessible_name": "CPF",
-            # no shadow_host key at all
+            # nenhuma chave shadow_host
         })
         chains = [c for c in target.candidates if c.strategy == "shadow_host_chain"]
         assert chains == [], (
-            "Plain document-tree targets must not get a shadow chain "
-            "candidate."
+            "Alvos de arvore documental simples nao devem receber candidato "
+            "de cadeia shadow."
         )
 
     def test_null_shadow_host_means_no_chain_candidate(self):
-        # Closed shadow root → recorder writes shadow_host=null.
+        # Shadow root fechada → gravador escreve shadow_host=null.
         target = self._n()._build_target({
             "tag": "input",
             "accessible_name": "CPF",
@@ -123,11 +123,11 @@ class TestBuildTargetEmitsShadowChain:
 
 class TestCaptureSchemaBumped:
     def test_schema_version_at_least_2(self):
-        # B14/B17 introduced v2 (target.shadow_host). H20 then introduced
-        # v3 (scenario_boundary event). The actual version may keep
-        # climbing; the invariant is only that we did bump.
+        # B14/B17 introduziu v2 (target.shadow_host). H20 entao introduziu
+        # v3 (evento scenario_boundary). A versao real pode continuar
+        # subindo; o invariante e apenas que houve incremento.
         from testforge.recorder.capture_fingerprint import CAPTURE_SCHEMA_VERSION
         assert CAPTURE_SCHEMA_VERSION >= 2, (
-            "B14/B17 added target.shadow_host to the recorder output. "
-            "Bump CAPTURE_SCHEMA_VERSION when this field shape changes."
+            "B14/B17 adicionou target.shadow_host a saida do gravador. "
+            "Incremente CAPTURE_SCHEMA_VERSION quando a forma deste campo mudar."
         )

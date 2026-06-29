@@ -1,12 +1,12 @@
-"""H9 — pilot QA unblock: HTTPS certificate errors ignored by default.
+"""H9 — desbloqueio QA piloto: erros de certificado HTTPS ignorados por padrao.
 
-3 of 11 production recordings failed step 1 with ERR_CERT_AUTHORITY_INVALID on
-*.apps.nprd.caixa. Default must skip cert verification; --verify-ssl is opt-in.
+3 de 11 gravacoes de producao falharam no passo 1 com ERR_CERT_AUTHORITY_INVALID em
+*.apps.nprd.caixa. O padrao deve pular verificacao de certificado; --verify-ssl e opt-in.
 
-Pins:
-- `_make_context_kwargs(verify_ssl=False)` sets `ignore_https_errors=True`.
-- `launch_browser(verify_ssl=False)` adds `--ignore-certificate-errors` arg.
-- `IncrementalRunner` default `verify_ssl=False`.
+Fixacoes:
+- `_make_context_kwargs(verify_ssl=False)` define `ignore_https_errors=True`.
+- `launch_browser(verify_ssl=False)` adiciona arg `--ignore-certificate-errors`.
+- `IncrementalRunner` padrao `verify_ssl=False`.
 """
 from __future__ import annotations
 
@@ -50,7 +50,7 @@ class TestLaunchBrowserHttpsArgs:
         pw.chromium.launch.return_value = MagicMock()
         launch_browser(pw, "chromium", headless=True, verify_ssl=True)
         call = pw.chromium.launch.call_args
-        # On non-Windows verify_ssl=True path passes only {"headless": ...}
+        # No caminho verify_ssl=True em nao-Windows passa apenas {"headless": ...}
         assert "--ignore-certificate-errors" not in call.kwargs.get("args", [])
 
 

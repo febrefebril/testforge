@@ -1,4 +1,4 @@
-"""Sprint 0 — DiagnosticTelemetryStore unit tests."""
+"""Sprint 0 — Testes unitarios do DiagnosticTelemetryStore."""
 from __future__ import annotations
 
 import json
@@ -51,7 +51,7 @@ class TestJSONLPersistence:
         files = store.files()
         assert files["session"]
         assert files["steps"]
-        assert files["replay"] is None  # never written
+        assert files["replay"] is None  # nunca escrito
         assert files["feature"] is None
 
 

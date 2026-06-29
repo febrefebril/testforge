@@ -1,4 +1,4 @@
-"""TestForge auto-updater — git pull on startup when configured in testforge_update.yml."""
+"""TestForge auto-updater — git pull na inicializacao quando configurado em testforge_update.yml."""
 import logging
 import subprocess
 from pathlib import Path
@@ -18,12 +18,12 @@ def _load_config(project_root: Path) -> dict:
         with open(config_path, encoding="utf-8") as f:
             return yaml.safe_load(f) or {}
     except Exception as exc:
-        logger.warning("auto-updater: failed to read %s: %s", _CONFIG_FILE, exc)
+        logger.warning("auto-updater: falha ao ler %s: %s", _CONFIG_FILE, exc)
         return {"enabled": False}
 
 
 def check_and_apply_update(project_root: Path) -> bool:
-    """Pull latest changes from git if auto-update is enabled. Returns True if updated."""
+    """Faz pull do git se auto-update estiver habilitado. Retorna True se atualizado."""
     config = _load_config(project_root)
     if not config.get("enabled"):
         return False
@@ -41,20 +41,20 @@ def check_and_apply_update(project_root: Path) -> bool:
             timeout=30,
         )
         if result.returncode != 0:
-            logger.warning("auto-updater: git pull failed: %s", result.stderr.strip())
+            logger.warning("auto-updater: git pull falhou: %s", result.stderr.strip())
             return False
 
-        already_up_to_date = "Already up to date" in result.stdout
+        already_up_to_date = "Already up to date" in result.stdout  # Nao traduzir: saida do git
         if not quiet:
             if not already_up_to_date:
-                print(f"[TestForge] Updated from {remote}/{branch}")
+                print(f"[TestForge] Atualizado de {remote}/{branch}")
         return not already_up_to_date
     except FileNotFoundError:
-        logger.warning("auto-updater: git not found in PATH")
+        logger.warning("auto-updater: git nao encontrado no PATH")
         return False
     except subprocess.TimeoutExpired:
-        logger.warning("auto-updater: git pull timed out")
+        logger.warning("auto-updater: git pull excedeu tempo limite")
         return False
     except Exception as exc:
-        logger.warning("auto-updater: unexpected error: %s", exc)
+        logger.warning("auto-updater: erro inesperado: %s", exc)
         return False

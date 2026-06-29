@@ -1,17 +1,17 @@
 """Sprint 0 commit 2 — CaptureQualityTracker.
 
-Per-step assessment of what the recorder actually captured. Answers:
-- Did we get a value, and from where? (event, setter hook, snapshot,
-  final_state, network payload, or missing)
-- What kind of value was it? (currency_BR, date, cpf, numeric, alpha)
-- How long did the user type? Was there an idle gap before?
-- Was the target inside a mat-form-field, cdk-overlay, or custom
-  component?
-- What is the stability of the generated primary selector?
+Avaliacao por passo do que o gravador realmente capturou. Respostas:
+- Conseguimos um valor, e de onde? (event, setter hook, snapshot,
+  final_state, network payload, ou missing)
+- Que tipo de valor era? (currency_BR, date, cpf, numeric, alpha)
+- Quanto tempo o usuario digitou? Houve uma pausa ociosa antes?
+- O alvo estava dentro de mat-form-field, cdk-overlay, ou componente
+  customizado?
+- Qual a estabilidade do seletor primario gerado?
 
-The tracker is pure analysis — does not mutate raw events or steps.
-Called from RecorderController after each `_persist_raw_event` when
-the recorder is in `--diagnostic-mode`.
+O tracker e analise pura — nao muta raw events ou steps.
+Chamado pelo RecorderController apos cada `_persist_raw_event` quando
+o gravador esta em `--diagnostic-mode`.
 """
 from __future__ import annotations
 
@@ -23,10 +23,10 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
-# Value-kind regexes evaluated in order; first match wins.
+# Regex de tipo de valor avaliadas em ordem; primeira corresponde vence.
 _VALUE_KINDS = [
     ("empty", re.compile(r"^\s*$")),
-    # Require either R$ prefix OR ",dd" decimal to avoid swallowing bare integers.
+    # Requer prefixo R$ OU decimal ",dd" para evitar engolir inteiros nus.
     ("currency_BR", re.compile(r"^(?:R?\$\s?[\d.]+(?:,\d{2})?|[\d.]+,\d{2})$")),
     ("date_BR", re.compile(r"^\d{2}/\d{2}/\d{4}$")),
     ("date_ISO", re.compile(r"^\d{4}-\d{2}-\d{2}")),
@@ -52,7 +52,7 @@ def detect_value_kind(value: Optional[str]) -> str:
 
 
 class CaptureQualityTracker:
-    """Per-step quality assessment."""
+    """Avaliacao de qualidade por passo."""
 
     def __init__(self) -> None:
         self._last_ts: Optional[float] = None
@@ -65,7 +65,7 @@ class CaptureQualityTracker:
         framework: Optional[dict] = None,
         value_source_hint: Optional[str] = None,
     ) -> dict:
-        """Build the steps.jsonl-friendly payload for one event."""
+        """Constroi payload compativel com steps.jsonl para um evento."""
         target = target_data or raw_event.get("target") or {}
         value = raw_event.get("value")
         action = raw_event.get("type") or raw_event.get("action") or "unknown"
@@ -144,7 +144,7 @@ class CaptureQualityTracker:
 
     @staticmethod
     def _custom_ancestors(target: dict) -> list[str]:
-        # Walk a few hints we already extract — parent_chain, css_path
+        # Percorre algumas dicas que ja extraimos — parent_chain, css_path
         out: list[str] = []
         css_path = target.get("css_path") or ""
         for token in re.findall(r"[a-z][a-z0-9-]+", css_path):

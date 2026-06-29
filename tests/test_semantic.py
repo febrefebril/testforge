@@ -111,7 +111,7 @@ class TestRecordingNormalizer:
             assert len(assert_steps) >= 2
 
     def test_compact_fill_events_same_selector(self):
-        """Sequential fills on same target within 500ms: keep only final event."""
+        """Fills sequenciais no mesmo target em ate 500ms: mantem apenas o ultimo evento."""
         normalizer = RecordingNormalizer()
         events = [
             {"event_id": "e1", "type": "fill", "timestamp": "2026-06-13T00:00:00.000",
@@ -126,7 +126,7 @@ class TestRecordingNormalizer:
         assert result[0]["value"] == "123"
 
     def test_compact_fill_events_keypress_included(self):
-        """keypress events are also compacted as fill."""
+        """Eventos keypress tambem sao compactados como fill."""
         normalizer = RecordingNormalizer()
         events = [
             {"event_id": "e1", "type": "fill", "timestamp": "2026-06-13T00:00:00.000",
@@ -139,7 +139,7 @@ class TestRecordingNormalizer:
         assert result[0]["value"] == "AB"
 
     def test_compact_fill_events_leave_last_only(self):
-        """Multiple rapid fills: only the last one survives."""
+        """Multiplos fills rapidos: apenas o ultimo sobrevive."""
         normalizer = RecordingNormalizer()
         events = [
             {"event_id": "e1", "type": "fill", "timestamp": "2026-06-13T00:00:00.000",
@@ -156,7 +156,7 @@ class TestRecordingNormalizer:
         assert result[0]["value"] == "xyzz"
 
     def test_compact_fill_events_different_selectors_not_merged(self):
-        """Fills on different elements are NOT compacted together."""
+        """Fills em elementos diferentes NAO sao compactados juntos."""
         normalizer = RecordingNormalizer()
         events = [
             {"event_id": "e1", "type": "fill", "timestamp": "2026-06-13T00:00:00.000",
@@ -170,11 +170,11 @@ class TestRecordingNormalizer:
         assert result[1]["value"] == "João"
 
     def test_compact_fill_events_same_placeholder_different_accessible_name(self):
-        """Two fields sharing placeholder but different accessible_name must NOT be merged.
+        """Dois campos compartilhando placeholder mas accessible_name diferente NAO devem ser mesclados.
 
-        Regression: currency fields like 'Renda' and 'Imóvel' both use placeholder
-        'R$0,00' with no id/name. Without accessible_name in _target_key, all fills
-        collapse to the last field's final value, silently dropping the first field.
+        Regression: campos monetarios como 'Renda' e 'Imovel' usam placeholder
+        'R$0,00' sem id/name. Sem accessible_name em _target_key, todos os fills
+        colapsam no valor final do ultimo campo, descartando silenciosamente o primeiro.
         """
         normalizer = RecordingNormalizer()
         events = [
@@ -186,18 +186,18 @@ class TestRecordingNormalizer:
                         "accessible_name": "Renda mensal *"}, "value": " 1.000,00 "},
             {"event_id": "e3", "type": "fill", "timestamp": "2026-06-23T00:00:02.000",
              "target": {"tag": "input", "placeholder": "R$0,00",
-                        "accessible_name": "Valor do imóvel *"}, "value": " 0,01 "},
+                        "accessible_name": "Valor do imovel *"}, "value": " 0,01 "},
             {"event_id": "e4", "type": "fill", "timestamp": "2026-06-23T00:00:03.000",
              "target": {"tag": "input", "placeholder": "R$0,00",
-                        "accessible_name": "Valor do imóvel *"}, "value": " 100.000,00 "},
+                        "accessible_name": "Valor do imovel *"}, "value": " 100.000,00 "},
         ]
         result = normalizer._compact_fill_events(events)
-        assert len(result) == 2, f"Expected 2 fills (one per field), got {len(result)}"
+        assert len(result) == 2, f"Esperado 2 fills (um por campo), obtido {len(result)}"
         assert result[0]["value"] == " 1.000,00 "
         assert result[1]["value"] == " 100.000,00 "
 
     def test_compact_fill_events_non_fill_preserved(self):
-        """Non-fill events (navigation, click) pass through unchanged."""
+        """Eventos nao-fill (navigation, click) passam inalterados."""
         normalizer = RecordingNormalizer()
         events = [
             {"event_id": "e1", "type": "navigation", "timestamp": "2026-06-13T00:00:00.000"},
@@ -228,7 +228,7 @@ class TestRecordingNormalizer:
         assert result[0]["value"] == "456"
 
     def test_compact_fill_events_multiple_groups(self):
-        """Multiple fill groups on different elements."""
+        """Multiplos grupos de fill em elementos diferentes."""
         normalizer = RecordingNormalizer()
         events = [
             {"event_id": "e1", "type": "fill", "timestamp": "2026-06-13T00:00:00.000",
@@ -246,7 +246,7 @@ class TestRecordingNormalizer:
         assert result[1]["value"] == "xy"
 
     def test_compact_fill_events_click_resets_group(self):
-        """A click between fills on same target resets the group."""
+        """Um click entre fills no mesmo target reseta o grupo."""
         normalizer = RecordingNormalizer()
         events = [
             {"event_id": "e1", "type": "fill", "timestamp": "2026-06-13T00:00:00.000",
@@ -262,13 +262,13 @@ class TestRecordingNormalizer:
         assert fill_values == ["123", "456"]
 
     def test_compact_fill_events_empty_list(self):
-        """Empty list returns empty list."""
+        """Lista vazia retorna lista vazia."""
         normalizer = RecordingNormalizer()
         result = normalizer._compact_fill_events([])
         assert result == []
 
     def test_compact_fill_events_no_targets(self):
-        """Events without targets are handled."""
+        """Eventos sem targets sao tratados."""
         normalizer = RecordingNormalizer()
         events = [
             {"event_id": "e1", "type": "fill", "timestamp": "2026-06-13T00:00:00.000",
@@ -280,7 +280,7 @@ class TestRecordingNormalizer:
 
 
 class TestGenericTextDetection:
-    """Tests for _is_generic_text — penalizes brittle generic UI labels."""
+    """Testes para _is_generic_text — penaliza rotulos UI genericos e fragieis."""
 
     def test_generic_portuguese_ok(self):
         assert _is_generic_text("OK") is True
@@ -329,7 +329,7 @@ class TestGenericTextDetection:
         assert _is_generic_text("btnSubmitForm") is False
 
     def test_build_target_penalizes_generic_text(self):
-        """Text-based candidates with generic text get score 0.10."""
+        """Candidatos text-based com texto generico recebem score 0.10."""
         normalizer = RecordingNormalizer()
         target_data = {
             "tag": "button",
@@ -341,11 +341,11 @@ class TestGenericTextDetection:
         )
         assert text_candidate is not None
         assert text_candidate.score == 0.10, (
-            f"Expected 0.10 for generic text, got {text_candidate.score}"
+            f"Esperado 0.10 para texto generico, obtido {text_candidate.score}"
         )
 
     def test_build_target_normal_text_unchanged(self):
-        """Non-generic text keeps normal score 0.55."""
+        """Texto nao-generico mantem score normal 0.55."""
         normalizer = RecordingNormalizer()
         target_data = {
             "tag": "button",
@@ -357,15 +357,15 @@ class TestGenericTextDetection:
         )
         assert text_candidate is not None
         assert text_candidate.score == 0.55, (
-            f"Expected 0.55 for non-generic text, got {text_candidate.score}"
+            f"Esperado 0.55 para texto nao-generico, obtido {text_candidate.score}"
         )
 
 
 class TestSkipReason:
-    """Tests for step skip reason detection in RecordingNormalizer."""
+    """Testes para deteccao de motivo de skip em RecordingNormalizer."""
 
     def _make_events_with_duplicates(self, tmpdir: str) -> str:
-        """Create raw_events.jsonl with duplicate click steps."""
+        """Cria raw_events.jsonl com steps de click duplicados."""
         events = [
             {"event_id": "e1", "type": "navigation", "timestamp": "2026-06-13T00:00:00",
              "url": "http://localhost:8765", "page_title": "Test"},
@@ -378,7 +378,7 @@ class TestSkipReason:
              "url": "http://localhost:8765", "page_title": "Test",
              "target": {"tag": "button", "text": "Pesquisar", "id": "btn",
                         "role": "button", "accessible_name": "Pesquisar"}},
-            # Duplicate click on same button
+            # Click duplicado no mesmo botao
             {"event_id": "e4", "type": "click", "timestamp": "2026-06-13T00:00:03",
              "url": "http://localhost:8765", "page_title": "Test",
              "target": {"tag": "button", "text": "Pesquisar", "id": "btn",
@@ -391,25 +391,25 @@ class TestSkipReason:
         return path
 
     def test_detect_duplicate_clicks(self):
-        """Consecutive identical click steps get marked as duplicate."""
+        """Steps de click identicos consecutivos sao marcados como duplicata."""
         with tempfile.TemporaryDirectory() as tmpdir:
             self._make_events_with_duplicates(tmpdir)
             normalizer = RecordingNormalizer()
             stc = normalizer.normalize(tmpdir, "ST-DUP", "test", "http://localhost:8765")
 
-            # Should have 4 steps: nav, fill, click, click
+            # Deve ter 4 steps: nav, fill, click, click
             assert len(stc.steps) == 4
 
-            # First click — no skip_reason
+            # Primeiro click — sem skip_reason
             click_steps = [s for s in stc.steps if s.action == "click"]
             assert len(click_steps) == 2
             assert click_steps[0].skip_reason == ""
-            # Second click — duplicate
+            # Segundo click — duplicata
             assert "duplicate" in click_steps[1].skip_reason
             assert "Step" in click_steps[1].skip_reason
 
     def test_navigation_not_duplicate_of_click(self):
-        """Different action types are never duplicates."""
+        """Tipos de acao diferentes nunca sao duplicatas."""
         normalizer = RecordingNormalizer()
         steps = [
             SemanticAction(action="click",
@@ -422,7 +422,7 @@ class TestSkipReason:
         assert steps[1].skip_reason == ""
 
     def test_different_values_not_duplicate(self):
-        """Same target but different values are not duplicates."""
+        """Mesmo target mas valores diferentes nao sao duplicatas."""
         normalizer = RecordingNormalizer()
         target = SemanticTarget(role="textbox", placeholder="CPF",
                                 candidates=[LocatorCandidate("placeholder", "[placeholder='CPF']", 0.85)])
@@ -435,7 +435,7 @@ class TestSkipReason:
         assert steps[1].skip_reason == ""
 
     def test_non_consecutive_not_duplicate(self):
-        """Same steps separated by a different step are not duplicates."""
+        """Mesmos steps separados por um step diferente nao sao duplicatas."""
         normalizer = RecordingNormalizer()
         target = SemanticTarget(role="button", text="OK",
                                 candidates=[LocatorCandidate("text", "text=OK", 0.55)])
@@ -444,15 +444,15 @@ class TestSkipReason:
             SemanticAction(action="fill", target=SemanticTarget(placeholder="x",
                                 candidates=[LocatorCandidate("placeholder", "[placeholder='x']", 0.85)]),
                            value="data"),
-            SemanticAction(action="click", target=target),  # same as first but not consecutive
+            SemanticAction(action="click", target=target),  # igual ao primeiro mas nao consecutivo
         ]
         normalizer._deduplicate_steps(steps)
         assert steps[0].skip_reason == ""
         assert steps[1].skip_reason == ""
-        assert steps[2].skip_reason == ""  # not consecutive, not marked
+        assert steps[2].skip_reason == ""  # nao consecutivo, nao marcado
 
     def test_already_skipped_not_rechecked(self):
-        """Steps already marked with skip_reason are not re-evaluated."""
+        """Steps ja marcados com skip_reason nao sao reavaliados."""
         normalizer = RecordingNormalizer()
         target = SemanticTarget(role="button", text="OK",
                                 candidates=[LocatorCandidate("text", "text=OK", 0.55)])
@@ -461,12 +461,12 @@ class TestSkipReason:
             SemanticAction(action="click", target=target),  # identical to first
         ]
         normalizer._deduplicate_steps(steps)
-        # First already has skip_reason, so second is not compared against it
+        # Primeiro ja tem skip_reason, entao segundo nao e comparado contra ele
         assert "non-actionable target" in steps[0].skip_reason
         assert steps[1].skip_reason == ""
 
     def test_non_actionable_target_no_candidates(self):
-        """Step with target but zero candidates gets 'non-actionable target'."""
+        """Step com target mas zero candidatos recebe 'non-actionable target'."""
         normalizer = RecordingNormalizer()
         steps = [
             SemanticAction(action="click",
@@ -482,7 +482,7 @@ class TestSkipReason:
         assert steps[1].skip_reason == "non-actionable target"
 
     def test_assert_not_flagged_non_actionable(self):
-        """Assert steps are never flagged as non-actionable."""
+        """Steps de assert nunca sao marcados como non-actionable."""
         normalizer = RecordingNormalizer()
         steps = [
             SemanticAction(action="assert",
@@ -493,7 +493,7 @@ class TestSkipReason:
         assert steps[0].skip_reason == ""
 
     def test_actionable_with_candidates_not_flagged(self):
-        """Step with candidates is not flagged."""
+        """Step com candidatos nao e marcado."""
         normalizer = RecordingNormalizer()
         steps = [
             SemanticAction(action="click",
@@ -504,7 +504,7 @@ class TestSkipReason:
         assert steps[0].skip_reason == ""
 
     def test_navigation_not_flagged_non_actionable(self):
-        """Navigation steps (no target needed) are not flagged."""
+        """Steps de navegacao (sem target necessario) nao sao marcados."""
         normalizer = RecordingNormalizer()
         steps = [
             SemanticAction(action="navigation", url="http://localhost"),
@@ -555,9 +555,9 @@ class TestCompiler:
             assert "from playwright.sync_api import Page, expect" in code
             assert "def test_st_001" in code
             assert "page.goto(BASE_URL)" in code
-            # Verify only one page.goto (initial navigation; redundant navigations skipped)
+            # Verifica apenas um page.goto (navegacao inicial; navegacoes redundantes puladas)
             assert code.count("page.goto(BASE_URL)") == 1, (
-                f"Expected exactly 1 page.goto(), got {code.count('page.goto(BASE_URL)')}"
+                f"Esperado exatamente 1 page.goto(), obtido {code.count('page.goto(BASE_URL)')}"
             )
             # Fill com fallback loop
             assert "for _sel in _sels" in code
@@ -597,12 +597,12 @@ class TestCompiler:
             assert "to_be_checked" in code
 
     def test_compile_submit_click_uses_expect_navigation(self):
-        """Submit clicks use expect_navigation instead of wait_for_load_state."""
+        """Clicks de submit usam expect_navigation em vez de wait_for_load_state."""
         tc = SemanticTestCase(test_id="ST-SUB", source_recording_id="REC-001",
                               application="fake-bank", base_url="http://localhost:8765")
-        # Navigation (skipped — initial goto emitted unconditionally)
+        # Navigation (pulado — goto inicial emitido incondicionalmente)
         tc.steps.append(SemanticAction(action="navigation"))
-        # Submit click with is_submit context
+        # Submit click com contexto is_submit
         click_target = SemanticTarget(role="button", text="Pesquisar", element_id="btnPesquisar")
         click_target.candidates = [
             LocatorCandidate("role", "role=button[name=\"Pesquisar\"]", 0.95),
@@ -618,16 +618,16 @@ class TestCompiler:
             with open(path) as f:
                 code = f.read()
 
-            # Must use expect_navigation for submit
+            # Deve usar expect_navigation para submit
             assert "expect_navigation" in code
             assert "wait_until='load'" in code
-            # Must NOT use old wait_for_load_state pattern
+            # Nao deve usar padrao antigo wait_for_load_state
             assert "wait_for_load_state" not in code
-            # Only one goto (the initial)
+            # Apenas um goto (o inicial)
             assert code.count("page.goto(BASE_URL)") == 1
 
     def test_compile_non_submit_click_no_expect_navigation(self):
-        """Regular clicks (not submit) do NOT use expect_navigation."""
+        """Clicks regulares (nao submit) NAO usam expect_navigation."""
         tc = SemanticTestCase(test_id="ST-CLK", source_recording_id="REC-001",
                               application="fake-bank", base_url="http://localhost:8765")
         tc.steps.append(SemanticAction(action="navigation"))
@@ -646,16 +646,16 @@ class TestCompiler:
             with open(path) as f:
                 code = f.read()
 
-            # Regular click: no expect_navigation
+            # Click regular: sem expect_navigation
             assert "expect_navigation" not in code
             assert "page.click(_sel)" in code
             assert "page.wait_for_timeout(800)" in code  # 800ms para DOM render
 
     def test_compile_multiple_navigation_skipped(self):
-        """Multiple navigation actions produce only one page.goto()."""
+        """Multiplas acoes de navegacao produzem apenas um page.goto()."""
         tc = SemanticTestCase(test_id="ST-MNAV", source_recording_id="REC-001",
                               application="fake-bank", base_url="http://localhost:8765")
-        # 3 navigation steps — only first (initial) should produce goto
+        # 3 steps de navegacao — apenas o primeiro (inicial) deve produzir goto
         tc.steps.append(SemanticAction(action="navigation"))
         tc.steps.append(SemanticAction(action="navigation"))
         tc.steps.append(SemanticAction(action="navigation"))
@@ -667,22 +667,22 @@ class TestCompiler:
                 code = f.read()
 
             assert code.count("page.goto(BASE_URL)") == 1, (
-                f"Expected 1 goto, got {code.count('page.goto(BASE_URL)')}"
+                f"Esperado 1 goto, obtido {code.count('page.goto(BASE_URL)')}"
             )
 
     def test_compile_navigation_skip_with_different_url(self):
-        """Navigation action with a URL different from base_url is still skipped."""
+        """Acao de navegacao com URL diferente de base_url ainda e pulada."""
         tc = SemanticTestCase(test_id="ST-NAVURL", source_recording_id="REC-001",
                               application="fake-bank", base_url="http://localhost:8765")
-        # Initial navigation (page already loaded via page.goto)
+        # Navegacao inicial (pagina ja carregada via page.goto)
         tc.steps.append(SemanticAction(action="navigation", url="http://localhost:8765"))
-        # Click a link that navigates to a different URL
+        # Click em link que navega para URL diferente
         click_target = SemanticTarget(role="link", text="Go to Page 2")
         click_target.candidates = [
             LocatorCandidate("text", "text=Go to Page 2", 0.85),
         ]
         tc.steps.append(SemanticAction(action="click", target=click_target))
-        # Navigation event captured after the click (redundant — already navigated)
+        # Evento de navegacao capturado apos o click (redundante — ja navegou)
         tc.steps.append(SemanticAction(action="navigation", url="http://localhost:8765/page2"))
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -691,18 +691,18 @@ class TestCompiler:
             with open(path) as f:
                 code = f.read()
 
-            # Only ONE page.goto (initial navigation)
+            # Apenas UM page.goto (navegacao inicial)
             assert code.count("page.goto(BASE_URL)") == 1, (
-                f"Expected 1 goto, got {code.count('page.goto(BASE_URL)')}"
+                f"Esperado 1 goto, obtido {code.count('page.goto(BASE_URL)')}"
             )
-            # Navigation actions (both initial and post-click) are skipped
-            # No explicit navigation to /page2 — the click already causes it
+            # Acoes de navegacao (inicial e pos-click) sao puladas
+            # Sem navegacao explicita para /page2 — o click ja a causa
             assert "page.goto" not in code.replace("page.goto(BASE_URL)", "")
-            # Click is present
+            # Click esta presente
             assert "page.click" in code
 
     def test_compile_submit_with_postback_url(self):
-        """Submit click with postback_url uses expect_navigation."""
+        """Submit click com postback_url usa expect_navigation."""
         tc = SemanticTestCase(test_id="ST-PBACK", source_recording_id="REC-001",
                               application="fake-bank", base_url="http://localhost:8765")
         tc.steps.append(SemanticAction(action="navigation"))
@@ -721,22 +721,22 @@ class TestCompiler:
             with open(path) as f:
                 code = f.read()
 
-            # Must use expect_navigation for submit
+            # Deve usar expect_navigation para submit
             assert "expect_navigation" in code
             assert "wait_until='load'" in code
-            # Only one goto
+            # Apenas um goto
             assert code.count("page.goto(BASE_URL)") == 1
-            # No redundant goto to postback URL
+            # Sem goto redundante para URL de postback
             assert "resultado" not in code.lower().replace("page.goto(base_url)", "")
 
 
 class TestL0_5AccessibilityResolution:
-    """Tests for L0.5 get_by_role with regex fuzzy name matching."""
+    """Testes para L0.5 get_by_role com correspondencia fuzzy regex de nome."""
 
     def test_l0_5_role_expr_with_role_and_name(self):
-        """_l0_5_role_expr returns regex get_by_role when role+name present."""
+        """_l0_5_role_expr retorna regex get_by_role quando role+nome presentes."""
         compiler = PlaywrightCompiler()
-        target = SemanticTarget(role="button", accessible_name="Enviar formulário")
+        target = SemanticTarget(role="button", accessible_name="Enviar formulario")
         expr = compiler._l0_5_role_expr(target)
         assert expr is not None
         assert "get_by_role" in expr
@@ -746,13 +746,13 @@ class TestL0_5AccessibilityResolution:
         assert "Enviar" in expr  # first 40 chars
 
     def test_l0_5_role_expr_without_role(self):
-        """_l0_5_role_expr returns None when role missing."""
+        """_l0_5_role_expr retorna None quando role ausente."""
         compiler = PlaywrightCompiler()
         target = SemanticTarget(accessible_name="Enviar")
         assert compiler._l0_5_role_expr(target) is None
 
     def test_l0_5_role_expr_without_name(self):
-        """_l0_5_role_expr returns None when accessible_name too short."""
+        """_l0_5_role_expr retorna None quando accessible_name muito curto."""
         compiler = PlaywrightCompiler()
         target = SemanticTarget(role="button")
         assert compiler._l0_5_role_expr(target) is None
@@ -760,7 +760,7 @@ class TestL0_5AccessibilityResolution:
         assert compiler._l0_5_role_expr(target) is None
 
     def test_l0_5_role_expr_truncates_long_name(self):
-        """_l0_5_role_expr truncates accessible_name to 40 chars."""
+        """_l0_5_role_expr trunca accessible_name para 40 caracteres."""
         compiler = PlaywrightCompiler()
         long_name = "A" * 100
         target = SemanticTarget(role="button", accessible_name=long_name)
@@ -770,7 +770,7 @@ class TestL0_5AccessibilityResolution:
         assert "A" * 41 not in expr
 
     def test_compiled_code_imports_re(self):
-        """Generated test script imports re for L0.5 regex support."""
+        """Script de teste gerado importa re para suporte a regex L0.5."""
         tc = SemanticTestCase(test_id="ST-L05", source_recording_id="REC-001",
                               application="fake-bank", base_url="http://localhost:8765")
         tc.steps.append(SemanticAction(action="navigation"))
@@ -782,7 +782,7 @@ class TestL0_5AccessibilityResolution:
             assert "import json, os, re" in code or "import re" in code
 
     def test_compiled_fill_includes_l0_5_regex(self):
-        """Fill step with role+name generates re.compile fallback."""
+        """Step fill com role+nome gera fallback re.compile."""
         tc = SemanticTestCase(test_id="ST-L05-FILL", source_recording_id="REC-001",
                               application="fake-bank", base_url="http://localhost:8765")
         tc.steps.append(SemanticAction(action="navigation"))
@@ -798,10 +798,10 @@ class TestL0_5AccessibilityResolution:
             path = compiler.compile(tc, tmpdir)
             with open(path) as f:
                 code = f.read()
-            assert "re.compile(re.escape" in code, f"L0.5 re.compile not found in:\n{code}"
+            assert "re.compile(re.escape" in code, f"L0.5 re.compile nao encontrado em:\n{code}"
 
     def test_compiled_click_includes_l0_5_regex(self):
-        """Click step with role+name generates re.compile fallback."""
+        """Step click com role+nome gera fallback re.compile."""
         tc = SemanticTestCase(test_id="ST-L05-CLK", source_recording_id="REC-001",
                               application="fake-bank", base_url="http://localhost:8765")
         tc.steps.append(SemanticAction(action="navigation"))
@@ -817,10 +817,10 @@ class TestL0_5AccessibilityResolution:
             path = compiler.compile(tc, tmpdir)
             with open(path) as f:
                 code = f.read()
-            assert "re.compile(re.escape" in code, f"L0.5 re.compile not found in:\n{code}"
+            assert "re.compile(re.escape" in code, f"L0.5 re.compile nao encontrado em:\n{code}"
 
     def test_compiled_fill_without_role_no_l0_5(self):
-        """Fill without role+name does not generate re.compile."""
+        """Fill sem role+nome nao gera re.compile."""
         tc = SemanticTestCase(test_id="ST-L05-NO", source_recording_id="REC-001",
                               application="fake-bank", base_url="http://localhost:8765")
         tc.steps.append(SemanticAction(action="navigation"))
@@ -834,21 +834,21 @@ class TestL0_5AccessibilityResolution:
             path = compiler.compile(tc, tmpdir)
             with open(path) as f:
                 code = f.read()
-            assert "re.compile" not in code, f"Unexpected re.compile in:\n{code}"
+            assert "re.compile" not in code, f"re.compile inesperado em:\n{code}"
 
 
 class TestCompoundSelectors:
-    """Tests for compound attribute selectors (2-attribute combination)."""
+    """Testes para seletores compostos por atributos (combinacao de 2 atributos)."""
 
     def _run_compound_test(self, target_data: dict, expected_count: int = 0):
-        """Helper: run _build_target and count compound candidates."""
+        """Helper: executa _build_target e conta candidatos compostos."""
         normalizer = RecordingNormalizer()
         target = normalizer._build_target(target_data)
         compounds = [c for c in target.candidates if c.strategy == "compound"]
         return compounds
 
     def test_compound_placeholder_aria_label(self):
-        """Compound generated when placeholder + accessible_name exist."""
+        """Composto gerado quando placeholder + accessible_name existem."""
         compounds = self._run_compound_test({
             "tag": "input", "placeholder": "R$0,00",
             "accessible_name": "Renda mensal *",
@@ -856,37 +856,37 @@ class TestCompoundSelectors:
         })
         assert len(compounds) >= 1
         compound = [c for c in compounds if "placeholder" in c.selector and "aria-label" in c.selector]
-        assert compound, f"No placeholder+aria-label compound found among: {[c.selector for c in compounds]}"
+        assert compound, f"Nenhum composto placeholder+aria-label encontrado entre: {[c.selector for c in compounds]}"
         assert compound[0].score >= 0.85
 
     def test_compound_placeholder_name(self):
-        """Compound generated when placeholder + name exist."""
+        """Composto gerado quando placeholder + name existem."""
         compounds = self._run_compound_test({
             "tag": "input", "placeholder": "R$0,00",
             "name": "renda",
         })
         compound = [c for c in compounds if "placeholder" in c.selector and "[name=" in c.selector]
-        assert compound, f"No placeholder+name compound found among: {[c.selector for c in compounds]}"
+        assert compound, f"Nenhum composto placeholder+name encontrado entre: {[c.selector for c in compounds]}"
         assert compound[0].score >= 0.70
 
     def test_compound_aria_label_name(self):
-        """Compound generated when accessible_name + name exist."""
+        """Composto gerado quando accessible_name + name existem."""
         compounds = self._run_compound_test({
             "tag": "input", "accessible_name": "Renda mensal *",
             "name": "renda",
         })
         compound = [c for c in compounds if "aria-label" in c.selector and "[name=" in c.selector]
-        assert compound, f"No aria-label+name compound found among: {[c.selector for c in compounds]}"
+        assert compound, f"Nenhum composto aria-label+name encontrado entre: {[c.selector for c in compounds]}"
 
     def test_compound_no_overlap_produces_none(self):
-        """No compound generated when no paired attributes exist."""
+        """Nenhum composto gerado quando nao existem atributos pareados."""
         compounds = self._run_compound_test({
             "tag": "input", "placeholder": "R$0,00",
         })
         assert len(compounds) == 0
 
     def test_compound_selector_has_correct_tag(self):
-        """Compound selector includes tag prefix."""
+        """Seletor composto inclui prefixo de tag."""
         compounds = self._run_compound_test({
             "tag": "input", "placeholder": "R$0,00",
             "accessible_name": "Renda mensal *",
@@ -894,25 +894,25 @@ class TestCompoundSelectors:
         })
         assert compounds
         for c in compounds:
-            assert c.selector.startswith("input["), f"Compound missing tag prefix: {c.selector}"
+            assert c.selector.startswith("input["), f"Composto sem prefixo de tag: {c.selector}"
 
     def test_compound_score_is_higher_than_single(self):
-        """Compound score is higher than min single-attribute score."""
+        """Score composto e maior que o score minimo de atributo unico."""
         compounds = self._run_compound_test({
             "tag": "input", "placeholder": "R$0,00",
             "accessible_name": "Renda mensal *",
         })
         assert compounds
-        # placeholder single = 0.85, aria-label single = 0.90
-        # compound should be min(0.85, 0.90) + 0.05 = 0.90
-        assert any(c.score >= 0.88 for c in compounds), f"Scores too low: {[c.score for c in compounds]}"
+        # placeholder unico = 0.85, aria-label unico = 0.90
+        # composto deve ser min(0.85, 0.90) + 0.05 = 0.90
+        assert any(c.score >= 0.88 for c in compounds), f"Scores muito baixos: {[c.score for c in compounds]}"
 
 
 class TestFingerprint:
-    """Tests for multi-attribute fingerprint in SemanticTarget."""
+    """Testes para impressao digital multi-atributo em SemanticTarget."""
 
     def test_fingerprint_populated_in_build_target(self):
-        """_build_target returns SemanticTarget with fingerprint dict."""
+        """_build_target retorna SemanticTarget com dicionario fingerprint."""
         normalizer = RecordingNormalizer()
         target = normalizer._build_target({
             "tag": "input", "placeholder": "R$0,00",
@@ -924,7 +924,7 @@ class TestFingerprint:
         assert len(target.fingerprint) > 0
 
     def test_fingerprint_contains_key_attributes(self):
-        """Fingerprint includes tag, role, accessible_name, placeholder."""
+        """Fingerprint inclui tag, role, accessible_name, placeholder."""
         normalizer = RecordingNormalizer()
         target = normalizer._build_target({
             "tag": "input", "role": "textbox",
@@ -939,7 +939,7 @@ class TestFingerprint:
         assert fp.get("name") == "renda"
 
     def test_fingerprint_empty_values_filtered(self):
-        """Empty values are filtered from fingerprint to keep it compact."""
+        """Valores vazios sao filtrados do fingerprint para mante-lo compacto."""
         normalizer = RecordingNormalizer()
         target = normalizer._build_target({
             "tag": "input", "placeholder": "R$0,00",
@@ -947,12 +947,12 @@ class TestFingerprint:
         fp = target.fingerprint
         assert "tag" in fp
         assert "placeholder" in fp
-        # role, accessible_name, label, test_id, name should be absent (empty)
+        # role, accessible_name, label, test_id, name devem estar ausentes (vazios)
         for key in ("role", "accessible_name", "label", "test_id", "name"):
-            assert key not in fp, f"Key '{key}' should be filtered out"
+            assert key not in fp, f"Chave '{key}' deveria ser filtrada"
 
     def test_fingerprint_in_to_dict(self):
-        """Fingerprint is serialized in SemanticTestCase.to_dict()."""
+        """Fingerprint e serializado em SemanticTestCase.to_dict()."""
         tc = SemanticTestCase(test_id="ST-FP", source_recording_id="REC-FP",
                               application="test", base_url="http://localhost")
         target = SemanticTarget(role="button", accessible_name="Submit",
@@ -966,7 +966,7 @@ class TestFingerprint:
         assert steps[0]["target"]["fingerprint"]["tag"] == "button"
 
     def test_fingerprint_nth_child_preserved(self):
-        """Fingerprint includes nth_child when > 0."""
+        """Fingerprint inclui nth_child quando > 0."""
         normalizer = RecordingNormalizer()
         target = normalizer._build_target({
             "tag": "button", "text": "OK",
@@ -977,10 +977,10 @@ class TestFingerprint:
 
 
 class TestSemanticStepsJsonl:
-    """Tests for semantic_steps.jsonl generation alongside compiled script."""
+    """Testes para geracao de semantic_steps.jsonl junto com script compilado."""
 
     def _build_test_case(self) -> SemanticTestCase:
-        """Build a SemanticTestCase with fill, click, assert steps."""
+        """Constroi um SemanticTestCase com steps de fill, click, assert."""
         tc = SemanticTestCase(
             test_id="ST-JSONL", source_recording_id="REC-JSONL",
             application="fake-bank", base_url="http://localhost:8765",
@@ -1010,7 +1010,7 @@ class TestSemanticStepsJsonl:
         return tc
 
     def test_generates_file(self):
-        """compile_semantic_steps generates semantic_steps.jsonl."""
+        """compile_semantic_steps gera semantic_steps.jsonl."""
         tc = self._build_test_case()
         with tempfile.TemporaryDirectory() as tmpdir:
             compiler = PlaywrightCompiler()
@@ -1019,7 +1019,7 @@ class TestSemanticStepsJsonl:
             assert path.endswith("semantic_steps.jsonl")
 
     def test_metadata_header_line(self):
-        """First line is metadata JSON record."""
+        """Primeira linha e um registro JSON de metadados."""
         tc = self._build_test_case()
         with tempfile.TemporaryDirectory() as tmpdir:
             compiler = PlaywrightCompiler()
@@ -1038,7 +1038,7 @@ class TestSemanticStepsJsonl:
             assert header["step_count"] == 4
 
     def test_fill_step_serialized(self):
-        """Fill step has action, value, target with candidates."""
+        """Step fill tem action, value, target com candidates."""
         tc = self._build_test_case()
         with tempfile.TemporaryDirectory() as tmpdir:
             compiler = PlaywrightCompiler()
@@ -1047,7 +1047,7 @@ class TestSemanticStepsJsonl:
             with open(path) as f:
                 lines = f.readlines()
 
-            fill_line = json.loads(lines[2])  # line 3: fill (after metadata, nav)
+            fill_line = json.loads(lines[2])  # linha 3: fill (apos metadata, nav)
             assert fill_line["action"] == "fill"
             assert fill_line["value"] == "12345678900"
             target = fill_line["target"]
@@ -1059,7 +1059,7 @@ class TestSemanticStepsJsonl:
             assert target["candidates"][0]["score"] == 0.90
 
     def test_click_step_serialized(self):
-        """Click step has action, target with role and candidates."""
+        """Step click tem action, target com role e candidates."""
         tc = self._build_test_case()
         with tempfile.TemporaryDirectory() as tmpdir:
             compiler = PlaywrightCompiler()
@@ -1068,7 +1068,7 @@ class TestSemanticStepsJsonl:
             with open(path) as f:
                 lines = f.readlines()
 
-            click_line = json.loads(lines[3])  # line 4: click
+            click_line = json.loads(lines[3])  # linha 4: click
             assert click_line["action"] == "click"
             target = click_line["target"]
             assert target["role"] == "button"
@@ -1076,7 +1076,7 @@ class TestSemanticStepsJsonl:
             assert len(target["candidates"]) == 1
 
     def test_assert_step_serialized(self):
-        """Assert step has action, value, context."""
+        """Step assert tem action, value, context."""
         tc = self._build_test_case()
         with tempfile.TemporaryDirectory() as tmpdir:
             compiler = PlaywrightCompiler()
@@ -1085,7 +1085,7 @@ class TestSemanticStepsJsonl:
             with open(path) as f:
                 lines = f.readlines()
 
-            assert_line = json.loads(lines[4])  # line 5: assert
+            assert_line = json.loads(lines[4])  # linha 5: assert
             assert assert_line["action"] == "assert"
             assert assert_line["value"] == "CPF consultado"
             assert assert_line["context"]["assert_type"] == "textual"
@@ -1093,7 +1093,7 @@ class TestSemanticStepsJsonl:
             assert target["text"] == "resultado"
 
     def test_skip_reason_included(self):
-        """Steps with skip_reason have it in the JSONL record."""
+        """Steps com skip_reason o incluem no registro JSONL."""
         tc = SemanticTestCase(test_id="ST-SKIP", source_recording_id="REC-001",
                               application="test", base_url="http://localhost")
         step = SemanticAction(
@@ -1115,7 +1115,7 @@ class TestSemanticStepsJsonl:
             assert step_line["skip_reason"] == "non-actionable target"
 
     def test_every_line_is_valid_json(self):
-        """Every line in semantic_steps.jsonl is valid JSON."""
+        """Toda linha em semantic_steps.jsonl e JSON valido."""
         tc = self._build_test_case()
         with tempfile.TemporaryDirectory() as tmpdir:
             compiler = PlaywrightCompiler()
@@ -1124,13 +1124,13 @@ class TestSemanticStepsJsonl:
             with open(path) as f:
                 for i, line in enumerate(f):
                     line = line.strip()
-                    assert line, f"Line {i + 1} is empty"
+                    assert line, f"Linha {i + 1} esta vazia"
                     obj = json.loads(line)
-                    assert isinstance(obj, dict), f"Line {i + 1} is not a dict"
+                    assert isinstance(obj, dict), f"Linha {i + 1} nao e um dicionario"
 
     def test_generated_alongside_compiled_script(self):
-        """compile() already generates the script; compile_semantic_steps()
-        generates the JSONL in same output directory."""
+        """compile() ja gera o script; compile_semantic_steps()
+        gera o JSONL no mesmo diretorio de saida."""
         tc = self._build_test_case()
         with tempfile.TemporaryDirectory() as tmpdir:
             compiler = PlaywrightCompiler()
@@ -1142,7 +1142,7 @@ class TestSemanticStepsJsonl:
             assert os.path.dirname(script_path) == os.path.dirname(semantic_path)
 
     def test_empty_steps(self):
-        """TestCase with no steps still generates valid JSONL (metadata only)."""
+        """TestCase sem steps ainda gera JSONL valido (apenas metadata)."""
         tc = SemanticTestCase(test_id="ST-EMPTY", source_recording_id="REC-001",
                               application="test", base_url="http://localhost")
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1152,12 +1152,12 @@ class TestSemanticStepsJsonl:
             with open(path) as f:
                 lines = f.readlines()
 
-            assert len(lines) == 1  # only metadata
+            assert len(lines) == 1  # apenas metadata
             header = json.loads(lines[0])
             assert header["step_count"] == 0
 
     def test_navigation_step_no_target(self):
-        """Navigation step serializes without target key."""
+        """Step de navegacao serializa sem chave target."""
         tc = SemanticTestCase(test_id="ST-NAV", source_recording_id="REC-001",
                               application="test", base_url="http://localhost")
         tc.steps.append(SemanticAction(action="navigation", url="http://localhost/page"))
@@ -1175,7 +1175,7 @@ class TestSemanticStepsJsonl:
             assert "target" not in nav_line
 
     def test_step_to_record_omits_empty_values(self):
-        """_step_to_record omits keys with empty/falsy values."""
+        """_step_to_record omite chaves com valores vazios/falsos."""
         compiler = PlaywrightCompiler()
         step = SemanticAction(action="click")
         record = compiler._step_to_record(step)
@@ -1188,14 +1188,14 @@ class TestSemanticStepsJsonl:
         assert "depends_on" not in record
 
     def test_step_to_record_blocking(self):
-        """_step_to_record includes blocking when True."""
+        """_step_to_record inclui blocking quando True."""
         compiler = PlaywrightCompiler()
         step = SemanticAction(action="click", blocking=True)
         record = compiler._step_to_record(step)
         assert record["blocking"] is True
 
     def test_step_to_record_depends_on(self):
-        """_step_to_record includes depends_on when set."""
+        """_step_to_record inclui depends_on quando definido."""
         compiler = PlaywrightCompiler()
         step = SemanticAction(action="click", depends_on="step_0003")
         record = compiler._step_to_record(step)
@@ -1203,11 +1203,11 @@ class TestSemanticStepsJsonl:
 
 
 class TestStepDependencyDetection:
-    """Tests for _detect_step_dependencies in RecordingNormalizer."""
+    """Testes para _detect_step_dependencies em RecordingNormalizer."""
 
     def _make_select_step(self, action="select_option", tag="select",
                           element_id="uf", text=""):
-        """Helper to create a SemanticAction for select/fill steps."""
+        """Helper para criar um SemanticAction para steps select/fill."""
         target = SemanticTarget(
             tag=tag, element_id=element_id, text=text,
             candidates=[LocatorCandidate("id", f"#{element_id}", 0.90)],
@@ -1215,7 +1215,7 @@ class TestStepDependencyDetection:
         return SemanticAction(action=action, target=target)
 
     def test_single_step_no_dependency(self):
-        """Single select step: no dependency created."""
+        """Step select unico: nenhuma dependencia criada."""
         normalizer = RecordingNormalizer()
         steps = [self._make_select_step(element_id="uf")]
         normalizer._detect_step_dependencies(steps)
@@ -1223,11 +1223,11 @@ class TestStepDependencyDetection:
         assert steps[0].depends_on == ""
 
     def test_two_select_steps_create_dependency(self):
-        """Two consecutive select steps: first is blocking, second depends."""
+        """Dois steps select consecutivos: primeiro e blocking, segundo depende."""
         normalizer = RecordingNormalizer()
         steps = [
             self._make_select_step(element_id="uf", text="UF"),
-            self._make_select_step(element_id="edificio", text="Edifício"),
+            self._make_select_step(element_id="edificio", text="Edificio"),
         ]
         normalizer._detect_step_dependencies(steps)
         assert steps[0].blocking is True
@@ -1236,11 +1236,11 @@ class TestStepDependencyDetection:
         assert steps[1].depends_on == "step_0001"
 
     def test_three_select_steps_chain(self):
-        """Three consecutive selects: first blocks, others depend on first."""
+        """Tres selects consecutivos: primeiro bloqueia, outros dependem do primeiro."""
         normalizer = RecordingNormalizer()
         steps = [
             self._make_select_step(element_id="uf", text="UF"),
-            self._make_select_step(element_id="edificio", text="Edifício"),
+            self._make_select_step(element_id="edificio", text="Edificio"),
             self._make_select_step(element_id="data", text="Data"),
         ]
         normalizer._detect_step_dependencies(steps)
@@ -1249,7 +1249,7 @@ class TestStepDependencyDetection:
         assert steps[2].depends_on == "step_0001"
 
     def test_navigation_breaks_chain(self):
-        """Navigation between selects breaks dependency chain."""
+        """Navegacao entre selects quebra a cadeia de dependencia."""
         normalizer = RecordingNormalizer()
         steps = [
             self._make_select_step(element_id="uf"),
@@ -1257,11 +1257,11 @@ class TestStepDependencyDetection:
             self._make_select_step(element_id="edificio"),
         ]
         normalizer._detect_step_dependencies(steps)
-        assert steps[0].blocking is False  # chain length 1 (stopped by nav)
+        assert steps[0].blocking is False  # chain length 1 (parou no nav)
         assert steps[2].blocking is False  # chain length 1
 
     def test_assert_breaks_chain(self):
-        """Assert between selects breaks dependency chain."""
+        """Assert entre selects quebra a cadeia de dependencia."""
         normalizer = RecordingNormalizer()
         steps = [
             self._make_select_step(element_id="uf"),
@@ -1274,7 +1274,7 @@ class TestStepDependencyDetection:
         assert steps[2].blocking is False  # chain length 1
 
     def test_fill_and_select_in_same_chain(self):
-        """Fill and select in same chain with a <select>: first is blocking."""
+        """Fill e select na mesma cadeia com <select>: primeiro e blocking."""
         normalizer = RecordingNormalizer()
         fill_step = SemanticAction(
             action="fill", value="123",
@@ -1288,7 +1288,7 @@ class TestStepDependencyDetection:
         assert steps[1].depends_on == "step_0001"
 
     def test_fills_only_no_select_no_dependency(self):
-        """Multiple fills on same page without any <select>: no dependency."""
+        """Multiplos fills na mesma pagina sem <select>: sem dependencia."""
         normalizer = RecordingNormalizer()
         steps = [
             SemanticAction(
@@ -1297,7 +1297,7 @@ class TestStepDependencyDetection:
                                       candidates=[LocatorCandidate("id", "#cpf", 0.90)]),
             ),
             SemanticAction(
-                action="fill", value="João",
+                action="fill", value="Joao",
                 target=SemanticTarget(tag="input", element_id="nome",
                                       candidates=[LocatorCandidate("id", "#nome", 0.90)]),
             ),
@@ -1312,7 +1312,7 @@ class TestStepDependencyDetection:
         assert all(s.depends_on == "" for s in steps)
 
     def test_click_in_chain(self):
-        """Click in data-entry chain: included in dependency."""
+        """Click na cadeia de entrada de dados: incluido na dependencia."""
         normalizer = RecordingNormalizer()
         steps = [
             self._make_select_step(element_id="uf"),
@@ -1329,7 +1329,7 @@ class TestStepDependencyDetection:
         assert steps[2].depends_on == "step_0001"
 
     def test_explicit_dependency_preserved(self):
-        """Step with explicit depends_on is not auto-detected."""
+        """Step com depends_on explicito nao e autodetectado."""
         normalizer = RecordingNormalizer()
         steps = [
             self._make_select_step(element_id="uf"),
@@ -1340,11 +1340,11 @@ class TestStepDependencyDetection:
             ),
         ]
         normalizer._detect_step_dependencies(steps)
-        assert steps[0].blocking is False  # chain broken by explicit dep
-        assert steps[1].depends_on == "step_0005"  # preserved
+        assert steps[0].blocking is False  # cadeia quebrada por dep explicito
+        assert steps[1].depends_on == "step_0005"  # preservado
 
     def test_explicit_blocking_preserved(self):
-        """Step with explicit blocking=True is not auto-detected."""
+        """Step com blocking=True explicito nao e autodetectado."""
         normalizer = RecordingNormalizer()
         steps = [
             SemanticAction(
@@ -1355,11 +1355,11 @@ class TestStepDependencyDetection:
             self._make_select_step(element_id="edificio"),
         ]
         normalizer._detect_step_dependencies(steps)
-        assert steps[0].blocking is True  # preserved
-        assert steps[1].depends_on == ""  # second is part of different chain
+        assert steps[0].blocking is True  # preservado
+        assert steps[1].depends_on == ""  # segundo faz parte de cadeia diferente
 
     def test_skipped_step_breaks_chain(self):
-        """Step with skip_reason breaks the chain."""
+        """Step com skip_reason quebra a cadeia."""
         normalizer = RecordingNormalizer()
         steps = [
             self._make_select_step(element_id="uf"),
@@ -1371,17 +1371,17 @@ class TestStepDependencyDetection:
             self._make_select_step(element_id="data"),
         ]
         normalizer._detect_step_dependencies(steps)
-        assert steps[0].blocking is False  # chain broken by skipped step
+        assert steps[0].blocking is False  # cadeia quebrada por skipped step
 
     def test_empty_steps(self):
-        """Empty step list: no error."""
+        """Lista de steps vazia: sem erro."""
         normalizer = RecordingNormalizer()
         steps = []
         normalizer._detect_step_dependencies(steps)
         assert steps == []
 
     def test_only_navigation(self):
-        """Navigation-only steps: no dependencies."""
+        """Steps apenas de navegacao: sem dependencias."""
         normalizer = RecordingNormalizer()
         steps = [
             SemanticAction(action="navigation", url="http://localhost"),
@@ -1393,10 +1393,10 @@ class TestStepDependencyDetection:
 
 
 class TestStepsJsonlDependencies:
-    """Tests for reading blocking/depends_on from steps.jsonl."""
+    """Testes para leitura de blocking/depends_on de steps.jsonl."""
 
     def test_steps_jsonl_with_blocking(self):
-        """Convert step from steps.jsonl with blocking=True."""
+        """Converte step de steps.jsonl com blocking=True."""
         normalizer = RecordingNormalizer()
         step_data = {
             "action": "select_option",
@@ -1412,11 +1412,11 @@ class TestStepsJsonlDependencies:
         assert result.depends_on == ""
 
     def test_steps_jsonl_with_depends_on(self):
-        """Convert step from steps.jsonl with depends_on."""
+        """Converte step de steps.jsonl com depends_on."""
         normalizer = RecordingNormalizer()
         step_data = {
             "action": "select_option",
-            "value": "Edifício A",
+            "value": "Edificio A",
             "tagName": "select",
             "id": "edificioSelect",
             "depends_on": "step_0003",
@@ -1427,7 +1427,7 @@ class TestStepsJsonlDependencies:
         assert result.blocking is False
 
     def test_steps_jsonl_with_context(self):
-        """Convert step with context dict from steps.jsonl."""
+        """Converte step com dicionario context de steps.jsonl."""
         normalizer = RecordingNormalizer()
         step_data = {
             "action": "click",
@@ -1442,7 +1442,7 @@ class TestStepsJsonlDependencies:
 
 
 class TestCompilerFieldValues:
-    """Testes de integração do PlaywrightCompiler com field_values."""
+    """Testes de integracao do PlaywrightCompiler com field_values."""
 
     def _make_fill_tc(self, value: str = "12345678900") -> SemanticTestCase:
         """Cria SemanticTestCase com um step de fill (CPF)."""
@@ -1466,7 +1466,7 @@ class TestCompilerFieldValues:
         return tc
 
     def test_compiler_uses_field_values(self):
-        """fill usa o valor de field_values quando disponível."""
+        """fill usa o valor de field_values quando disponivel."""
         from testforge.semantic.model import FieldValueMap
 
         tc = self._make_fill_tc(value="original_value")
@@ -1505,7 +1505,7 @@ class TestCompilerFieldValues:
             assert "12345678900" in code
 
     def test_compiler_data_file_injection(self):
-        """data_file_dict preenche missing_fill quando field_value está vazio."""
+        """data_file_dict preenche missing_fill quando field_value esta vazio."""
         from testforge.semantic.model import FieldValueMap
 
         tc = self._make_fill_tc(value="")  # valor vazio — missing_fill

@@ -26,7 +26,7 @@ class TestStepReport:
         assert sr.healing_raw_response == ""
 
     def test_full_candidates_not_truncated(self):
-        """BUG-016: candidates must NOT be truncated — full list preserved."""
+        """BUG-016: candidatos NAO devem ser truncados — lista completa preservada."""
         full_candidates = [
             {"selector": "button:has-text('Pesquisar')", "score": 0.95},
             {"selector": "[type='submit']", "score": 0.80},
@@ -38,14 +38,14 @@ class TestStepReport:
         assert len(sr.candidates) == 5  # todos preservados, nao so [:3]
 
     def test_long_error_message_preserved(self):
-        """BUG-016: error messages NOT truncated to [:300]."""
+        """BUG-016: mensagens de erro NAO truncadas para [:300]."""
         long_error = "ERR: " + ("x" * 500) + " — final"
         sr = StepReport(step_num=2, action="fill", error_message=long_error)
         assert len(sr.error_message) > 300
         assert sr.error_message.endswith("— final")
 
     def test_long_healing_raw_response_preserved(self):
-        """BUG-016: LLM raw_response NOT truncated to [:200]."""
+        """BUG-016: raw_response do LLM NAO truncada para [:200]."""
         long_response = "RESP: " + ("y" * 500) + " — end"
         sr = StepReport(step_num=3, action="click",
                         healing_raw_response=long_response)
@@ -53,7 +53,7 @@ class TestStepReport:
         assert sr.healing_raw_response.endswith("— end")
 
     def test_long_healing_locator_preserved(self):
-        """BUG-016: healing locator NOT truncated to [:60]."""
+        """BUG-016: locator de healing NAO truncado para [:60]."""
         long_locator = "button[data-testid='submit-button-main'] >> text=" + ("z" * 80)
         sr = StepReport(step_num=4, action="click",
                         healing_proposal_locator=long_locator)
@@ -174,7 +174,7 @@ class TestRunReport:
             assert os.path.exists(path)
 
     def test_full_candidates_serialized_without_truncation(self):
-        """BUG-016: full candidates preserved in JSON output."""
+        """BUG-016: candidatos completos preservados na saida JSON."""
         candidates = [
             {"selector": "x" * 100, "score": 0.9},
             {"selector": "y" * 100, "score": 0.8},

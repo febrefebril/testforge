@@ -1,4 +1,4 @@
-"""Sprint 0 — DiagnosticSession + RecorderController integration tests."""
+"""Sprint 0 — Testes de integracao DiagnosticSession + RecorderController."""
 from __future__ import annotations
 
 import json
@@ -73,20 +73,20 @@ class TestDiagnosticSessionIntegration:
             candidates=[],
         )
         payload = sess.finalize()
-        # session.json present
+        # session.json presente
         on_disk = json.loads((tmp_path / "session.json").read_text())
         assert on_disk["framework_detection"]["primary"] == "angular-material"
         assert on_disk["totals"]["steps"] == 3
         assert on_disk["totals"]["asserts"] == 1
-        # steps.jsonl present
+        # steps.jsonl presente
         steps_lines = open(tmp_path / "steps.jsonl").readlines()
         assert len(steps_lines) == 3
-        # scenario.feature present + Gherkin shape OK
+        # scenario.feature presente + formato Gherkin OK
         feature = (tmp_path / "scenario.feature").read_text()
         assert "Funcionalidade: Simulador" in feature
-        assert "Quando clico no botão \"Calcular\"" in feature
-        assert "preencho \"Renda mensal\" com valor monetário" in feature
-        assert "Então vejo o texto \"Parcela estimada\"" in feature
+        assert "Quando clico no botao \"Calcular\"" in feature
+        assert "preencho \"Renda mensal\" com valor monetario" in feature
+        assert "Entao vejo o texto \"Parcela estimada\"" in feature
 
     def test_totals_track_value_capture(self, tmp_path):
         page = _make_page(self._detection_payload())
@@ -108,7 +108,7 @@ class TestDiagnosticSessionIntegration:
         sess.finalize()
         assert sess.totals["value_captured"] == 1
         assert sess.totals["value_missing"] == 1
-        assert sess.totals["blind_spots"] >= 1  # 'typing_not_captured' from e2
+        assert sess.totals["blind_spots"] >= 1  # 'typing_not_captured' do e2
 
     def test_gherkin_override(self, tmp_path):
         page = _make_page(self._detection_payload())
@@ -122,11 +122,11 @@ class TestDiagnosticSessionIntegration:
              "target": {"accessible_name": "Login"}},
             target_data={"accessible_name": "Login"}, candidates=[],
         )
-        sess.finalize(funcionalidade_override="Autenticação",
+        sess.finalize(funcionalidade_override="Autenticacao",
                        cenario_override="Login com sucesso")
         feature = (tmp_path / "scenario.feature").read_text()
-        assert "Funcionalidade: Autenticação" in feature
-        assert "Cenário: Login com sucesso" in feature
+        assert "Funcionalidade: Autenticacao" in feature
+        assert "Cenario: Login com sucesso" in feature
 
 
 class TestRecorderControllerDiagnostic:
@@ -153,7 +153,7 @@ class TestRecorderControllerDiagnostic:
             session_dir = ctrl._store._session_dir
             assert os.path.isdir(os.path.join(session_dir, "diagnostic"))
             ctrl.stop()
-            # session.json written
+            # session.json escrito
             assert os.path.exists(os.path.join(
                 session_dir, "diagnostic", "session.json"))
 
@@ -178,8 +178,8 @@ class TestRecorderControllerDiagnostic:
 
 
 class TestHotfix15PrecaptureForClose:
-    """Hotfix 15: precapture_for_close caches framework + url for finalize
-    after browser.close()."""
+    """Hotfix 15: precapture_for_close armazena framework + url para finalize
+    apos browser.close()."""
 
     def _make_page(self, url="https://app.test/"):
         p = MagicMock()
@@ -197,7 +197,7 @@ class TestHotfix15PrecaptureForClose:
             session_dir=str(tmp_path / "diag"), replay_mode="immediate",
         )
         sess.start()
-        # Stub the detector so we control what gets cached.
+        # Simula o detector para controlar o que e armazenado em cache.
         with patch.object(
             sess._detector, "detect",
             return_value={"primary": "angular-material"},
@@ -219,17 +219,17 @@ class TestHotfix15PrecaptureForClose:
             return_value={"primary": "angular-material"},
         ):
             sess.precapture_for_close()
-        # Now break the page — simulate browser.close()
+        # Agora quebra a pagina — simula browser.close()
         type(page).url = PropertyMock(side_effect=Exception("closed"))
         page.evaluate = MagicMock(side_effect=Exception("closed"))
-        # detector.detect() also broken now
+        # detector.detect() tambem quebrado agora
         with patch.object(
             sess._detector, "detect", side_effect=Exception("closed"),
         ):
             payload = sess.finalize()
-        # Framework still landed in the payload
+        # Framework ainda presente no payload
         assert payload["framework_detection"] == {"primary": "angular-material"}
-        # URL too
+        # URL tambem
         assert payload["app_url_signature"]
 
     def test_precapture_tolerates_detector_failure(self, tmp_path):

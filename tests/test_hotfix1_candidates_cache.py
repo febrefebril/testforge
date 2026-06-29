@@ -1,4 +1,4 @@
-"""Hotfix 1 — heuristic candidates + detection cache."""
+"""Hotfix 1 — candidatos heuristicos + cache de deteccao."""
 from __future__ import annotations
 
 from unittest.mock import MagicMock
@@ -62,7 +62,7 @@ class TestQuickCandidates:
             "element_id": "user-email",
         })
         strategies = {c["strategy"] for c in out}
-        # role+name native, aria_label_css, placeholder_css, id_css
+        # nativo role+nome, aria_label_css, placeholder_css, id_css
         assert "playwright_native" in strategies
         assert "aria_label_css" in strategies
         assert "placeholder_css" in strategies
@@ -92,7 +92,7 @@ class TestDetectionCache:
         assert det._last_detection["primary"] == "angular-material"
 
     def test_page_eval_failed_uses_cache(self):
-        # First detect succeeds
+        # Primeira deteccao bem-sucedida
         page = self._page_eval_result({
             "angular_material": True, "custom_components": [],
             "shadow_dom_count": 0, "iframe_count": 0, "dom_size": 10,
@@ -100,11 +100,11 @@ class TestDetectionCache:
             "evidence": [],
         })
         det = FrameworkDetector(page, cdp_session=None)
-        det.detect()  # populates cache
-        # Now page eval fails (browser closed)
+        det.detect()  # preenche cache
+        # Agora o page eval falha (navegador fechado)
         page.evaluate.side_effect = Exception("Target closed")
         result = det.detect()
-        # cache served, primary preserved
+        # cache servido, primary preservado
         assert result["primary"] == "angular-material"
         assert any("page_eval_failed_at_finalize: served from cache" in e
                     for e in result["evidence"])
@@ -118,7 +118,7 @@ class TestDetectionCache:
         det = FrameworkDetector(page, cdp_session=None)
         det.detect()
         assert det._last_detection is None
-        # second call still unknown
+        # segunda chamada ainda desconhecida
         page.evaluate.side_effect = Exception("closed")
         result = det.detect()
         assert result["primary"] == "unknown"

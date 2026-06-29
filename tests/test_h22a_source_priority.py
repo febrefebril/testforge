@@ -1,23 +1,23 @@
-"""H22a — source priority re-rank after the Material currencymask spike.
+"""H22a — reordenacao de prioridade de fonte apos spike currencymask Material.
 
-Background: see .planning/spikes/SPIKE-keyboard-type-mask.md (H22 section)
-and the 2026-06-27 H22 entry in .planning/DECISIONS-LOG.md.
+Contexto: veja .planning/spikes/SPIKE-keyboard-type-mask.md (secao H22)
+e a entrada H22 de 2026-06-27 em .planning/DECISIONS-LOG.md.
 
-The spike showed that `value_mutations.jsonl` (source=`setter_hook`) only
-catches mask-driven writes that delegate to the prototype `value` setter.
-For ng2-currency-mask-style instance overrides (and for real keyboard
-typing on plain inputs) the hook captures nothing. `final_state_snapshot`
-reads `el.value` via the canonical instance getter, so it survives every
-mask pattern that displays a value on screen.
+O spike mostrou que `value_mutations.jsonl` (fonte=`setter_hook`) apenas
+captura escritas dirigidas por mascara que delegam ao setter `value` do
+prototipo. Para sobrescritas de instancia estilo ng2-currency-mask (e para
+digitacao real via teclado em inputs simples) o hook nao captura nada.
+`final_state_snapshot` le `el.value` via o getter canonico da instancia,
+entao sobrevive a todo padrao de mascara que exibe um valor na tela.
 
-Decision: promote `final_state` above `setter_hook` in the priority table.
+Decisao: promover `final_state` acima de `setter_hook` na tabela de prioridade.
 
-This file pins:
-1. The new ordering (so a future refactor cannot silently reverse it).
-2. The merge behaviour when both sources have a value for the same
-   physical field — `final_state` must win.
-3. The single-source-of-truth invariant (only `IR_SOURCE_PRIORITY`
-   should drive the priority).
+Este arquivo fixa:
+1. A nova ordenacao (para que uma refatoracao futura nao a reverta silenciosamente).
+2. O comportamento de mesclagem quando ambas as fontes tem valor para o mesmo
+   campo fisico — `final_state` deve vencer.
+3. O invariante de fonte-unica-de-verdade (apenas `IR_SOURCE_PRIORITY`
+   deve conduzir a prioridade).
 """
 from __future__ import annotations
 
@@ -34,18 +34,18 @@ from testforge.semantic.model import (
 )
 
 
-# ---- 1. Ordering invariant -------------------------------------------------
+# ---- 1. Invariante de ordenacao -------------------------------------------------
 
 
 class TestIR_SOURCE_PRIORITY_ranking:
     def test_final_state_above_setter_hook(self):
-        """H22a: final_state must outrank setter_hook because setter_hook
-        misses the instance-override and plain-typing failure modes."""
+        """H22a: final_state deve superar setter_hook porque setter_hook
+        perde os modos de falha de sobrescrita de instancia e digitacao simples."""
         p = RecordingNormalizer.IR_SOURCE_PRIORITY
         assert p["final_state"] > p["setter_hook"], (
-            "final_state must outrank setter_hook (H22a). The setter hook "
-            "is structurally insufficient for masks that don't delegate "
-            "to the prototype setter. See SPIKE-keyboard-type-mask.md."
+            "final_state deve superar setter_hook (H22a). O setter hook "
+            "e estruturalmente insuficiente para mascaras que nao delegam "
+            "ao setter do prototipo. Veja SPIKE-keyboard-type-mask.md."
         )
 
     def test_form_values_remains_top(self):
@@ -54,14 +54,14 @@ class TestIR_SOURCE_PRIORITY_ranking:
                       "snapshot_diff", "network_payload",
                       "polling", "missing_fill"):
             assert p["form_values"] > p[other], (
-                f"form_values must outrank {other}; it is the only source "
-                "that reflects what the browser actually submitted."
+                f"form_values deve superar {other}; e a unica fonte "
+                "que reflete o que o navegador realmente submeteu."
             )
 
     def test_fill_event_above_final_state(self):
-        """fill_event represents an explicit user action captured at the
-        right moment; final_state is a session-end snapshot. fill_event
-        should still win when present."""
+        """fill_event representa uma acao de usuario explicita capturada no
+        momento certo; final_state e um instantaneo de fim de sessao. fill_event
+        ainda deve vencer quando presente."""
         p = RecordingNormalizer.IR_SOURCE_PRIORITY
         assert p["fill_event"] > p["final_state"]
 
@@ -69,21 +69,21 @@ class TestIR_SOURCE_PRIORITY_ranking:
         p = RecordingNormalizer.IR_SOURCE_PRIORITY
         for other in [k for k in p if k != "missing_fill"]:
             assert p["missing_fill"] < p[other], (
-                f"missing_fill must rank below {other} so any real source "
-                "can replace a placeholder."
+                f"missing_fill deve ficar abaixo de {other} para que qualquer fonte real "
+                "possa substituir um placeholder."
             )
 
     def test_no_collisions(self):
-        """Distinct sources must have distinct priority numbers — ties
-        in `_ir_dedupe_entries` fall back to a value-length comparison,
-        which is fragile."""
+        """Fontes distintas devem ter numeros de prioridade distintos —
+        empates em `_ir_dedupe_entries` recorrem a comparacao de comprimento
+        de valor, o que e fragil."""
         p = RecordingNormalizer.IR_SOURCE_PRIORITY
         assert len(set(p.values())) == len(p), (
-            "Duplicate priority values in IR_SOURCE_PRIORITY: " + repr(p)
+            "Valores de prioridade duplicados em IR_SOURCE_PRIORITY: " + repr(p)
         )
 
 
-# ---- 2. Merge behaviour (integration) --------------------------------------
+# ---- 2. Comportamento de mesclagem (integracao) --------------------------------------
 
 
 def _write_jsonl(path: Path, rows: list[dict]) -> None:
@@ -98,26 +98,26 @@ def _write_json(path: Path, payload: dict) -> None:
 
 
 class TestFinalStateBeatsSetterHookOnMerge:
-    """Pin H22a behaviour: when both sources fire for the same physical
-    field, final_state's value must be the one stored in field_values."""
+    """Fixa comportamento H22a: quando ambas as fontes disparam para o mesmo
+    campo fisico, o valor de final_state deve ser o armazenado em field_values."""
 
     def test_final_state_wins_when_both_sources_present(self, tmp_path):
-        # value_mutations.jsonl — setter_hook source
+        # value_mutations.jsonl — fonte setter_hook
         _write_jsonl(tmp_path / "value_mutations.jsonl", [
             {
                 "type": "value_mutation",
                 "timestamp": "2026-06-27T10:00:00Z",
                 "fingerprint": "input#mat-input-1[name=]",
-                "value": "1,00",  # stale mid-typing snapshot
+                "value": "1,00",  # instantaneo obsoleto de meio de digitacao
             },
             {
                 "type": "value_mutation",
                 "timestamp": "2026-06-27T10:00:01Z",
                 "fingerprint": "input#mat-input-1[name=]",
-                "value": "10,00",  # also stale; mask kept reformatting
+                "value": "10,00",  # tambem obsoleto; mascara ficou reformatando
             },
         ])
-        # final_state_snapshot.json — final_state source, ground truth
+        # final_state_snapshot.json — fonte final_state, verdade absoluta
         _write_json(tmp_path / "final_state_snapshot.json", {
             "reason": "session_end",
             "timestamp": "2026-06-27T10:05:00Z",
@@ -157,7 +157,7 @@ class TestFinalStateBeatsSetterHookOnMerge:
 
         n = RecordingNormalizer()
         entries = n._ir_all(str(tmp_path), [step])
-        # Find the entry that points at our masked input.
+        # Encontra a entrada que aponta para nosso input mascarado.
         candidates = [
             e for e in entries
             if e.get("identifiers", {}).get("id") == "mat-input-1"
@@ -165,46 +165,46 @@ class TestFinalStateBeatsSetterHookOnMerge:
             or "valor" in e.get("field_key", "").lower()
         ]
         assert candidates, (
-            f"_ir_all dropped both sources for the masked input. Got: {entries}"
+            f"_ir_all descartou ambas as fontes para o input mascarado. Obteve: {entries}"
         )
 
-        # After dedup, the winner for this physical field must be final_state.
+        # Apos dedup, o vencedor para este campo fisico deve ser final_state.
         winner = n._ir_dedupe_entries(candidates)
         assert len(winner) >= 1
         chosen = winner[0]
         assert chosen["source"] == "final_state", (
-            f"setter_hook ({chosen.get('value')!r}) beat final_state — "
-            f"H22a regression. Winner: {chosen}"
+            f"setter_hook ({chosen.get('value')!r}) venceu final_state — "
+            f"regressao H22a. Vencedor: {chosen}"
         )
         assert chosen["value"] == "10.000,00", (
-            f"Wrong value picked: {chosen.get('value')!r}"
+            f"Valor incorreto selecionado: {chosen.get('value')!r}"
         )
 
 
-# ---- 3. Single-source-of-truth invariant -----------------------------------
+# ---- 3. Invariante de fonte-unica-de-verdade -----------------------------------
 
 
 class TestNoInlinePriorityMaps:
-    """Pin: no inline copy of the priority map should survive in
-    recording_normalizer.py. H22a unified them to `IR_SOURCE_PRIORITY`.
+    """Fixa: nenhuma copia inline do mapa de prioridade deve sobreviver em
+    recording_normalizer.py. H22a os unificou em `IR_SOURCE_PRIORITY`.
 
-    A future PR that copies the table inline (a common
-    refactor-without-thinking pattern) would silently re-fork the
-    rankings. This invariant catches that at CI time.
+    Um PR futuro que copie a tabela inline (um padrao comum de
+    refatoracao-sem-pensar) refaria silenciosamente os rankings. Este
+    invariante detecta isso em tempo de CI.
     """
 
     def test_no_competing_priority_dicts_in_normalizer(self):
         src = Path(
             "src/testforge/semantic/recording_normalizer.py"
         ).read_text(encoding="utf-8")
-        # The literal `"form_values": 100` paired with `"setter_hook":`
-        # in the SAME block is the inline-copy signature we removed.
-        # Allow exactly one occurrence (the IR_SOURCE_PRIORITY constant).
+        # O literal `"form_values": 100` pareado com `"setter_hook":`
+        # no MESMO bloco e a assinatura de copia inline que removemos.
+        # Permite exatamente uma ocorrencia (a constante IR_SOURCE_PRIORITY).
         marker = '"form_values": 100'
         count = src.count(marker)
         assert count == 1, (
-            f"Expected exactly 1 occurrence of {marker!r} (the "
-            f"IR_SOURCE_PRIORITY constant). Found {count}. A new inline "
-            "copy of the priority map was added — fold it into "
-            "RecordingNormalizer.IR_SOURCE_PRIORITY instead."
+            f"Esperava exatamente 1 ocorrencia de {marker!r} (a constante "
+            f"IR_SOURCE_PRIORITY). Encontrada {count}. Uma nova copia "
+            "inline do mapa de prioridade foi adicionada — incorpore-a em "
+            "RecordingNormalizer.IR_SOURCE_PRIORITY em vez disso."
         )

@@ -35,7 +35,7 @@ def _quote(value: str) -> str:
 
 
 def build_quick_candidates(target_data: Optional[dict]) -> list[dict]:
-    """Return up to 5 candidate dicts derived from target_data. Cheap (<1 ms)."""
+    """Retorna ate 5 candidatos derivados de target_data. Barato (<1 ms)."""
     if not target_data:
         return []
     out: list[dict] = []

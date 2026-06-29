@@ -1,11 +1,11 @@
-"""Phase 5 — Pipes & Filters refactor of RecordingNormalizer.
+"""Fase 5 — Refatoracao Pipes & Filters do RecordingNormalizer.
 
-Verifies that:
-- Stage + Pipeline base classes work
-- LoadStage / DedupStage / CompactStage / AuditStage produce the same
-  raw_events list as the legacy code path
-- RecordingNormalizer(use_pipeline=True).normalize() produces the same
-  SemanticTestCase as the legacy path on the same input
+Verifica que:
+- Classes base Stage + Pipeline funcionam
+- LoadStage / DedupStage / CompactStage / AuditStage produzem a mesma
+  lista raw_events que o codigo legado
+- RecordingNormalizer(use_pipeline=True).normalize() produz o mesmo
+  SemanticTestCase que o caminho legado na mesma entrada
 """
 from __future__ import annotations
 
@@ -117,7 +117,7 @@ class TestDedupAndCompactStages:
             ctx = NormalizationContext(recording_dir=d)
             ctx.raw_events = list(events)
             ctx = DedupStage(n).run(ctx)
-        # Logic match: same events in, same events out (no snapshot cycles)
+        # Logica identica: mesmos eventos entram, mesmos eventos saem (sem ciclos de snapshot)
         assert ctx.raw_events == n._remove_snapshot_duplicates(events)
 
     def test_compact_stage_collapses_fills(self):
@@ -130,7 +130,7 @@ class TestDedupAndCompactStages:
         ctx = NormalizationContext(recording_dir="x")
         ctx.raw_events = list(events)
         ctx = CompactStage(n).run(ctx)
-        # Three sequential fills on same field collapse to the last one.
+        # Tres fills sequenciais no mesmo campo colapsam no ultimo.
         assert len(ctx.raw_events) <= len(events)
         assert ctx.raw_events[-1]["value"] == "abc"
 
@@ -150,7 +150,7 @@ class TestPipelineParityWithLegacy:
             pipe = RecordingNormalizer(use_pipeline=True).normalize(
                 d, test_id="ST-p", application="x", base_url="http://x/"
             )
-        # Compare via to_dict because it ignores empty fields uniformly.
+        # Compara via to_dict porque ignora campos vazios uniformemente.
         assert legacy.to_dict() == pipe.to_dict()
 
     def test_pipeline_run_does_not_crash_on_empty_recording(self):

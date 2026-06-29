@@ -1,17 +1,17 @@
-"""H21 — inline value prompt as the new primary source.
+"""H21 — prompt de valor inline como nova fonte primaria.
 
-When the overlay detects keystrokes followed by an empty input on blur,
-it asks the user inline ("mascara interceptou — digite o valor"). The
-typed value lands in raw_events.jsonl as `inline_field_value` and the
-normalizer surfaces it as `user_supplied_inline` — the highest single-
-source priority below form_values.
+Quando o overlay detecta teclas pressionadas seguidas de input vazio no blur,
+ele pergunta ao usuario inline ("mascara interceptou — digite o valor"). O
+valor digitado vai para raw_events.jsonl como `inline_field_value` e o
+normalizer o apresenta como `user_supplied_inline` — a maior prioridade de
+fonte unica abaixo de form_values.
 
-This file pins:
-1. user_supplied_inline outranks fill_event / setter_hook / final_state.
-2. The normalizer parses the raw event into a FieldValueMap entry with
-   the right source, value, and identifier shape.
-3. user_supplied_inline beats setter_hook on the same field.
-4. Empty values are dropped.
+Este arquivo fixa:
+1. user_supplied_inline supera fill_event / setter_hook / final_state.
+2. O normalizer analisa o evento bruto em uma entrada FieldValueMap com
+   a fonte, valor e formato de identificador corretos.
+3. user_supplied_inline vence setter_hook no mesmo campo.
+4. Valores vazios sao descartados.
 """
 from __future__ import annotations
 
@@ -74,10 +74,10 @@ class TestNormalizerReadsInlineEvents:
         e = entries[0]
         assert e["source"] == "user_supplied_inline"
         assert e["value"] == "2500"
-        # Canonical key is built from the label, not the fingerprint.
+        # Chave canonica e construida a partir do rotulo, nao do fingerprint.
         assert "mat-input" not in e["field_key"]
         assert "renda" in e["field_key"].lower()
-        # Identifiers preserved for the downstream resolver.
+        # Identificadores preservados para o resolver downstream.
         assert e["identifiers"]["label"] == "Renda mensal *"
         assert e["identifiers"]["id"] == "mat-input-1"
 
@@ -93,23 +93,23 @@ class TestNormalizerReadsInlineEvents:
         assert "Valor do imóvel *" in labels
 
     def test_inline_beats_setter_hook_on_same_field(self, tmp_path):
-        """When both sources fire for the same masked field, user-typed
-        value must win the dedupe."""
+        """Quando ambas as fontes disparam para o mesmo campo mascarado, o
+        valor digitado pelo usuario deve vencer a deduplicacao."""
         rec = _write_raw_events(tmp_path, [
             _inline("Renda mensal *", "2500"),
-            # Also a value_mutation (setter_hook) that the mask
-            # produced — usually a partial / wrong value.
+            # Tambem uma value_mutation (setter_hook) que a mascara
+            # produziu — geralmente um valor parcial / incorreto.
             {
                 "type": "value_mutation",
                 "timestamp": "2026-06-27T22:00:01Z",
                 "fingerprint": "input#mat-input-1[name=]",
-                "value": "25,00",  # mask produced this; user meant 2500
+                "value": "25,00",  # mascara produziu isto; usuario queria 2500
             },
         ])
         n = RecordingNormalizer()
-        # Run the full IR pipeline so dedupe runs.
+        # Executa o pipeline IR completo para que a dedup rode.
         entries = n._ir_all(str(rec), [])
-        # The merged entry for the renda field must be the user value.
+        # A entrada mesclada para o campo renda deve ser o valor do usuario.
         target = next(
             (e for e in entries if "renda" in e["field_key"].lower()),
             None,
@@ -123,6 +123,6 @@ class TestSchemaBumped:
     def test_capture_schema_v4(self):
         from testforge.recorder.capture_fingerprint import CAPTURE_SCHEMA_VERSION
         assert CAPTURE_SCHEMA_VERSION >= 4, (
-            "H21 added the inline_field_value raw event type. Bump "
-            "CAPTURE_SCHEMA_VERSION when the event shape changes."
+            "H21 adicionou o tipo de evento bruto inline_field_value. Aumente "
+            "CAPTURE_SCHEMA_VERSION quando a forma do evento mudar."
         )

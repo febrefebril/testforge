@@ -1,4 +1,4 @@
-"""TestForge — Test fixtures for curation pages."""
+"""TestForge — Fixtures de teste para paginas de curacao."""
 import pytest
 import os
 import threading
@@ -12,7 +12,7 @@ TEST_PAGES_DIR = str(Path(__file__).parent)
 
 @pytest.fixture(scope="module")
 def test_server():
-    """Start local HTTP server serving test_pages/ directory."""
+    """Inicia servidor HTTP local servindo diretorio test_pages/."""
     # Change to test_pages dir so SimpleHTTPRequestHandler serves from there
     orig_dir = os.getcwd()
     os.chdir(TEST_PAGES_DIR)

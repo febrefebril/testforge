@@ -32,9 +32,9 @@ def _is_sensitive(name: str) -> bool:
 
 
 def _best_field_name(event: dict, idx: int) -> str:
-    """Gera o melhor nome de campo a partir de atributos de alvo de evento.
+    """Gera melhor nome de campo a partir de atributos de alvo do evento.
 
-    Prioridade: label > placeholder > element_id > genérico 'field_N'.
+    Prioridade: label > placeholder > element_id > generico 'field_N'.
     """
     target = event.get("target", {}) or {}
 
@@ -64,14 +64,14 @@ def _best_field_name(event: dict, idx: int) -> str:
 
 
 def extract_test_data(recording_dir: str, scenarios: bool = False) -> dict:
-    """Extract fill values from recording into structured test data.
+    """Extrai valores de preenchimento da gravacao em dados de teste estruturados.
 
-    Args:
-        recording_dir: Path to recording directory (contains raw_events.jsonl).
-        scenarios: If True, wrap data in {"default": {...}} for multi-scenario support.
+    Argumentos:
+        recording_dir: Caminho para diretorio de gravacao (contem raw_events.jsonl).
+        scenarios: Se True, envolve dados em {"default": {...}} para suporte multi-cenario.
 
-    Returns:
-        Dict with "fields" and "sensitive_alerts" keys.
+    Retorna:
+        Dict com chaves "fields" e "sensitive_alerts".
     """
     jsonl_path = os.path.join(recording_dir, "raw_events.jsonl")
     if not os.path.exists(jsonl_path):
@@ -138,15 +138,15 @@ def generate_test_data_file(
     output_path: Optional[str] = None,
     scenarios: bool = False,
 ) -> str:
-    """Generate test_data.json from recording.
+    """Gera test_data.json a partir da gravacao.
 
-    Args:
-        recording_dir: Path to recording directory.
-        output_path: Output file path. Defaults to recording_dir/test_data.json.
-        scenarios: If True, generate multi-scenario format.
+    Argumentos:
+        recording_dir: Caminho para diretorio de gravacao.
+        output_path: Caminho do arquivo de saida. Padrao: recording_dir/test_data.json.
+        scenarios: Se True, gera formato multi-cenario.
 
-    Returns:
-        Path to generated file.
+    Retorna:
+        Caminho para arquivo gerado.
     """
     data = extract_test_data(recording_dir, scenarios=scenarios)
 
@@ -158,15 +158,15 @@ def generate_test_data_file(
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-    # Print sensitive data alerts
+    # Exibe alertas de dados sensiveis
     for alert in data.get("sensitive_alerts", []):
-        print(f"  [WARN] Sensivel: {alert['field']} — {alert['reason']}")
+        print(f"  [AVISO] Sensivel: {alert['field']} — {alert['reason']}")
 
     return output_path
 
 
 def add_scenario(data: dict, scenario_name: str, fields: dict) -> dict:
-    """Add a new scenario to existing test data."""
+    """Adiciona novo cenario a dados de teste existentes."""
     if "scenarios" not in data:
         data["scenarios"] = {"default": data.get("fields", {})}
         if "fields" in data:

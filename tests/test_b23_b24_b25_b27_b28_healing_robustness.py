@@ -1,27 +1,27 @@
-"""Bugs found in test-pos-hotfix10 log:
+"""Bugs encontrados no log test-pos-hotfix10:
 
-* B23 — L0 catalog hit returned PASSED_STEP with proposal=None. The
-  legacy run path then logged
+* B23 — acerto no catalogo L0 retornou PASSED_STEP com proposal=None. O
+  caminho legado entao logou
     `Curador: PASSED_STEP [L0]
      Curador: REJEITADO — locator generico/perigoso: ''`
-  The healed step was actually fine, but downstream display saw an
-  empty selector. Fix: attach an LLMHealingProposal mirroring the
-  recipe's solution_selector + strategy + confidence 0.95.
+  O passo curado estava realmente ok, mas a exibicao downstream via um
+  seletor vazio. Correcao: anexar um LLMHealingProposal espelhando o
+  solution_selector + strategy + confidence 0.95 da receita.
 
-* B24/B25 — selector_agent._try_text accepted any text >= 2 chars,
-  including "JAN", "1992", "1", and the bare "OK"/"Calcular" word.
-  Result: heals against calendar cells and generic buttons that have
-  nothing to do with the target. Fix: minimum length 6, reject pure
-  numerics, reject a small blocklist of common UI verbs.
+* B24/B25 — selector_agent._try_text aceitava qualquer texto >= 2 caracteres,
+  incluindo "JAN", "1992", "1", e as palavras simples "OK"/"Calcular".
+  Resultado: curas contra celulas de calendario e botoes genericos que nao
+  tem nada a ver com o alvo. Correcao: tamanho minimo 6, rejeitar numericos
+  puros, rejeitar uma pequena lista de verbos de UI comuns.
 
-* B27 — L3 LLM intermittently emits {"new_selector": "..."} or
-  {"selector": "..."} instead of {"new_locator": "..."}. Parser
-  silently dropped the cure and reported UNRESOLVED with confidence 0.
-  Fix: accept the full alias set.
+* B27 — L3 LLM intermitentemente emite {"new_selector": "..."} ou
+  {"selector": "..."} ao inves de {"new_locator": "..."}. O parser
+  silenciosamente descartava a cura e reportava UNRESOLVED com confianca 0.
+  Correcao: aceitar o conjunto completo de alias.
 
-* B28 — same parser bug as B27, surfaced as `Curador: UNRESOLVED [L3] →
-  button.mat-calendar-previous-button (conf=0.00)` — the selector
-  text leaked through but was not stored on the proposal.
+* B28 — mesmo bug de parser do B27, manifestado como `Curador: UNRESOLVED [L3] →
+  button.mat-calendar-previous-button (conf=0.00)` — o texto do seletor
+  vazou mas nao foi armazenado na proposta.
 """
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ from testforge.healing.healing_catalog import HealingCatalog
 from testforge.healing.llm_healer import _parse_response
 
 
-# ---- B23: L0 attaches a proposal ----------------------------------------------
+# ---- B23: L0 anexa uma proposta -------------------------------------------------
 
 
 @dataclass
@@ -69,8 +69,8 @@ class TestL0CatalogAttachesProposal:
     def test_proposal_carries_solution_selector(self):
         catalog = _FakeCatalog([_Recipe()])
         curator = CuradorAutomatico(catalog=catalog, step_runner=None)
-        # `family` argument is taken from inside the outcome; we only
-        # need the private method to return a complete outcome.
+        # O argumento `family` e extraido de dentro do outcome; precisamos
+        # apenas que o metodo privado retorne um outcome completo.
         outcome = curator._try_layer0_catalog(
             family="FAM-01",
             step_data={"selector": "a.dead-link"},
@@ -80,15 +80,15 @@ class TestL0CatalogAttachesProposal:
         assert outcome.status == ProgressResult.PASSED_STEP
         assert outcome.layer_used == "L0"
         assert outcome.proposal is not None, (
-            "L0 hit must attach a proposal — empty proposal triggers "
-            "the dangerous-locator filter downstream (B19/B20). See B23."
+            "Acerto L0 deve anexar uma proposta — proposta vazia aciona "
+            "o filtro de localizador perigoso downstream (B19/B20). Veja B23."
         )
         assert outcome.proposal.new_locator == 'button[data-testid="continue"]'
         assert outcome.proposal.confidence >= 0.5
         assert outcome.proposal.strategy == "data_testid_fallback"
 
 
-# ---- B24/B25: text= fallback semantic guard ---------------------------------
+# ---- B24/B25: guarda semantico do fallback text= --------------------------------
 
 
 class TestTextFallbackGuards:
@@ -96,7 +96,7 @@ class TestTextFallbackGuards:
         return SelectorAgent()
 
     def test_three_letter_calendar_label_rejected(self):
-        # "JAN" — month label on the SIOPI datepicker.
+        # "JAN" — rotulo de mes no datepicker SIOPI.
         assert self._agent()._try_text("JAN") is None
 
     def test_four_digit_year_rejected(self):
@@ -110,23 +110,23 @@ class TestTextFallbackGuards:
     def test_generic_ui_verbs_rejected(self):
         for word in ("OK", "Cancelar", "Continuar", "Home", "Calcular"):
             assert self._agent()._try_text(word) is None, (
-                f"Generic verb {word!r} must be rejected"
+                f"Verbo generico {word!r} deve ser rejeitado"
             )
 
     def test_meaningful_label_is_accepted(self):
-        proposal = self._agent()._try_text("Próximo passo")
+        proposal = self._agent()._try_text("Proximo passo")
         assert proposal is not None
-        assert proposal.new_locator == 'text="Próximo passo"'
+        assert proposal.new_locator == 'text="Proximo passo"'
         assert proposal.strategy == "has_text_fallback"
 
     def test_long_meaningful_text_accepted(self):
-        target = "Valor + renda Já escolheu a casa?"
+        target = "Valor + renda Ja escolheu a casa?"
         proposal = self._agent()._try_text(target)
         assert proposal is not None
         assert target.replace('"', '\\"') in proposal.new_locator
 
 
-# ---- B27/B28: LLM key aliases ------------------------------------------------
+# ---- B27/B28: aliases de chave LLM -----------------------------------------------
 
 
 class TestLLMParserAcceptsAllKeys:
@@ -146,7 +146,7 @@ class TestLLMParserAcceptsAllKeys:
         assert proposal.new_locator == "a#x"
 
     def test_new_selector_alias_works(self):
-        """The exact key observed in the SIOPI L3 log."""
+        """A chave exata observada no log SIOPI L3."""
         text = self._wrap({"new_selector": "button.mat-calendar-previous-button"})
         proposal = _parse_response(text)
         assert proposal is not None

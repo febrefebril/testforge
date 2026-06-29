@@ -1,19 +1,19 @@
-"""Sprint 0 commit 6 — Azure DevOps publisher (G4) + Z1+Z5 credential chain.
+"""Sprint 0 commit 6 — Publicador Azure DevOps (G4) + cadeia de credenciais Z1+Z5.
 
-Push diagnostic artifacts to a private Azure DevOps Git repository
-without the tester ever seeing a PAT. The pickup chain (Z5) reads
-credentials in this order:
+Envia artefatos de diagnostico para um repositorio Git privado do Azure DevOps
+sem que o testador veja um PAT. A cadeia de coleta (Z5) le
+credenciais nesta ordem:
 
     1. env  AZURE_DEVOPS_PAT
-    2. file ~/.testforge/secrets             (chmod 600, written by Z1)
-    3. file ~/.azure/credentials              (legacy az CLI helper)
+    2. arquivo ~/.testforge/secrets             (chmod 600, escrito por Z1)
+    3. arquivo ~/.azure/credentials              (helper legado az CLI)
     4. git credential helper                  (`git credential fill`)
 
-Falls back to SSH push if `prefer_ssh: true` or no PAT is resolvable.
+Faz fallback para SSH push se `prefer_ssh: true` ou nenhum PAT for resolvido.
 
-The Z1 admin path is shipped as the CLI `testforge admin install-pat`
-command (wired in cli/app.py) — runs once per machine, after which the
-tester just runs `testforge diagnose <url>` and publication is silent.
+O caminho admin Z1 e enviado como comando CLI `testforge admin install-pat`
+(conectado em cli/app.py) — executa uma vez por maquina, apos o qual o
+testador apenas executa `testforge diagnose <url>` e a publicacao e silenciosa.
 """
 from __future__ import annotations
 
@@ -44,12 +44,12 @@ class AzureDevOpsCreds:
 
 
 # ----------------------------------------------------------------------
-# Z1 — admin install
+# Z1 — instalacao admin
 # ----------------------------------------------------------------------
 
 def install_pat(pat: str, org: str, project: str, repo: str,
                  path: Path = _SECRETS_PATH) -> Path:
-    """Persist Azure DevOps credentials with 0600 permission."""
+    """Persiste credenciais Azure DevOps com permissao 0600."""
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "azure_devops": {
@@ -65,15 +65,15 @@ def install_pat(pat: str, org: str, project: str, repo: str,
 
 
 # ----------------------------------------------------------------------
-# Z5 — credential pickup chain
+# Z5 — cadeia de coleta de credenciais
 # ----------------------------------------------------------------------
 
 def resolve_credentials(
     org: str = "", project: str = "", repo: str = "",
     secrets_path: Path = _SECRETS_PATH,
 ) -> Optional[AzureDevOpsCreds]:
-    """Walk the chain, return first hit. None when nothing resolves."""
-    # 1. Env var
+    """Percorre a cadeia, retorna primeiro resultado. None quando nada resolve."""
+    # 1. Variavel de ambiente
     pat = os.environ.get("AZURE_DEVOPS_PAT", "").strip()
     if pat and org and project and repo:
         return AzureDevOpsCreds(pat=pat, org=org, project=project,
@@ -93,7 +93,7 @@ def resolve_credentials(
         except Exception as exc:
             logger.warning("secrets file parse failed: %s", exc)
 
-    # 3. ~/.azure/credentials
+    # 3. ~/.azure/credentials (helper legado az CLI)
     azure_creds = Path.home() / ".azure" / "credentials"
     if pat == "" and azure_creds.exists() and org and project and repo:
         try:
@@ -109,7 +109,7 @@ def resolve_credentials(
         except Exception:
             pass
 
-    # 4. git credential helper
+    # 4. Helper git credential
     if pat == "" and org and project and repo:
         try:
             req = (
@@ -136,11 +136,11 @@ def resolve_credentials(
 
 
 # ----------------------------------------------------------------------
-# Publisher
+# Publicador
 # ----------------------------------------------------------------------
 
 class AzureDevOpsPublisher:
-    """G4 — HTTPS+PAT primary, SSH fallback."""
+    """G4 — HTTPS+PAT primario, fallback SSH."""
 
     def __init__(self, org: str, project: str, repo: str,
                  branch: str = "main", prefer_ssh: bool = False,
@@ -167,9 +167,9 @@ class AzureDevOpsPublisher:
 
     # ------------------------------------------------------------------
     def publish(self, recording_id: str, diagnostic_dir: str) -> dict:
-        """Clone, copy diagnostic artifacts, commit, push.
+        """Clona, copia artefatos de diagnostico, commita, faz push.
 
-        Returns a dict with success/error/remote_path/commit_sha.
+        Retorna dict com success/error/remote_path/commit_sha.
         """
         if not os.path.isdir(diagnostic_dir):
             return {"success": False, "error": f"diagnostic_dir not found: {diagnostic_dir}"}
@@ -188,7 +188,7 @@ class AzureDevOpsPublisher:
                 self._git(["clone", "--depth", "1", "--branch", self._branch,
                             clone_url, work], cwd=None, log_url=push_url)
             except subprocess.CalledProcessError as exc:
-                # Empty repo or branch missing: init+push later
+                # Repo vazio ou branch ausente: init+push depois
                 logger.info("Clone failed (treating as empty repo): %s", exc)
                 self._git(["init"], cwd=work)
                 self._git(["checkout", "-b", self._branch], cwd=work)
@@ -215,7 +215,7 @@ class AzureDevOpsPublisher:
                             "-c", "user.name=TestForge Diagnostic",
                             "commit", "-m", f"diag: {recording_id}"], cwd=work)
             except subprocess.CalledProcessError as exc:
-                # Nothing to commit is fine
+                # Nada para commitar e ok
                 if b"nothing to commit" not in (getattr(exc, "stderr", b"") or b""):
                     logger.warning("commit: %s", exc)
             try:
@@ -235,7 +235,7 @@ class AzureDevOpsPublisher:
     # ------------------------------------------------------------------
     def _git(self, args: list[str], cwd: Optional[str], capture: bool = False,
              log_url: Optional[str] = None) -> str:
-        # Mask PAT in log output
+        # Mascara PAT na saida do log
         log_args = list(args)
         if log_url:
             logger.debug("git %s (url=%s...)", " ".join(log_args), log_url[:40])

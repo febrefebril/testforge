@@ -54,11 +54,11 @@ class PilotMetrics:
     recordings: list = field(default_factory=list)
 
     def ingest_recording(self, recording_id: str, readiness_path: str):
-        """Ingest a single recording's readiness report into aggregate metrics.
+        """Ingere relatorio de prontidao de uma unica gravacao nas metricas agregadas.
 
         Args:
-            recording_id: Recording identifier.
-            readiness_path: Path to readiness_report.json.
+            recording_id: Identificador da gravacao.
+            readiness_path: Caminho para readiness_report.json.
         """
         if not os.path.exists(readiness_path):
             return
@@ -80,7 +80,7 @@ class PilotMetrics:
             "failures": rr.get("failures", []),
         })
 
-        # Count status
+        # Conta status
         status_map = {
             "ready_for_team": "ready_for_team",
             "incomplete_intent": "incomplete_intent",
@@ -91,7 +91,7 @@ class PilotMetrics:
                 setattr(self, attr, getattr(self, attr, 0) + 1)
                 break
 
-        # Count failures by category
+        # Conta falhas por categoria
         for failure in rr.get("failures", []):
             fl = failure.lower()
             if "selector" in fl:
@@ -110,10 +110,10 @@ class PilotMetrics:
                 self.failures["wrong_field_mapping"] += 1
 
     def compute_auto_resolution_rate(self, completeness_report=None) -> float:
-        """Return fraction of fields resolved automatically (0.0 to 1.0).
+        """Retorna fracao de campos resolvidos automaticamente (0.0 a 1.0).
 
-        If completeness_report provided, uses resolved_count / total from it.
-        Otherwise uses fields_auto_resolved / total from self.
+        Se completeness_report fornecido, usa resolved_count / total dele.
+        Caso contrario, usa fields_auto_resolved / total de self.
         """
         if completeness_report is not None:
             resolved = getattr(completeness_report, "resolved_count", 0) or 0
@@ -129,7 +129,7 @@ class PilotMetrics:
         return round(self.fields_auto_resolved / total, 4)
 
     def to_dict(self) -> dict:
-        """Serialize to dictionary for JSON output."""
+        """Serializa para dicionario para saida JSON."""
         return {
             "summary": {
                 "total_recordings": self.total_recordings,
@@ -157,7 +157,7 @@ class PilotMetrics:
         }
 
     def to_markdown(self) -> str:
-        """Generate QA-friendly markdown dashboard."""
+        """Gera dashboard markdown amigavel para QA."""
         d = self.to_dict()
         s = d["summary"]
 
@@ -171,51 +171,51 @@ class PilotMetrics:
             f"| Metric | Value |",
             f"|--------|-------|",
             f"| Total Recordings | {s['total_recordings']} |",
-            f"| [OK] Ready for Team | {s['ready_for_team']} |",
-            f"| [WARN] Incomplete Intent | {s['incomplete_intent']} |",
-            f"| 🔍 Needs Review | {s['needs_review']} |",
+            f"| [OK] Pronto para Time | {s['ready_for_team']} |",
+            f"| [AVISO] Intent Incompleta | {s['incomplete_intent']} |",
+            f"| [REVISAO] Requer Revisao | {s['needs_review']} |",
             f"| Completion Rate | {s['completion_rate']:.1%} |",
             f"",
             f"## Fields",
             f"",
             f"| Category | Count |",
             f"|----------|-------|",
-            f"| Auto-resolved | {d['fields']['auto_resolved']} |",
-            f"| User-supplied | {d['fields']['user_supplied']} |",
-            f"| Missing | {d['fields']['missing']} |",
+            f"| Auto-resolvido | {d['fields']['auto_resolved']} |",
+            f"| Fornecido pelo usuario | {d['fields']['user_supplied']} |",
+            f"| Ausente | {d['fields']['missing']} |",
             f"",
             f"## Incremental Validation",
             f"",
             f"| Outcome | Count |",
             f"|---------|-------|",
-            f"| [OK] Passed | {d['incremental_validation']['passed']} |",
-            f"| [FAIL] Failed | {d['incremental_validation']['failed']} |",
+            f"| [OK] Passou | {d['incremental_validation']['passed']} |",
+            f"| [FAIL] Falhou | {d['incremental_validation']['failed']} |",
             f"",
         ]
 
         failures = d["failures"]
         if any(failures.values()):
             lines.extend([
-                f"## Failure Reasons",
+                f"## Razoes de Falha",
                 f"",
                 f"| Category | Count | Priority |",
                 f"|----------|-------|----------|",
             ])
-            # Sort by count descending, add priority tag
+            # Ordena por contagem decrescente, adiciona tag de prioridade
             sorted_fails = sorted(failures.items(), key=lambda x: x[1], reverse=True)
             for i, (cat, count) in enumerate(sorted_fails):
                 if count == 0:
                     continue
-                priority = "🔴 HIGH" if i < 2 else "🟡 MEDIUM" if i < 4 else "🟢 LOW"
+                priority = "[ALTA] ALTA" if i < 2 else "[MEDIA] MEDIA" if i < 4 else "[BAIXA] BAIXA"
                 lines.append(f"| {cat.replace('_', ' ').title()} | {count} | {priority} |")
             lines.append("")
 
-        lines.append(f"## Recordings")
+        lines.append(f"## Gravacoes")
         lines.append(f"")
         if self.recordings:
             lines.extend([
-                f"| Recording | Status | Verdict | Steps | Failures |",
-                f"|-----------|--------|---------|-------|----------|",
+                f"| Gravacao | Status | Veredito | Passos | Falhas |",
+                f"|----------|--------|----------|--------|--------|",
             ])
             for r in self.recordings:
                 steps = r.get("steps", {})
@@ -233,13 +233,13 @@ class PilotMetrics:
 
 
 def collect_pilot_metrics(recordings_dir: str) -> PilotMetrics:
-    """Walk a recordings directory and collect metrics from all readiness reports.
+    """Percorre diretorio de gravacoes e coleta metricas de todos os relatorios de prontidao.
 
     Args:
-        recordings_dir: Root directory containing recording subdirectories.
+        recordings_dir: Diretorio raiz contendo subdiretorios de gravacao.
 
     Returns:
-        Aggregated PilotMetrics instance.
+        Instancia agregada de PilotMetrics.
     """
     metrics = PilotMetrics()
 
@@ -251,10 +251,10 @@ def collect_pilot_metrics(recordings_dir: str) -> PilotMetrics:
         if not os.path.isdir(entry_path):
             continue
 
-        # Try both readiness report locations
+        # Tenta ambos locais de relatorio de prontidao
         readiness_path = os.path.join(entry_path, "readiness", "readiness_report.json")
         if not os.path.exists(readiness_path):
-            # Fallback: look in recording root
+            # Fallback: procura na raiz da gravacao
             readiness_path = os.path.join(entry_path, "readiness_report.json")
         if not os.path.exists(readiness_path):
             continue
@@ -269,15 +269,15 @@ def save_pilot_report(
     output_dir: str,
     filename_prefix: str = "pilot_readiness",
 ) -> tuple[str, str]:
-    """Save pilot readiness report to JSON and Markdown.
+    """Salva relatorio de prontidao piloto em JSON e Markdown.
 
     Args:
-        metrics: Aggregated PilotMetrics.
-        output_dir: Directory to save reports.
-        filename_prefix: Base name for output files.
+        metrics: PilotMetrics agregados.
+        output_dir: Diretorio para salvar relatorios.
+        filename_prefix: Nome base para arquivos de saida.
 
     Returns:
-        Tuple of (json_path, md_path).
+        Tupla de (json_path, md_path).
     """
     os.makedirs(output_dir, exist_ok=True)
 

@@ -1,6 +1,6 @@
 """TestForge — IncrementalUI.
 
-Renderiza saída de terminal por step (verbose ou compacta).
+Renderiza saida de terminal por step (verbose ou compacta).
 """
 from __future__ import annotations
 import sys

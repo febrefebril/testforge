@@ -66,11 +66,11 @@ class EvidenceCollector:
 
     def capture_dom(self, step_id: str, phase: str = "after") -> str:
         """Captura DOM snapshot. phase = 'before' ou 'after'.
-        Validates content is not empty before saving."""
+        Valida se conteudo nao esta vazio antes de salvar."""
         try:
             html = self._page.content()
             if not html or len(html.strip()) < 20:
-                # Register empty alert but don't save empty file
+                # Registra alerta de vazio mas nao salva arquivo vazio
                 self._pkg.metadata["quality_flags"] = self._pkg.metadata.get("quality_flags", [])
                 self._pkg.metadata["quality_flags"].append(f"DOM_SNAPSHOT_EMPTY:{step_id}")
                 return ""
@@ -101,7 +101,7 @@ class EvidenceCollector:
 
         pkg_dir = os.path.join(self._root, self._pkg.run_id)
 
-        # manifest
+        # manifesto
         manifest = {
             "run_id": self._pkg.run_id,
             "started_at": self._pkg.started_at,
@@ -115,18 +115,18 @@ class EvidenceCollector:
         with open(os.path.join(pkg_dir, "manifest.json"), "w") as f:
             json.dump(manifest, f, indent=2, default=str)
 
-        # steps
+        # passos
         if self._pkg.steps:
             with open(os.path.join(pkg_dir, "steps.jsonl"), "w") as f:
                 for step in self._pkg.steps:
                     f.write(json.dumps(step, default=str) + "\n")
 
-        # network
+        # rede
         if self._pkg.network_log:
             with open(os.path.join(pkg_dir, "network_log.json"), "w") as f:
                 json.dump(self._pkg.network_log, f, indent=2, default=str)
 
-        # sensitive data
+        # dados sensiveis
         if self._pkg.sensitive_alerts:
             data = {
                 "policy": "alert_only",
@@ -150,7 +150,7 @@ class EvidenceCollector:
             pass
 
     def _on_console(self, msg):
-        """Handler: console message."""
+        """Handler: mensagem de console."""
         try:
             self._console_buffer.append({
                 "text": str(msg.text)[:500],
@@ -161,7 +161,7 @@ class EvidenceCollector:
             pass
 
     def _on_response(self, response):
-        """Handler: network response."""
+        """Handler: resposta de rede."""
         try:
             self._network_buffer.append({
                 "method": response.request.method,
@@ -177,10 +177,10 @@ class EvidenceCollector:
         step_context: dict,
         include_screenshot: bool = False,
     ) -> EvidencePayload:
-        """Build structured evidence payload for LLM Healer (L3).
+        """Constroi payload de evidencias estruturado para LLM Healer (L3).
 
-        Collects DOM snapshot, recent console errors, recent network requests,
-        and optional screenshot. Sanitizes DOM before inclusion.
+        Coleta DOM snapshot, erros recentes de console, requisicoes de rede recentes,
+        e screenshot opcional. Sanitiza DOM antes da inclusao.
         """
         dom_html = ""
         screenshot_bytes = None
@@ -197,11 +197,11 @@ class EvidenceCollector:
                 except Exception:
                     screenshot_bytes = None
 
-        # Last 5 console errors (filter warnings/errors)
+        # Ultimos 5 erros de console (filtra warnings/errors)
         recent_console = [e for e in self._console_buffer[-5:]
                          if e.get("level", "") in ("error", "warning", "info")]
 
-        # Last 3 network requests (truncate URLs)
+        # Ultimas 3 requisicoes de rede (trunca URLs)
         recent_network = []
         for entry in self._network_buffer[-3:]:
             entry_copy = dict(entry)
@@ -217,7 +217,7 @@ class EvidenceCollector:
         )
 
     def clear_buffers(self):
-        """Clear console and network buffers (between runs)."""
+        """Limpa buffers de console e rede (entre execucoes)."""
         self._console_buffer.clear()
         self._network_buffer.clear()
 

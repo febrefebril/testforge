@@ -1,4 +1,4 @@
-"""Sprint 0 — CaptureQualityTracker + ReplayCheck unit tests."""
+"""Sprint 0 — Testes unitarios do CaptureQualityTracker + ReplayCheck."""
 from __future__ import annotations
 
 from unittest.mock import MagicMock
@@ -169,7 +169,7 @@ class TestReplayCheckImmediate:
         page = MagicMock(); page.url = "http://x/"
         first = MagicMock(); first.count.return_value = 0
         second = MagicMock(); second.count.return_value = 1
-        # First call returns missing locator; second returns hit
+        # Primeira chamada retorna localizador ausente; segunda retorna acerto
         page.locator.side_effect = [first, second]
         rc = ReplayCheck(page, mode="immediate")
         out = rc.check("s1", [

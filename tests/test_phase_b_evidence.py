@@ -1,7 +1,7 @@
-"""Tests for Phase B — downstream evidence consumption.
+"""Testes para Fase B — consumo de evidencias downstream.
 
-Verifies IntentReconstructor reads value_mutations, checked transitions,
-and final_state; and RecordingNormalizer uses evidence before missing_fill.
+Verifica que IntentReconstructor le value_mutations, checked transitions
+e final_state; e que RecordingNormalizer usa evidencias antes de missing_fill.
 """
 
 import json

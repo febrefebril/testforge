@@ -1,4 +1,4 @@
-"""Hotfix 4 — --complete prompt values persisted across normalize calls."""
+"""Hotfix 4 — valores do prompt --complete persistidos entre chamadas normalize."""
 from __future__ import annotations
 
 import json
@@ -45,7 +45,7 @@ class TestUserSuppliedMerge:
         assert fv.source == "user_supplied_cli"
 
     def test_does_not_overwrite_form_values(self):
-        """Pre-seed stc.field_values then verify the merger respects form_values."""
+        """Pre-seed stc.field_values para verificar que o merger respeita form_values."""
         from testforge.semantic.model import FieldValueMap
         with tempfile.TemporaryDirectory() as d:
             _write_raw(d, [])
@@ -55,7 +55,7 @@ class TestUserSuppliedMerge:
                 },
             })
             n = RecordingNormalizer()
-            # Build a minimal stc directly and call merger to isolate the rule.
+            # Constroi um stc minimal diretamente e chama o merger para isolar a regra.
             from testforge.semantic.model import SemanticTestCase
             stc = SemanticTestCase(test_id="x", source_recording_id=os.path.basename(d))
             stc.field_values = {
@@ -67,7 +67,7 @@ class TestUserSuppliedMerge:
             }
             n._current_recording_dir = d
             n._merge_user_supplied_values(stc)
-            # form_values must still win
+            # form_values ainda deve vencer
             assert stc.field_values["renda_mensal_*"].source == "form_values"
             assert stc.field_values["renda_mensal_*"].value == "from_form_submit"
 
@@ -92,13 +92,13 @@ class TestUserSuppliedMerge:
 
 class TestEndToEndCompleteness:
     def test_second_run_sees_supplied_values(self):
-        """End-to-end: second normalize() call after --complete must see values."""
+        """Fim-a-fim: segunda chamada normalize() apos --complete deve ver os valores."""
         with tempfile.TemporaryDirectory() as d:
             _write_raw(d, [])
             normalizer = RecordingNormalizer()
             stc1 = normalizer.normalize(d, "ST-x", "app", "http://x/")
             assert stc1.field_values == {}
-            # --complete prompt writes the file
+            # --complete prompt escreve o arquivo
             _write_field_value_map(d, {
                 "renda_mensal_*": {"value": "10000",
                                      "source": "user_supplied_cli",

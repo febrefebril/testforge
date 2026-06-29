@@ -26,7 +26,7 @@ def _tester_hash() -> str:
 
 
 class DiagnosticSession:
-    """High-level wrapper. Threads framework, capture, replay, gherkin."""
+    """Wrapper de alto nivel. Coordena framework, capture, replay, gherkin."""
 
     # H17 perf: probe only the small set of user-actionable event types.
     # Recorder fires _persist_raw_event for every browser event (focus,
@@ -95,7 +95,7 @@ class DiagnosticSession:
 
     def assess_event(self, raw_event: dict, target_data: Optional[dict] = None,
                      candidates: Optional[list] = None) -> dict:
-        """Called by RecorderController after each _persist_raw_event."""
+        """Chamado pelo RecorderController apos cada _persist_raw_event."""
         if self._tracker is None or self._store is None:
             return {}
         framework = self._detector.detect() if self._detector else None
@@ -138,8 +138,8 @@ class DiagnosticSession:
         return payload
 
     def precapture_for_close(self) -> None:
-        """Hotfix 15: snapshot anything that requires a live page now, so
-        finalize() can run after the browser has already been closed."""
+        """Hotfix 15: captura agora tudo que requer pagina ativa, para que
+        finalize() possa executar apos o navegador ja ter sido fechado."""
         if self._cached_framework is not None:
             return
         try:
@@ -159,7 +159,7 @@ class DiagnosticSession:
     def finalize(self,
                  funcionalidade_override: str = "",
                  cenario_override: str = "") -> dict:
-        """Detect frameworks, write session.json, return the payload."""
+        """Detecta frameworks, escreve session.json, retorna o payload."""
         self._stopped_at = datetime.now(timezone.utc).isoformat()
         # Use the value snapshotted by precapture_for_close() if the browser
         # has already gone away; fall back to a live detect otherwise.
@@ -229,7 +229,7 @@ class DiagnosticSession:
 
 
 def _normalize(url: str) -> str:
-    """Reuse the same URL normalization as the Phase 4 SQLite catalog."""
+    """Reusa a mesma normalizacao de URL do catalog SQLite Fase 4."""
     try:
         from ..healing.sqlite_intent_catalog import normalize_url
         return normalize_url(url)

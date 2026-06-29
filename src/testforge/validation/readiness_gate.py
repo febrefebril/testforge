@@ -26,14 +26,14 @@ class ReadinessVerdict(str, Enum):
     PASS = "pass"
     FAIL = "fail"
     NEEDS_REVIEW = "needs_review"
-    # H16: criteria pass but zero executable steps ran — gate-only signal.
-    # Prevents dashboard false-greens when nothing was actually exercised.
+    # H16: criterios aprovados mas zero passos executaveis rodaram — sinal gate-only.
+    # Previne falsos verdes no dashboard quando nada foi realmente exercitado.
     GATED_ONLY = "gated_only"
 
 
 @dataclass
 class ReadinessReport:
-    """Avaliação compreensiva de prontidão para uma gravação única."""
+    """Avaliacao compreensiva de prontidao para uma gravacao unica."""
 
     recording_id: str = ""
     application: str = ""
@@ -124,17 +124,17 @@ class ReadinessReport:
             f"| Metric | Value |",
             f"|--------|-------|",
             f"| Total | {self.total_steps} |",
-            f"| [OK] Passed | {self.passed_steps} |",
-            f"| 🔧 Healed | {self.healed_steps} |",
-            f"| [FAIL] Failed | {self.failed_steps} |",
-            f"| [BLOCK] Blocked | {self.blocked_steps} |",
-            f"| [SKIP] Skipped | {self.skipped_steps} |",
+            f"| [OK] Passou | {self.passed_steps} |",
+            f"| [CURADO] Curado | {self.healed_steps} |",
+            f"| [FAIL] Falhou | {self.failed_steps} |",
+            f"| [BLOQ] Bloqueado | {self.blocked_steps} |",
+            f"| [PULO] Pulado | {self.skipped_steps} |",
             f"",
         ]
 
         if self.missing_fields:
             lines.extend([
-                f"## [FAIL] Missing Fields",
+                f"## [FAIL] Campos Ausentes",
                 f"",
                 f"| Field | Label | Reason |",
                 f"|-------|-------|--------|",
@@ -145,7 +145,7 @@ class ReadinessReport:
 
         if self.review_required_fields:
             lines.extend([
-                f"## [WARN] Review Required Fields",
+                f"## [AVISO] Campos com Revisao Requerida",
                 f"",
                 f"| Field | Label | Reason |",
                 f"|-------|-------|--------|",
@@ -156,7 +156,7 @@ class ReadinessReport:
 
         if self.failures:
             lines.extend([
-                f"## Failures",
+                f"## Falhas",
             ])
             for f in self.failures:
                 lines.append(f"- [FAIL] {f}")
@@ -164,7 +164,7 @@ class ReadinessReport:
 
         if self.warnings:
             lines.extend([
-                f"## Warnings",
+                f"## Avisos",
             ])
             for w in self.warnings:
                 lines.append(f"- [WARN] {w}")
@@ -172,44 +172,44 @@ class ReadinessReport:
 
         if self.verdict == ReadinessVerdict.PASS:
             lines.extend([
-                f"## [OK] Ready for Team",
+                f"## [OK] Pronto para o Time",
                 f"",
-                f"This recording passed all readiness criteria and can be used by the team.",
+                f"Esta gravacao passou em todos os criterios de prontidao e pode ser usada pelo time.",
             ])
         elif self.verdict == ReadinessVerdict.GATED_ONLY:
             lines.extend([
-                f"## [GATED] Gate Passed — No Execution Evidence",
+                f"## [GATED] Gate Aprovado — Sem Evidencia de Execucao",
                 f"",
-                f"Criteria green but zero executable steps ran. Run 'testforge run-incremental' "
-                f"before marking ready for team.",
+                f"Criterios verdes mas nenhum passo executavel rodou. Execute 'testforge run-incremental' "
+                f"antes de marcar como pronto para o time.",
             ])
         elif self.verdict == ReadinessVerdict.NEEDS_REVIEW:
             lines.extend([
-                f"## 🔍 Needs Review",
+                f"## [REVISAO] Requer Revisao",
                 f"",
-                f"This recording requires human review before it can be marked as ready.",
-                f"Review the failures above, fix the issues, and re-run validation.",
+                f"Esta gravacao requer revisao humana antes de ser marcada como pronta.",
+                f"Revise as falhas acima, corrija os problemas e reexecute a validacao.",
             ])
         else:
             lines.extend([
-                f"## [FAIL] Not Ready",
+                f"## [FAIL] Nao Pronto",
                 f"",
-                f"This recording did not pass readiness criteria.",
-                f"Address the failures above before attempting validation again.",
+                f"Esta gravacao nao passou nos criterios de prontidao.",
+                f"Corrija as falhas acima antes de tentar validar novamente.",
             ])
 
         return "\n".join(lines)
 
 
 class RecordingReadinessGate:
-    """Objective readiness gate for recording validation.
+    """Portao de prontidao objetivo para validacao de gravacao.
 
-    Evaluates multiple criteria to decide if a recording is ready_for_team.
+    Avalia multiplos criterios para decidir se uma gravacao esta pronta para o time.
     """
 
-    # Step statuses that count as 'passed' for readiness
+    # Status de passo que contam como 'aprovado' para prontidao
     PASSING_STATUSES = {"passed", "healed_validated"}
-    # Step statuses that count as 'failed' for readiness
+    # Status de passo que contam como 'falhou' para prontidao
     FAILING_STATUSES = {"failed", "healing_rejected"}
 
     @staticmethod
@@ -225,22 +225,22 @@ class RecordingReadinessGate:
         recording_id: str,
         application: str,
         base_url: str,
-        completeness_report,  # CompletenessReport from intent_completeness
-        step_results: list,  # List of IncrementalStepResult from incremental runner
+        completeness_report,
+        step_results: list,
         field_values: Optional[dict] = None,
     ) -> ReadinessReport:
-        """Evaluate all readiness criteria and produce a report.
+        """Avalia todos os criterios de prontidao e produz um relatorio.
 
         Args:
-            recording_id: ID of the recording being evaluated.
-            application: Application name.
-            base_url: Base URL of the application.
-            completeness_report: CompletenessReport from check_steps().
-            step_results: List of IncrementalStepResult from incremental run.
-            field_values: Optional field_value_map dict.
+            recording_id: ID da gravacao sendo avaliada.
+            application: Nome da aplicacao.
+            base_url: URL base da aplicacao.
+            completeness_report: CompletenessReport de check_steps().
+            step_results: Lista de IncrementalStepResult da execucao incremental.
+            field_values: Dict opcional field_value_map.
 
         Returns:
-            ReadinessReport with verdict and detailed breakdown.
+            ReadinessReport com veredito e detalhamento.
         """
         report = ReadinessReport(
             recording_id=recording_id,
@@ -248,7 +248,7 @@ class RecordingReadinessGate:
             base_url=base_url,
         )
 
-        # ---------- Criterion 1: Completeness ----------
+        # ---------- Criterio 1: Completude ----------
         completeness_ok = (
             completeness_report is not None
             and completeness_report.is_complete
@@ -274,7 +274,7 @@ class RecordingReadinessGate:
             report.missing_fields = missing
             report.review_required_fields = review_req
 
-        # ---------- Criterion 2: Step execution ----------
+        # ---------- Criterio 2: Execucao de passos ----------
         if step_results:
             report.total_steps = len(step_results)
             report.passed_steps = sum(
@@ -293,7 +293,7 @@ class RecordingReadinessGate:
                 1 for r in step_results if r.status == "skipped"
             )
 
-            # Consider a step 'passed' if it passed or healed_validated
+            # Considera passo 'aprovado' se passou ou healed_validated
             executable = [r for r in step_results if r.status not in ("blocked", "skipped")]
             all_passed = all(
                 self._is_passing_status(getattr(r, "status", ""))
@@ -313,7 +313,7 @@ class RecordingReadinessGate:
                 "Step validation skipped at record time — run 'testforge run-incremental' to validate execution"
             )
 
-        # ---------- Criterion 3: Blocking steps resolved ----------
+        # ---------- Criterio 3: Passos bloqueantes resolvidos ----------
         if step_results:
             blocking = [r for r in step_results if getattr(r, "blocking", False)]
             if blocking:
@@ -327,12 +327,12 @@ class RecordingReadinessGate:
                         "Blocking step(s) failed or unresolved — dependent steps may be affected"
                     )
             else:
-                report.blocking_steps_resolved = True  # No blocking steps == trivially resolved
+                report.blocking_steps_resolved = True  # Sem passos bloqueantes == trivialmente resolvido
         else:
             report.blocking_steps_resolved = True
 
-        # ---------- Criterion 4: User-supplied values validated ----------
-        # Check if field_values has user_supplied_cli sources
+        # ---------- Criterio 4: Valores fornecidos pelo usuario validados ----------
+        # Verifica se field_values tem fontes user_supplied_cli
         user_supplied_count = 0
         if field_values:
             for key, fvm in field_values.items():
@@ -345,7 +345,7 @@ class RecordingReadinessGate:
                     user_supplied_count += 1
 
         if user_supplied_count > 0:
-            # User-supplied values exist — check if they were validated via step execution
+            # Valores fornecidos pelo usuario existem — verifica se foram validados via execucao
             if step_results and report.all_steps_passed:
                 report.user_supplied_values_validated = True
             else:
@@ -355,9 +355,9 @@ class RecordingReadinessGate:
                     f"by incremental execution"
                 )
         else:
-            report.user_supplied_values_validated = True  # No user values == trivially validated
+            report.user_supplied_values_validated = True  # Sem valores de usuario == trivialmente validado
 
-        # ---------- Criterion 5: Healing oracles ----------
+        # ---------- Criterio 5: Oracles de healing ----------
         if step_results:
             healed = [r for r in step_results if r.status == "healed_validated"]
             oracles_failed = False
@@ -372,15 +372,15 @@ class RecordingReadinessGate:
                     "Healing was applied but oracle validation failed — healing may be unreliable"
                 )
         else:
-            report.healing_oracles_passed = True  # No healing == trivially passed
+            report.healing_oracles_passed = True  # Sem healing == trivialmente aprovado
 
-        # ---------- Final verdict ----------
-        # H16: verdict=pass requires ALL of:
-        #   1. every criterion green
-        #   2. at least one executable step succeeded (passed or healed_validated)
-        #   3. zero failed or healing_rejected steps
-        # Otherwise: gated_only (criteria green, nothing executed), fail (failures),
-        # or needs_review (criteria green but no execution evidence).
+        # ---------- Veredito final ----------
+        # H16: veredito=pass requer TUDO:
+        #   1. todos os criterios verdes
+        #   2. pelo menos um passo executavel bem-sucedido (passed ou healed_validated)
+        #   3. zero falhas ou healing_rejected
+        # Caso contrario: gated_only (criterios verdes, nada executado), fail (falhas),
+        # ou needs_review (criterios verdes mas sem evidencia de execucao).
         all_criteria = [
             report.completeness_passed,
             report.all_steps_passed,
@@ -423,14 +423,14 @@ def save_readiness_report(
     report: ReadinessReport,
     output_dir: str,
 ) -> tuple[str, str]:
-    """Save readiness report to JSON and Markdown files.
+    """Salva relatorio de prontidao em arquivos JSON e Markdown.
 
     Args:
-        report: ReadinessReport to save.
-        output_dir: Directory to save files in.
+        report: ReadinessReport a salvar.
+        output_dir: Diretorio para salvar os arquivos.
 
     Returns:
-        Tuple of (json_path, md_path).
+        Tupla de (json_path, md_path).
     """
     os.makedirs(output_dir, exist_ok=True)
 

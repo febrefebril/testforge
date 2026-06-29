@@ -1,4 +1,4 @@
-"""Regression test — Bug 1: _persist_step must not propagate exceptions."""
+"""Teste de regressão — Bug 1: _persist_step não deve propagar exceções."""
 import json
 import os
 import builtins
@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 
 def test_persist_step_survives_page_title_error(tmp_path):
-    """If page.title() raises (browser closed), _persist_step must not propagate."""
+    """Se page.title() lança exceção (browser fechado), _persist_step não deve propagar."""
     from testforge.recorder.recorder_controller import RecorderController
 
     page = MagicMock()
@@ -27,11 +27,11 @@ def test_persist_step_survives_page_title_error(tmp_path):
     try:
         ctrl._persist_step(step_data)
     except Exception as exc:
-        pytest.fail(f"_persist_step propagated exception: {exc}")
+        pytest.fail(f"_persist_step propagou exceção: {exc}")
 
 
 def test_persist_step_survives_encoding_error(tmp_path, monkeypatch):
-    """If file write fails, _persist_step must not propagate."""
+    """Se escrita de arquivo falha, _persist_step não deve propagar."""
     from testforge.recorder.recorder_controller import RecorderController
 
     page = MagicMock()
@@ -48,7 +48,7 @@ def test_persist_step_survives_encoding_error(tmp_path, monkeypatch):
 
     def failing_open(path, *args, **kwargs):
         if "steps.jsonl" in str(path):
-            raise IOError("Simulated disk full")
+            raise IOError("Simulação de disco cheio")
         return original_open(path, *args, **kwargs)
 
     monkeypatch.setattr(builtins, "open", failing_open)
@@ -58,4 +58,4 @@ def test_persist_step_survives_encoding_error(tmp_path, monkeypatch):
     try:
         ctrl._persist_step(step_data)
     except Exception as exc:
-        pytest.fail(f"_persist_step propagated IOError: {exc}")
+        pytest.fail(f"_persist_step propagou IOError: {exc}")

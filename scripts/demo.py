@@ -48,7 +48,7 @@ def main():
         recorder.flush_events()
 
         # Step 1: Fill CPF
-        print("  📝 Preenchendo CPF...")
+        print("  [ANOTACAO] Preenchendo CPF...")
         cpf_field = page.get_by_placeholder("000.000.000-00")
         evidence.capture_dom("step_01_fill", "before")
         cpf_field.fill("12345678900")
@@ -58,7 +58,7 @@ def main():
         recorder.flush_events()
 
         # Step 2: Click Pesquisar
-        print("  🖱 Clicando Pesquisar...")
+        print("  [CLIQUE] Clicando Pesquisar...")
         btn = page.get_by_role("button", name="Pesquisar")
         evidence.capture_screenshot("step_02_click", "before")
         btn.click()
@@ -67,7 +67,7 @@ def main():
         recorder.flush_events()
 
         # Step 3: Assert textual
-        print("  🔍 Assert textual: verificando resultado...")
+        print("  [BUSCA] Assert textual: verificando resultado...")
         page.evaluate("""() => {
             var el = document.querySelector('#resultadoSection');
             if (el) {
@@ -84,7 +84,7 @@ def main():
         recorder.flush_events()
 
         # Step 4: Assert visivel
-        print("  👁 Assert visivel: resultado esta visivel...")
+        print("  [VISAO] Assert visivel: resultado esta visivel...")
         page.evaluate("""() => {
             var el = document.querySelector('#resultadoSection');
             if (el) {
@@ -124,7 +124,7 @@ def main():
     if os.path.exists(rec_dir):
         with open(f"{rec_dir}/recording_metadata.json") as f:
             meta = json.load(f)
-        print(f"\n📼 Gravação: {meta['recording_id']}")
+        print(f"\n[LISTA] Gravacao: {meta['recording_id']}")
         print(f"   Status: {meta['status']}")
         print(f"   Inicio: {meta['started_at'][:19]}")
         print(f"   Fim:    {meta['finished_at'][:19]}")
@@ -134,7 +134,7 @@ def main():
         if os.path.exists(raw):
             with open(raw) as f:
                 events = [json.loads(l) for l in f]
-            print(f"\n📋 Raw events ({len(events)}):")
+            print(f"\n[LISTA] Eventos brutos ({len(events)}):")
             for e in events:
                 print(f"   {e['event_id']} | {e['type']:12s} | {e.get('page_title','')[:30]}")
 
@@ -143,7 +143,7 @@ def main():
         if os.path.exists(steps_f):
             with open(steps_f) as f:
                 steps = [json.loads(l) for l in f]
-            print(f"\n🔢 Steps ({len(steps)}):")
+            print(f"\n[NUMERO] Etapas ({len(steps)}):")
             for s in steps:
                 extra = ""
                 if s["action"] == "assert":
@@ -154,20 +154,20 @@ def main():
         ss = f"{rec_dir}/screenshots"
         if os.path.exists(ss):
             pngs = [f for f in os.listdir(ss) if f.endswith(".png")]
-            print(f"\n📸 Screenshots: {len(pngs)}")
+            print(f"\n[FOTO] Screenshots: {len(pngs)}")
 
         # Network
         net = f"{rec_dir}/network_log.json"
         if os.path.exists(net):
             with open(net) as f:
                 net_data = json.load(f)
-            print(f"🌐 Network entries: {len(net_data)}")
+            print(f"[REDE] Entradas de rede: {len(net_data)}")
 
     # Evidence
     if os.path.exists(ev_dir):
         with open(f"{ev_dir}/manifest.json") as f:
             ev_manifest = json.load(f)
-        print(f"\n📦 Evidence Package: {ev_manifest['run_id']}")
+        print(f"\n[PACOTE] Pacote de Evidencias: {ev_manifest['run_id']}")
         print(f"   Steps: {ev_manifest['step_count']}")
         print(f"   Screenshots: {ev_manifest['screenshot_count']}")
         print(f"   Network: {ev_manifest['network_entries']}")
@@ -181,10 +181,10 @@ def main():
         if os.path.exists(alert_f):
             with open(alert_f) as f:
                 alerts = json.load(f)
-            print(f"   ⚠ Sensitive data: {alerts['policy']} ({len(alerts['alerts'])} alertas)")
+            print(f"   [AVISO] Dados sensiveis: {alerts['policy']} ({len(alerts['alerts'])} alertas)")
 
     # Estrutura
-    print(f"\n📁 Estrutura gerada:")
+    print(f"\n[PASTA] Estrutura gerada:")
     def tree(d, prefix=""):
         if not os.path.exists(d):
             return
@@ -207,8 +207,8 @@ def main():
 
     print()
     print("=" * 60)
-    print("  Demo concluida! 51 testes passando.")
-    print("  Pipeline: BMAD → GSD → GIT")
+    print("  Demo concluida! [OK] 51 testes passando.")
+    print("  Pipeline: BMAD [SETA] GSD [SETA] GIT")
     print("=" * 60)
 
 

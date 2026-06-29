@@ -14,7 +14,7 @@ import re
 
 @dataclass
 class UrlWarning:
-    """Um aviso de validação para uma URL que pode estar malformada devido ao processamento do shell."""
+    """Aviso de validacao para URL que pode estar malformada devido ao processamento do shell."""
 
     message: str
     is_critical: bool = False
@@ -24,7 +24,7 @@ class UrlWarning:
 class UrlValidator:
     """Valida URLs para problemas comuns de truncagem de shell."""
 
-    # URL must match this to be considered a valid http/https URL
+    # URL deve corresponder a isto para ser considerada uma URL http/https valida
     _URL_RE = re.compile(r"^https?://", re.IGNORECASE)
 
     def validate(self, url: str) -> list[UrlWarning]:
@@ -39,27 +39,27 @@ class UrlValidator:
         warnings: list[UrlWarning] = []
 
         if not url or not url.strip():
-            warnings.append(UrlWarning("URL is empty", is_critical=True, url=url))
+            warnings.append(UrlWarning("URL vazia", is_critical=True, url=url))
             return warnings
 
         url = url.strip()
 
-        # Detect direct ampersand in URL — almost certainly unquoted shell input.
-        # The shell would have already stripped everything after & so this only
-        # triggers when ampersand appears within the remaining fragment.
+        # Detecta E comercial direto na URL — quase certamente input shell sem aspas.
+        # O shell ja teria removido tudo apos & entao isso so
+        # dispara quando o E comercial aparece no fragmento restante.
         if "&" in url:
             warnings.append(
                 UrlWarning(
-                    "URL contains '&' character. "
-                    "If using shell, wrap URL in quotes to prevent truncation "
-                    "at ampersand (shell background operator). "
-                    f"Current URL may be incomplete or truncated: {url}",
+                    "URL contem caractere '&'. "
+                    "Se usar shell, envolva URL em aspas para evitar truncagem "
+                    "no E comercial (operador de background do shell). "
+                    f"URL atual pode estar incompleta ou truncada: {url}",
                     is_critical=True,
                     url=url,
                 )
             )
 
-        # Detect truncated URLs — symptoms of shell ampersand split.
+        # Detecta URLs truncadas — sintomas de divisao por E comercial do shell.
         truncation_warnings = self._detect_truncation(url)
         warnings.extend(truncation_warnings)
 
@@ -67,7 +67,7 @@ class UrlValidator:
         if not self._URL_RE.match(url):
             warnings.append(
                 UrlWarning(
-                    f"URL does not start with http:// or https://: {url}",
+                    f"URL nao comeca com http:// ou https://: {url}",
                     is_critical=False,
                     url=url,
                 )
@@ -76,7 +76,7 @@ class UrlValidator:
         return warnings
 
     def _detect_truncation(self, url: str) -> list[UrlWarning]:
-        """Detect symptoms of a URL truncated by shell ampersand processing."""
+        """Detecta sintomas de URL truncada por processamento de E comercial do shell."""
         warnings: list[UrlWarning] = []
 
         try:
@@ -84,49 +84,49 @@ class UrlValidator:
         except Exception:
             return warnings
 
-        # Symptom 1: query string ends with = (parameter name without value).
+        # Sintoma 1: query string termina com = (nome de parametro sem valor).
         if parsed.query and parsed.query.endswith("="):
             warnings.append(
                 UrlWarning(
-                    "URL query string ends with '=' — possible truncation. "
-                    "Did the shell strip everything after an unquoted '&'? "
+                    "Query string da URL termina com '=' — possivel truncagem. "
+                    "O shell removeu tudo apos um '&' sem aspas? "
                     f"Query: ?{parsed.query}",
                     is_critical=True,
                     url=url,
                 )
             )
 
-        # Symptom 2: query string has parameter names without values.
+        # Sintoma 2: query string tem nomes de parametro sem valores.
         if parsed.query:
             params = parse_qs(parsed.query, keep_blank_values=True)
             for name, values in params.items():
                 if not values or all(v == "" for v in values):
                     warnings.append(
                         UrlWarning(
-                            f"Query parameter '{name}' has no value — "
-                            "possible truncation after shell ampersand split.",
+                            f"Parametro de query '{name}' sem valor — "
+                            "possivel truncagem apos divisao por E comercial do shell.",
                             is_critical=True,
                             url=url,
                         )
                     )
 
-        # Symptom 3: URL ends with ? (query string started but got truncated).
+        # Sintoma 3: URL termina com ? (query string comecou mas foi truncada).
         if url.rstrip().endswith("?"):
             warnings.append(
                 UrlWarning(
-                    "URL ends with '?' — query string appears truncated. "
-                    "Wrap URL in quotes when using shell.",
+                    "URL termina com '?' — query string parece truncada. "
+                    "Envolva URL em aspas ao usar shell.",
                     is_critical=True,
                     url=url,
                 )
             )
 
-        # Symptom 4: URL ends with = (parameter assignment truncated).
+        # Sintoma 4: URL termina com = (atribuicao de parametro truncada).
         if url.rstrip().endswith("="):
             warnings.append(
                 UrlWarning(
-                    "URL ends with '=' — parameter value appears truncated. "
-                    "Wrap URL in quotes when using shell.",
+                    "URL termina com '=' — valor de parametro parece truncado. "
+                    "Envolva URL em aspas ao usar shell.",
                     is_critical=True,
                     url=url,
                 )
@@ -135,18 +135,18 @@ class UrlValidator:
         return warnings
 
     def is_valid(self, url: str) -> bool:
-        """Check if URL passes validation without critical warnings."""
+        """Verifica se URL passa na validacao sem avisos criticos."""
         warnings = self.validate(url)
         return not any(w.is_critical for w in warnings)
 
 
 def validate_url(url: str) -> list[UrlWarning]:
-    """Convenience function to validate a URL and return warnings.
+    """Funcao de conveniencia para validar uma URL e retornar avisos.
 
     Args:
-        url: The URL string to validate.
+        url: String de URL para validar.
 
     Returns:
-        List of UrlWarning objects. Empty list means no warnings.
+        Lista de objetos UrlWarning. Lista vazia significa sem avisos.
     """
     return UrlValidator().validate(url)

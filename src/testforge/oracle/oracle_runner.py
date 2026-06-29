@@ -41,9 +41,9 @@ class OracleRunner:
             if expected_text:
                 import re
                 text = el.text_content() or ""
-                # Normalize whitespace before comparing — DOM text_content() preserves
-                # raw spacing including icon text prefixes and extra whitespace between
-                # nodes. Playwright's has-text() normalizes internally; we mirror that.
+                # Normaliza espacos antes de comparar — DOM text_content() preserva
+                # espacamento bruto incluindo prefixos de texto de icone e espacos extras entre
+                # nos. Playwright has-text() normaliza internamente; espelhamos isso.
                 _norm = lambda s: re.sub(r'\s+', ' ', s).strip().lower()
                 if _norm(expected_text) not in _norm(text):
                     return OracleResult(

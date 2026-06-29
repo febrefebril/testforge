@@ -1,7 +1,7 @@
 """TestForge — StepPostconditionValidator.
 
-Valida o efeito de cada ação. Impede falso positivo e falso healing:
-"step executou sem exception" NÃO é sinônimo de "fluxo funcionou".
+Valida o efeito de cada acao. Impede falso positivo e falso healing:
+"step executou sem exception" NAO e sinonimo de "fluxo funcionou".
 """
 from __future__ import annotations
 import re
@@ -11,7 +11,7 @@ from .step_result import PostconditionResult
 
 
 class StepPostconditionValidator:
-    """Valida pós-condições por step após a execução."""
+    """Valida pos-condicoes por step apos a execucao."""
 
     def __init__(self, page, oracle_runner=None):
         self.page = page
@@ -163,15 +163,15 @@ class StepPostconditionValidator:
         if next_step and getattr(next_step, "target", None):
             cands = next_step.target.candidates
             if cands:
-                # Try exact selectors first, then generic fallbacks
+                # Tenta seletores exatos primeiro, depois fallbacks genericos
                 selectors_to_try = [c.selector for c in cands[:3]]
-                # Add generic fallback: same role without monetary value in name
+                # Adiciona fallback generico: mesmo role sem valor monetario no nome
                 for c in cands:
                     if c.selector.startswith("role=") and "[name=" in c.selector:
                         role = c.selector.split("[")[0]  # e.g., "role=listitem"
                         selectors_to_try.append(role)
                         break
-                # Add nth-child fallback for result cards
+                # Adiciona fallback nth-child para cartoes de resultado
                 if any("role=listitem" in s for s in selectors_to_try):
                     selectors_to_try.append("[role=listitem]:nth-child(2)")
 
@@ -185,7 +185,7 @@ class StepPostconditionValidator:
                         )
                     except Exception:
                         import sys
-                        print(f"  ⚡ pos-condicao: {next_sel[:60]} nao encontrado", file=sys.stderr)
+                        print(f"  [AVISO] pos-condicao: {next_sel[:60]} nao encontrado", file=sys.stderr)
                         continue
 
                 return PostconditionResult(

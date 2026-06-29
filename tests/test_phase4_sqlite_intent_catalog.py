@@ -1,4 +1,4 @@
-"""Phase 4 — SQLite intent-keyed catalog + LocatorResolver persistence."""
+"""Fase 4 — Catalogo SQLite indexado por intent + persistencia LocatorResolver."""
 from __future__ import annotations
 
 import json
@@ -109,11 +109,11 @@ class TestIntentCatalog:
             cat = self._cat(d)
             cat.record_success(intent_text="x", url="http://a/", action="click",
                                resolved_call='get_by_role("button")')
-            # Each failure subtracts 0.2 from confidence; starts at 1.0.
+            # Cada falha subtrai 0.2 da confianca; comeca em 1.0.
             for _ in range(6):
                 cat.record_failure("x", "http://a/", "click")
             row = cat.lookup("x", "http://a/", "click")
-            # Stale entries are excluded from lookup
+            # Entradas obsoletas sao excluidas da consulta
             assert row is None
             cat.close()
 
@@ -194,7 +194,7 @@ class TestResolverSqlitePersistence:
                                action="click",
                                resolved_call='get_by_role("button", name="X")',
                                resolved_selector='page.get_by_role("button", name="X")')
-            # Fresh resolver (no in-memory cache); must hit SQLite L0
+            # Resolver novo (sem cache em memoria); deve atingir SQLite L0
             resolver = LocatorResolver(page, sqlite_catalog=cat)
             result = resolver.resolve("c1", [], action="click")
             assert result.level == "L0_cache"

@@ -21,7 +21,7 @@ class MetricsSnapshot:
     llm_escalations: int = 0
     oracle_passed: int = 0
     oracle_failed: int = 0
-    # Per-step counters (BUG-011)
+    # Contadores por step (BUG-011)
     falhas_detectadas: int = 0
     healings_tentados: int = 0
     aplicados: int = 0
@@ -66,7 +66,7 @@ class MetricsSnapshot:
             "false_heal_rate": round(self.false_heal_rate, 4),
             "precision": round(self.precision, 4),
             "llm_rate": round(self.llm_rate, 4),
-            # Per-step (BUG-011)
+            # Por step (BUG-011)
             "falhas_detectadas": self.falhas_detectadas,
             "healings_tentados": self.healings_tentados,
             "aplicados": self.aplicados,
@@ -138,22 +138,22 @@ class MetricsRepository:
     def summary(self, show_per_step: bool = True) -> str:
         s = self._snapshot
         lines = [
-            f"Total runs:      {s.total_runs}",
-            f"Total healings:  {s.total_healings}",
-            f"True heals:      {s.true_heals}",
-            f"False heals:     {s.false_heals}",
-            f"LLM escalations: {s.llm_escalations}",
-            f"Oracle passed:   {s.oracle_passed}",
-            f"Oracle failed:   {s.oracle_failed}",
+            f"Total runs:           {s.total_runs}",
+            f"Total healings:       {s.total_healings}",
+            f"True heals:           {s.true_heals}",
+            f"False heals:          {s.false_heals}",
+            f"LLM escalations:      {s.llm_escalations}",
+            f"Oracle passed:        {s.oracle_passed}",
+            f"Oracle failed:        {s.oracle_failed}",
             f"",
-            f"False heal rate: {s.false_heal_rate:.2%}",
-            f"Precision:       {s.precision:.2%}",
-            f"LLM rate:        {s.llm_rate:.2%}",
+            f"False heal rate:      {s.false_heal_rate:.2%}",
+            f"Precision:            {s.precision:.2%}",
+            f"LLM rate:             {s.llm_rate:.2%}",
         ]
         if show_per_step:
             lines.extend([
                 f"",
-                f"--- Per-Step Metrics (BUG-011) ---",
+                f"--- Metricas por Step (BUG-011) ---",
                 f"Falhas detectadas:  {s.falhas_detectadas}",
                 f"Healings tentados:  {s.healings_tentados}",
                 f"Aplicados:          {s.aplicados}",

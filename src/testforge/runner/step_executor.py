@@ -1,8 +1,8 @@
 """TestForge — StepExecutor.
 
-Executa um step com a estratégia apropriada por ação.
-Não decide se o step passou semanticamente — isso é papel da pós-condição.
-Usa field_value_map para ligar campo → valor com intenção e fallback.
+Executa um step com a estrategia apropriada por acao.
+Nao decide se o step passou semanticamente — isso e papel da pos-condicao.
+Usa field_value_map para ligar campo → valor com intencao e fallback.
 """
 from __future__ import annotations
 import logging
@@ -12,19 +12,19 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
-# CS-1 / hotfix 18: mask detection lives here, not in 4 different fill
-# helpers. Anything that needs to know "is this input masked, and how?"
-# calls _detect_mask_kind. Anything that needs to fill an input calls
-# _fill_masked. There is no other path. Hotfix-per-helper recurrences
-# (16, 17) happened because the same logic lived in 4 places and drifted.
+# CS-1 / hotfix 18: deteccao de mask vive aqui, nao em 4 helpers de fill
+# diferentes. Qualquer coisa que precise saber "este input tem mask, e como?"
+# chama _detect_mask_kind. Qualquer coisa que precise preencher um input chama
+# _fill_masked. Nao ha outro caminho. Recurrencias hotfix-por-helper
+# (16, 17) aconteceram porque a mesma logica vivia em 4 lugares e divergiu.
 _DATE_MASK_PLACEHOLDER_HINTS = (
     "dd/mm", "mm/dd", "aaaa", "yyyy", "__/__/____", "dd/mm/aaaa",
 )
-# `currency` is the mask_kind for any input whose mask strips non-digits
-# and types raw digits. Covers BRL currency (R$ 0,00), CPF
-# (000.000.000-00), CNPJ (00.000.000/0000-00), CEP (00000-000), Brazilian
-# phone ((00) 00000-0000). Same algorithm — name kept stable for
-# back-compat with the existing tests / spans.
+# `currency` e o mask_kind para qualquer input cuja mask remove nao-digitos
+# e digita digitos crus. Cobre moeda BRL (R$ 0,00), CPF
+# (000.000.000-00), CNPJ (00.000.000/0000-00), CEP (00000-000), telefone
+# brasileiro ((00) 00000-0000). Mesmo algoritmo — nome mantido estavel para
+# back-compat com os testes / spans existentes.
 _CURRENCY_MASK_PLACEHOLDER_HINTS = (
     "r$", "0,00",          # currency
     "000.000.000",         # CPF
@@ -37,7 +37,7 @@ _CURRENCY_MASK_PLACEHOLDER_HINTS = (
 
 
 class StepExecutor:
-    """Executa uma única ação no browser via Playwright."""
+    """Executa uma unica acao no browser via Playwright."""
 
     DEFAULT_TIMEOUT = 5000
 
@@ -49,29 +49,29 @@ class StepExecutor:
         return cands[0] if cands else ""
 
     def _all_selectors(self, step) -> list:
-        """Retorna TODOS os seletores candidatos do alvo do passo, melhor primeiro."""
+        """Retorna TODOS os seletores candidatos do alvo do step, melhor primeiro."""
         if step.target and getattr(step.target, "candidates", None):
             return [c.selector for c in step.target.candidates if c.selector]
         return []
 
     def _canonical(self, s: str) -> str:
-        """Normaliza string para comparação — minúscula, remove espaços, colapsa whitespace."""
+        """Normaliza string para comparacao — minuscula, remove espacos, colapsa whitespace."""
         if not s:
             return ""
         import re
         return re.sub(r'[-_\s]+', '_', s.strip().lower())
 
     def _resolve_field_value(self, step, data_values: dict, field_value_map: dict) -> tuple:
-        """Resolve valor e intenção para campo do passo usando field_value_map + data_values.
+        """Resolve valor e intencao para campo do step usando field_value_map + data_values.
 
         Prioridade:
-        1. Correspondência exata em field_value_map por identificadores de alvo (name, aria_label, placeholder, id)
-        2. Correspondência exata em data_values pelos mesmos identificadores
-        3. Correspondência de chave canônica em field_value_map
-        4. Correspondência de chave canônica em data_values
-        5. Correspondência de substring em data_values (fallback legado)
+        1. Correspondencia exata em field_value_map por identificadores de alvo (name, aria_label, placeholder, id)
+        2. Correspondencia exata em data_values pelos mesmos identificadores
+        3. Correspondencia de chave canonica em field_value_map
+        4. Correspondencia de chave canonica em data_values
+        5. Correspondencia de substring em data_values (fallback legado)
 
-        Retorna (value, intention) — ambas strings vazias se sem correspondência.
+        Retorna (value, intention) — ambas strings vazias se sem correspondencia.
         """
         # Collect identifiers from step target (use getattr for test fakes)
         ids = {}
@@ -88,23 +88,23 @@ class StepExecutor:
 
         # Auxiliar: tenta correspondência contra um dict (field_value_map ou data_values)
         def _unwrap(entry) -> tuple:
-            """CS-4c / hotfix 19: stc.field_values is keyed to FieldValueMap
-            dataclass instances, not plain dicts. The previous code path
+            """CS-4c / hotfix 19: stc.field_values tem chaves para instancias
+            FieldValueMap dataclass, nao dicts simples. O caminho de codigo anterior
 
                 if isinstance(entry, dict):
                     return (entry["value"], entry["intention"])
                 return (str(entry), "")
 
-            silently took the str(entry) branch for every FieldValueMap
-            object and typed the dataclass __repr__ (e.g.
+            silenciosamente pegou o ramo str(entry) para todo objeto
+            FieldValueMap e digitou o __repr__ da dataclass (ex:
             "FieldValueMap(field_key='...', value='1.000,00', ...)" —
-            ~370 chars with ~19 digits) into the masked input. The mask
-            stripped the digits, producing R$ 1.000.001.000.000.012,00
-            or similar. The user saw "concatenation" — it was actually
-            a repr serialization.
+            ~370 chars com ~19 digitos) no input mascarado. A mask
+            removeu os digitos, produzindo R$ 1.000.001.000.000.012,00
+            ou similar. O usuario viu "concatenacao" — era na verdade
+            uma serializacao repr.
 
-            This unwrap handles dict, FieldValueMap-shaped objects
-            (anything with a `.value` attribute), and plain scalars.
+            Este unwrap trata dict, objetos com formato FieldValueMap
+            (qualquer coisa com atributo `.value`), e escalares simples.
             """
             if isinstance(entry, dict):
                 return (entry.get("value", "") or "",
@@ -158,7 +158,7 @@ class StepExecutor:
         return ("", "")
 
     def _inject_intention(self, step, value: str, intention: str) -> None:
-        """Store resolved intention in step context for healing/fallback."""
+        """Armazena intencao resolvida no contexto do step para healing/fallback."""
         ctx = getattr(step, "context", {}) or {}
         if value:
             ctx["resolved_value"] = value
@@ -174,8 +174,8 @@ class StepExecutor:
         selectors = self._all_selectors(step)
         selector = selectors[0] if selectors else ""
 
-        # Delegate to registered component handler when the step targets a known framework component.
-        # Handlers declare ownership via detect() — only the first matching handler is used.
+        # Delega para handler de componente registrado quando o step alvo um componente de framework conhecido.
+        # Handlers declaram ownership via detect() — apenas o primeiro handler correspondente e usado.
         if action == "click":
             from ..handlers import detect_handler
             _handler = detect_handler(step)
@@ -194,29 +194,29 @@ class StepExecutor:
             detector = MaterialComponentDetector()
 
             tag = (step.target.tag or "").lower() if step.target else ""
-            # Radio buttons (Angular Material mat-radio-button) must be clicked, not filled.
-            # Detected by element_id prefix or top candidate selector containing mat-radio-button.
-            # No candidates guard needed — detector checks both element_id and selector.
+            # Radio buttons (Angular Material mat-radio-button) devem ser clicados, nao preenchidos.
+            # Detectados pelo prefixo element_id ou seletor do top candidate contendo mat-radio-button.
+            # Nao precisa de guard de candidates — detector verifica element_id e selector.
             _el_id = (getattr(step.target, "element_id", "") or "") if step.target else ""
             _top_sel = (step.target.candidates[0].selector if step.target and step.target.candidates else "")
             _is_radio = detector.is_material_radio_button(_el_id, _top_sel)
             if tag in ("input", "textarea") and not _is_radio:
                 ctx = getattr(step, "context", {}) or {}
 
-                # Resolve value + intention from field_value_map + data_values
+                # Resolve valor + intencao do field_value_map + data_values
                 resolved_val, intention = self._resolve_field_value(step, data_values, field_value_map)
                 self._inject_intention(step, resolved_val, intention)
 
-                # Priority 1: form_values from submit capture
+                # Prioridade 1: form_values do submit capture
                 form_vals = ctx.get("form_values") or {}
                 if form_vals:
                     for name, val in form_vals.items():
                         if self._fill_input(self.page, label=name, value=val):
                             return f"submit_form:{name}"
 
-                # Priority 2: resolved value from field_value_map.
-                # Use accessible_name/label/placeholder from the target as the fill label —
-                # the intention string is a human-readable description, not a valid aria-label.
+                # Prioridade 2: valor resolvido do field_value_map.
+                # Usa accessible_name/label/placeholder do target como fill label —
+                # a string intention e uma descricao legivel, nao um aria-label valido.
                 if resolved_val:
                     fill_label = (
                         ((step.target.accessible_name or "") if step.target else "")
@@ -227,7 +227,7 @@ class StepExecutor:
                     if self._fill_input(self.page, label=fill_label, value=resolved_val):
                         return f"field_map:{fill_label}"
 
-                # Priority 3: missing_fill → match data_values by fill_label
+                # Prioridade 3: missing_fill → corresponde data_values por fill_label
                 if ctx.get("missing_fill"):
                     fill_label = ctx.get("fill_label", "")
                     if fill_label and data_values:
@@ -236,17 +236,17 @@ class StepExecutor:
                                 self._fill_input(page=self.page, label=k, value=str(v))
                                 return selector
 
-                # Priority 4: aria-label fallback
+                # Prioridade 4: fallback aria-label
                 if selector.startswith("[aria-"):
                     return self._fill_by_aria_label(step, data_values) or selector
 
-                # Priority 5: try data fill by label/placeholder
+                # Prioridade 5: tenta data fill por label/placeholder
                 if data_values:
                     if self._try_data_fill(step, selector, data_values):
                         return selector
 
-                # Priority 6: if we have a resolved value but all strategies failed,
-                # raise with intention context for healing fallback
+                # Prioridade 6: se temos valor resolvido mas todas as estrategias falharam,
+                # levanta com contexto de intencao para fallback de healing
                 if resolved_val:
                     raise ValueError(
                         f"fill_failed: '{intention or 'unknown'}' value='{resolved_val}' "
@@ -255,11 +255,11 @@ class StepExecutor:
             return self._execute_click(step, selectors)
 
         if action == "fill":
-            # Resolve value + intention
+            # Resolve valor + intencao
             resolved_val, intention = self._resolve_field_value(step, data_values, field_value_map)
-            # step.value has priority — field_value_map only fills when step is empty.
-            # This prevents field_value_map from overwriting later fills of same field
-            # (e.g. recording has 3 fills: 10.000 → 100.000 → 1.000.000 on same input).
+            # step.value tem prioridade — field_value_map so preenche quando step esta vazio.
+            # Isso evita que field_value_map sobrescreva fills posteriores do mesmo campo
+            # (ex: recording tem 3 fills: 10.000 → 100.000 → 1.000.000 no mesmo input).
             use_val = step.value or resolved_val
             self._inject_intention(step, use_val, intention)
             return self._execute_fill(step, selectors, data_values, field_value_map)
@@ -278,11 +278,10 @@ class StepExecutor:
         raise NotImplementedError(f"acao desconhecida: {action}")
 
     def _fill_input(self, page, label: str, value: str) -> bool:
-        """Find an input by aria-label / placeholder / name and fill it.
+        """Encontra um input por aria-label / placeholder / name e preenche.
 
-        CS-1: mask handling, clear-before-type and value normalization
-        live in `_fill_masked`. This method's job is locator selection
-        only.
+        CS-1: tratamento de mask, limpar-antes-de-digitar e normalizacao de valor
+        vivem em `_fill_masked`. O trabalho deste metodo e apenas selecao de locator.
         """
         patterns = [
             f'input[aria-label="{label}"]',
@@ -310,9 +309,9 @@ class StepExecutor:
         return False
 
     def _fill_by_aria_label(self, step, data_values) -> Optional[str]:
-        """Try to find and fill an input by aria-label from data_values keys.
+        """Tenta encontrar e preencher um input por aria-label das chaves de data_values.
 
-        CS-1: mask handling delegated to `_fill_masked`.
+        CS-1: tratamento de mask delegado a `_fill_masked`.
         """
         if not data_values:
             return None
@@ -334,7 +333,7 @@ class StepExecutor:
         return None
 
     def _try_data_fill(self, step, selector, data_values) -> bool:
-        """Attempt to fill from data values. Returns True if fill was attempted."""
+        """Tenta preencher a partir de data_values. Retorna True se fill foi tentado."""
         if not data_values:
             return False
         label = ""
@@ -362,24 +361,24 @@ class StepExecutor:
             return False
 
     # ----------------------------------------------------------------
-    # CS-1 / hotfix 18 — single source of truth for masked-input fills.
-    # The four fill helpers (_execute_fill, _fill_input,
-    # _fill_by_aria_label, _try_data_fill) call _fill_masked. None of
-    # them re-implement mask detection or the clear-and-press sequence.
-    # When a bug surfaces it lives in exactly one place. CS-3 telemetry
-    # is wired here so every fill is auditable from .testforge/spans.jsonl.
+    # CS-1 / hotfix 18 — fonte unica de verdade para fills com mask.
+    # Os quatro helpers de fill (_execute_fill, _fill_input,
+    # _fill_by_aria_label, _try_data_fill) chamam _fill_masked. Nenhum
+    # deles reimplementa deteccao de mask ou a sequencia limpar-e-digitar.
+    # Quando um bug aparece, vive em exatamente um lugar. Telemetria CS-3
+    # esta aqui para que todo fill seja auditavel de .testforge/spans.jsonl.
     # ----------------------------------------------------------------
 
     def _detect_mask_kind(self, el) -> tuple[str, str]:
-        """Return (mask_kind, mask_detect) where:
+        """Retorna (mask_kind, mask_detect) onde:
 
         mask_kind   ∈ {"currency", "date", "none"}
         mask_detect ∈ {"attribute", "placeholder", "date_placeholder", "none"}
 
-        Mask detection consults the `currencymask` HTML attribute first
-        (legacy Caixa data layer) and falls back to placeholder
-        inspection so that Material inputs without the attribute (e.g.
-        SIOPI's `<input placeholder="R$0,00">`) are still recognized.
+        Deteccao de mask consulta o atributo HTML `currencymask` primeiro
+        (camada de dados Caixa legada) e faz fallback para inspecao de
+        placeholder para que inputs Material sem o atributo (ex:
+        SIOPI `<input placeholder="R$0,00">`) ainda sejam reconhecidos.
         """
         try:
             if el.get_attribute("currencymask") is not None:
@@ -398,20 +397,20 @@ class StepExecutor:
 
     def _fill_masked(self, el, value: str, *, fill_path: str,
                      selector_used: str = "") -> str:
-        """Fill `el` with `value`, respecting mask kind. Returns mask_kind.
+        """Preenche `el` com `value`, respeitando tipo de mask. Retorna mask_kind.
 
-        Always:
-        - Clears the field via triple-click before typing so re-runs
-          and healing retries do not concatenate keystrokes.
-        - For currency masks: types raw digits extracted via regex —
-          mask formats them into "R$ X.XXX,XX".
-        - For date masks: types the formatted value with slashes —
-          the mask uses the slashes to position the cursor.
-        - For unmasked inputs: calls `el.fill` which clears + sets.
-        - Emits a `fill.attempted` span with the full audit trail.
+        Sempre:
+        - Limpa o campo via triplo-clique antes de digitar para que re-execucoes
+          e retentativas de healing nao concatenem teclas.
+        - Para masks de moeda: digita digitos crus extraidos via regex —
+          a mask formata em "R$ X.XXX,XX".
+        - Para masks de data: digita o valor formatado com barras —
+          a mask usa as barras para posicionar o cursor.
+        - Para inputs sem mask: chama `el.fill` que limpa + define.
+        - Emite um span `fill.attempted` com trilha de auditoria completa.
 
-        Single function. Four callers. No divergence possible by
-        construction. See CS-1 / `.planning/CONSOLIDATION-SPRINT.md`.
+        Funcao unica. Quatro chamadores. Nenhuma divergencia possivel por
+        construcao. Veja CS-1 / `.planning/CONSOLIDATION-SPRINT.md`.
         """
         value = "" if value is None else str(value)
         mask_kind, mask_detect = self._detect_mask_kind(el)
@@ -458,11 +457,11 @@ class StepExecutor:
                         mask_kind: str, mask_detect: str, cleared: bool,
                         type_val: Optional[str], value: str,
                         status: str, error_msg: str) -> None:
-        """CS-3 — JSONL fill.attempted span so the next debug session
-        can answer "which fill path ran on step N?" without re-running.
+        """CS-3 — span JSONL fill.attempted para que a proxima sessao de debug
+        possa responder "qual caminho de fill executou no step N?" sem re-executar.
 
-        Raw `value` and `type_val` are redacted — only length and the
-        value_kind bucket are logged. Selector strings are truncated.
+        `value` e `type_val` brutos sao ocultados — apenas length e o
+        bucket value_kind sao logados. Strings de selector sao truncadas.
         """
         try:
             from testforge.metrics.telemetry import get_tracer
@@ -485,7 +484,7 @@ class StepExecutor:
                 for k, v in attrs.items():
                     span.set_attribute(k, v)
         except Exception:
-            # Telemetry must never break execution.
+            # Telemetria nunca deve quebrar a execucao.
             logger.debug("telemetry emit failed for fill.attempted", exc_info=True)
 
     def _execute_click(self, step, selectors):
@@ -495,24 +494,24 @@ class StepExecutor:
         from ..healing import MaterialComponentDetector
         detector = MaterialComponentDetector()
 
-        # Hotfix BUG 1: when the click target lives inside a CDK overlay
+        # Hotfix BUG 1: quando o alvo do click vive dentro de um overlay CDK
         # (Angular Material datepicker calendar, dialog, autocomplete panel),
-        # the first interaction is racy — the overlay starts animating in
-        # AFTER the previous trigger click resolved, and the immediate next
-        # click lands either on nothing or on the still-fading backdrop.
-        # Wait for the overlay container to be visible (best effort) before
-        # any click whose selector mentions cdk-overlay or mat-calendar.
+        # a primeira interacao e racing — o overlay comeca a animar
+        # APOS o click trigger anterior resolver, e o click imediato seguinte
+        # cai ou em nada ou no backdrop que ainda esta sumindo.
+        # Aguarda o container do overlay ficar visivel (best effort) antes
+        # de qualquer click cujo selector mencione cdk-overlay ou mat-calendar.
         try:
             if any(_inside_cdk_overlay(s) for s in selectors if s):
                 self.page.wait_for_selector(
                     ".cdk-overlay-container .cdk-overlay-pane",
                     state="visible", timeout=2500,
                 )
-                # Also wait for any CDK animation to settle.
+                # Tambem aguarda qualquer animacao CDK estabilizar.
                 self.page.wait_for_timeout(250)
         except Exception:
-            # If the wait fails just proceed — the click loop below has
-            # its own retry behavior.
+            # Se a espera falhar, apenas prossegue — o loop de click abaixo tem
+                # seu proprio comportamento de retry.
             pass
 
         last_error = None
@@ -520,7 +519,7 @@ class StepExecutor:
             if not sel:
                 continue
             try:
-                # Check if this is a Material radio button (no candidates guard needed)
+                # Verifica se e um radio button Material (sem necessidade de guard de candidates)
                 if detector.is_material_radio_button("", sel):
                     loc = self.page.locator(sel).first
                     loc.dispatch_event("click")
@@ -539,10 +538,10 @@ class StepExecutor:
             raise ValueError("fill sem selector")
         field_value_map = field_value_map or {}
 
-        # Resolve value — step.value has priority over field_value_map.
-        # field_value_map only fills when step value is empty (e.g. placeholder from
-        # IntentReconstructor). This prevents overwriting later fills on same field
-        # (e.g. 3 fills: 10.000 → 100.000 → 1.000.000 on same currency input).
+        # Resolve valor — step.value tem prioridade sobre field_value_map.
+        # field_value_map so preenche quando step value esta vazio (ex: placeholder do
+        # IntentReconstructor). Isso evita sobrescrever fills posteriores no mesmo campo
+        # (ex: 3 fills: 10.000 → 100.000 → 1.000.000 no mesmo input de moeda).
         resolved_val, intention = self._resolve_field_value(step, data_values, field_value_map)
         value = (step.value or resolved_val or "").strip()
 
@@ -555,17 +554,17 @@ class StepExecutor:
                 continue
             try:
                 el = self.page.locator(selector).first
-                # CS-1: single fill primitive. Handles mask detection,
-                # triple-click clear, raw-digit / formatted-date /
-                # plain-fill branches, and emits the fill.attempted span.
+                # CS-1: primitiva unica de fill. Trata deteccao de mask,
+                # limpar com triplo-clique, ramos de digito-cru / data-formatada /
+                # fill-simples, e emite o span fill.attempted.
                 mask_kind = self._fill_masked(
                     el, (step.value or value).strip(),
                     fill_path="_execute_fill",
                     selector_used=selector,
                 )
-                # Masked path returns immediately. Unmasked path also
-                # succeeded if no exception bubbled up. Either way the
-                # selector resolved and we wrote a value — return it.
+                # Caminho com mask retorna imediatamente. Caminho sem mask tambem
+                # sucedeu se nenhuma exception subiu. De qualquer forma o
+                # selector resolveu e escrevemos um valor — retorna.
                 if mask_kind != "none":
                     self.page.wait_for_timeout(200)
                 return selector
@@ -589,7 +588,7 @@ class StepExecutor:
 
 
 def _inside_cdk_overlay(selector: str) -> bool:
-    """Hotfix BUG 1 helper — detect selectors that live inside a CDK overlay."""
+    """Helper Hotfix BUG 1 — detecta seletores que vivem dentro de um overlay CDK."""
     if not selector:
         return False
     s = selector.lower()

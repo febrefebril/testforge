@@ -1,16 +1,16 @@
-"""Phase 6: zero-dependency tracer compatible with OpenTelemetry attribute shape.
+"""Fase 6: tracer sem dependencias compativel com formato de atributos OpenTelemetry.
 
-Writes spans as JSONL to `.testforge/spans.jsonl`. Each span carries
-OTel-compatible fields (name, trace_id, span_id, parent_span_id, start
-+ end + duration, attributes dict). When a real OTel exporter is
-desired later, a single adapter can replay this JSONL stream.
+Escreve spans como JSONL em `.testforge/spans.jsonl`. Cada span carrega
+campos compativeis com OTel (name, trace_id, span_id, parent_span_id, start
++ end + duration, attributes dict). Quando um exportador OTel real for
+desejado depois, um unico adaptador pode reproduzir este stream JSONL.
 
-Used by:
+Usado por:
 - runtime.resolver.LocatorResolver  -> span name "resolve"
 - runtime.step.*                    -> span name "step.<action>"
 
-Tracer is process-local. `get_tracer()` returns the singleton; tests
-can `reset_tracer()` between cases.
+Tracer e local ao processo. `get_tracer()` retorna o singleton; testes
+podem chamar `reset_tracer()` entre casos.
 """
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ def _new_span_id() -> str:
 
 
 class Span:
-    """One open span. Mutable until `end()`."""
+    """Um span aberto. Mutavel ate `end()`."""
 
     __slots__ = (
         "name", "trace_id", "span_id", "parent_span_id",
@@ -92,7 +92,7 @@ class Span:
 
 
 class Tracer:
-    """Process-local JSONL span writer."""
+    """Escritor de spans JSONL local ao processo."""
 
     def __init__(self, spans_path: str = DEFAULT_SPANS_PATH,
                  enabled: bool = True) -> None:
@@ -165,7 +165,7 @@ def get_tracer(spans_path: str = DEFAULT_SPANS_PATH) -> Tracer:
 
 
 def reset_tracer() -> None:
-    """Clear the singleton (tests only)."""
+    """Limpa o singleton (apenas testes)."""
     global _tracer
     with _tracer_lock:
         _tracer = None

@@ -1,7 +1,7 @@
-"""Stability tests for critical recorder paths: listeners, commands, step persistence,
-evidence level branching, and network capture.
+"""Testes de estabilidade para caminhos criticos do recorder: listeners, comandos, persistencia de passos,
+ramificacao de nivel de evidencia e captura de rede.
 
-All tests are unit tests — no Playwright browser required.
+Todos os testes sao unitarios — nenhum navegador Playwright necessario.
 """
 import json
 import os
@@ -13,7 +13,7 @@ from testforge.recorder.recorder_controller import RecorderController
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Auxiliares
 # ---------------------------------------------------------------------------
 
 def _make_page(evaluate_return=None):
@@ -32,14 +32,14 @@ def _fake_session(recording_id: str = "REC-001"):
 
 
 # ---------------------------------------------------------------------------
-# A1: Listener lifecycle
+# A1: Ciclo de vida do listener
 # ---------------------------------------------------------------------------
 
 class TestListenerLifecycle:
-    """page.on() / page.remove_listener() called correctly — no leak risk."""
+    """page.on() / page.remove_listener() chamados corretamente — sem risco de vazamento."""
 
     def _start(self, ctrl, rid="REC-001"):
-        """Call ctrl.start() with RawRecordingStore patched out."""
+        """Chama ctrl.start() com RawRecordingStore patchado."""
         with patch("testforge.recorder.recorder_controller.RawRecordingStore"):
             ctrl.start(rid)
 
@@ -95,11 +95,11 @@ class TestListenerLifecycle:
 
 
 # ---------------------------------------------------------------------------
-# A2: Command control flow
+# A2: Fluxo de controle de comandos
 # ---------------------------------------------------------------------------
 
 class TestCommandControlFlow:
-    """handle_commands() branches and wait_for_command() exception safety."""
+    """Ramificacoes do handle_commands() e seguranca de excecao do wait_for_command()."""
 
     def _ctrl(self):
         page = _make_page(evaluate_return=[])
@@ -146,16 +146,16 @@ class TestCommandControlFlow:
         ctrl = self._ctrl()
         ctrl._command_queue = ["TOGGLE_PAUSE"]
         ctrl.handle_commands()
-        # No command this time — still paused
+        # Nenhum comando desta vez — ainda pausado
         assert ctrl.handle_commands() == "paused"
 
 
 # ---------------------------------------------------------------------------
-# A3: Step persistence
+# A3: Persistencia de passos
 # ---------------------------------------------------------------------------
 
 class TestStepPersistence:
-    """_persist_step() writes JSONL correctly and counter is monotonic."""
+    """_persist_step() escreve JSONL corretamente e contador e monotono."""
 
     def _ctrl(self, tmp_path):
         page = _make_page()
@@ -245,11 +245,11 @@ class TestStepPersistence:
 
 
 # ---------------------------------------------------------------------------
-# A4: Evidence level branching
+# A4: Ramificacao de nivel de evidencia
 # ---------------------------------------------------------------------------
 
 class TestEvidenceLevel:
-    """Screenshot capture gated by evidence_level (full vs light)."""
+    """Captura de screenshot controlada por evidence_level (full vs light)."""
 
     def _ctrl_with_level(self, level: str):
         page = _make_page()
@@ -295,11 +295,11 @@ class TestEvidenceLevel:
 
 
 # ---------------------------------------------------------------------------
-# A5: Network capture
+# A5: Captura de rede
 # ---------------------------------------------------------------------------
 
 class TestNetworkCapture:
-    """_on_request() and _on_response() capture entries correctly."""
+    """_on_request() e _on_response() capturam entradas corretamente."""
 
     def _ctrl(self):
         return RecorderController(_make_page())
@@ -381,7 +381,7 @@ class TestNetworkCapture:
         req.resource_type = "xhr"
         type(req).post_data = PropertyMock(side_effect=Exception("access denied"))
         ctrl._on_request(req)
-        # Entry still appended, post_data is None
+        # Entrada ainda anexada, post_data e None
         assert len(ctrl._network_entries) == 1
         assert ctrl._network_entries[0]["post_data"] is None
 

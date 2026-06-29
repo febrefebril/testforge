@@ -6,7 +6,7 @@ import sys
 
 
 def _resolve_script_path(script: str) -> str:
-    """Accept either a file or a directory; resolve to the test_*.py inside."""
+    """Aceita arquivo ou diretorio; resolve para o test_*.py dentro."""
     if os.path.isdir(script):
         candidates = sorted(glob.glob(os.path.join(script, "test_*.py")))
         if not candidates:
@@ -27,7 +27,7 @@ def cmd_run_incremental(args):
     try:
         args.script = _resolve_script_path(args.script)
     except FileNotFoundError as exc:
-        print(f"[TestForge] X {exc}", file=sys.stderr)
+        print(f"[TestForge] [X] {exc}", file=sys.stderr)
         sys.exit(2)
     _verify_ssl = getattr(args, 'verify_ssl', False)
     runner = IncrementalRunner(
@@ -51,7 +51,7 @@ def cmd_run_incremental(args):
         failed = summary.get("failed", 0) + summary.get("healing_rejected", 0)
         sys.exit(0 if failed == 0 else 1)
     except FileNotFoundError as exc:
-        print(f"[TestForge] X {exc}", file=sys.stderr)
+        print(f"[TestForge] [X] {exc}", file=sys.stderr)
         sys.exit(2)
     except Exception as exc:
         print(f"[TestForge] X Erro inesperado: {exc}", file=sys.stderr)

@@ -1,6 +1,6 @@
-"""Phase 3: High-level step API consumed by compiled tests.
+"""Phase 3: API de alto nivel para steps consumida por testes compilados.
 
-Compiled v2 tests are minimal:
+Testes compilados v2 sao minimos:
 
     from testforge.runtime import step
 
@@ -15,8 +15,8 @@ Compiled v2 tests are minimal:
                          expected="Welcome",
                          candidates_file="step_003.json")
 
-The fallback chain is entirely in the runtime — changing strategy
-does NOT require recompiling tests.
+A cadeia de fallback esta inteiramente no runtime — mudar estrategia
+NAO requer recompilar os testes.
 """
 from __future__ import annotations
 
@@ -29,13 +29,14 @@ from .resolver import LocatorResolver
 
 logger = logging.getLogger(__name__)
 
-# Module-level resolver cache keyed by page id. Tests rarely share pages,
-# but the per-page cache lets `step.click(page, ...)` work without an
-# explicit setup call.
+# Cache de resolver em nivel de modulo indexado por id de pagina. Testes raramente compartilham paginas,
+# mas o cache por pagina permite que `step.click(page, ...)` funcione sem uma
+# chamada de setup explicita.
 _resolvers: dict[int, LocatorResolver] = {}
 
 
 def _resolver_for(page) -> LocatorResolver:
+    """Retorna ou cria um LocatorResolver para a pagina dada."""
     key = id(page)
     r = _resolvers.get(key)
     if r is None:
@@ -45,10 +46,10 @@ def _resolver_for(page) -> LocatorResolver:
 
 
 def _resolve_path(candidates_file: str) -> str:
-    """Resolve a candidates_file path relative to caller's script dir.
+    """Resolve um caminho candidates_file relativo ao diretorio do script chamador.
 
-    Compiled tests pass relative paths like "step_001.json". The runtime
-    resolves them against the test script's directory.
+    Testes compilados passam caminhos relativos como "step_001.json". O runtime
+    resolve contra o diretorio do script de teste.
     """
     if os.path.isabs(candidates_file):
         return candidates_file
@@ -62,18 +63,18 @@ def _resolve_path(candidates_file: str) -> str:
 
 
 # ----------------------------------------------------------------------
-# Public API
+# API Publica
 # ----------------------------------------------------------------------
 
 def go(page, url: str) -> None:
-    """Navigate to URL. Simple wrapper kept for parity with other step.* helpers."""
+    """Navega para URL. Wrapper simples mantido por paridade com outros helpers step.*."""
     page.goto(url)
 
 
 def click(page, intent: str, candidates_file: str = "",
           candidates: Optional[list[dict]] = None,
           timeout_ms: int = 5000) -> None:
-    """Resolve `intent` to a Locator and click it."""
+    """Resolve `intent` para um Locator e clica nele."""
     from ..metrics.telemetry import get_tracer
     with get_tracer().start_span("step.click") as span:
         span.set_attribute("intent_text", intent)
@@ -88,7 +89,7 @@ def click(page, intent: str, candidates_file: str = "",
 def fill(page, intent: str, value: str, candidates_file: str = "",
          candidates: Optional[list[dict]] = None,
          timeout_ms: int = 5000) -> None:
-    """Resolve `intent` and fill it with `value`."""
+    """Resolve `intent` e preenche com `value`."""
     from ..metrics.telemetry import get_tracer
     with get_tracer().start_span("step.fill") as span:
         span.set_attribute("intent_text", intent)
@@ -110,7 +111,7 @@ def fill(page, intent: str, value: str, candidates_file: str = "",
 def select(page, intent: str, value: str, candidates_file: str = "",
            candidates: Optional[list[dict]] = None,
            timeout_ms: int = 5000) -> None:
-    """Resolve `intent` and select an option from a <select> or combobox."""
+    """Resolve `intent` e seleciona uma opcao de um <select> ou combobox."""
     from ..metrics.telemetry import get_tracer
     with get_tracer().start_span("step.select") as span:
         span.set_attribute("intent_text", intent)
@@ -125,7 +126,7 @@ def select(page, intent: str, value: str, candidates_file: str = "",
 def assert_text(page, intent: str, expected: str, candidates_file: str = "",
                 candidates: Optional[list[dict]] = None,
                 timeout_ms: int = 10000) -> None:
-    """Resolve `intent`, wait for visible, and assert the element contains `expected`."""
+    """Resolve `intent`, aguarda visivel, e verifica se o elemento contem `expected`."""
     locator, _ = _do_resolve(page, intent, candidates_file, candidates)
     locator.first.wait_for(state="visible", timeout=timeout_ms)
     actual = locator.first.text_content(timeout=3000) or ""
@@ -138,14 +139,14 @@ def assert_text(page, intent: str, expected: str, candidates_file: str = "",
 def assert_visible(page, intent: str, candidates_file: str = "",
                    candidates: Optional[list[dict]] = None,
                    timeout_ms: int = 10000) -> None:
-    """Resolve `intent` and assert the element is visible."""
+    """Resolve `intent` e verifica se o elemento esta visivel."""
     locator, _ = _do_resolve(page, intent, candidates_file, candidates)
     locator.first.wait_for(state="visible", timeout=timeout_ms)
 
 
 def _do_resolve(page, intent: str, candidates_file: str,
                 inline_candidates: Optional[list[dict]]):
-    """Internal: route to LocatorResolver, return (locator, result)."""
+    """Interno: roteia para LocatorResolver, retorna (locator, result)."""
     resolver = _resolver_for(page)
     if inline_candidates is not None:
         result = resolver.resolve(intent, inline_candidates)

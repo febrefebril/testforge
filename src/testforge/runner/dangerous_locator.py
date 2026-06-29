@@ -1,22 +1,22 @@
-"""Centralized dangerous-locator filter.
+"""Filtro centralizado de locator perigoso.
 
-B19/B20 (2026-06-27): the IncrementalRunner had a `_DANGEROUS_LOCATORS`
-set + `_is_dangerously_generic` predicate; the legacy `run` path did
-not. A SIOPI run produced 26 consecutive L2 heals all resolving to
-`a[href="/"]` (the home link), oracle-approved as success because the
-link existed on every page. To stop the false-pass cascade we (1)
-broaden the deny-list, (2) move it to a single module both runners
-import.
+B19/B20 (2026-06-27): o IncrementalRunner tinha um conjunto `_DANGEROUS_LOCATORS`
++ predicado `_is_dangerously_generic`; o caminho legado `run` nao tinha.
+Uma execucao SIOPI produziu 26 curas L2 consecutivas todas resolvendo para
+`a[href="/"]` (o link home), aprovadas pelo oracle como sucesso porque o
+link existia em toda pagina. Para parar a cascata de falso-positivo nos (1)
+ampliamos a lista de negacao, (2) movemos para um modulo unico que ambos
+os runners importam.
 
-Add new patterns by category:
-- bare-tag names (`a`, `div`, `button`) — always too generic.
-- nav helpers (`a[href="/"]`, `a[href="#"]`, `a[href=""]`) — present
-  on every page of a typical SPA.
-- role helpers without text (`[role="button"]`, `[role="link"]`).
-- CSS-only `nth-child` selectors below ~30 chars — almost never stable.
+Adicione novos padroes por categoria:
+- nomes de tag simples (`a`, `div`, `button`) — sempre muito genericos.
+- nav helpers (`a[href="/"]`, `a[href="#"]`, `a[href=""]`) — presentes
+  em toda pagina de um SPA tipico.
+- role helpers sem texto (`[role="button"]`, `[role="link"]`).
+- seletores CSS-only `nth-child` abaixo de ~30 chars — quase nunca estaveis.
 
-Future: when we have evidence telemetry, threshold by hit-rate (a
-locator is dangerous when it matches >K elements site-wide).
+Futuro: quando tivermos telemetria de evidencia, threshold por taxa-de-acerto (um
+locator e perigoso quando corresponde a >K elementos no site todo).
 """
 from __future__ import annotations
 
@@ -64,9 +64,9 @@ _DANGEROUS_PATTERNS: tuple[re.Pattern, ...] = (
 
 
 def is_dangerously_generic(locator: str) -> bool:
-    """Return True when the locator is too generic to trust.
+    """Retorna True quando o locator e muito generico para ser confiavel.
 
-    Empty / None → True (a healer that returns nothing is a failed heal).
+    Vazio / None → True (um healer que retorna nada e uma cura falha).
     """
     if not locator:
         return True

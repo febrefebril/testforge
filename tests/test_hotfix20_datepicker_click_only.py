@@ -1,19 +1,19 @@
-"""Hotfix 20: AngularMaterialHandler must keep click-only datepicker sequences.
+"""Hotfix 20: AngularMaterialHandler deve manter sequencias de datepicker apenas com clique.
 
-Regression: pre-hotfix-20 the handler's _dedup_datepicker_sequences method
-classified any datepicker sequence with no follow-up `fill` step as
-"abandoned" and suppressed every calendar nav click. In production
-(Caixa SIOPI), the date input has a mask that suppresses the input event,
-so the user selects a date entirely by clicking calendar cells — the
-recorder captures clicks, no fill ever fires. The handler's abandoned
-branch suppressed those clicks at runtime, leaving the date input empty
-and breaking the downstream Calcular button.
+Regressao: pre-hotfix-20 o metodo _dedup_datepicker_sequences do handler
+classificava qualquer sequencia de datepicker sem um passo `fill` subsequente
+como "abandonada" e suprimia todos os cliques de navegacao do calendario. Em
+producao (Caixa SIOPI), o input de data tem uma mascara que suprime o evento
+de input, entao o usuario seleciona uma data inteiramente clicando em celulas
+do calendario — o gravador captura cliques, nenhum fill nunca dispara. O ramo
+abandonado do handler suprimia esses cliques em tempo de execucao, deixando o
+input de data vazio e quebrando o botao Calcular downstream.
 
-Hotfix 20 adds a third branch: if the last calendar click in the
-sequence landed on a day cell (mat-calendar-body-cell or a numeric text
-target inside the overlay), the sequence is treated as click-only
-completion. All clicks are kept. Tests below pin both this case and
-the original two (fill follow-up; truly abandoned).
+Hotfix 20 adiciona um terceiro ramo: se o ultimo clique do calendario na
+sequencia pousou em uma celula de dia (mat-calendar-body-cell ou um alvo de
+texto numerico dentro do overlay), a sequencia e tratada como conclusao apenas
+com clique. Todos os cliques sao mantidos. Testes abaixo fixam tanto este caso
+quanto os dois originais (fill subsequente; verdadeiramente abandonado).
 """
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ def _make_step(action, selector, value="", overlay=False, text=""):
 
 
 def test_click_only_date_selection_keeps_all_clicks():
-    """SIOPI shape: toggle + nav + day-cell click, no fill follow-up."""
+    """Forma SIOPI: toggle + navegacao + clique em celula de dia, sem fill subsequente."""
     handler = AngularMaterialHandler()
     steps = [
         _make_step("click", "span.mat-mdc-button-touch-target"
@@ -53,17 +53,17 @@ def test_click_only_date_selection_keeps_all_clicks():
         _make_step("click", "input[aria-label='Prestação']"),  # next field
     ]
     handler._dedup_datepicker_sequences(steps)
-    # The datepicker steps must NOT be marked datepicker_dedup
+    # Os passos do datepicker NAO devem ser marcados como datepicker_dedup
     for i, s in enumerate(steps[:6]):
         assert s.skip_reason != "datepicker_dedup", (
             f"step {i} was wrongly suppressed: {s.skip_reason}"
         )
-    # The next-field click stays as-is
+    # O clique no campo seguinte permanece inalterado
     assert steps[6].skip_reason == ""
 
 
 def test_fill_followup_still_suppresses_clicks():
-    """Classic shape: toggle + nav + date fill — clicks suppressed."""
+    """Forma classica: toggle + navegacao + fill de data — cliques suprimidos."""
     handler = AngularMaterialHandler()
     steps = [
         _make_step("click", "mat-datepicker-toggle button"),
@@ -74,41 +74,41 @@ def test_fill_followup_still_suppresses_clicks():
         _make_step("fill", "input[name='date']", value="15/03/2026"),
     ]
     handler._dedup_datepicker_sequences(steps)
-    # Clicks before the fill are suppressed
+    # Cliques antes do fill sao suprimidos
     assert steps[0].skip_reason == "datepicker_dedup"
     assert steps[1].skip_reason == "datepicker_dedup"
     assert steps[2].skip_reason == "datepicker_dedup"
-    # The date fill is the canonical intent — kept
+    # O fill de data e a intencao canonica — mantido
     assert steps[3].skip_reason == ""
 
 
 def test_truly_abandoned_sequence_still_suppresses_calendar():
-    """User opened the picker, navigated, then clicked outside without
-    picking a day. The non-calendar click is kept; calendar nav is
-    suppressed."""
+    """Usuario abriu o seletor, navegou, entao clicou fora sem selecionar
+    um dia. O clique fora do calendario e mantido; navegacao do calendario e
+    suprimida."""
     handler = AngularMaterialHandler()
     steps = [
         _make_step("click", "mat-datepicker-toggle button"),
         _make_step("click", "button.mat-calendar-previous-button",
                    overlay=True),
-        # Calendar previous-button without a day cell at the end
-        _make_step("click", "button#somewhere-else"),  # non-calendar click
+        # Botao anterior do calendario sem celula de dia no final
+        _make_step("click", "button#somewhere-else"),  # clique fora do calendario
     ]
     handler._dedup_datepicker_sequences(steps)
-    # The two calendar steps are suppressed
+    # Os dois passos do calendario sao suprimidos
     assert steps[0].skip_reason == "datepicker_dedup"
     assert steps[1].skip_reason == "datepicker_dedup"
-    # The escape click stays
+    # O clique de saida permanece
     assert steps[2].skip_reason == ""
 
 
 def test_day_cell_detected_by_numeric_text_in_overlay():
-    """Some selector chains do not carry mat-calendar-body-cell. The
-    fallback detection uses numeric text inside an overlay step."""
+    """Algumas cadeias de seletor nao contem mat-calendar-body-cell. A
+    deteccao de fallback usa texto numerico dentro de um passo overlay."""
     handler = AngularMaterialHandler()
     steps = [
         _make_step("click", "mat-datepicker-toggle button"),
-        # No mat-calendar-body-cell in the selector, but text is a day
+        # Sem mat-calendar-body-cell no seletor, mas texto e um dia
         _make_step("click", "span.some-other-class", overlay=True, text="15"),
         _make_step("click", "input[aria-label='Prestação']"),
     ]

@@ -1,4 +1,4 @@
-"""Hotfix 3 — Material icon scrubbing + skip empty-label Gherkin lines."""
+"""Hotfix 3 — limpeza de icones Material + pular linhas Gherkin com rotulo vazio."""
 from __future__ import annotations
 
 import os
@@ -21,19 +21,19 @@ class TestMaterialIconStrip:
         ("home Valor do imóvel", "Valor do imóvel"),
         ("check_circle Imóvel quitado", "Imóvel quitado"),
         ("arrow_back Página Inicial", "Página Inicial"),
-        # Multiple leading icons
+        # Multiplos icones no inicio
         ("home arrow_back Voltar", "Voltar"),
-        # Icon at the end
+        # Icone no final
         ("Confirmar arrow_forward", "Confirmar"),
-        # No icon, untouched
+        # Sem icone, inalterado
         ("Calcular agora", "Calcular agora"),
-        # All-icon labels: keep last token (single-token rule) so users see
-        # *something* — these turn out to be rare and aren't worth stripping
-        # to nothing.
+        # Rotulos apenas com icone: manter ultimo token (regra de unico token)
+        # para que usuarios vejam *algo* — estes casos sao raros e nao valem
+        # a pena reduzir a nada.
         ("home arrow_back", "arrow_back"),
-        # Empty input
+        # Entrada vazia
         ("", ""),
-        # Whitespace collapse
+        # Colapso de espacos em branco
         ("table_view   Calculadora", "Calculadora"),
     ])
     def test_clean(self, input, expected):
@@ -46,7 +46,7 @@ class TestSafeLabel:
         assert _safe_label(target) == "Calculadora poder de compra"
 
     def test_single_word_label_kept_even_if_icon_name(self):
-        # Conservative rule: single-token label is never stripped.
+        # Regra conservadora: rotulo de unico token nunca e removido.
         target = {"accessible_name": "home"}
         assert _safe_label(target) == "home"
 
@@ -67,8 +67,9 @@ class TestGherkinSkipsEmptyLabel:
             assert w.steps == []
 
     def test_click_with_single_word_label_kept(self):
-        # Single-token labels are conservative: never stripped, even when the
-        # word is a Material icon. Better surface "home" than skip silently.
+        # Rotulos de unico token sao conservadores: nunca removidos, mesmo
+        # quando a palavra e um icone Material. Melhor exibir "home" do
+        # que pular silenciosamente.
         with tempfile.TemporaryDirectory() as d:
             w = GherkinWriter(d)
             line = w.on_step("click", target={"accessible_name": "home"})
@@ -88,9 +89,9 @@ class TestGherkinSkipsEmptyLabel:
     def test_keyword_progress_only_on_emitted(self):
         with tempfile.TemporaryDirectory() as d:
             w = GherkinWriter(d)
-            # First click with no label -> skipped, no Quando emitted
+            # Primeiro clique sem rotulo -> pulado, nenhum Quando emitido
             assert w.on_step("click", target={}) is None
-            # Real click -> should emit Quando, not E
+            # Clique real -> deve emitir Quando, nao E
             real = w.on_step("click", target={"accessible_name": "Login"})
             assert real.startswith("  Quando")
 
@@ -101,7 +102,7 @@ class TestEndToEndCleanFeature:
             w = GherkinWriter(d)
             w.on_navigation("http://app/", title="Simulador")
             w.on_step("click", target={"accessible_name": "table_view Calculadora poder de compra"})
-            w.on_step("click", target={})  # skipped
+            w.on_step("click", target={})  # pulado
             w.on_step("fill", target={"label": "Renda mensal"}, value="R$ 5.000,00")
             w.on_step("click", target={"accessible_name": "arrow_back Voltar"})
             path = w.write()

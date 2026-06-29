@@ -1,7 +1,7 @@
-"""Testes para PR 3 da Fase B — Polling Strategy + Masked Field Detection.
+"""Testes para PR 3 da Fase B — Estrategia de Polling + Deteccao de Campos Mascarados.
 
-Story 2.1: _reconstruct_from_polling() — source=polling, score=50
-Story 2.2: _detect_masked_field() — is_masked flag em value_mutations
+Historia 2.1: _reconstruct_from_polling() — source=polling, score=50
+Historia 2.2: _detect_masked_field() — flag is_masked em value_mutations
 """
 
 import json
@@ -14,7 +14,7 @@ from testforge.semantic.model import SemanticAction, SemanticTarget
 from testforge.semantic.recording_normalizer import RecordingNormalizer
 
 
-# -- Fixtures ------------------------------------------------------------------
+# -- Fixtures -----------------------------------------------------------------
 
 
 @pytest.fixture
@@ -96,7 +96,7 @@ def _make_mutation_line(fingerprint="input#valor[name=valor]", name="valor",
     })
 
 
-# -- Story 2.1: Polling Strategy -----------------------------------------------
+# -- Historia 2.1: Estrategia de Polling ----------------------------------------
 
 
 class TestPollingStrategy:
@@ -275,7 +275,7 @@ class TestPollingStrategy:
         assert valor_entries[0]["source"] == "snapshot_diff"
 
 
-# -- Story 2.2: Masked Field Detection -----------------------------------------
+# -- Historia 2.2: Deteccao de Campos Mascarados --------------------------------
 
 
 class TestMaskedFieldDetection:

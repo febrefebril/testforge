@@ -1,9 +1,9 @@
-"""Phase 2 — v2 LocatorExtractor + scorer + intent + Playwright codegen.
+"""Fase 2 — v2 LocatorExtractor + scorer + intent + Playwright codegen.
 
-Unit tests for the new super-selector locator pipeline. Verifies that
-v2 candidates carry intent_text, attribute_stability, and
-playwright_call, and that the normalizer hook is feature-flagged
-(off by default, on when `use_v2_locator=True`).
+Testes unitarios para o pipeline de localizacao super-selector v2. Verifica que
+candidatos v2 carregam intent_text, attribute_stability e
+playwright_call, e que o hook normalizador esta sob feature flag
+(desligado por padrao, ligado quando `use_v2_locator=True`).
 """
 from __future__ import annotations
 
@@ -150,7 +150,7 @@ class TestExtractor:
     def test_test_id_first_when_role_absent(self):
         ex = LocatorExtractor()
         cands = ex.extract({"test_id": "save-btn", "tag": "button"})
-        # Native get_by_test_id ranks first
+        # Native get_by_test_id fica em primeiro
         assert any(c.strategy == "playwright_native" and "test_id" in (c.playwright_call or "")
                    for c in cands)
 
@@ -207,7 +207,7 @@ class TestNormalizerHook:
         n = RecordingNormalizer()  # default off
         target_data = {"role": "button", "accessible_name": "Salvar", "tag": "button"}
         target = n._build_target(target_data)
-        # Legacy candidates only; none should carry intent_text.
+        # Apenas candidatos legados; nenhum deve carregar intent_text.
         assert target.intent_text is None
         assert all(c.intent_text is None for c in target.candidates)
 
@@ -223,7 +223,7 @@ class TestNormalizerHook:
         n = RecordingNormalizer(use_v2_locator=True)
         target_data = {"role": "button", "accessible_name": "Salvar", "tag": "button"}
         target = n._build_target(target_data)
-        # Legacy candidate with strategy 'role' must still be there
+        # Candidato legado com estrategia 'role' ainda deve estar presente
         assert any(c.strategy == "role" for c in target.candidates)
 
     def test_to_dict_serializes_v2_fields(self):

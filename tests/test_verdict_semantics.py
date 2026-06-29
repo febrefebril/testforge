@@ -1,20 +1,20 @@
-"""H16 — Readiness verdict semantics pin.
+"""H16 — Consolidacao de semantica de veredito.
 
-Bug: `deve_logar_no_gas_do_povo_3` reported verdict=pass with steps=0.
-Dashboards showed green for recordings nothing executed. Pilot QA cannot
-trust verdicts.
+Bug: `deve_logar_no_gas_do_povo_3` reportou verdict=pass com steps=0.
+Dashboards mostravam verde para gravacoes sem nada executado. QA piloto nao
+pode confiar em vereditos.
 
-New rule (NEXT-SESSION.md):
-    verdict == "pass" iff (
+Nova regra (NEXT-SESSION.md):
+    verdict == "pass" sse (
         criteria_passed == criteria_total
         AND steps.passed + steps.healed > 0
         AND (steps.failed + steps.healing_rejected) == 0
     )
 
-Otherwise:
-    - 5 criteria green, 0 executable steps  → GATED_ONLY (new)
-    - any failed or healing_rejected step    → FAIL
-    - criteria fail                          → FAIL or NEEDS_REVIEW
+Caso contrario:
+    - 5 criterios verdes, 0 steps executaveis → GATED_ONLY (novo)
+    - qualquer step falhou ou healing_rejected → FAIL
+    - criterios falham → FAIL ou NEEDS_REVIEW
 """
 from __future__ import annotations
 
@@ -83,20 +83,20 @@ def _eval(steps, completeness=None) -> object:
     )
 
 
-# ---- Core H16 invariants ----------------------------------------------------
+# ---- Invariantes centrais H16 ----------------------------------------------------
 
 
 def test_criteria_green_zero_steps_returns_gated_only():
-    """5 criteria pass, 0 step results → GATED_ONLY (was PASS pre-H16)."""
+    """5 criterios passam, 0 steps → GATED_ONLY (era PASS pre-H16)."""
     report = _eval(steps=[])
     assert report.verdict == ReadinessVerdict.GATED_ONLY, (
-        f"Expected GATED_ONLY when no steps ran, got {report.verdict}"
+        f"Esperado GATED_ONLY quando nenhum step executou, obteve {report.verdict}"
     )
     assert report.status == RecordingStatus.needs_review
 
 
 def test_criteria_green_only_skipped_steps_returns_gated_only():
-    """All skipped → no successful executions → GATED_ONLY."""
+    """Todos ignorados → nenhuma execucao bem-sucedida → GATED_ONLY."""
     steps = [
         StepStub(step_num=1, status="skipped", skip_reason="duplicate"),
         StepStub(step_num=2, status="skipped", skip_reason="duplicate"),
@@ -106,7 +106,7 @@ def test_criteria_green_only_skipped_steps_returns_gated_only():
 
 
 def test_criteria_green_one_passed_zero_failed_returns_pass():
-    """Minimum success bar: at least 1 step actually executed and no failures."""
+    """Barra minima de sucesso: ao menos 1 step executado e nenhuma falha."""
     steps = [StepStub(step_num=1, status="passed")]
     report = _eval(steps)
     assert report.verdict == ReadinessVerdict.PASS
@@ -120,14 +120,14 @@ def test_criteria_green_many_passed_zero_failed_returns_pass():
 
 
 def test_healed_validated_counts_as_successful_execution():
-    """healed_validated is a successful execution (passed via healing)."""
+    """healed_validated e uma execucao bem-sucedida (passou via healing)."""
     steps = [StepStub(step_num=1, status="healed_validated")]
     report = _eval(steps)
     assert report.verdict == ReadinessVerdict.PASS
 
 
 def test_any_failed_step_returns_fail():
-    """1 passed + 1 failed → FAIL, even with criteria green."""
+    """1 passo + 1 falha → FAIL, mesmo com criterios verdes."""
     steps = [
         StepStub(step_num=1, status="passed"),
         StepStub(step_num=2, status="failed", error_message="timeout"),
@@ -137,7 +137,7 @@ def test_any_failed_step_returns_fail():
 
 
 def test_healing_rejected_step_returns_fail():
-    """healing_rejected counts as failure under H16."""
+    """healing_rejected conta como falha no H16."""
     steps = [
         StepStub(step_num=1, status="passed"),
         StepStub(step_num=2, status="healing_rejected",
@@ -156,7 +156,7 @@ def test_all_failed_returns_fail():
     assert report.verdict == ReadinessVerdict.FAIL
 
 
-# ---- Criteria failure paths ------------------------------------------------
+# ---- Caminhos de falha de criterios ------------------------------------------------
 
 
 def test_completeness_failure_returns_fail():
@@ -185,20 +185,20 @@ def test_completeness_failure_returns_fail():
     assert report.verdict == ReadinessVerdict.FAIL
 
 
-# ---- Reporting integrity --------------------------------------------------
+# ---- Integridade do relatorio --------------------------------------------------
 
 
 def test_gated_only_emits_warning():
-    """GATED_ONLY surfaces a warning explaining the missing execution evidence."""
+    """GATED_ONLY exibe um aviso explicando a ausencia de evidencia de execucao."""
     report = _eval(steps=[])
     assert any(
         "no executable step" in w.lower() or "dashboard" in w.lower()
         for w in report.warnings
-    ), f"Expected warning about empty execution, got {report.warnings}"
+    ), f"Esperado aviso sobre execucao vazia, obteve {report.warnings}"
 
 
 def test_gated_only_markdown_renders_new_section():
-    """to_markdown emits a dedicated GATED block (not the green PASS section)."""
+    """to_markdown emite um bloco GATED dedicado (nao a secao verde PASS)."""
     report = _eval(steps=[])
     md = report.to_markdown()
     assert "GATED" in md or "gated" in md.lower()

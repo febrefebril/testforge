@@ -1,4 +1,4 @@
-"""TestForge — Silent self-update via git pull on startup."""
+"""TestForge — Auto-atualizacao silenciosa via git pull na inicializacao."""
 from __future__ import annotations
 
 import os
@@ -8,13 +8,13 @@ from pathlib import Path
 
 
 def check_and_apply_update(project_root: Path) -> None:
-    """Fetch origin/main; if ahead, pull and re-exec. Never blocks startup."""
+    """Busca origin/main; se a frente, faz pull e re-executa. Nunca bloqueia inicializacao."""
     try:
-        # Skip if TESTFORGE_NO_UPDATE is set (useful for CI or offline use)
+        # Pula se TESTFORGE_NO_UPDATE estiver definido (util para CI ou offline)
         if os.getenv("TESTFORGE_NO_UPDATE"):
             return
 
-        # Require git repo
+        # Requer repo git
         r = subprocess.run(
             ["git", "rev-parse", "--is-inside-work-tree"],
             cwd=str(project_root),
@@ -24,7 +24,7 @@ def check_and_apply_update(project_root: Path) -> None:
         if r.returncode != 0:
             return
 
-        # Fetch silently (short timeout — don't punish offline users)
+        # Fetch silencioso (timeout curto — nao punir usuarios offline)
         subprocess.run(
             ["git", "fetch", "origin", "main", "--quiet"],
             cwd=str(project_root),
@@ -32,7 +32,7 @@ def check_and_apply_update(project_root: Path) -> None:
             timeout=5,
         )
 
-        # Count commits we're behind
+        # Conta commits que estamos atras
         r = subprocess.run(
             ["git", "rev-list", "HEAD..origin/main", "--count"],
             cwd=str(project_root),
@@ -46,7 +46,7 @@ def check_and_apply_update(project_root: Path) -> None:
         if behind == 0:
             return
 
-        # Pull with rebase (keeps local commits on top, avoids merge commits)
+        # Pull com rebase (mantem commits locais no topo, evita merge commits)
         subprocess.run(
             ["git", "pull", "--rebase", "--quiet", "origin", "main"],
             cwd=str(project_root),
@@ -55,9 +55,9 @@ def check_and_apply_update(project_root: Path) -> None:
         )
 
         print(f"[TestForge] Atualizado ({behind} commit(s)). Reiniciando...", file=sys.stderr)
-        # Replace current process with updated code
+        # Substitui processo atual pelo codigo atualizado
         os.execv(sys.executable, [sys.executable] + sys.argv)
 
     except Exception:
-        # Never block startup
+        # Nunca bloqueia inicializacao
         pass

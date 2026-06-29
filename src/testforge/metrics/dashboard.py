@@ -1,15 +1,15 @@
-"""Phase 6: static dashboard.html generator.
+"""Fase 6: gerador de dashboard.html estatico.
 
-Reads spans (`.testforge/spans.jsonl`) and the SQLite intent catalog,
-emits a single self-contained HTML file with Chart.js (CDN) charts:
+Le spans (`.testforge/spans.jsonl`) e o catalog de intents SQLite,
+emite um unico arquivo HTML auto-contido com graficos Chart.js (CDN):
 
-- Resolve-level distribution: L0_cache vs L1_candidate vs FAILED
-- Top intents by frequency
-- Resolve latency histogram (ms)
-- Intent-catalog size + stale ratio
+- Distribuicao por nivel de resolucao: L0_cache vs L1_candidate vs FAILED
+- Top intents por frequencia
+- Histograma de latencia de resolucao (ms)
+- Tamanho do catalog de intents + razao de stale
 
-Zero infrastructure: open the HTML in any browser. No server, no CSS
-framework — inline styles only. Chart.js is loaded from jsDelivr CDN.
+Zero infraestrutura: abra o HTML em qualquer navegador. Sem servidor, sem CSS
+framework — apenas estilos inline. Chart.js carregado do jsDelivr CDN.
 """
 from __future__ import annotations
 
@@ -89,7 +89,7 @@ def _compute_resolve_metrics(spans: list[dict]) -> dict:
 
 
 def _hist_buckets(latencies: list[float], bucket_edges: list[float]) -> list[int]:
-    """Return counts per (e[i], e[i+1]] bucket; last bucket is >= e[-1]."""
+    """Retorna contagens por bucket (e[i], e[i+1]]; ultimo bucket e >= e[-1]."""
     counts = [0] * (len(bucket_edges) - 1)
     for v in latencies:
         for i in range(len(bucket_edges) - 1):
@@ -105,7 +105,7 @@ def generate_html(
     spans_path: str = ".testforge/spans.jsonl",
     db_path: str = ".testforge/intent_catalog.sqlite",
 ) -> str:
-    """Return the dashboard HTML as a string. Pure function — no IO."""
+    """Retorna o HTML do dashboard como string. Funcao pura — sem IO."""
     spans = _read_spans(spans_path)
     metrics = _compute_resolve_metrics(spans)
     catalog = _catalog_stats(db_path)
@@ -212,6 +212,7 @@ def write_dashboard(
     spans_path: str = ".testforge/spans.jsonl",
     db_path: str = ".testforge/intent_catalog.sqlite",
 ) -> str:
+    """Gera e salva o dashboard HTML no caminho especificado."""
     html_content = generate_html(spans_path=spans_path, db_path=db_path)
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:

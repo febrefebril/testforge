@@ -26,7 +26,7 @@ def main():
         if not pending:
             print("Nenhuma revisao pendente.")
             return
-        print(f"{'RUN ID':30s} {'ALERTS':>6s}  {'DATA'}")
+        print(f"{'ID RUN':30s} {'ALERTAS':>6s}  {'DATA'}")
         print("-" * 60)
         for p in pending:
             started = p.get("started_at", "")[:19] if p.get("started_at") else "—"
@@ -47,12 +47,12 @@ def main():
 
         alerts = store.get_sensitive_alerts(run_id)
         if alerts:
-            print(f"⚠ {len(alerts)} alertas de dados sensiveis:")
+            print(f"[AVISO] {len(alerts)} alertas de dados sensiveis:")
             for a in alerts:
                 print(f"  - {a.get('type', '?')}: {a.get('field', '?')}")
 
         screenshots = store.get_screenshots(run_id)
-        print(f"\n📸 {len(screenshots)} screenshots disponiveis")
+        print(f"\n[FOTO] {len(screenshots)} screenshots disponiveis")
 
     elif "--decide" in sys.argv:
         print("Decisoes disponiveis:", ", ".join(REVIEW_DECISIONS))

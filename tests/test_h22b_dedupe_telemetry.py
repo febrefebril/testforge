@@ -1,23 +1,23 @@
-"""H22b — dedupe diagnostics on RecordingNormalizer.
+"""H22b — diagnosticos de deduplicacao no RecordingNormalizer.
 
-Background: see .planning/spikes/SPIKE-keyboard-type-mask.md (H22
-section) and the 2026-06-27 H22a entry in DECISIONS-LOG.md.
+Contexto: veja .planning/spikes/SPIKE-keyboard-type-mask.md (secao H22)
+e a entrada H22a de 2026-06-27 em DECISIONS-LOG.md.
 
-H22a re-ranked the source priority table so `final_state` outranks
-`setter_hook`. H22b adds per-call telemetry that counts how often each
-source actually beats another. The signal feeds the H22c decision: if
-`setter_hook` is dominated by `final_state` in every recording, the
-prototype hook (and its companion value_mutations.jsonl pipeline) can
-be deleted.
+H22a reordenou a tabela de prioridade de fonte para que `final_state`
+supere `setter_hook`. H22b adiciona telemetria por chamada que conta
+quantas vezes cada fonte realmente vence outra. O sinal alimenta a
+decisao H22c: se `setter_hook` for dominado por `final_state` em toda
+gracao, o hook do prototipo (e seu pipeline companheiro
+value_mutations.jsonl) pode ser deletado.
 
-This file pins:
-1. The stats structure exists on each instance.
-2. Stats reset between `normalize()` calls.
-3. The `setter_hook_dominated_by_final_state` counter increments when
-   both sources fire for the same field and final_state wins.
-4. The `setter_hook_uncontested` counter increments when setter_hook
-   produces a value with no other source for that key — this is the
-   remaining justification for keeping the hook.
+Este arquivo fixa:
+1. A estrutura de estatisticas existe em cada instancia.
+2. As estatisticas resetam entre chamadas `normalize()`.
+3. O contador `setter_hook_dominated_by_final_state` incrementa quando
+   ambas as fontes disparam para o mesmo campo e final_state vence.
+4. O contador `setter_hook_uncontested` incrementa quando setter_hook
+   produz um valor sem outra fonte para aquela chave — esta e a
+   justificativa restante para manter o hook.
 """
 from __future__ import annotations
 
@@ -48,9 +48,9 @@ class TestStatsShape:
         }
 
     def test_stats_are_per_instance(self):
-        """Two normalizers should not share dedupe stats — H22b uses
-        instance state precisely to avoid the class-level mutable-state
-        bug that bit us in earlier P2/P3 regressions."""
+        """Dois normalizers nao devem compartilhar estatisticas de dedup — H22b usa
+        estado de instancia precisamente para evitar o bug de estado mutavel em
+        nivel de classe que nos afetou em regressoes P2/P3 anteriores."""
         a = RecordingNormalizer()
         b = RecordingNormalizer()
         a.ir_dedupe_stats["loser_counts"]["setter_hook"] = 99
@@ -72,10 +72,10 @@ class TestDedupeAccountsWinsAndLosses:
         assert n.ir_dedupe_stats["winner_counts"].get("final_state") == 1
 
     def test_setter_hook_uncontested_when_no_competing_source(self):
-        """If setter_hook is the only source that produced a value for a
-        key, the hook is still load-bearing. This counter tracks how
-        often that happens so H22c (delete _hookValue) can be made
-        evidence-based."""
+        """Se setter_hook e a unica fonte que produziu um valor para uma
+        chave, o hook ainda e essencial. Este contador rastreia com que
+        frequencia isso acontece para que H22c (deletar _hookValue) possa
+        ser baseado em evidencias."""
         n = RecordingNormalizer()
         entries = [
             _make_entry("only_setter_field", "1,00", "setter_hook"),
@@ -94,9 +94,9 @@ class TestDedupeAccountsWinsAndLosses:
         assert n.ir_dedupe_stats["setter_hook_uncontested"] == 0
 
     def test_setter_hook_beats_lower_source(self):
-        """The new ordering must still let setter_hook beat
-        network_payload / polling / snapshot_diff. Pin it so H22a's
-        promotion doesn't accidentally invert those too."""
+        """A nova ordenacao ainda deve permitir que setter_hook vença
+        network_payload / polling / snapshot_diff. Fixa para que a
+        promocao de H22a nao inverta acidentalmente esses tambem."""
         n = RecordingNormalizer()
         entries = [
             _make_entry("field", "polling_val", "polling"),
@@ -110,22 +110,22 @@ class TestDedupeAccountsWinsAndLosses:
 
 class TestStatsResetPerNormalize:
     def test_stats_reset_on_normalize_call(self, tmp_path):
-        """A second normalize() invocation should not carry stats from
-        the first. This mirrors the lifecycle of CLI invocations where
-        the normalizer instance can be reused across recordings."""
+        """Uma segunda invocacao normalize() nao deve carregar estatisticas da
+        primeira. Isso espelha o ciclo de vida de invocacoes CLI onde a
+        instancia do normalizer pode ser reutilizada entre gravacoes."""
         n = RecordingNormalizer()
-        # Manually pollute stats as if a prior call had run.
+        # Polui estatisticas manualmente como se uma chamada anterior tivesse rodado.
         n.ir_dedupe_stats["setter_hook_dominated_by_final_state"] = 5
         n.ir_dedupe_stats["loser_counts"]["setter_hook"] = 10
-        # Run normalize on an empty recording dir.
-        # An empty dir produces an empty STC but should still reset
-        # stats — that's the H22b contract.
+        # Executa normalize em um diretorio de gravacao vazio.
+        # Um diretorio vazio produz um STC vazio mas ainda deve resetar
+        # as estatisticas — esse e o contrato H22b.
         try:
             n.normalize(str(tmp_path))
         except Exception:
-            # Empty dirs may raise on missing raw_events.jsonl; that's
-            # fine for this test — the stats reset happens before any
-            # file IO.
+            # Diretorios vazios podem falhar por falta de raw_events.jsonl; isso
+            # e aceitavel para este teste — o reset de estatisticas acontece antes
+            # de qualquer E/S de arquivo.
             pass
         assert n.ir_dedupe_stats["setter_hook_dominated_by_final_state"] == 0
         assert n.ir_dedupe_stats["loser_counts"] == {}

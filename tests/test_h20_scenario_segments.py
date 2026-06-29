@@ -1,13 +1,13 @@
-"""H20 — scenario boundary partitioning.
+"""H20 — particionamento de limite de cenario.
 
-Recorder emits a `scenario_boundary` raw event when the user presses
-Shift+N. Normalizer drops it from the step stream and instead records
-the position as a partition between scenarios. Default (no boundaries)
-remains a single segment that spans every step.
+O gravador emite um evento bruto `scenario_boundary` quando o usuario
+pressiona Shift+N. O normalizer o remove do fluxo de passos e em vez disso
+registra a posicao como uma particao entre cenarios. O padrao (sem limites)
+permanece um unico segmento que abrange todos os passos.
 
-The compiler/runner do not yet emit one test-per-segment — that lives
-in a follow-up. This file pins the data plumbing so the follow-up has
-something to consume.
+O compilador/executor ainda nao emite um teste-por-segmento — isso esta
+em um trabalho futuro. Este arquivo fixa a tubulacao de dados para que o
+trabalho futuro tenha algo para consumir.
 """
 from __future__ import annotations
 
@@ -88,7 +88,7 @@ class TestBoundaryPartitions:
         a, b = stc.scenario_segments
         assert a["start_step"] == 0 and a["end_step_exclusive"] == 2
         assert b["start_step"] == 2 and b["end_step_exclusive"] == 4
-        # The named boundary names the segment that follows it.
+        # O limite nomeado nomeia o segmento que o segue.
         assert b["name"] == "fluxo_alternativo"
 
     def test_two_boundaries_make_three_segments(self, tmp_path):
@@ -122,8 +122,8 @@ class TestBoundaryPartitions:
         )
 
     def test_empty_segments_are_dropped(self, tmp_path):
-        """Two consecutive boundaries with no steps between → no zero-
-        length segment in the output."""
+        """Dois limites consecutivos sem passos entre eles → nenhum segmento de
+        comprimento zero na saida."""
         rec = _write_raw_events(tmp_path, [
             _click(1),
             _boundary("a"),
@@ -134,17 +134,17 @@ class TestBoundaryPartitions:
         stc = n.normalize(str(rec))
         for s in stc.scenario_segments:
             assert s["end_step_exclusive"] > s["start_step"], (
-                f"Empty segment leaked: {s}"
+                f"Segmento vazio vazou: {s}"
             )
 
 
 class TestCaptureSchemaBump:
     def test_schema_at_least_v3(self):
-        # H20 introduced v3 (scenario_boundary). Later bumps in the same
-        # session (H21 → v4) climb past it; only the lower bound is
-        # invariant for this feature.
+        # H20 introduziu v3 (scenario_boundary). Aumentos posteriores na
+        # mesma sessao (H21 → v4) ultrapassam; apenas o limite inferior e
+        # invariante para esta funcionalidade.
         from testforge.recorder.capture_fingerprint import CAPTURE_SCHEMA_VERSION
         assert CAPTURE_SCHEMA_VERSION >= 3, (
-            "H20 added the scenario_boundary raw event. Bump CAPTURE_"
-            "SCHEMA_VERSION when this event shape changes."
+            "H20 adicionou o evento bruto scenario_boundary. Aumente CAPTURE_"
+            "SCHEMA_VERSION quando esta forma de evento mudar."
         )

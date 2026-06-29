@@ -1,4 +1,4 @@
-"""Lançamento centralizado de navegador com fallback CDP-first."""
+"""Centralized browser launcher with CDP-first fallback."""
 from __future__ import annotations
 import logging
 import os
@@ -31,7 +31,7 @@ def _gpu_args(headless=False):
         return []
     args = list(_WINDOWS_GPU_ARGS)
     if not headless:
-        # headed mode: remove --window-size to avoid window resize flicker
+        # modo headed: remove --window-size para evitar flicker
         args = [a for a in args if not a.startswith("--window-size")]
     return args
 
@@ -39,17 +39,17 @@ def _gpu_args(headless=False):
 def launch_browser(pw, browser_type="chromium", headless=False, cdp_url="", verify_ssl=True):
     errors = []
 
-    # P1: CDP via variável de ambiente
+        # P1: CDP via ENV
     env_cdp = os.environ.get("TESTFORGE_USE_CDP", "").strip()
     if env_cdp:
         try:
             browser = pw.chromium.connect_over_cdp(env_cdp, timeout=10000)
-            logger.info(f"OK Navegador CDP env ({env_cdp})")
+            logger.info(f"[OK] Navegador CDP env ({env_cdp})")
             return browser
         except Exception as e:
             errors.append(f"cdp_env: {e}")
 
-    # P2: CDP via parâmetro
+        # P2: CDP via param
     if cdp_url:
         try:
             browser = pw.chromium.connect_over_cdp(cdp_url, timeout=10000)
@@ -89,7 +89,7 @@ def launch_browser(pw, browser_type="chromium", headless=False, cdp_url="", veri
     for name, kwargs in strategies:
         try:
             browser = pw.chromium.launch(**kwargs)
-            logger.info(f"OK Navegador via {name}")
+            logger.info(f"[OK] Navegador via {name}")
             return browser
         except Exception as e:
             errors.append(f"{name}: {e}")

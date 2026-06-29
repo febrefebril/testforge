@@ -1,4 +1,4 @@
-"""Regression test — Bug 7: form_values from submit must prevent missing_fill detection."""
+"""Teste de regressão — Bug 7: form_values do submit deve evitar detecção de missing_fill."""
 import json
 import os
 import tempfile
@@ -6,7 +6,7 @@ import pytest
 
 
 def test_form_values_prevent_missing_fill():
-    """Fields captured via form_values at submit must not be marked missing_fill."""
+    """Campos capturados via form_values no submit não devem ser marcados como missing_fill."""
     from testforge.semantic.recording_normalizer import RecordingNormalizer
 
     renda_target = {
@@ -50,4 +50,4 @@ def test_form_values_prevent_missing_fill():
         and "renda" in ((getattr(s, "context", {}) or {}).get("fill_label", "") or "").lower()
     ]
     assert not missing, \
-        f"Renda mensal was in form_values but marked missing_fill: {missing}"
+        f"Renda mensal estava em form_values mas marcado como missing_fill: {missing}"

@@ -67,10 +67,10 @@ class StepReport:
 
 @dataclass
 class RunReport:
-    """Full execution report for a test run.
+    """Relatorio completo de execucao para uma execucao de teste.
 
-    Captures all step details without truncation, saved to JSON file.
-    Terminal output stays as human-friendly summary.
+    Captura todos os detalhes do passo sem truncagem, salvos em arquivo JSON.
+    Saida do terminal permanece como resumo amigavel.
     """
     recording_id: str
     base_url: str
@@ -82,7 +82,7 @@ class RunReport:
     steps: list[StepReport] = field(default_factory=list)
 
     def add_step(self, step: StepReport) -> None:
-        """Add a step report to the run."""
+        """Adiciona relatorio de passo a execucao."""
         self.steps.append(step)
 
     def to_dict(self) -> dict:
@@ -98,7 +98,7 @@ class RunReport:
         }
 
     def save(self, output_dir: str) -> str:
-        """Save full report to JSON file. Returns the file path."""
+        """Salva relatorio completo em arquivo JSON. Retorna caminho do arquivo."""
         os.makedirs(output_dir, exist_ok=True)
         safe_ts = time.strftime("%Y%m%d-%H%M%S")
         filename = f"run_report_{safe_ts}.json"
@@ -109,5 +109,5 @@ class RunReport:
 
 
 def save_report(report: RunReport, output_dir: str) -> str:
-    """Convenience function to save a RunReport and return path."""
+    """Funcao de conveniencia para salvar RunReport e retornar caminho."""
     return report.save(output_dir)

@@ -1,11 +1,11 @@
-"""Capture fingerprint contract.
+"""Contrato de fingerprint de captura.
 
-Pins the H22 followup decision: every new recording embeds a small
-identity block so the normalizer can warn when an older recording was
-written by an incompatible recorder.
+Consolida a decisao H22: toda nova gravacao embute um pequeno
+bloco de identidade para que o normalizador possa alertar quando
+uma gravacao mais antiga foi escrita por um gravador incompativel.
 
-The block lives under `recording_metadata.json["fingerprint"]` and
-covers: capture_schema_version, testforge_version,
+O bloco fica em `recording_metadata.json["fingerprint"]` e cobre:
+capture_schema_version, testforge_version,
 overlay_inject_sha256, git_head_sha, recorded_at.
 """
 from __future__ import annotations
@@ -48,10 +48,10 @@ class TestFingerprintBlock:
     def test_compute_is_deterministic_between_calls(self):
         a = compute_fingerprint()
         b = compute_fingerprint()
-        # recorded_at will differ but the rest should be stable.
+        # recorded_at vai diferir mas o resto deve ser estavel.
         for key in ("capture_schema_version", "overlay_inject_sha256",
                     "git_head_sha", "testforge_version"):
-            assert a[key] == b[key], f"{key} drifted between calls"
+            assert a[key] == b[key], f"{key} divergiu entre chamadas"
 
 
 class TestRecordingSessionEmbedsFingerprint:
@@ -66,8 +66,8 @@ class TestRecordingSessionEmbedsFingerprint:
         assert meta_path.exists()
         metadata = json.loads(meta_path.read_text(encoding="utf-8"))
         assert "fingerprint" in metadata, (
-            "RecordingSession must embed `fingerprint` on session start "
-            "so future normalizers can detect schema drift."
+            "RecordingSession deve incorporar `fingerprint` ao iniciar sessao "
+            "para que normalizadores futuros detectem desvio de schema."
         )
         fp = metadata["fingerprint"]
         assert fp["capture_schema_version"] == CAPTURE_SCHEMA_VERSION
@@ -83,7 +83,7 @@ class TestRecordingSessionEmbedsFingerprint:
         mgr.finalize()
         meta = json.loads(Path(session.metadata_path).read_text(encoding="utf-8"))
         assert meta["fingerprint"] == original_fp, (
-            "Fingerprint must survive stop/finalize unchanged."
+            "Fingerprint deve sobreviver a stop/finalize inalterado."
         )
 
 
@@ -111,25 +111,25 @@ class TestVerifyFingerprint:
     def test_overlay_sha_mismatch_emits_warning(self):
         current = compute_fingerprint()
         forged = dict(current)
-        forged["overlay_inject_sha256"] = "0" * 64  # not the real sha
+        forged["overlay_inject_sha256"] = "0" * 64  # nao e o sha real
         result = verify_fingerprint({"fingerprint": forged})
         assert any("overlay_inject.js" in w for w in result["warnings"])
 
 
 class TestNormalizerCachesFingerprintCheck:
     def test_normalize_populates_fingerprint_check_on_instance(self, tmp_path):
-        # Build a minimal valid recording dir: empty raw_events.jsonl is
-        # enough — the normalizer's verify call runs before the parse.
+        # Constroi diretorio de gravacao minimo valido: raw_events.jsonl vazio e
+        # suficiente — a chamada verify do normalizador executa antes do parse.
         rec_dir = tmp_path / "rec_legacy"
         rec_dir.mkdir()
         (rec_dir / "raw_events.jsonl").write_text("", encoding="utf-8")
-        # No metadata file at all → must be flagged as legacy.
+        # Nenhum arquivo de metadados → deve ser marcado como legado.
         n = RecordingNormalizer()
         try:
             n.normalize(str(rec_dir))
         except Exception:
-            # Empty events may raise downstream; we only care that the
-            # fingerprint check ran.
+            # Eventos vazios podem gerar erro downstream; nos so importa que
+            # a verificacao de fingerprint foi executada.
             pass
         assert hasattr(n, "fingerprint_check")
         assert n.fingerprint_check["compatible"] is False

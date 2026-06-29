@@ -1,4 +1,4 @@
-"""Tests for TestForge pipeline models: PipelineStage, PipelineManifest, PipelineInspector."""
+"""Testes para modelos de pipeline do TestForge: PipelineStage, PipelineManifest, PipelineInspector."""
 import json
 import os
 import tempfile
@@ -7,7 +7,7 @@ from testforge.models import PipelineStage, PipelineManifest, PipelineInspector
 
 
 def _make_raw_events(path: str, events: list[dict] | None = None) -> str:
-    """Create a raw_events.jsonl file. Returns the file path."""
+    """Cria arquivo raw_events.jsonl. Retorna caminho do arquivo."""
     if events is None:
         events = [
             {"event_id": "evt_00001", "type": "navigation",
@@ -32,7 +32,7 @@ def _make_raw_events(path: str, events: list[dict] | None = None) -> str:
 
 
 def _make_steps(path: str, steps: list[dict] | None = None) -> str:
-    """Create a steps.jsonl file. Returns the file path."""
+    """Cria arquivo steps.jsonl. Retorna caminho do arquivo."""
     if steps is None:
         steps = [
             {"step_id": "step_0001", "action": "click",
@@ -54,7 +54,7 @@ def _make_steps(path: str, steps: list[dict] | None = None) -> str:
 
 def _make_semantic_steps(path: str, steps: list[dict] | None = None,
                          metadata: dict | None = None) -> str:
-    """Create a semantic_steps.jsonl file. Returns the file path."""
+    """Cria arquivo semantic_steps.jsonl. Retorna caminho do arquivo."""
     if metadata is None:
         metadata = {"type": "metadata", "test_id": "ST-TEST",
                     "source_recording_id": "REC-001",
@@ -84,7 +84,7 @@ def _make_semantic_steps(path: str, steps: list[dict] | None = None,
 
 
 def _make_script(path: str) -> str:
-    """Create a test_flow.py script. Returns the file path."""
+    """Cria script test_flow.py. Retorna caminho do arquivo."""
     content = '''"""Teste gerado pelo TestForge."""
 from playwright.sync_api import Page, expect
 
@@ -117,63 +117,63 @@ def test_meu_fluxo(page: Page):
 # ---------------------------------------------------------------------------
 
 class TestPipelineStage:
-    """Tests for the PipelineStage enum."""
+    """Testes para o enum PipelineStage."""
 
     def test_four_members_exist(self):
-        """All four pipeline stages must be present."""
+        """Todos os quatro estagios do pipeline devem estar presentes."""
         members = list(PipelineStage)
         assert len(members) == 4
         values = {s.value for s in members}
         assert values == {"raw_events", "steps", "semantic_steps", "script"}
 
     def test_labels_are_human_readable(self):
-        """Each stage should have a non-empty, human-readable label."""
+        """Cada estagio deve ter um rotulo nao vazio e legivel."""
         for stage in PipelineStage:
-            assert stage.label, f"Empty label for {stage}"
+            assert stage.label, f"Rotulo vazio para {stage}"
             assert isinstance(stage.label, str)
 
     def test_stage_types_match(self):
-        """Stage types should map correctly."""
+        """Tipos de estagio devem mapear corretamente."""
         assert PipelineStage.RAW_EVENTS.stage_type == "capture"
         assert PipelineStage.STEPS.stage_type == "curated"
         assert PipelineStage.SEMANTIC_STEPS.stage_type == "compiled"
         assert PipelineStage.SCRIPT.stage_type == "executable"
 
     def test_file_names(self):
-        """File names should match recording conventions."""
+        """Nomes de arquivo devem seguir convencoes de gravacao."""
         assert PipelineStage.RAW_EVENTS.file_name == "raw_events.jsonl"
         assert PipelineStage.STEPS.file_name == "steps.jsonl"
         assert PipelineStage.SEMANTIC_STEPS.file_name == "semantic_steps.jsonl"
         assert PipelineStage.SCRIPT.file_name is None  # Script name varies
 
     def test_descriptions_non_empty(self):
-        """Every stage should have a detailed description string."""
+        """Cada estagio deve ter uma string de descricao detalhada."""
         for stage in PipelineStage:
             desc = stage.description
             assert desc, f"Empty description for {stage}"
-            assert len(desc) > 50, f"Description too short for {stage}"
+            assert len(desc) > 50, f"Descricao muito curta para {stage}"
 
     def test_consumes_produces_consistency(self):
-        """Pipeline graph must be acyclic and consistent."""
-        # raw_events consumes nothing, is consumed by semantic_steps
+        """Grafo do pipeline deve ser aciclico e consistente."""
+        # raw_events nao consome nada, e consumido por semantic_steps
         assert PipelineStage.RAW_EVENTS.consumes == []
         assert PipelineStage.SEMANTIC_STEPS in PipelineStage.RAW_EVENTS.produces
 
-        # steps consumes nothing, is consumed by semantic_steps
+        # steps nao consome nada, e consumido por semantic_steps
         assert PipelineStage.STEPS.consumes == []
         assert PipelineStage.SEMANTIC_STEPS in PipelineStage.STEPS.produces
 
-        # semantic_steps consumes raw_events + steps, produces script
+        # semantic_steps consome raw_events + steps, produz script
         assert PipelineStage.RAW_EVENTS in PipelineStage.SEMANTIC_STEPS.consumes
         assert PipelineStage.STEPS in PipelineStage.SEMANTIC_STEPS.consumes
         assert PipelineStage.SCRIPT in PipelineStage.SEMANTIC_STEPS.produces
 
-        # script consumes semantic_steps, produces nothing
+        # script consome semantic_steps, nao produz nada
         assert PipelineStage.SEMANTIC_STEPS in PipelineStage.SCRIPT.consumes
         assert PipelineStage.SCRIPT.produces == []
 
     def test_access_by_value(self):
-        """Should be able to access PipelineStage by string value."""
+        """Deve ser possivel acessar PipelineStage por valor de string."""
         assert PipelineStage("raw_events") == PipelineStage.RAW_EVENTS
         assert PipelineStage("steps") == PipelineStage.STEPS
         assert PipelineStage("semantic_steps") == PipelineStage.SEMANTIC_STEPS
@@ -185,10 +185,10 @@ class TestPipelineStage:
 # ---------------------------------------------------------------------------
 
 class TestPipelineManifest:
-    """Tests for PipelineManifest — directory scanning."""
+    """Testes para PipelineManifest — varredura de diretorio."""
 
     def test_empty_directory(self):
-        """Manifest of empty/nonexistent directory should show zero stages."""
+        """Manifest de diretorio vazio/inexistente deve mostrar zero estagios."""
         with tempfile.TemporaryDirectory() as tmpdir:
             manifest = PipelineManifest(tmpdir)
             assert manifest.pipeline_depth == 0
@@ -198,12 +198,12 @@ class TestPipelineManifest:
             assert manifest.stage_path(PipelineStage.RAW_EVENTS) is None
 
     def test_missing_directory(self):
-        """Manifest for non-existent directory handles gracefully."""
+        """Manifest para diretorio inexistente lida graciosamente."""
         manifest = PipelineManifest("/tmp/does_not_exist_xyz_testforge")
         assert manifest.pipeline_depth == 0
 
     def test_only_raw_events(self):
-        """Directory with only raw_events.jsonl."""
+        """Diretorio com apenas raw_events.jsonl."""
         with tempfile.TemporaryDirectory() as tmpdir:
             _make_raw_events(tmpdir)
             manifest = PipelineManifest(tmpdir)
@@ -214,7 +214,7 @@ class TestPipelineManifest:
             assert not manifest.is_complete
 
     def test_only_steps(self):
-        """Directory with only steps.jsonl."""
+        """Diretorio com apenas steps.jsonl."""
         with tempfile.TemporaryDirectory() as tmpdir:
             _make_steps(tmpdir)
             manifest = PipelineManifest(tmpdir)
@@ -222,7 +222,7 @@ class TestPipelineManifest:
             assert PipelineStage.STEPS in manifest.stages_present
 
     def test_full_four_stages(self):
-        """Directory with all four pipeline stage files."""
+        """Diretorio com todos os quatro arquivos de estagio do pipeline."""
         with tempfile.TemporaryDirectory() as tmpdir:
             _make_raw_events(tmpdir)
             _make_steps(tmpdir)
@@ -238,14 +238,14 @@ class TestPipelineManifest:
             )
 
     def test_script_detection_by_pattern(self):
-        """Script detection uses test_*.py glob pattern."""
+        """Detecao de script usa padrao glob test_*.py."""
         with tempfile.TemporaryDirectory() as tmpdir:
             _make_script(tmpdir)
             manifest = PipelineManifest(tmpdir)
             assert manifest.script_path.endswith("test_meu_fluxo.py")
 
     def test_to_dict(self):
-        """to_dict() should serialize manifest state."""
+        """to_dict() deve serializar estado do manifest."""
         with tempfile.TemporaryDirectory() as tmpdir:
             _make_raw_events(tmpdir)
             manifest = PipelineManifest(tmpdir)
@@ -259,7 +259,7 @@ class TestPipelineManifest:
             assert d["paths"]["steps"] is None
 
     def test_refresh_picks_up_new_files(self):
-        """Calling refresh() after writing files should detect them."""
+        """Chamar refresh() apos escrever arquivos deve detecta-los."""
         with tempfile.TemporaryDirectory() as tmpdir:
             manifest = PipelineManifest(tmpdir)
             assert manifest.pipeline_depth == 0
@@ -278,11 +278,11 @@ class TestPipelineManifest:
 # ---------------------------------------------------------------------------
 
 class TestPipelineInspector:
-    """Tests for PipelineInspector — file introspection."""
+    """Testes para PipelineInspector — introspeccao de arquivo."""
 
     # -- raw_events inspection --
     def test_inspect_raw_events(self):
-        """inspect_raw_events should report event count and type histogram."""
+        """inspect_raw_events deve relatar contagem de eventos e histograma de tipos."""
         with tempfile.TemporaryDirectory() as tmpdir:
             path = _make_raw_events(tmpdir)
             result = PipelineInspector.inspect_raw_events(path)
@@ -296,14 +296,14 @@ class TestPipelineInspector:
             assert result["has_dom_snapshots"] is False
 
     def test_inspect_raw_events_empty(self):
-        """Empty raw_events.jsonl should report zero events."""
+        """raw_events.jsonl vazio deve relatar zero eventos."""
         with tempfile.TemporaryDirectory() as tmpdir:
             path = _make_raw_events(tmpdir, events=[])
             result = PipelineInspector.inspect_raw_events(path)
             assert result["event_count"] == 0
 
     def test_inspect_raw_events_missing(self):
-        """Inspecting a non-existent file should raise FileNotFoundError."""
+        """Inspecionar arquivo inexistente deve lancar FileNotFoundError."""
         with tempfile.TemporaryDirectory() as tmpdir:
             path = os.path.join(tmpdir, "raw_events.jsonl")
             try:
@@ -314,7 +314,7 @@ class TestPipelineInspector:
 
     # -- steps inspection --
     def test_inspect_steps(self):
-        """inspect_steps should report step count and action breakdown."""
+        """inspect_steps deve relatar contagem de steps e detalhamento de acoes."""
         with tempfile.TemporaryDirectory() as tmpdir:
             path = _make_steps(tmpdir)
             result = PipelineInspector.inspect_steps(path)
@@ -326,7 +326,7 @@ class TestPipelineInspector:
             assert not result["has_dependency_chains"]
 
     def test_inspect_steps_with_blocking(self):
-        """Steps with blocking and depends_on should be detected."""
+        """Steps com blocking e depends_on devem ser detectados."""
         with tempfile.TemporaryDirectory() as tmpdir:
             _make_steps(tmpdir, steps=[
                 {"step_id": "step_0001", "action": "select_option",
@@ -341,7 +341,7 @@ class TestPipelineInspector:
             assert result["has_dependency_chains"] is True
 
     def test_inspect_steps_missing(self):
-        """Inspecting a missing steps file should raise."""
+        """Inspecionar arquivo steps ausente deve lancar excecao."""
         with tempfile.TemporaryDirectory() as tmpdir:
             path = os.path.join(tmpdir, "steps.jsonl")
             try:

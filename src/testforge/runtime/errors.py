@@ -1,12 +1,12 @@
-"""Phase 3: Runtime errors raised by LocatorResolver and step helpers."""
+"""Phase 3: Erros de runtime levantados por LocatorResolver e step helpers."""
 from __future__ import annotations
 
 
 class LocatorNotFoundError(RuntimeError):
-    """Raised when no candidate locator resolves to a usable element.
+    """Levantado quando nenhum locator candidato resolve para um elemento utilizavel.
 
-    Carries enough context (intent text, attempted candidates, last error)
-    that an L2/L3 healer can pick up the failure without re-parsing the
+    Carrega contexto suficiente (texto de intent, candidatos tentados, ultimo erro)
+    para que um healer L2/L3 possa pegar a falha sem re-interpretar o
     traceback.
     """
 
@@ -27,7 +27,7 @@ class LocatorNotFoundError(RuntimeError):
 
 
 class StepExecutionError(RuntimeError):
-    """Raised when a resolved locator throws on the actual action (fill, click)."""
+    """Levantado quando um locator resolvido lanca erro na acao real (fill, click)."""
 
     def __init__(self, intent: str, action: str, message: str) -> None:
         self.intent = intent

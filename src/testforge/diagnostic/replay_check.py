@@ -39,14 +39,14 @@ class ReplayCheck:
 
     # ------------------------------------------------------------------
     def check(self, step_id: str, candidates: list) -> Optional[dict]:
-        """Probe immediately (B1) or queue for later (B4)."""
+        """Testa imediatamente (B1) ou enfileira para depois (B4)."""
         if self._mode == "batched":
             self._pending.append((step_id, list(candidates)))
             return None
         return self._do_check(step_id, candidates)
 
     def drain(self) -> list[dict]:
-        """Process queued probes (called at stop in batched mode)."""
+        """Processa testes enfileirados (chamado no stop em modo batched)."""
         out: list[dict] = []
         for sid, cands in self._pending:
             rec = self._do_check(sid, cands)

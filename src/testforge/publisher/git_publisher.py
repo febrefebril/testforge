@@ -61,16 +61,16 @@ class GitPublisher:
 
     @classmethod
     def from_config(cls, cwd: str = None) -> Optional[GitPublisher]:
-        """Load from .testforge/config.yml. Probes cwd first, then git root."""
+        """Carrega de .testforge/config.yml. Tenta cwd primeiro, depois git root."""
         log = logging.getLogger("testforge.publisher")
         cwd = cwd or os.getcwd()
-        # Always resolve git root — needed for local-mode publishing regardless
-        # of where the config file is found.
+        # Sempre resolve git root — necessario para publicacao modo local independentemente
+        # de onde o arquivo de config e encontrado.
         git_root = cls._find_git_root(cwd)
         log.debug("from_config: cwd=%s git_root=%s", cwd, git_root)
-        # 1. Try cwd/.testforge/config.yml
+        # 1. Tenta cwd/.testforge/config.yml
         config_path = os.path.join(cwd, ".testforge", "config.yml")
-        # 2. Fallback to git root/.testforge/config.yml
+        # 2. Fallback para git root/.testforge/config.yml
         if not os.path.exists(config_path) and git_root:
             config_path = os.path.join(git_root, ".testforge", "config.yml")
         if not os.path.exists(config_path):
@@ -107,7 +107,7 @@ class GitPublisher:
 
     @staticmethod
     def _find_git_root(start: str) -> Optional[str]:
-        """Walk up from start looking for .git directory."""
+        """Sobe a partir de start procurando diretorio .git."""
         path = os.path.abspath(start)
         while True:
             if os.path.isdir(os.path.join(path, ".git")):
@@ -123,7 +123,7 @@ class GitPublisher:
         recordings_dir: str | pathlib.Path,
         semantic_tests_dir: str | pathlib.Path,
     ) -> PublishResult:
-        """Publish recording artifacts to configured Git repo."""
+        """Publica artefatos de gravacao no repositorio Git configurado."""
         if self._local_mode:
             return self._local_publish(recording_id, recordings_dir, semantic_tests_dir)
         self._log.info("publish: iniciando modo remoto — recording=%s url=%s", recording_id, self._url)
@@ -138,7 +138,7 @@ class GitPublisher:
                 return PublishResult(
                     recording_id=recording_id,
                     success=False,
-                    error=f"metadata not found: {metadata_path}",
+                    error=f"metadata nao encontrado: {metadata_path}",
                 )
 
             with open(metadata_path) as f:
@@ -147,11 +147,11 @@ class GitPublisher:
                             metadata.get("system"), metadata.get("suite"))
 
             with tempfile.TemporaryDirectory() as tmp_dir:
-                # Clone shallow
+                # Clone raso
                 self._clone_shallow(tmp_dir)
                 repo_dir = os.path.join(tmp_dir, "repo")
 
-                # Compute hierarchical remote path from system/suite/test_case
+                # Calcula caminho remoto hierarquico a partir de system/suite/test_case
                 remote_path = self._build_remote_path(recording_id, metadata)
                 self._log.info("publish: caminho remoto = %s", remote_path)
 
@@ -159,18 +159,18 @@ class GitPublisher:
                 dest_dir = os.path.join(repo_dir, remote_path)
                 os.makedirs(dest_dir, exist_ok=True)
 
-                # Copy artifacts
+                # Copia artefatos
                 copied = self._copy_artifacts(
                     repo_dir, recording_id, recordings_dir, semantic_tests_dir,
                     remote_path=remote_path,
                 )
                 self._log.info("publish: %d artefato(s) copiado(s): %s", len(copied), copied)
 
-                # Generate submission report (compact, team-facing)
+                # Gera relatorio de submissao (compacto, voltado ao time)
                 submission_report = self._generate_submission_report(
                     recording_id, metadata, recordings_dir
                 )
-                # Save locally in recording dir (permanent copy)
+                # Salva localmente no diretorio da gravacao (copia permanente)
                 local_report_path = os.path.join(recordings_dir, recording_id, "submission_report.json")
                 with open(local_report_path, "w", encoding="utf-8") as f:
                     json.dump(submission_report, f, indent=2, default=str)
@@ -179,17 +179,17 @@ class GitPublisher:
                 shutil.copy2(local_report_path, report_path)
                 copied.append("submission_report.json")
 
-                # Generate summary
+                # Gera sumario
                 summary_md = self._generate_summary(recording_id, metadata)
                 summary_path = os.path.join(dest_dir, "SUMMARY.md")
                 with open(summary_path, "w", encoding="utf-8") as f:
                     f.write(summary_md)
                 summary_generated = True
 
-                # Stage changes
+                # Prepara alteracoes (stage)
                 self._git("add", ".", cwd=repo_dir)
 
-                # Check if there are staged changes
+                # Verifica se ha alteracoes staged
                 staged = self._git("diff", "--cached", "--name-only", cwd=repo_dir)
                 if not staged.strip():
                     self._log.info("publish: sem alteracoes para commitar (artefatos ja existem no repo)")
@@ -203,7 +203,7 @@ class GitPublisher:
                     )
                 self._log.debug("publish: arquivos staged:\n%s", staged)
 
-                # Commit with git author env vars
+                # Commit com variaveis de ambiente git author
                 commit_env = os.environ.copy()
                 commit_env.update({
                     "GIT_AUTHOR_NAME": "TestForge",
@@ -224,7 +224,7 @@ class GitPublisher:
                 self._log.info("publish: enviando para origin/%s ...", self._branch)
                 self._git("push", "origin", self._branch, cwd=repo_dir)
 
-                # Get commit SHA
+                # Obtem SHA do commit
                 sha = self._git("rev-parse", "HEAD", cwd=repo_dir)
                 self._log.info("publish: push concluido — sha=%s", sha[:12] if sha else "?")
 
@@ -252,7 +252,7 @@ class GitPublisher:
         recordings_dir: str | pathlib.Path,
         semantic_tests_dir: str | pathlib.Path,
     ) -> PublishResult:
-        """Publish by committing directly to the local git repo. No token required."""
+        """Publica commitando diretamente no repo git local. Nenhum token necessario."""
         self._log.info(
             "_local_publish: iniciando — recording=%s git_root=%s remote=%s branch=%s",
             recording_id, self._git_root, self._remote, self._branch,
@@ -271,7 +271,7 @@ class GitPublisher:
                 return PublishResult(
                     recording_id=recording_id,
                     success=False,
-                    error=f"metadata not found: {metadata_path}",
+                    error=f"metadata nao encontrado: {metadata_path}",
                 )
 
             with open(metadata_path) as f:
@@ -356,7 +356,7 @@ class GitPublisher:
             return PublishResult(recording_id=recording_id, success=False, error=scrubbed)
 
     def _git(self, *args: str, cwd: str, env: dict | None = None) -> str:
-        """Run a git command. Never logs the token. Returns stdout."""
+        """Executa comando git. Nunca registra o token no log. Retorna stdout."""
         if env is None:
             env = os.environ.copy()
         safe_args = [self._scrub_token(a) for a in args]
@@ -386,13 +386,13 @@ class GitPublisher:
         return stdout
 
     def _scrub_token(self, text: str) -> str:
-        """Replace token with *** in text."""
+        """Substitui token por *** no texto."""
         if self._token and self._token in text:
             return text.replace(self._token, "***")
         return text
 
     def _clone_shallow(self, tmp_dir: str) -> None:
-        """Clone repo with --depth 1."""
+        """Clona repo com --depth 1."""
         if self._token:
             auth_url = self._url.replace("https://", f"https://:{self._token}@")
         else:
@@ -416,7 +416,7 @@ class GitPublisher:
                     safe_url, exc.stderr.strip() if exc.stderr else "(sem mensagem)",
                 )
                 raise
-            # Branch doesn't exist on remote — clone default and create it
+            # Branch nao existe no remoto — clona padrao e cria localmente
             self._log.info(
                 "clone: branch '%s' nao encontrado — clonando branch padrao e criando localmente",
                 self._branch,
@@ -426,10 +426,10 @@ class GitPublisher:
             self._git("checkout", "-b", self._branch, cwd=repo_dir)
 
     def _build_remote_path(self, recording_id: str, metadata: dict) -> str:
-        """Build hierarchical remote path from system/suite/test_case metadata.
+        """Constroi caminho remoto hierarquico a partir dos metadados system/suite/test_case.
 
-        Returns: {prefix}/{system}/{suite}/{test_case}/{recording_id}
-        Falls back to {prefix}/uncategorized/{recording_id} if fields missing.
+        Retorna: {prefix}/{system}/{suite}/{test_case}/{recording_id}
+        Fallback para {prefix}/uncategorized/{recording_id} se campos ausentes.
         """
         system = (metadata.get("system") or "").strip()
         suite = (metadata.get("suite") or "").strip()
@@ -448,15 +448,15 @@ class GitPublisher:
         metadata: dict,
         recordings_dir: str,
     ) -> dict:
-        """Generate compact team-facing submission report.
+        """Gera relatorio de submissao compacto voltado ao time.
 
-        Reads readiness_report.json if available. Otherwise derives status from metadata.
-        The `testforge_issue` flag is set when verdict is not 'pass', signalling the
-        team that something in TestForge needs fixing (not just the recording).
+        Le readiness_report.json se disponivel. Caso contrario deriva status dos metadados.
+        A flag `testforge_issue` e definida quando veredito nao e 'pass', sinalizando ao
+        time que algo no TestForge precisa de correcao (nao apenas a gravacao).
         """
         rec_dir = os.path.join(recordings_dir, recording_id)
 
-        # Read readiness report if available
+        # Le relatorio de prontidao se disponivel
         readiness_path = os.path.join(rec_dir, "readiness", "readiness_report.json")
         verdict = "not_evaluated"
         criteria_passed = 0
@@ -478,7 +478,7 @@ class GitPublisher:
             except Exception:
                 pass
 
-        # Read testforge version
+        # Le versao do testforge
         version = "unknown"
         try:
             version_file = pathlib.Path(__file__).parent.parent.parent.parent / "VERSION"
@@ -517,11 +517,11 @@ class GitPublisher:
         semantic_tests_dir: str,
         remote_path: str = "",
     ) -> list[str]:
-        """Copy recording and semantic test artifacts. Returns list of copied files."""
+        """Copia artefatos de gravacao e teste semantico. Retorna lista de arquivos copiados."""
         copied = []
         dest_dir = os.path.join(repo_dir, remote_path) if remote_path else os.path.join(repo_dir, self._path_prefix, recording_id)
 
-        # Flat files from recordings/
+        # Arquivos simples de recordings/
         rec_dir = os.path.join(recordings_dir, recording_id)
         flat_files = [
             "recording_metadata.json",
@@ -540,7 +540,7 @@ class GitPublisher:
                 shutil.copy2(src, os.path.join(dest_dir, fname))
                 copied.append(fname)
 
-        # dom_snapshots directory (always present)
+        # Diretorio dom_snapshots (sempre presente)
         dom_src = os.path.join(rec_dir, "dom_snapshots")
         if os.path.isdir(dom_src):
             dom_dest = os.path.join(dest_dir, "dom_snapshots")
@@ -549,7 +549,7 @@ class GitPublisher:
             shutil.copytree(dom_src, dom_dest)
             copied.append("dom_snapshots/")
 
-        # screenshots directory (only if non-empty)
+        # Diretorio screenshots (apenas se nao vazio)
         screenshots_src = os.path.join(rec_dir, "screenshots")
         if os.path.isdir(screenshots_src) and os.listdir(screenshots_src):
             screenshots_dest = os.path.join(dest_dir, "screenshots")
@@ -558,10 +558,10 @@ class GitPublisher:
             shutil.copytree(screenshots_src, screenshots_dest)
             copied.append("screenshots/")
 
-        # Semantic test files (if they exist)
+        # Arquivos de teste semantico (se existirem)
         st_base = os.path.join(semantic_tests_dir, f"ST-{recording_id}")
         if os.path.isdir(st_base):
-            # Find test_*.py
+            # Encontra test_*.py
             test_files = glob.glob(os.path.join(st_base, "test_*.py"))
             for test_file in test_files:
                 shutil.copy2(test_file, dest_dir)
@@ -576,7 +576,7 @@ class GitPublisher:
         return copied
 
     def _generate_summary(self, recording_id: str, metadata: dict) -> str:
-        """Generate SUMMARY.md content."""
+        """Gera conteudo de SUMMARY.md."""
         app = metadata.get("application", "unknown")
         url = metadata.get("base_url", "")
         started = metadata.get("started_at", "")

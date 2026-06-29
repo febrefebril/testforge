@@ -1,17 +1,17 @@
-"""Phase 3+4: LocatorResolver — runtime fallback chain (replaces hard-coded try/except).
+"""Phase 3+4: LocatorResolver — cadeia de fallback em runtime (substitui try/except fixo).
 
-Reads candidate locators from a JSON file (one per step) and resolves
-to a Playwright `Locator` using an L0→L1 chain:
+Le candidatos locator de arquivo JSON (um por step) e resolve
+para um `Locator` Playwright usando cadeia L0→L1:
 
-    L0   intent-keyed cache hit                      ~1 ms
-         - in-memory dict (Phase 3)
-         - SQLite IntentCatalog persistence (Phase 4, opt-in)
-    L1   walk candidates by score, first hit wins    ~50-2000 ms
+    L0   cache hit por intent                      ~1 ms
+         - dict em memoria (Phase 3)
+         - SQLite IntentCatalog persistente (Phase 4, opt-in)
+    L1   percorre candidatos por score, primeiro hit vence    ~50-2000 ms
 
-L2 (specialist agents) and L3 (LLM) stay in the legacy fallback_runner
-for now and will be plugged here in a later phase. The resolver focuses
-on producing a working Locator from the v2 super-selector candidate
-list and persisting what worked.
+L2 (agentes especialistas) e L3 (LLM) permanecem no fallback_runner legado
+por enquanto e serao plugados aqui em uma fase posterior. O resolver foca
+em produzir um Locator funcional da lista de candidatos super-selector v2
+e persistir o que funcionou.
 """
 from __future__ import annotations
 
@@ -45,10 +45,10 @@ class ResolveResult:
 
 
 class LocatorResolver:
-    """Resolves a step's intent to a live Playwright Locator.
+    """Resolve a intent de um step para um Locator Playwright vivo.
 
-    Thread-unsafe; one resolver per test process. The cache is in-memory
-    only here; Phase 4 will persist it to SQLite.
+    Nao thread-safe; um resolver por processo de teste. O cache e apenas
+    em memoria aqui; Phase 4 persistira para SQLite.
     """
 
     def __init__(self, page, probe_timeout_ms: int = DEFAULT_PROBE_TIMEOUT_MS,
@@ -70,13 +70,13 @@ class LocatorResolver:
 
     # ------------------------------------------------------------------
     def resolve_from_file(self, candidates_path: str, intent: str) -> ResolveResult:
-        """Load candidates from a JSON file and resolve."""
+        """Carrega candidatos de um arquivo JSON e resolve."""
         candidates = self._load(candidates_path)
         return self.resolve(intent, candidates)
 
     def resolve(self, intent: str, candidates: list[dict],
                 action: str = "click") -> ResolveResult:
-        """Try L0 cache (memory then SQLite), then candidates in order."""
+        """Tenta cache L0 (memoria depois SQLite), depois candidatos em ordem."""
         from ..metrics.telemetry import get_tracer
         tracer = get_tracer()
         with tracer.start_span("resolve") as span:
@@ -103,14 +103,14 @@ class LocatorResolver:
         last_error = ""
         url = self._current_url()
 
-        # L0a: in-memory cache hit (per test process)
+        # L0a: cache hit em memoria (por processo de teste)
         cached = self._cache.get(intent)
         if cached:
             try:
                 locator = self._build(cached)
                 if self._exists(locator):
                     elapsed = (time.perf_counter() - t0) * 1000
-                    logger.info("L0 mem hit intent=%s strategy=%s elapsed=%.1fms",
+                    logger.info("L0 cache memoria hit intent=%s strategy=%s elapsed=%.1fms",
                                  intent, cached.get("strategy"), elapsed)
                     return ResolveResult(
                         locator=locator,
@@ -126,7 +126,7 @@ class LocatorResolver:
                 attempted.append("L0_mem_miss")
                 self._cache.pop(intent, None)
 
-        # L0b: SQLite persistent cache (cross-run)
+        # L0b: cache persistente SQLite (entre execucoes)
         if self._sqlite is not None:
             try:
                 row = self._sqlite.lookup(intent, url, action)
@@ -161,9 +161,9 @@ class LocatorResolver:
                         except Exception:
                             pass
             except Exception as exc:
-                logger.debug("SQLite lookup failed (non-fatal): %s", exc)
+                logger.debug("SQLite lookup falhou (nao-fatal): %s", exc)
 
-        # L1: walk candidates by score, return first hit
+        # L1: percorre candidatos por score, retorna primeiro hit
         for idx, c in enumerate(candidates):
             strategy = c.get("strategy", "?")
             attempted.append(f"L1_{strategy}")
@@ -180,7 +180,7 @@ class LocatorResolver:
                                 attributes_at_record=c.get("attribute_stability"),
                             )
                         except Exception as exc:
-                            logger.debug("SQLite record_success failed: %s", exc)
+                            logger.debug("SQLite record_success falhou: %s", exc)
                     elapsed = (time.perf_counter() - t0) * 1000
                     logger.info(
                         "L1 hit intent=%s strategy=%s score=%.2f idx=%d elapsed=%.1fms",
@@ -201,13 +201,13 @@ class LocatorResolver:
                 continue
 
         elapsed = (time.perf_counter() - t0) * 1000
-        logger.warning("Resolve FAILED intent=%s attempted=%s elapsed=%.1fms",
+        logger.warning("Resolve FALHOU intent=%s attempted=%s elapsed=%.1fms",
                         intent, attempted, elapsed)
         raise LocatorNotFoundError(intent, candidates, last_error)
 
     # ------------------------------------------------------------------
     def _build(self, candidate: dict):
-        """Turn a candidate dict into a Playwright Locator."""
+        """Converte um dict candidato em um Locator Playwright."""
         call = candidate.get("playwright_call")
         if call:
             return dispatch(self._page, call)
@@ -215,13 +215,13 @@ class LocatorResolver:
         sel = candidate.get("selector", "")
         if not sel:
             raise ValueError("candidate has neither playwright_call nor selector")
-        # Strip the "page." prefix that v2 emits for symmetry with playwright_call.
+        # Remove o prefixo "page." que v2 emite por simetria com playwright_call.
         if sel.startswith("page."):
             return dispatch(self._page, sel[len("page."):])
         return self._page.locator(sel)
 
     def _exists(self, locator) -> bool:
-        """Return True if the locator resolves to at least one element."""
+        """Retorna True se o locator resolve para pelo menos um elemento."""
         try:
             return locator.count() > 0
         except Exception:
@@ -229,7 +229,7 @@ class LocatorResolver:
 
     def _load(self, candidates_path: str) -> list[dict]:
         if not os.path.exists(candidates_path):
-            raise FileNotFoundError(candidates_path)
+            raise FileNotFoundError(f"Arquivo de candidatos nao encontrado: {candidates_path}")
         with open(candidates_path, encoding="utf-8") as f:
             data = json.load(f)
         if isinstance(data, list):
@@ -240,7 +240,9 @@ class LocatorResolver:
 
     # ------------------------------------------------------------------
     def cache_size(self) -> int:
+        """Retorna tamanho do cache em memoria."""
         return len(self._cache)
 
     def clear_cache(self) -> None:
+        """Limpa o cache em memoria."""
         self._cache.clear()

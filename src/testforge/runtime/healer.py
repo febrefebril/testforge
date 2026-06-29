@@ -1,14 +1,14 @@
-"""Runtime multi-attribute self-healing — resolve selectors by scoring live DOM elements
-against the recorded fingerprint.
+"""Auto-healing multi-atributo em runtime — resolve seletores pontuando elementos DOM
+vivos contra a fingerprint gravada.
 
-Heuristic over strict — score 0.0-1.0, threshold gates confidence.
-Designed to be called from generated test scripts when Playwright locator fails.
+Heuristico sobre estrito — score 0.0-1.0, threshold define confianca.
+Projetado para ser chamado de scripts de teste gerados quando o locator Playwright falha.
 
-Catalogo auto-aprendido: successful heal resolutions are recorded to a JSONL file.
-Next time the same fingerprint appears, the catalog returns instantly (<1ms)
-instead of re-scoring against the live DOM.
+Catalogo auto-aprendido: resolucoes de healing bem-sucedidas sao gravadas em arquivo JSONL.
+Proxima vez que a mesma fingerprint aparecer, o catalogo retorna instantaneamente (<1ms)
+em vez de re-pontuar contra o DOM vivo.
 
-Usage (generated script)::
+Uso (script gerado)::
 
     from testforge.runtime.healer import resolve_selector
     _best = resolve_selector(page, ["input#foo", "input[name='bar']"], {"tag": "input", "placeholder": "R$0,00"})
@@ -51,10 +51,10 @@ _LIVE_ATTRS_JS = """(el) => ({
 
 
 def _score_match(live: dict, fingerprint: dict) -> float:
-    """Score 0.0-1.0 how well a live element matches the recorded fingerprint.
+    """Pontua 0.0-1.0 o quanto um elemento vivo corresponde a fingerprint gravada.
 
-    Each fingerprint key contributes its weight only when present.
-    Matches are exact unless marked fuzzy (substring allowed at 0.6x).
+    Cada chave da fingerprint contribui com seu peso apenas quando presente.
+    Correspondencias sao exatas a menos que marcadas fuzzy (substring permitida a 0.6x).
     """
     if not fingerprint or not live:
         return 0.0
@@ -62,7 +62,7 @@ def _score_match(live: dict, fingerprint: dict) -> float:
     total_weight = 0.0
     matched_weight = 0.0
 
-    # (live_key, fp_key, weight, allow_substring)
+    # (live_key, fp_key, peso, permitir_substring)
     checks = [
         ("tag", "tag", 0.15, False),
         ("role", "role", 0.20, False),
@@ -77,10 +77,10 @@ def _score_match(live: dict, fingerprint: dict) -> float:
         lv = (live.get(live_key) or "").strip()
         fv = (fingerprint.get(fp_key) or "").strip()
         if not fv:
-            continue  # not recorded in fingerprint, skip
+            continue  # nao registrado na fingerprint, pula
         total_weight += weight
         if not lv:
-            continue  # element lacks this attr, no match
+            continue  # elemento nao tem este atributo, sem match
         if allow_substring:
             lv_lower = lv.lower()
             fv_lower = fv.lower()
@@ -98,7 +98,7 @@ def _score_match(live: dict, fingerprint: dict) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Catalog auto-aprendido — records successful heal resolutions for <1ms reuse
+# Catalogo auto-aprendido — registra resolucoes de healing bem-sucedidas para reuso <1ms
 # ---------------------------------------------------------------------------
 
 def _fp_key(fp: dict) -> str:
@@ -116,15 +116,15 @@ class _CatalogEntry:
 
 
 class HealCatalog:
-    """Persistent catalog of successful heal resolutions.
+    """Catalogo persistente de resolucoes de healing bem-sucedidas.
 
-    Maps element fingerprints to selectors that worked before.
-    Lookup is O(1) dict keyed by canonical JSON fingerprint.
+    Mapeia fingerprints de elementos para seletores que funcionaram antes.
+    Busca e O(1) dict indexado por fingerprint JSON canonica.
 
-    Storage is JSONL at ``path`` — one JSON object per line.
-    Default path is ``.testforge/heal_catalog.jsonl`` (override via
-    ``TESTFORGE_HEAL_CATALOG`` env var). Set path to ``""`` for
-    memory-only (no persistence).
+    Armazenamento e JSONL em ``path`` — um objeto JSON por linha.
+    Caminho padrao e ``.testforge/heal_catalog.jsonl`` (sobrescreve via
+    ``TESTFORGE_HEAL_CATALOG`` env var). Defina path como ``""`` para
+    apenas memoria (sem persistencia).
     """
 
     def __init__(self, path: str | None = None):
@@ -138,9 +138,9 @@ class HealCatalog:
         self._load()
 
     def lookup(self, fingerprint: dict) -> str | None:
-        """Return best selector for *exact* fingerprint match, or None.
+        """Retorna melhor selector para correspondencia *exata* de fingerprint, ou None.
 
-        Expired entries (30d since last success) are skipped and evicted.
+        Entradas expiradas (30d desde ultimo sucesso) sao puladas e removidas.
         """
         if not fingerprint:
             return None
@@ -157,10 +157,10 @@ class HealCatalog:
         return entry.selector
 
     def record(self, fingerprint: dict, selector: str, score: float):
-        """Record or reinforce a successful healing.
+        """Registra ou reforca um healing bem-sucedido.
 
-        New entries are appended. Existing entries have their count
-        incremented and score updated to max(old, new).
+        Novas entradas sao adicionadas. Entradas existentes tem seu contador
+        incrementado e score atualizado para max(antigo, novo).
         """
         if not fingerprint or not selector:
             return
@@ -251,7 +251,7 @@ class HealCatalog:
             logger.warning("heal_catalog: save error %s — %s", self.path, exc)
 
     def clear(self):
-        """Clear all entries (used in tests)."""
+        """Limpa todas as entradas (usado em testes)."""
         self._entries.clear()
         if self.path and os.path.exists(self.path):
             try:
@@ -261,14 +261,14 @@ class HealCatalog:
 
 
 # ---------------------------------------------------------------------------
-# Global catalog singleton — transparent to generated scripts
+# Singleton do catalogo global — transparente para scripts gerados
 # ---------------------------------------------------------------------------
 
 _CATALOG: HealCatalog | None = None
 
 
 def _get_catalog() -> HealCatalog:
-    """Lazy-init global catalog singleton."""
+    """Inicializacao lazy do singleton do catalogo global."""
     global _CATALOG
     if _CATALOG is None:
         _CATALOG = HealCatalog()
@@ -276,7 +276,7 @@ def _get_catalog() -> HealCatalog:
 
 
 def reset_catalog():
-    """Reset catalog singleton and clear persistent file (for test isolation)."""
+    """Reseta o singleton do catalogo e limpa arquivo persistente (para isolamento de teste)."""
     global _CATALOG
     if _CATALOG is not None:
         _CATALOG.clear()
@@ -289,33 +289,33 @@ def resolve_selector(
     fingerprint: dict | None = None,
     threshold: float | None = None,
 ) -> str | None:
-    """Try each CSS selector against live DOM and score matches against fingerprint.
+    """Tenta cada seletor CSS contra DOM vivo e pontua correspondencias contra fingerprint.
 
-    Checks the :class:`HealCatalog` first — if a previous successful resolution
-    exists for the exact fingerprint, returns it instantly (<1ms).
+    Verifica :class:`HealCatalog` primeiro — se uma resolucao bem-sucedida anterior
+    existir para a fingerprint exata, retorna instantaneamente (<1ms).
 
-    Otherwise falls through to live DOM scoring. On success, automatically
-    records the result in the catalog for future reuse.
+    Caso contrario, faz fallback para pontuacao DOM vivo. Em sucesso, grava automaticamente
+    o resultado no catalogo para reuso futuro.
 
     Args:
-        page: Playwright Page (sync API).
-        selectors: CSS selector strings to evaluate.
-        fingerprint: Dict of recorded element attributes (from SemanticTarget).
-        threshold: Minimum score to accept a match. Defaults to CONFIDENCE_THRESHOLD.
+        page: Playwright Page (API sync).
+        selectors: Strings de seletor CSS para avaliar.
+        fingerprint: Dict de atributos de elemento gravados (de SemanticTarget).
+        threshold: Score minimo para aceitar uma correspondencia. Padrao: CONFIDENCE_THRESHOLD.
 
     Returns:
-        Best-matching selector string, or None if none score above threshold.
+        Melhor string de seletor correspondente, ou None se nenhum pontuar acima do threshold.
     """
     thresh = threshold if threshold is not None else CONFIDENCE_THRESHOLD
 
-    # Fast path: catalog lookup (<1ms, no DOM interaction)
+    # Caminho rapido: busca no catalogo (<1ms, sem interacao DOM)
     if fingerprint:
         cat = _get_catalog()
         cached = cat.lookup(fingerprint)
         if cached is not None:
             return cached
 
-    # Slow path: live DOM scoring
+    # Caminho lento: pontuacao DOM vivo
     candidates: list[tuple[float, str]] = []
 
     for sel in selectors:
@@ -327,7 +327,7 @@ def resolve_selector(
         if count == 0:
             continue
 
-        # Extract attributes from the first (and typically only) match
+        # Extrai atributos do primeiro (e tipicamente unico) match
         try:
             handle = loc.first.element_handle()
             if not handle:
@@ -350,7 +350,7 @@ def resolve_selector(
     best_score, best_sel = candidates[0]
     if best_score >= thresh:
         logger.info("resolve_selector: best=%s score=%.2f threshold=%.2f", best_sel, best_score, thresh)
-        # Auto-record in catalog for future reuse
+        # Auto-registro no catalogo para reuso futuro
         if fingerprint:
             try:
                 _get_catalog().record(fingerprint, best_sel, best_score)

@@ -1,4 +1,4 @@
-"""Hotfix 7 — SPA pseudo-submit detection via XHR/fetch POST."""
+"""Hotfix 7 — deteccao de pseudo-submit SPA via XHR/fetch POST."""
 from __future__ import annotations
 
 import tempfile
@@ -46,7 +46,7 @@ class TestPseudoSubmitPromotion:
         with tempfile.TemporaryDirectory() as tmp:
             ctrl = RecorderController(page, recordings_root=tmp)
             ctrl.start("REC-001")
-            # Simulate a recent click
+            # Simula um clique recente
             ctrl._recent_clicks = [{
                 "event_id": "evt_001",
                 "ts": datetime.now(timezone.utc).timestamp(),
@@ -92,13 +92,13 @@ class TestPseudoSubmitPromotion:
         with tempfile.TemporaryDirectory() as tmp:
             ctrl = RecorderController(page, recordings_root=tmp)
             ctrl.start("REC-004")
-            # Click 5 s ago — outside 1.5 s window
+            # Clique a 5 s atras — fora da janela de 1,5 s
             ctrl._recent_clicks = [{
                 "event_id": "evt_001",
                 "ts": datetime.now(timezone.utc).timestamp() - 5.0,
             }]
             ctrl._on_request(_request())
-            # _mark_pseudo_submit drops stale entries -> latest is gone
+            # _mark_pseudo_submit remove entradas obsoletas -> ultima se foi
             assert ctrl._recent_clicks == []
             ctrl.stop()
 
@@ -121,7 +121,7 @@ class TestPseudoSubmitPromotion:
 
 
 class TestHotfix12NetworkPersistence:
-    """Hotfix 12: pseudo_submit metadata also tags the persisted network entry."""
+    """Hotfix 12: metadados pseudo_submit tambem marcam a entrada de rede persistida."""
 
     def test_mark_pseudo_submit_tags_matching_network_entry(self):
         from testforge.recorder.recorder_controller import RecorderController
@@ -173,7 +173,7 @@ class TestHotfix12NetworkPersistence:
 
 
 class TestHotfix12AuditorCounts:
-    """Auditor recognizes is_pseudo_submit entries as postbacks."""
+    """Auditor reconhece entradas is_pseudo_submit como postbacks."""
 
     def test_auditor_counts_pseudo_submit_as_postback(self):
         from testforge.recorder.recording_auditor import RecordingAuditor

@@ -1,4 +1,4 @@
-"""Hotfix 5 — git add -f in publisher + --system default to --app."""
+"""Hotfix 5 — git add -f no publisher + --system padrao para --app."""
 from __future__ import annotations
 
 import os
@@ -12,16 +12,16 @@ import pytest
 class TestGitAddForce:
     @patch.object(subprocess, "run")
     def test_local_publish_invokes_git_add_dash_f(self, mock_run, tmp_path):
-        """Force-add bypass for the recordings/ .gitignore exclusion."""
+        """Bypass force-add para a exclusao .gitignore de recordings/."""
         from testforge.publisher.git_publisher import GitPublisher
 
-        # subprocess.run always succeeds; record call args
+        # subprocess.run sempre bem-sucedido; registra argumentos das chamadas
         def _ok(args, **kw):
             return subprocess.CompletedProcess(args=args, returncode=0,
                                                  stdout="", stderr="")
         mock_run.side_effect = _ok
 
-        # Create a minimal git_root + recording layout
+        # Cria um layout git_root + recordings minimal
         git_root = tmp_path / "repo"
         rec_root = git_root / "recordings"
         rec_dir = rec_root / "REC-1"
@@ -34,11 +34,11 @@ class TestGitAddForce:
         pub = GitPublisher(url="https://example/r.git", token="",
                             branch="main", path_prefix="recordings",
                             local_mode=True, git_root=str(git_root))
-        # Inspect the calls — we look for any `git add -f <path>` invocation
+        # Inspeciona as chamadas — procuramos por qualquer invocacao `git add -f <path>`
         try:
             pub._local_publish("REC-1", str(rec_root), str(tmp_path / "tests"))
         except Exception:
-            pass  # IO and shutil paths may still error; we only care about add -f
+            pass  # IO e shutil ainda podem falhar; so nos importa add -f
         cmdlines = []
         for call in mock_run.call_args_list:
             cmdlines.append(call.args[0] if call.args else [])
@@ -51,7 +51,7 @@ class TestSystemDefaultsToApp:
     def test_system_falls_back_to_app(self):
         from argparse import Namespace
 
-        # Simulate the resolution block in cmd_record without running the whole CLI
+        # Simula o bloco de resolucao em cmd_record sem executar o CLI completo
         args = Namespace(system=None, app="SIOPI", suite="s",
                           test_case="tc", name="N")
         _cfg = {}

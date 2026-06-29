@@ -1,4 +1,4 @@
-"""Sprint 0 — GherkinWriter unit tests."""
+"""Sprint 0 — Testes unitarios do GherkinWriter."""
 from __future__ import annotations
 
 import os
@@ -14,7 +14,7 @@ class TestSequencing:
         with tempfile.TemporaryDirectory() as d:
             w = GherkinWriter(d)
             line = w.on_step("click", target={"accessible_name": "Logar"})
-            assert line.startswith("  Quando clico no botão")
+            assert line.startswith("  Quando clico no botao")
 
     def test_subsequent_interactive_is_E(self):
         with tempfile.TemporaryDirectory() as d:
@@ -28,7 +28,7 @@ class TestSequencing:
             w = GherkinWriter(d)
             w.on_step("click", target={"accessible_name": "Logar"})
             a = w.on_step("assert", target={"text": "Bem-vindo"})
-            assert a.startswith("  Então vejo o texto")
+            assert a.startswith("  Entao vejo o texto")
 
     def test_second_assert_is_E(self):
         with tempfile.TemporaryDirectory() as d:
@@ -45,8 +45,8 @@ class TestValueKindOpaque:
             w = GherkinWriter(d)
             line = w.on_step("fill", target={"label": "Renda mensal *"},
                               value="R$ 5.000,00")
-            assert line == '  Quando preencho "Renda mensal *" com valor monetário'
-            assert "5.000" not in line  # value never leaks
+            assert line == '  Quando preencho "Renda mensal *" com valor monetario'
+            assert "5.000" not in line  # valor nunca vaza
 
     def test_date_phrase(self):
         with tempfile.TemporaryDirectory() as d:
@@ -111,7 +111,7 @@ class TestNavigationAndFuncionalidade:
         with tempfile.TemporaryDirectory() as d:
             w = GherkinWriter(d)
             w.on_navigation("http://x/", title="A")
-            w.on_navigation("http://x/", title="A")  # same URL
+            w.on_navigation("http://x/", title="A")  # mesma URL
             path = w.write()
             content = open(path).read()
             assert content.count("Dado que acesso") == 1
@@ -140,7 +140,7 @@ class TestAutoCenario:
     def test_default_when_nothing_known(self):
         with tempfile.TemporaryDirectory() as d:
             w = GherkinWriter(d)
-            assert w.auto_cenario_from_sequence() == "Cenário gravado"
+            assert w.auto_cenario_from_sequence() == "Cenario gravado"
 
 
 class TestWriteOutput:
@@ -156,11 +156,11 @@ class TestWriteOutput:
             content = open(path).read()
             assert content.startswith("# language: pt\n")
             assert "Funcionalidade: Simulador" in content
-            assert "Cenário: Fluxo iniciado por 'Calcular'" in content
+            assert "Cenario: Fluxo iniciado por 'Calcular'" in content
             assert "Dado que acesso \"http://x/\"" in content
-            assert "Quando clico no botão \"Calcular\"" in content
-            assert "E preencho \"Renda\" com valor monetário" in content
-            assert "Então vejo o texto \"Parcela estimada\"" in content
+            assert "Quando clico no botao \"Calcular\"" in content
+            assert "E preencho \"Renda\" com valor monetario" in content
+            assert "Entao vejo o texto \"Parcela estimada\"" in content
 
     def test_override_funcionalidade_and_cenario(self):
         with tempfile.TemporaryDirectory() as d:
@@ -168,9 +168,9 @@ class TestWriteOutput:
             w.on_navigation("http://x/", title="Auto")
             w.on_step("click", target={"accessible_name": "Y"})
             path = w.write(
-                funcionalidade_override="Login do usuário",
+                funcionalidade_override="Login do usuario",
                 cenario_override="Login com sucesso",
             )
             content = open(path).read()
-            assert "Funcionalidade: Login do usuário" in content
-            assert "Cenário: Login com sucesso" in content
+            assert "Funcionalidade: Login do usuario" in content
+            assert "Cenario: Login com sucesso" in content

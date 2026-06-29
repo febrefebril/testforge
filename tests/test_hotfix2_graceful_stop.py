@@ -1,4 +1,4 @@
-"""Hotfix 2 — graceful stop + editor fallback."""
+"""Hotfix 2 — parada graciosa + fallback do editor."""
 from __future__ import annotations
 
 import os
@@ -38,7 +38,7 @@ class TestPageListenerDetach:
             ctrl = RecorderController(page, recordings_root=tmp)
             ctrl.start("REC-001")
             ctrl.detach_page_listeners()
-            # remove_listener called for request, response, framenavigated
+            # remove_listener chamado para request, response, framenavigated
             event_names = [c.args[0] for c in page.remove_listener.call_args_list]
             assert "request" in event_names
             assert "response" in event_names
@@ -52,7 +52,7 @@ class TestPageListenerDetach:
         with tempfile.TemporaryDirectory() as tmp:
             ctrl = RecorderController(page, recordings_root=tmp)
             ctrl.start("REC-002")
-            ctrl.detach_page_listeners()  # must not raise
+            ctrl.detach_page_listeners()  # nao deve lancar excecao
 
 
 class TestFlushEventsClosedPage:
@@ -62,12 +62,12 @@ class TestFlushEventsClosedPage:
         with tempfile.TemporaryDirectory() as tmp:
             ctrl = RecorderController(page, recordings_root=tmp)
             ctrl.start("REC-003")
-            # Simulate closed page: page.url raises
+            # Simula pagina fechada: page.url lanca excecao
             type(page).url = property(
                 lambda self: (_ for _ in ()).throw(Exception("Target closed")))
-            ctrl.flush_events()  # must not raise
-            # evaluate should NOT have been called after url failed
-            # (the call at startup is already consumed by the polling loop)
+            ctrl.flush_events()  # nao deve lancar excecao
+            # evaluate NAO deve ter sido chamado apos falha de url
+            # (a chamada na inicializacao ja foi consumida pelo loop de polling)
             ctrl.stop()
 
     def test_flush_swallows_target_closed_inside_evaluate(self):
@@ -78,7 +78,7 @@ class TestFlushEventsClosedPage:
             ctrl.start("REC-004")
             page.evaluate.side_effect = Exception(
                 "Page.evaluate: Target page, context or browser has been closed")
-            ctrl.flush_events()  # must not raise
+            ctrl.flush_events()  # nao deve lancar excecao
 
 
 class TestStopToleratesClosedPage:
@@ -88,13 +88,13 @@ class TestStopToleratesClosedPage:
         with tempfile.TemporaryDirectory() as tmp:
             ctrl = RecorderController(page, recordings_root=tmp)
             ctrl.start("REC-005")
-            # Make every page interaction error
+            # Faz toda interacao com pagina gerar erro
             page.evaluate.side_effect = Exception("Target closed")
             page.screenshot.side_effect = Exception("Target closed")
             page.content.side_effect = Exception("Target closed")
             type(page).url = property(
                 lambda self: (_ for _ in ()).throw(Exception("Target closed")))
-            ctrl.stop()  # must not raise
+            ctrl.stop()  # nao deve lancar excecao
 
 
 class TestOpenInEditor:
@@ -115,7 +115,7 @@ class TestOpenInEditor:
                                                     mock_which, monkeypatch):
         monkeypatch.setenv("EDITOR", "/bin/nano")
         mock_exists.return_value = False  # /bin/nano absent
-        # Fallback chain: vi resolves
+        # Cadeia de fallback: vi resolve
         mock_which.side_effect = lambda c: "/usr/bin/vi" if c == "vi" else None
         from testforge.cli.app import _open_in_editor
         _open_in_editor("/tmp/x.feature")

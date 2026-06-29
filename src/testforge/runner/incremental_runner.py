@@ -29,8 +29,8 @@ from .step_postcondition import StepPostconditionValidator
 from .incremental_ui import IncrementalUI
 
 
-# B19/B20: centralised in runner/dangerous_locator. Re-exported here so
-# external callers that imported _DANGEROUS_LOCATORS keep working.
+# B19/B20: centralizado em runner/dangerous_locator. Re-exportado aqui para
+# que chamadas externas que importaram _DANGEROUS_LOCATORS continuem funcionando.
 from .dangerous_locator import (
     DANGEROUS_LOCATORS as _DANGEROUS_LOCATORS,
     is_dangerously_generic as _shared_is_dangerously_generic,
@@ -119,10 +119,10 @@ class IncrementalRunner:
         self.app_name = stc.application or "web"
         self._field_value_map = stc.field_values or {}
 
-        # Report field-value map and suggest data file for missing values
+        # Relata field-value map e sugere data file para valores ausentes
         if self._field_value_map:
             missing = []
-            print(f"  📋 {len(self._field_value_map)} campo(s) mapeado(s) com intenção")
+            print(f"  [LISTA] {len(self._field_value_map)} campo(s) mapeado(s) com intencao")
             for key, fvm in sorted(self._field_value_map.items()):
                 val_display = fvm.value if fvm.value else "<pendente>"
                 if not fvm.value:
@@ -131,14 +131,14 @@ class IncrementalRunner:
             if missing:
                 template = {k: "<valor>" for k in missing}
                 print(f"  [WARN] {len(missing)} campo(s) sem valor na gravação (currencymask)")
-                print(f"  💡 Crie um data file: --data dados.json")
-                print(f"  📋 Template: {json.dumps(template, indent=2, ensure_ascii=False)}")
+                print(f"  [DICA] Crie um data file: --data dados.json")
+                print(f"  [LISTA] Template: {json.dumps(template, indent=2, ensure_ascii=False)}")
 
     def _find_recording_dir(self, rec_id):
-        # Hotfix 15: also check the package's project root so the runner
-        # finds recordings even when invoked from a different CWD. Layout:
+        # Hotfix 15: tambem verifica a raiz do projeto do pacote para que o runner
+        # encontre recordings mesmo quando invocado de um CWD diferente. Layout:
         # <repo>/src/testforge/runner/incremental_runner.py ->
-        # parents[3] == <repo>/. Same anchor as the CLI's _PROJECT_ROOT.
+        # parents[3] == <repo>/. Mesma ancora do _PROJECT_ROOT do CLI.
         try:
             project_root = Path(__file__).resolve().parents[3]
         except Exception:
@@ -169,8 +169,8 @@ class IncrementalRunner:
         else:
             self._data_values = raw
 
-        # Cross-reference data_values with field_value_map: populate missing
-        # field_value_map entries with matching data_values keys.
+        # Cruza data_values com field_value_map: preenche entradas
+        # field_value_map ausentes com chaves de data_values correspondentes.
         if self._data_values and self._field_value_map:
             import re as _re
             def _norm(s):
@@ -188,14 +188,14 @@ class IncrementalRunner:
                             fvm['value'] = str(val)
                             updates += 1
             if updates:
-                print(f"  🔗 {updates} campo(s) populados do data file para field_value_map")
+                print(f"  [LINK] {updates} campo(s) populados do data file para field_value_map")
 
     def _init_components(self):
         self.precondition_validator = StepPreconditionValidator(self.page)
         self.step_executor = StepExecutor(self.page)
         self.postcondition_validator = StepPostconditionValidator(self.page)
 
-        # ReplayRecorder: capture execution telemetry in recording-compatible format
+        # ReplayRecorder: captura telemetria de execucao em formato compativel com recording
         if self.capture_enabled and self.recording_id:
             try:
                 from testforge.recorder.replay_recorder import ReplayRecorder
@@ -205,7 +205,7 @@ class IncrementalRunner:
                     output_root=str(Path(self.output_root).parent / "recordings"),
                 )
                 cap_dir = self.replay_recorder.start()
-                print(f"  📹 Captura: {cap_dir}")
+                print(f"  [CAPTURA] Captura: {cap_dir}")
             except Exception as exc:
                 print(f"  [WARN] ReplayRecorder: {exc}")
                 self.replay_recorder = None
@@ -272,7 +272,7 @@ class IncrementalRunner:
             )
         intention = f"{step.action} step {step_num}" + (f" on '{target_text}'" if target_text else "")
 
-        # Enrich with field_value_map intention when available
+        # Enriquece com intencao do field_value_map quando disponivel
         ctx = getattr(step, "context", {}) or {}
         if ctx.get("resolved_intention"):
             intention += f" [intent: {ctx['resolved_intention']}]"
@@ -304,7 +304,7 @@ class IncrementalRunner:
             "failure_phase": failure_phase,
             "original_error": original_error,
         }
-        # Include resolved value + intention from field_value_map for healing context
+        # Inclui valor + intencao resolvidos do field_value_map para contexto de healing
         ctx = getattr(step, "context", {}) or {}
         if ctx.get("resolved_value"):
             step_context["field_value"] = ctx["resolved_value"]
@@ -317,8 +317,8 @@ class IncrementalRunner:
 
     @staticmethod
     def _is_dangerously_generic(locator):
-        # B19: delegate to the shared filter so the legacy `run` path
-        # gets the same protection (B20).
+        # B19: delega para o filtro compartilhado para que o caminho legado `run`
+        # receba a mesma protecao (B20).
         return _shared_is_dangerously_generic(locator)
 
     @staticmethod
@@ -335,8 +335,8 @@ class IncrementalRunner:
                 "visibility_wait", "overlay_dismiss", "dialog_handler",
                 "iframe_switch", "label_click", "synthetic_click",
                 "xpath_fallback",
-                # Masked input strategies: click on masked fields should allow
-                # press_sequentially (e.g. currency/date masks that reject fill())
+                # Estrategias de masked input: click em campos mascarados deve permitir
+                # press_sequentially (ex: mascaras de moeda/data que rejeitam fill())
                 "press_sequentially", "masked_input_detection",
             },
             "select_option": {
@@ -375,9 +375,9 @@ class IncrementalRunner:
             if (
                 proposal.new_locator == original_selector
                 and outcome.layer_used != "L0"
-                # Allow same locator when strategy changes execution approach
-                # (e.g. fill → press_sequentially for masked inputs).
-                # Only reject when it's a true retry of the same failed approach.
+                # Permite mesmo locator quando a estrategia muda a abordagem de execucao
+                # (ex: fill → press_sequentially para masked inputs).
+                # Rejeita apenas quando for uma repeticao real da mesma abordagem falha.
                 and proposal.strategy not in (
                     "press_sequentially", "masked_input_detection",
                     "dialog_handler", "overlay_dismiss", "iframe_switch",
@@ -796,7 +796,7 @@ class IncrementalRunner:
 
             if self.replay_recorder:
                 cap_info = self.replay_recorder.finish()
-                print(f"  📹 Captura salva: {cap_info['session_dir']} ({cap_info['steps_captured']} steps)")
+                print(f"  [CAPTURA] Captura salva: {cap_info['session_dir']} ({cap_info['steps_captured']} steps)")
 
             browser.close()
 

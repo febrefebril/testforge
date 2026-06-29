@@ -57,7 +57,7 @@ def run_scenario(name, page, steps):
             page.wait_for_timeout(300)
             recorder.flush_events()
         except Exception as e:
-            RESULTS.append(f"  ✗ {name}: {stype} → {str(e)[:80]}")
+            RESULTS.append(f"  [X] {name}: {stype} → {str(e)[:80]}")
             recorder.stop()
             return False
 
@@ -68,7 +68,7 @@ def run_scenario(name, page, steps):
 
     rec_dir = f"recordings/{rid}"
     if not os.path.exists(f"{rec_dir}/raw_events.jsonl"):
-        RESULTS.append(f"  ✗ {name}: sem raw_events")
+        RESULTS.append(f"  [X] {name}: sem raw_events")
         return False
 
     with open(f"{rec_dir}/raw_events.jsonl") as f:
@@ -80,10 +80,10 @@ def run_scenario(name, page, steps):
         path = PlaywrightCompiler().compile(stc, f"semantic_tests/ST-{rid}")
         with open(path) as f:
             compile(f.read(), path, "exec")
-        RESULTS.append(f"  ✓ {name}: {len(events)} eventos ({','.join(set(etypes))}) → script OK")
+        RESULTS.append(f"  [OK] {name}: {len(events)} eventos ({','.join(set(etypes))}) → script OK")
         return True
     except Exception as e:
-        RESULTS.append(f"  ✗ {name}: compiler → {str(e)[:80]}")
+        RESULTS.append(f"  [X] {name}: compiler → {str(e)[:80]}")
         return False
 
 
@@ -104,7 +104,7 @@ def main():
         browser = pw.chromium.launch(headless=not headed)
 
         # ── Cenario 1: Campo sem ID ──
-        print("\n📋 1/6 — SEL: campo sem ID")
+        print("\n[LISTA] 1/6 — SEL: campo sem ID")
         page = browser.new_page()
         run_scenario("01-campo-sem-id", page, [
             {"type": "fill", "target": "sem id, sem name", "value": "teste 123"},
@@ -113,7 +113,7 @@ def main():
         page.close()
 
         # ── Cenario 2: Botao fora do form ──
-        print("📋 2/6 — SEL: botao fora do form")
+        print("[LISTA] 2/6 — SEL: botao fora do form")
         page = browser.new_page()
         run_scenario("02-botao-fora-form", page, [
             {"type": "click_id", "target": "btn-fora-form"},
@@ -122,7 +122,7 @@ def main():
         page.close()
 
         # ── Cenario 3: CPF com mascara ──
-        print("📋 3/6 — INP: CPF com mascara")
+        print("[LISTA] 3/6 — INP: CPF com mascara")
         page = browser.new_page()
         run_scenario("03-cpf-mask", page, [
             {"type": "fill", "target": "000.000.000-00", "value": "12345678901"},
@@ -131,7 +131,7 @@ def main():
         page.close()
 
         # ── Cenario 4: Combobox ──
-        print("📋 4/6 — INP: combobox")
+        print("[LISTA] 4/6 — INP: combobox")
         page = browser.new_page()
         run_scenario("04-combobox", page, [
             {"type": "fill", "target": "Digite ou selecione", "value": "Python"},
@@ -140,7 +140,7 @@ def main():
         page.close()
 
         # ── Cenario 5: Upload ──
-        print("📋 5/6 — INP: upload de arquivo")
+        print("[LISTA] 5/6 — INP: upload de arquivo")
         page = browser.new_page()
         run_scenario("05-upload", page, [
             {"type": "fill", "target": "sem id, sem name", "value": "pre-upload"},
@@ -149,7 +149,7 @@ def main():
         page.close()
 
         # ── Cenario 6: Checkbox ──
-        print("📋 6/6 — STA: checkbox")
+        print("[LISTA] 6/6 — STA: checkbox")
         page = browser.new_page()
         run_scenario("06-checkbox", page, [
             {"type": "click_checkbox", "target": "tech"},
@@ -166,8 +166,8 @@ def main():
     for r in RESULTS:
         print(r)
 
-    passed = sum(1 for r in RESULTS if "✓" in r)
-    failed = sum(1 for r in RESULTS if "✗" in r)
+    passed = sum(1 for r in RESULTS if "[OK]" in r)
+    failed = sum(1 for r in RESULTS if "[X]" in r)
     print(f"\n  {passed}/{passed+failed} cenarios")
 
 

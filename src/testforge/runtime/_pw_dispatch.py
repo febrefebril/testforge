@@ -1,13 +1,13 @@
-"""Phase 3: Safe dispatcher for Playwright `get_by_*` call strings.
+"""Phase 3: Dispatcher seguro para strings de chamada Playwright `get_by_*`.
 
-Parses strings such as `get_by_role("button", name="Salvar")` using
-the `ast` module — no `eval` — then invokes the corresponding method
-on a Playwright `Page` or `Locator`. Supports method chaining:
+Interpreta strings como `get_by_role("button", name="Salvar")` usando
+o modulo `ast` — sem `eval` — entao invoca o metodo correspondente
+em um `Page` ou `Locator` do Playwright. Suporta encadeamento de metodos:
 `get_by_role("dialog").get_by_role("button", name="Salvar")`.
 
-Only allowlisted methods are dispatchable; anything else raises
-`ValueError`. This is the supply chain that lets a JSON candidate file
-become a live `Locator` without ever executing arbitrary code.
+Apenas metodos em lista branca sao despachaveis; qualquer outra coisa levanta
+`ValueError`. Esta e a cadeia de suprimento que permite que um arquivo JSON candidato
+se torne um `Locator` vivo sem nunca executar codigo arbitrario.
 """
 from __future__ import annotations
 
@@ -39,9 +39,9 @@ def _literal(node: ast.AST) -> Any:
 
 
 def dispatch(receiver, call_str: str):
-    """Apply `call_str` against `receiver` (Page or Locator) and return the result.
+    """Aplica `call_str` contra `receiver` (Page ou Locator) e retorna o resultado.
 
-    Example:
+    Exemplo:
         dispatch(page, 'get_by_role("button", name="Salvar")')
             -> page.get_by_role("button", name="Salvar")
 

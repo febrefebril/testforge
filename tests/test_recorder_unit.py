@@ -107,23 +107,23 @@ class TestRawRecordingStore:
 
 
 class TestRecordingNameResolution:
-    """Tests for preventing silent overwrite of existing recordings."""
+    """Testes para prevenir sobrescrita silenciosa de gravacoes existentes."""
 
     def test_no_conflict_returns_original_name(self):
-        """When directory does not exist, original name is returned."""
+        """Quando o diretorio nao existe, o nome original e retornado."""
         with tempfile.TemporaryDirectory() as tmpdir:
             result = RecordingSessionManager._resolve_name(tmpdir, "my_test")
             assert result == "my_test"
 
     def test_conflict_returns_suffixed_name(self):
-        """When directory exists, returns name_2."""
+        """Quando o diretorio existe, retorna name_2."""
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, "my_test"))
             result = RecordingSessionManager._resolve_name(tmpdir, "my_test")
             assert result == "my_test_2"
 
     def test_multiple_conflicts_returns_next_available(self):
-        """When name and name_2 exist, returns name_3."""
+        """Quando name e name_2 existem, retorna name_3."""
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, "my_test"))
             os.makedirs(os.path.join(tmpdir, "my_test_2"))
@@ -131,37 +131,37 @@ class TestRecordingNameResolution:
             assert result == "my_test_3"
 
     def test_name_with_trailing_suffix(self):
-        """When base name already has _N suffix and that dir also exists."""
+        """Quando o nome base ja tem sufixo _N e esse diretorio tambem existe."""
         with tempfile.TemporaryDirectory() as tmpdir:
             os.makedirs(os.path.join(tmpdir, "login_flow_2"))
             result = RecordingSessionManager._resolve_name(tmpdir, "login_flow_2")
             assert result == "login_flow_2_2"
 
     def test_start_uses_resolved_name(self):
-        """RecordingSessionManager.start() must create dir with resolved name."""
+        """RecordingSessionManager.start() deve criar diretorio com nome resolvido."""
         with tempfile.TemporaryDirectory() as tmpdir:
             mgr = RecordingSessionManager(tmpdir)
-            # First session
+            # Primeira sessao
             s1 = mgr.start("demo", "app", "http://localhost")
             assert s1.recording_id == "demo"
             assert os.path.isdir(os.path.join(tmpdir, "demo"))
             mgr.stop()
             mgr.finalize()
 
-            # Second session with same name — must get _2
+            # Segunda sessao com mesmo nome — deve obter _2
             s2 = mgr.start("demo", "app", "http://localhost")
             assert s2.recording_id == "demo_2"
             assert os.path.isdir(os.path.join(tmpdir, "demo_2"))
-            assert not os.path.isdir(os.path.join(tmpdir, "demo", "raw_events.jsonl"))  # untouched
+            assert not os.path.isdir(os.path.join(tmpdir, "demo", "raw_events.jsonl"))  # intacto
 
 
 class TestRecorderControllerEventId:
-    """Tests for monotonic event_id within a recording session."""
+    """Testes para event_id monotono dentro de uma sessao de gravacao."""
 
     def _make_mock_event_data(self, event_type="click", url="http://localhost/test"):
-        """Create minimal event data as received from JS."""
+        """Cria dados minimos de evento conforme recebido do JS."""
         return {
-            "event_id": "evt_ignored",  # JS-generated ID — should be ignored by Python
+            "event_id": "evt_ignored",  # ID gerado pelo JS — deve ser ignorado pelo Python
             "type": event_type,
             "timestamp": "2025-01-01T00:00:00Z",
             "url": url,
@@ -171,42 +171,42 @@ class TestRecorderControllerEventId:
         }
 
     def test_event_ids_monotonic_across_flushes(self):
-        """event_id must be unique and monotonic — never reset within a recording session."""
+        """event_id deve ser unico e monotono — nunca resetado dentro de uma sessao de gravacao."""
         with tempfile.TemporaryDirectory() as tmpdir:
             mock_page = MagicMock()
             recorder = RecorderController(mock_page, recordings_root=tmpdir)
 
-            # Patch _capture_snapshots to avoid real Playwright calls
+            # Patch _capture_snapshots para evitar chamadas reais do Playwright
             with patch.object(recorder, "_capture_snapshots"):
                 recorder.start(recording_id="REC-MONO-001")
 
-                # Simulate 3 separate flush cycles (like after navigation)
+                # Simula 3 ciclos de flush separados (como apos navegacao)
                 for _ in range(3):
                     recorder._persist_raw_event(self._make_mock_event_data("navigation"))
                     recorder._persist_raw_event(self._make_mock_event_data("click"))
                     recorder._persist_raw_event(self._make_mock_event_data("fill"))
 
-            # Read stored events
+            # Le eventos armazenados
             events_path = os.path.join(tmpdir, "REC-MONO-001", "raw_events.jsonl")
             with open(events_path) as f:
                 events = [json.loads(line) for line in f]
 
             event_ids = [e["event_id"] for e in events]
-            assert len(event_ids) == 9, f"Expected 9 events, got {len(event_ids)}"
+            assert len(event_ids) == 9, f"Esperados 9 eventos, obtidos {len(event_ids)}"
 
-            # All IDs must be unique
+            # Todos os IDs devem ser unicos
             assert len(set(event_ids)) == len(event_ids), (
-                f"Duplicate event_ids found: {event_ids}"
+                f"event_ids duplicados encontrados: {event_ids}"
             )
 
-            # Monotonic sequence: evt_00001, evt_00002, ...
+            # Sequencia monotona: evt_00001, evt_00002, ...
             expected_ids = [f"evt_{i:05d}" for i in range(1, 10)]
             assert event_ids == expected_ids, (
-                f"Expected {expected_ids}, got {event_ids}"
+                f"Esperado {expected_ids}, obtido {event_ids}"
             )
 
     def test_event_counter_does_not_reset_on_multiple_starts(self):
-        """Calling start() must not reset the event counter — it keeps monotonic across the session."""
+        """Chamar start() nao deve resetar o contador de eventos — ele permanece monotono ao longo da sessao."""
         with tempfile.TemporaryDirectory() as tmpdir:
             mock_page = MagicMock()
             recorder = RecorderController(mock_page, recordings_root=tmpdir)
@@ -216,11 +216,11 @@ class TestRecorderControllerEventId:
                 recorder._persist_raw_event(self._make_mock_event_data("click"))
                 recorder._persist_raw_event(self._make_mock_event_data("click"))
 
-                # Simulate end of first session
+                # Simula fim da primeira sessao
                 recorder._session_manager.stop()
                 recorder._session_manager.finalize()
 
-                # Start another recording — counter must continue, not reset
+                # Inicia outra gravacao — contador deve continuar, sem resetar
                 recorder.start(recording_id="REC-NORESET-002")
                 recorder._persist_raw_event(self._make_mock_event_data("click"))
 
@@ -229,13 +229,13 @@ class TestRecorderControllerEventId:
                 events = [json.loads(line) for line in f]
 
             event_ids = [e["event_id"] for e in events]
-            # First recording had evt_00001, evt_00002; second should start at evt_00003
+            # Primeira gravacao teve evt_00001, evt_00002; segunda deve comecar em evt_00003
             assert event_ids[0] == "evt_00003", (
-                f"Counter reset! Expected evt_00003, got {event_ids[0]}"
+                f"Contador resetado! Esperado evt_00003, obtido {event_ids[0]}"
             )
 
     def test_js_generated_event_id_is_ignored(self):
-        """Python-side counter must be the single source of truth — JS event_id discarded."""
+        """Contador do Python deve ser a unica fonte da verdade — event_id do JS descartado."""
         with tempfile.TemporaryDirectory() as tmpdir:
             mock_page = MagicMock()
             recorder = RecorderController(mock_page, recordings_root=tmpdir)
@@ -243,13 +243,13 @@ class TestRecorderControllerEventId:
             with patch.object(recorder, "_capture_snapshots"):
                 recorder.start(recording_id="REC-IGNOREJS-001")
 
-                # JS sends event_id="evt_bad_js_id" — Python must ignore it
+                # JS envia event_id="evt_bad_js_id" — Python deve ignorar
                 data = self._make_mock_event_data("click")
                 data["event_id"] = "evt_bad_js_id"
                 recorder._persist_raw_event(data)
 
                 data2 = self._make_mock_event_data("fill")
-                data2["event_id"] = "evt_bad_js_id"  # JS counter "reset" on navigation
+                data2["event_id"] = "evt_bad_js_id"  # Contador JS "resetou" na navegacao
                 recorder._persist_raw_event(data2)
 
             events_path = os.path.join(tmpdir, "REC-IGNOREJS-001", "raw_events.jsonl")
@@ -258,12 +258,12 @@ class TestRecorderControllerEventId:
 
             event_ids = [e["event_id"] for e in events]
             assert event_ids == ["evt_00001", "evt_00002"], (
-                f"JS event_id leaked! Expected unique IDs, got {event_ids}"
+                f"Event_id do JS vazou! Esperados IDs unicos, obtidos {event_ids}"
             )
 
 
 class TestRecorderH1BrowserCloseGracefulStop:
-    """Hotfix H1: closing the browser/page is equivalent to Shift+S."""
+    """Hotfix H1: fechar o navegador/pagina equivale a Shift+S."""
 
     def test_target_closed_handler_sets_flag(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -292,7 +292,7 @@ class TestRecorderH1BrowserCloseGracefulStop:
             recorder = RecorderController(mock_page, recordings_root=tmpdir)
             with patch.object(recorder, "_capture_snapshots"):
                 recorder.start(recording_id="REC-H1-001")
-            # page.on('close', ...) must be among page.on calls
+            # page.on('close', ...) deve estar entre as chamadas page.on
             event_names = [call.args[0] for call in mock_page.on.call_args_list]
             assert "close" in event_names
 
@@ -307,52 +307,52 @@ class TestRecorderH1BrowserCloseGracefulStop:
 
 
 class TestHotfix14ShiftSOverlayUX:
-    """Hotfix 14: Shift+S updates overlay UI before browser closes."""
+    """Hotfix 14: Shift+S atualiza interface do overlay antes do navegador fechar."""
 
     def test_overlay_js_defines_showStoppingUI(self):
-        """Ensure overlay JS exposes the helper that updates the banner."""
+        """Garante que o JS do overlay expoe o helper que atualiza o banner."""
         from testforge.recorder.recorder_controller import RecorderController
         assert "_showStoppingUI" in RecorderController._OVERLAY_JS
 
     def test_confirmStop_paths_call_showStoppingUI(self):
-        """Both _confirmStop branches (with/without asserts) trigger the UI update."""
+        """Ambos os ramos do _confirmStop (com/sem asserts) acionam a atualizacao da interface."""
         from testforge.recorder.recorder_controller import RecorderController
         js = RecorderController._OVERLAY_JS
-        # The two STOP push sites must both follow a _showStoppingUI call.
-        # Use a coarse check: count _showStoppingUI() invocations >= 2.
+        # Os dois locais de STOP push devem ambos seguir uma chamada _showStoppingUI.
+        # Usa verificacao grossa: conta invocacoes _showStoppingUI() >= 2.
         invocations = js.count("_showStoppingUI()")
         assert invocations >= 2, (
-            f"expected at least 2 _showStoppingUI() calls, found {invocations}"
+            f"esperadas pelo menos 2 chamadas _showStoppingUI(), encontradas {invocations}"
         )
 
     def test_showStoppingUI_disables_buttons_and_shows_notice(self):
-        """The helper toggles button state and injects #tf-stop-notice."""
+        """O helper alterna estado do botao e injeta #tf-stop-notice."""
         from testforge.recorder.recorder_controller import RecorderController
         js = RecorderController._OVERLAY_JS
-        # The body should disable the stop button, change the status text,
-        # and add a notice element.
+        # O corpo deve desabilitar o botao de parada, alterar o texto de status,
+        # e adicionar um elemento de aviso.
         assert "tf-stop-notice" in js
         assert "Encerrando" in js
         assert "btnStop.disabled = true" in js
 
 
 class TestHotfix15RecordingsRoot:
-    """Hotfix 15: recordings_root must be absolute, anchored at project root."""
+    """Hotfix 15: recordings_root deve ser absoluto, ancorado na raiz do projeto."""
 
     def test_recorder_uses_passed_recordings_root(self):
-        """RecorderController honors an explicit recordings_root path."""
+        """RecorderController respeita um caminho recordings_root explicito."""
         with tempfile.TemporaryDirectory() as tmpdir:
             mock_page = MagicMock()
             recorder = RecorderController(mock_page, recordings_root=tmpdir)
             with patch.object(recorder, "_capture_snapshots"):
                 recorder.start(recording_id="REC-PATH-001")
-            # Verify the recording dir lives under tmpdir
+            # Verifica se o diretorio da gravacao esta dentro de tmpdir
             assert os.path.isdir(os.path.join(tmpdir, "REC-PATH-001"))
 
     def test_recorder_default_recordings_root_is_relative(self):
-        """Default 'recordings' is relative (regression guard for hotfix 15)."""
-        # If someone changes the default to absolute without thinking, the
-        # CLI's anchoring becomes a no-op. Pin the contract.
+        """'recordings' padrao e relativo (protecao de regressao para o hotfix 15)."""
+        # Se alguem mudar o padrao para absoluto sem pensar, a
+        # ancoragem da CLI vira um no-op. Fixa o contrato.
         import inspect
         sig = inspect.signature(RecorderController.__init__)
         default = sig.parameters["recordings_root"].default

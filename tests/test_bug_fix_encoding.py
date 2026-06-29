@@ -1,4 +1,4 @@
-"""Regression test — Bug 5: encoding utf-8 explicit in all write paths."""
+"""Teste de regressão — Bug 5: encoding utf-8 explícito em todos os caminhos de escrita."""
 import json
 import os
 import pytest
@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 
 def test_compiler_writes_utf8(tmp_path):
-    """Compiled test file must be readable as utf-8 even with accented chars."""
+    """Arquivo de teste compilado deve ser legível como utf-8 mesmo com caracteres acentuados."""
     from testforge.semantic.compiler import PlaywrightCompiler
     from testforge.semantic.model import (
         SemanticTestCase, SemanticAction, SemanticTarget, LocatorCandidate,
@@ -35,7 +35,7 @@ def test_compiler_writes_utf8(tmp_path):
 
 
 def test_persist_step_writes_utf8(tmp_path):
-    """_persist_step must not raise on accented text."""
+    """_persist_step não deve lançar exceção em texto acentuado."""
     from testforge.recorder.recorder_controller import RecorderController
 
     page = MagicMock()

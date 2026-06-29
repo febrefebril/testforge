@@ -1,12 +1,12 @@
-"""Tests for Field State Snapshots — Sprint 3.
+"""Testes para Field State Snapshots — Sprint 3.
 
-Épico 3 — Field State Snapshot (3.1 field_snapshots.jsonl, 3.2 final_state_snapshot.json)
-Épico 4 — Setter Hook e MutationObserver (4.1 value setters, 4.2 contenteditable/ARIA)
+Epico 3 — Field State Snapshot (3.1 field_snapshots.jsonl, 3.2 final_state_snapshot.json)
+Epico 4 — Setter Hook e MutationObserver (4.1 value setters, 4.2 contenteditable/ARIA)
 
-CT-AUTO-3.1: Field with preventDefault — value recovered by setter_hook or snapshot_diff.
-CT-AUTO-3.2: Currency mask — raw, displayed, and normalized values captured.
-CT-AUTO-3.3: Contenteditable — text changes detected by MutationObserver/snapshot.
-CT-AUTO-3.4: Native select — selected value and text captured.
+CT-AUTO-3.1: Campo com preventDefault — valor recuperado por setter_hook ou snapshot_diff.
+CT-AUTO-3.2: Mascara de moeda — valores bruto, exibido e normalizados capturados.
+CT-AUTO-3.3: Contenteditable — alteracoes de texto detectadas por MutationObserver/snapshot.
+CT-AUTO-3.4: Select nativo — valor selecionado e texto capturados.
 """
 
 import json
@@ -26,7 +26,7 @@ from testforge.recorder.raw_recording_store import RawRecordingStore
 
 @pytest.fixture
 def mock_page():
-    """Create a MagicMock that mimics Playwright Page."""
+    """Cria um MagicMock que simula uma Page do Playwright."""
     page = MagicMock()
     page.evaluate = MagicMock(return_value=[])
     page.url = "http://localhost:8765/test"
@@ -36,7 +36,7 @@ def mock_page():
 
 @pytest.fixture
 def controller(mock_page):
-    """Create RecorderController with mock page and temp dir."""
+    """Cria RecorderController com page mock e diretorio temporario."""
     with tempfile.TemporaryDirectory() as tmpdir:
         controller = RecorderController(mock_page, recordings_root=tmpdir)
         controller.start("TEST-S3", "test-app", "http://localhost:8765")
@@ -45,7 +45,7 @@ def controller(mock_page):
 
 @pytest.fixture
 def mock_store(controller):
-    """Extract the store from controller for direct testing."""
+    """Extrai o store do controller para teste direto."""
     ctrl, tmpdir, page = controller
     return ctrl._store, tmpdir, page, ctrl
 
@@ -100,14 +100,14 @@ def _make_final_state(reason="user_stop", fields=None):
     }
 
 
-# -- CT-AUTO-3.1: Field with preventDefault ------------------------------------
+# -- CT-AUTO-3.1: Campo com preventDefault --------------------------------------
 
 
 class TestCT_AUTO_3_1:
     """CT-AUTO-3.1: Campo com preventDefault — valor recuperado por setter_hook ou snapshot."""
 
     def test_save_field_snapshot_appends_to_jsonl(self, mock_store):
-        """field_snapshots.jsonl receives snapshot entries."""
+        """field_snapshots.jsonl recebe entradas de snapshot."""
         store, tmpdir, page, ctrl = mock_store
         snapshot = _make_snapshot(value="ABC123")
         ctrl._save_field_snapshot(snapshot)
@@ -122,7 +122,7 @@ class TestCT_AUTO_3_1:
         assert data["value"] == "ABC123"
 
     def test_save_value_mutation_appends_to_jsonl(self, mock_store):
-        """value_mutations.jsonl receives mutation entries."""
+        """value_mutations.jsonl recebe entradas de mutacao."""
         store, tmpdir, page, ctrl = mock_store
         mutation = _make_value_mutation(old="", new="XYZ")
         ctrl._save_value_mutation(mutation)
@@ -138,7 +138,7 @@ class TestCT_AUTO_3_1:
         assert data["old_value"] == ""
 
     def test_flush_field_snapshots_reads_js_queue(self, mock_store):
-        """flush_events batched payload persists field snapshots."""
+        """O payload em lote do flush_events persiste field snapshots."""
         store, tmpdir, page, ctrl = mock_store
         snapshot_batch = {
             "timestamp": "2026-06-18T10:00:00Z",
@@ -162,7 +162,7 @@ class TestCT_AUTO_3_1:
         assert data["snapshots"][0]["value"] == "Capturado"
 
     def test_flush_value_mutations_reads_js_queue(self, mock_store):
-        """flush_events batched payload persists value mutations."""
+        """O payload em lote do flush_events persiste value mutations."""
         store, tmpdir, page, ctrl = mock_store
         mutation = _make_value_mutation(old="", new="ValorProgramatico")
         page.evaluate = MagicMock(return_value={
@@ -181,7 +181,7 @@ class TestCT_AUTO_3_1:
         assert data["new_value"] == "ValorProgramatico"
 
     def test_flush_events_also_flushes_snapshots_and_mutations(self, controller):
-        """flush_events() reads snapshots and mutations in a single batched CDP call."""
+        """flush_events() le snapshots e mutations em uma unica chamada CDP em lote."""
         ctrl, tmpdir, page = controller
         snapshot_batch = {
             "timestamp": "2026-06-18T10:00:00Z",
@@ -198,20 +198,20 @@ class TestCT_AUTO_3_1:
 
         ctrl.flush_events()
 
-        # Check field_snapshots.jsonl
+        # Verifica field_snapshots.jsonl
         s_path = os.path.join(ctrl._store._session_dir, "field_snapshots.jsonl")
         assert os.path.exists(s_path)
         with open(s_path) as f:
             assert "flush_test" in f.read()
 
-        # Check value_mutations.jsonl
+        # Verifica value_mutations.jsonl
         m_path = os.path.join(ctrl._store._session_dir, "value_mutations.jsonl")
         assert os.path.exists(m_path)
         with open(m_path) as f:
             assert "flush_mut" in f.read()
 
     def test_snapshot_includes_identifiers_and_metadata(self, mock_store):
-        """Snapshot entry has all required fields: fingerprint, identifiers, tag, type, value, visibility, enabled, bounding_box."""
+        """Entrada de snapshot tem todos os campos obrigatorios: fingerprint, identifiers, tag, type, value, visibility, enabled, bounding_box."""
         store, tmpdir, page, ctrl = mock_store
         snapshot = _make_snapshot()
         ctrl._save_field_snapshot(snapshot)
@@ -242,14 +242,14 @@ class TestCT_AUTO_3_1:
         assert "height" in data["bounding_box"]
 
 
-# -- CT-AUTO-3.2: Currency mask ------------------------------------------------
+# -- CT-AUTO-3.2: Mascara de moeda ------------------------------------------------
 
 
 class TestCT_AUTO_3_2:
     """CT-AUTO-3.2: Mascara de moeda — valor capturado independente de input event."""
 
     def test_setter_hook_captures_programmatic_value(self, mock_store):
-        """Setter hook detects programmatic value changes (simulating currency mask)."""
+        """Setter hook detecta alteracoes programaticas de valor (simulando mascara de moeda)."""
         store, tmpdir, page, ctrl = mock_store
         mutation = _make_value_mutation(
             old="", new="1.234,56",
@@ -265,7 +265,7 @@ class TestCT_AUTO_3_2:
         assert data["fingerprint"] == "input#campo1[name=valor]"
 
     def test_multiple_setter_hooks_are_captured_sequentially(self, mock_store):
-        """Multiple value changes are captured in sequence."""
+        """Multiplas alteracoes de valor sao capturadas em sequencia."""
         store, tmpdir, page, ctrl = mock_store
         mutations = [
             _make_value_mutation(old="", new="1", name="valor"),
@@ -284,7 +284,7 @@ class TestCT_AUTO_3_2:
         assert data2["new_value"] == "12"
 
     def test_snapshot_captures_formatted_currency_value(self, mock_store):
-        """field_snapshot captures the formatted currency value."""
+        """field_snapshot captura o valor formatado da moeda."""
         store, tmpdir, page, ctrl = mock_store
         snapshot = _make_snapshot(
             fingerprint="input#valor[name=valor]",
@@ -299,7 +299,7 @@ class TestCT_AUTO_3_2:
         assert data["value"] == "R$ 1.234,56"
 
     def test_final_state_includes_currency_field(self, mock_store):
-        """final_state_snapshot.json captures currency field."""
+        """final_state_snapshot.json captura campo de moeda."""
         store, tmpdir, page, ctrl = mock_store
         field = _make_snapshot(
             fingerprint="input#valor[name=valor]",
@@ -328,7 +328,7 @@ class TestCT_AUTO_3_3:
     """CT-AUTO-3.3: Contenteditable — texto editado recuperado por MutationObserver/snapshot."""
 
     def test_contenteditable_snapshot_captures_text(self, mock_store):
-        """Contenteditable field snapshot captures text content."""
+        """Snapshot de campo contenteditable captura conteudo de texto."""
         store, tmpdir, page, ctrl = mock_store
         snapshot = _make_snapshot(
             fingerprint="contenteditable#conteudo",
@@ -348,7 +348,7 @@ class TestCT_AUTO_3_3:
         assert data["fingerprint"].startswith("contenteditable")
 
     def test_contenteditable_snapshot_has_visibility_and_bounding_box(self, mock_store):
-        """Contenteditable snapshot includes visibility and bounding box."""
+        """Snapshot contenteditable inclui visibilidade e bounding box."""
         store, tmpdir, page, ctrl = mock_store
         snapshot = _make_snapshot(
             fingerprint="contenteditable#editor",
@@ -367,7 +367,7 @@ class TestCT_AUTO_3_3:
         assert data["bounding_box"] is not None
 
     def test_content_edit_event_has_type_and_fingerprint(self, mock_store):
-        """content_edit event from MutationObserver has type and fingerprint."""
+        """Evento content_edit do MutationObserver tem type e fingerprint."""
         store, tmpdir, page, ctrl = mock_store
         ctrl._save_value_mutation({
             "type": "content_edit",
@@ -386,14 +386,14 @@ class TestCT_AUTO_3_3:
         assert data["fingerprint"] == "contenteditable#conteudo"
 
 
-# -- CT-AUTO-3.4: Native select ------------------------------------------------
+# -- CT-AUTO-3.4: Select nativo ------------------------------------------------
 
 
 class TestCT_AUTO_3_4:
     """CT-AUTO-3.4: Select nativo — selected value e text capturados."""
 
     def test_select_value_captured_in_snapshot(self, mock_store):
-        """Select element value is captured by field snapshot."""
+        """Valor do elemento select e capturado pelo field snapshot."""
         store, tmpdir, page, ctrl = mock_store
         snapshot = _make_snapshot(
             fingerprint="select#uf[name=uf]",
@@ -411,7 +411,7 @@ class TestCT_AUTO_3_4:
         assert data["value"] == "SP"
 
     def test_select_multiple_options_captured(self, mock_store):
-        """Each select in a form is captured separately."""
+        """Cada select em um formulario e capturado separadamente."""
         store, tmpdir, page, ctrl = mock_store
         snapshots = [
             _make_snapshot(fingerprint="select#uf[name=uf]", value="SP", tag="select"),
@@ -428,7 +428,7 @@ class TestCT_AUTO_3_4:
         assert json.loads(lines[1])["value"] == "pessoa_fisica"
 
     def test_select_mutation_captured_by_setter_hook(self, mock_store):
-        """Select value change via JS is captured by setter hook."""
+        """Alteracao de valor do select via JS e capturada pelo setter hook."""
         store, tmpdir, page, ctrl = mock_store
         mutation = _make_value_mutation(
             tag="select",
@@ -446,14 +446,14 @@ class TestCT_AUTO_3_4:
         assert data["new_value"] == "RJ"
 
 
-# -- Épico 3.2: final_state_snapshot.json --------------------------------------
+# -- Epico 3.2: final_state_snapshot.json --------------------------------------
 
 
 class TestFinalStateSnapshot:
-    """Tests for final_state_snapshot.json capture."""
+    """Testes para captura de final_state_snapshot.json."""
 
     def test_final_state_created_on_stop(self, controller):
-        """stop() creates final_state_snapshot.json."""
+        """stop() cria final_state_snapshot.json."""
         ctrl, tmpdir, page = controller
         page.evaluate = MagicMock(return_value=_make_final_state(reason="recording_stopped"))
 
@@ -466,7 +466,7 @@ class TestFinalStateSnapshot:
         assert data["reason"] == "recording_stopped"
 
     def test_final_state_created_on_finalize(self, controller):
-        """finalize() creates final_state_snapshot.json."""
+        """finalize() cria final_state_snapshot.json."""
         ctrl, tmpdir, page = controller
         page.evaluate = MagicMock(return_value=_make_final_state(reason="recording_finalized"))
 
@@ -477,7 +477,7 @@ class TestFinalStateSnapshot:
         assert os.path.exists(path)
 
     def test_final_state_has_all_fields(self, controller):
-        """final_state_snapshot.json has reason, timestamp, url, page_title, fields."""
+        """final_state_snapshot.json tem reason, timestamp, url, page_title, fields."""
         ctrl, tmpdir, page = controller
         fields = [
             _make_snapshot(fingerprint="input#campo1[name=campo1]", value="Valor1"),
@@ -500,40 +500,40 @@ class TestFinalStateSnapshot:
         assert data["fields"][1]["value"] == "SP"
 
     def test_final_state_capture_failure_sets_quality_flag(self, controller):
-        """When final state capture fails, no crash — gracefully handled."""
+        """Quando a captura do estado final falha, sem crash — tratado graciosamente."""
         ctrl, tmpdir, page = controller
         page.evaluate = MagicMock(side_effect=Exception("JS error"))
 
-        # Should not raise
+        # Nao deve lancar excecao
         ctrl._capture_final_state_snapshot("recording_stopped")
         path = os.path.join(ctrl._store._session_dir, "final_state_snapshot.json")
         assert not os.path.exists(path)
 
 
-# -- Overlay JS syntax checks --------------------------------------------------
+# -- Verificacoes de sintaxe do Overlay JS --------------------------------------------
 
 
 class TestOverlayJS:
-    """Validate that the embedded _OVERLAY_JS is syntactically valid."""
+    """Valida que o _OVERLAY_JS incorporado e sintaticamente valido."""
 
     def test_overlay_js_contains_new_queues(self):
-        """_OVERLAY_JS declares __tfFieldSnapshotQueue and __tfValueMutationQueue."""
+        """_OVERLAY_JS declara __tfFieldSnapshotQueue e __tfValueMutationQueue."""
         js = RecorderController._OVERLAY_JS
         assert "__tfFieldSnapshotQueue" in js
         assert "__tfValueMutationQueue" in js
 
     def test_overlay_js_contains_snapshot_function(self):
-        """_OVERLAY_JS defines _tf_snapshotFields."""
+        """_OVERLAY_JS define _tf_snapshotFields."""
         js = RecorderController._OVERLAY_JS
         assert "_tf_snapshotFields" in js
 
     def test_overlay_js_contains_final_state_function(self):
-        """_OVERLAY_JS defines _tf_captureFinalState."""
+        """_OVERLAY_JS define _tf_captureFinalState."""
         js = RecorderController._OVERLAY_JS
         assert "_tf_captureFinalState" in js
 
     def test_overlay_js_contains_setter_hooks(self):
-        """_OVERLAY_JS contains setter hook code."""
+        """_OVERLAY_JS contem codigo de setter hook."""
         js = RecorderController._OVERLAY_JS
         assert "value_mutation" in js
         assert "HTMLInputElement.prototype" in js or "_hookValue" in js
@@ -541,61 +541,61 @@ class TestOverlayJS:
         assert "HTMLTextAreaElement.prototype" in js or "_hookValue" in js
 
     def test_overlay_js_contains_mutation_observer(self):
-        """_OVERLAY_JS contains MutationObserver setup."""
+        """_OVERLAY_JS contem configuracao do MutationObserver."""
         js = RecorderController._OVERLAY_JS
         assert "MutationObserver" in js
         assert "content_edit" in js
         assert "aria_mutation" in js
 
     def test_overlay_js_contains_snapshot_polling(self):
-        """_OVERLAY_JS contains field snapshot polling interval."""
+        """_OVERLAY_JS contem intervalo de polling de field snapshot."""
         js = RecorderController._OVERLAY_JS
         assert "__tfFieldSnapshotInterval" in js
         assert "_tf_snapshotFields()" in js
 
     def test_overlay_js_captures_final_state_on_stop(self):
-        """_OVERLAY_JS calls _captureFinalState('user_stop') on Shift+S."""
+        """_OVERLAY_JS chama _captureFinalState('user_stop') ao Shift+S."""
         js = RecorderController._OVERLAY_JS
         assert "_captureFinalState('user_stop')" in js or '_captureFinalState("user_stop")' in js
 
     def test_overlay_js_captures_final_state_on_submit(self):
-        """_OVERLAY_JS calls _captureFinalState('form_submit') on submit."""
+        """_OVERLAY_JS chama _captureFinalState('form_submit') ao submit."""
         js = RecorderController._OVERLAY_JS
         assert "_captureFinalState('form_submit')" in js or '_captureFinalState("form_submit")' in js
 
     def test_overlay_js_captures_final_state_on_beforeunload(self):
-        """_OVERLAY_JS calls _captureFinalState('beforeunload') on beforeunload."""
+        """_OVERLAY_JS chama _captureFinalState('beforeunload') ao beforeunload."""
         js = RecorderController._OVERLAY_JS
         assert "_captureFinalState('beforeunload')" in js or '_captureFinalState("beforeunload")' in js
 
 
-# -- Edge cases ----------------------------------------------------------------
+# -- Casos limite ----------------------------------------------------------------
 
 
 class TestSprint3EdgeCases:
-    """Edge cases for field snapshots."""
+    """Casos limite para field snapshots."""
 
     def test_empty_field_snapshot_queue(self, mock_store):
-        """Empty fieldSnapshots in payload — no crash, no file."""
+        """fieldSnapshots vazio no payload — sem crash, sem arquivo."""
         store, tmpdir, page, ctrl = mock_store
         page.evaluate = MagicMock(return_value={
             "events": [], "steps": [], "commands": [], "fieldSnapshots": [], "valueMutations": [],
         })
-        ctrl.flush_events()  # Should not raise
+        ctrl.flush_events()  # Nao deve lancar excecao
 
     def test_none_field_snapshot_queue(self, mock_store):
-        """evaluate() exception — no crash."""
+        """Excecao do evaluate() — sem crash."""
         store, tmpdir, page, ctrl = mock_store
         page.evaluate = MagicMock(side_effect=Exception("detached"))
-        ctrl.flush_events()  # Should not raise
+        ctrl.flush_events()  # Nao deve lancar excecao
 
     def test_malformed_snapshot_data(self, mock_store):
-        """Malformed snapshot data does not crash."""
+        """Dados de snapshot malformados nao causam crash."""
         store, tmpdir, page, ctrl = mock_store
-        ctrl._save_field_snapshot({"invalid": True})  # Should not raise
+        ctrl._save_field_snapshot({"invalid": True})  # Nao deve lancar excecao
 
     def test_large_number_of_snapshots(self, mock_store):
-        """Many snapshots are handled without crash."""
+        """Muitos snapshots sao tratados sem crash."""
         store, tmpdir, page, ctrl = mock_store
         for i in range(100):
             ctrl._save_field_snapshot(_make_snapshot(
@@ -609,7 +609,7 @@ class TestSprint3EdgeCases:
         assert len(lines) == 100
 
     def test_hidden_field_captured(self, mock_store):
-        """Hidden fields are captured with visibility=hidden."""
+        """Campos ocultos sao capturados com visibility=hidden."""
         store, tmpdir, page, ctrl = mock_store
         snapshot = _make_snapshot(
             fingerprint="input#hidden1[name=hidden1]",
@@ -625,7 +625,7 @@ class TestSprint3EdgeCases:
         assert data["value"] == "valor_oculto"
 
     def test_disabled_field_captured(self, mock_store):
-        """Disabled fields are captured with enabled=false."""
+        """Campos desabilitados sao capturados com enabled=false."""
         store, tmpdir, page, ctrl = mock_store
         snapshot = _make_snapshot(
             fingerprint="input#disabled1[name=disabled1]",

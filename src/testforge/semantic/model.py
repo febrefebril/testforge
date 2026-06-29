@@ -1,12 +1,12 @@
-"""TestForge — Semantic Intermediate Model (MIS).
+"""TestForge — Modelo Intermediario Semantico (MIS).
 
-Phase 2: LocatorCandidate extended with super-selector fields
+Fase 2: LocatorCandidate estendido com campos de super-seletores
 (backend_node_id, role, accessible_name, ax_path, attributes,
-ancestor_roles, attribute_stability, playwright_call). All optional —
-existing code that constructs `LocatorCandidate(strategy, selector, score, reason)`
-continues to work unchanged. The new fields are populated by the
-v2 extractor in `semantic.locator.extractor` when AX-tree data
-(produced by the Phase 1 CDP recorder) is available.
+ancestor_roles, attribute_stability, playwright_call). Todos opcionais —
+codigo existente que constroi `LocatorCandidate(strategy, selector, score, reason)`
+continua funcionando inalterado. Novos campos populados pelo
+extrator v2 em `semantic.locator.extractor` quando dados da arvore AX
+(produzidos pelo gravador CDR da Fase 1) estao disponiveis.
 """
 from dataclasses import dataclass, field
 from typing import Optional
@@ -18,7 +18,7 @@ class LocatorCandidate:
     selector: str
     score: float
     reason: str = ""
-    # Phase 2 super-selector enrichment (optional, populated by v2 extractor).
+    # Enriquecimento de super-seletor Fase 2 (opcional, populado pelo extrator v2).
     backend_node_id: Optional[int] = None
     role: Optional[str] = None
     accessible_name: Optional[str] = None
@@ -43,14 +43,14 @@ class SemanticTarget:
     name: Optional[str] = None
     candidates: list = field(default_factory=list)
     fingerprint: dict = field(default_factory=dict)
-    # Phase 2: AX-tree context for runtime disambiguation + L0 cache key.
+    # Fase 2: contexto da arvore AX para desambiguacao em runtime + chave de cache L0.
     ax_path: list = field(default_factory=list)
     ancestor_roles: list = field(default_factory=list)
     intent_text: Optional[str] = None
-    # B14/B17: open shadow-root host descriptor, when the captured
-    # element lives inside a shadow tree. Shape:
+    # B14/B17: descritor de host shadow-root aberto, quando o elemento
+    # capturado vive dentro de uma arvore shadow. Formato:
     #   {host_selector, host_tag, host_id, mode}
-    # None when on the document tree or inside a closed shadow root.
+    # None quando na arvore do documento ou dentro de shadow root fechado.
     shadow_host: Optional[dict] = None
 
 
@@ -92,11 +92,11 @@ class SemanticTestCase:
     preconditions: list = field(default_factory=list)
     steps: list = field(default_factory=list)
     blind_spots: list = field(default_factory=list)
-    field_values: dict = field(default_factory=dict)  # key -> FieldValueMap
-    # H20: user-marked scenario partitions. Each entry is
-    # {start_step, end_step_exclusive, name} indexing into `steps`.
-    # When no Shift+N was pressed, there is exactly one segment that
-    # spans every step.
+    field_values: dict = field(default_factory=dict)  # chave -> FieldValueMap
+    # H20: particoes de cenario marcadas pelo usuario. Cada entrada eh
+    # {start_step, end_step_exclusive, name} indexando em `steps`.
+    # Quando Shift+N nao foi pressionado, ha exatamente um segmento que
+    # abrange todos os passos.
     scenario_segments: list = field(default_factory=list)
 
     def to_dict(self) -> dict:
@@ -162,7 +162,7 @@ class SemanticTestCase:
 
     @staticmethod
     def _candidate_dict(c) -> dict:
-        """Serialize a LocatorCandidate; emit v2 fields only when populated."""
+        """Serializa um LocatorCandidate; emite campos v2 apenas quando populados."""
         out = {
             "strategy": c.strategy,
             "selector": c.selector,

@@ -1,4 +1,4 @@
-"""Sprint 0 — FrameworkDetector unit tests."""
+"""Sprint 0 — Testes unitarios do FrameworkDetector."""
 from __future__ import annotations
 
 from unittest.mock import MagicMock
@@ -103,7 +103,7 @@ class TestCDPAttach:
     def test_attach_safe_without_cdp(self):
         page = _page_with_eval({"evidence": [], "custom_components": []})
         det = FrameworkDetector(page, cdp_session=None)
-        det.attach()  # must not raise
+        det.attach()  # nao deve lancar excecao
         det.detach()
 
     def test_attach_subscribes_when_cdp_present(self):
@@ -120,7 +120,7 @@ class TestCDPAttach:
         cdp = MagicMock()
         det = FrameworkDetector(page, cdp_session=cdp)
         det.attach()
-        # Simulate CDP event
+        # Simula evento CDP
         det._on_response({"response": {"url": "https://app/runtime.angular-16.2.0.js"}})
         det._on_response({"response": {"url": "https://app/styles.css"}})
         assert len(det._bundles_seen) == 2
@@ -128,10 +128,10 @@ class TestCDPAttach:
     def test_response_handler_tolerates_bad_payload(self):
         page = _page_with_eval({"evidence": [], "custom_components": []})
         det = FrameworkDetector(page, cdp_session=MagicMock())
-        det._on_response({})        # no response key
-        det._on_response({"response": {}})   # no url
+        det._on_response({})        # sem chave response
+        det._on_response({"response": {}})   # sem url
         det._on_response({"response": {"url": None}})
-        assert det._bundles_seen == []  # everything skipped silently
+        assert det._bundles_seen == []  # tudo ignorado silenciosamente
 
 
 class TestSessionSkeleton:

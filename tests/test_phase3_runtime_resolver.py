@@ -1,10 +1,10 @@
-"""Phase 3 — Runtime LocatorResolver + step API + v2 compiler.
+"""Fase 3 — LocatorResolver em tempo de execucao + step API + compilador v2.
 
-Unit tests cover:
-- ast-based dispatcher rejects arbitrary code
-- LocatorResolver L0 cache + L1 fallback chain
-- step.* helpers route through resolver
-- compile_v2 emits minimal script + per-step JSON candidates
+Testes unitarios cobrem:
+- dispatcher baseado em AST rejeita codigo arbitrario
+- LocatorResolver cache L0 + cadeia de fallback L1
+- helpers step.* roteiam via resolver
+- compile_v2 emite script minimo + candidatos JSON por step
 """
 from __future__ import annotations
 
@@ -107,9 +107,9 @@ class TestLocatorResolver:
         locator = MagicMock(); locator.count.return_value = 1
         page.get_by_role.return_value = locator
         resolver = LocatorResolver(page)
-        # First call populates cache
+        # Primeira chamada popula cache
         resolver.resolve("click button X", [self._candidate()])
-        # Second call MUST come back as L0
+        # Segunda chamada DEVE retornar como L0
         result = resolver.resolve("click button X", [self._candidate()])
         assert result.level == "L0_cache"
 
@@ -272,7 +272,7 @@ class TestCompileV2:
         with tempfile.TemporaryDirectory() as d:
             path = PlaywrightCompiler().compile_v2(tc, d)
             content = open(path).read()
-            # Only 2 step.* calls; navigation and skipped excluded
+            # Apenas 2 chamadas step.*; navegacao e pulados excluidos
             assert content.count("step.fill") + content.count("step.click") == 2
 
     def test_emits_select_for_select_tag(self):

@@ -1,7 +1,7 @@
-"""Phase 7 — YAML-driven ComponentResolver.
+"""Fase 7 — ComponentResolver orientado a YAML.
 
-Verifies parity with the legacy `handlers.detect_handler()` registry
-and that adding/swapping patterns is purely declarative.
+Verifica paridade com o registro legado `handlers.detect_handler()`
+e que adicionar/trocar padroes e puramente declarativo.
 """
 from __future__ import annotations
 
@@ -74,9 +74,9 @@ class TestPatternMatching:
                 "selector_contains_any": ["mat-select"],
             },
         )
-        # mat-radio selector is filtered out, leaving nothing to match.
+        # Seletor mat-radio e filtrado, restando nada para corresponder.
         assert p.matches(["mat-radio-button:has-text('Yes')"], "", "input") is False
-        # When a non-radio mat-select selector is also present, it still matches.
+        # Quando um seletor mat-select nao-radio tambem esta presente, ainda corresponde.
         assert p.matches([
             "mat-radio-button:has-text('Yes')",
             "div.mat-select-trigger",
@@ -161,8 +161,8 @@ class TestParityWithLegacy:
 
 class TestPrecedence:
     def test_angular_material_wins_over_primefaces(self):
-        # Selectors with both 'mat-' and 'ui-' should resolve to angular-material
-        # because the YAML lists it first.
+        # Seletores com 'mat-' e 'ui-' devem resolver para angular-material
+        # porque o YAML o lista primeiro.
         r = ComponentResolver()
         s = _step(tag="mat-select", selectors=['ui-selectonemenu mat-select'])
         h = r.find_handler(s)

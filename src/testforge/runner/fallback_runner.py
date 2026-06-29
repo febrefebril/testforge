@@ -1,4 +1,5 @@
-"""TestForge — Validador Shadow + Executor Fallback."""
+"""TestForge — Validador Shadow + Executor Fallback.
+"""
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -9,9 +10,9 @@ from playwright.sync_api import Page, TimeoutError as PlaywrightTimeout
 
 
 class SmartStepRunner:
-    """Executor de passo consciente da estratégia para pipeline de healing.
+    """Executor de step consciente da estrategia para pipeline de healing.
 
-    Suporta todas as 10 estratégias de healing com implementação adequada do Playwright.
+    Suporta todas as 10 estrategias de healing com implementacao adequada do Playwright.
     Usado por CuradorAutomatico step_runner em cmd_run e testes de healing.
     """
 
@@ -23,13 +24,13 @@ class SmartStepRunner:
         self._page = page
 
     def execute(self, step_data: dict, strategy: str = "") -> bool:
-        """Executa um passo usando a estratégia de healing especificada.
+        """Executa um step usando a estrategia de healing especificada.
 
         Args:
             step_data: dict com 'selector', 'action', 'value', 'strategy'
-            strategy: nome da estratégia de healing (sobrescreve step_data['strategy'])
+            strategy: nome da estrategia de healing (sobrescreve step_data['strategy'])
 
-        Returns True se passo sucesso, False caso contrário.
+        Returns True se step sucesso, False caso contrario.
         """
         sel = step_data.get("selector", "")
         action = step_data.get("action", "click")
@@ -149,7 +150,8 @@ class SmartStepRunner:
 
 @dataclass
 class HealingSuggestion:
-    """Sugestao de healing — registrada em shadow mode, nao aplicada automaticamente."""
+    """Sugestao de healing — registrada em shadow mode, nao aplicada automaticamente.
+    """
     step_id: str
     original_selector: str
     failure: FailureClassification
@@ -160,7 +162,8 @@ class HealingSuggestion:
 
 
 class ShadowValidator:
-    """Sugere healing para LOCATOR_NOT_FOUND. NAO aplica auto-heal."""
+    """Sugere healing para LOCATOR_NOT_FOUND. NAO aplica auto-heal.
+    """
 
     def __init__(self, page: Page):
         self._page = page
@@ -206,13 +209,15 @@ class ShadowValidator:
 
 
 class FallbackRunner:
-    """Tenta candidatos de locator em ordem de score. Deterministico, sem LLM."""
+    """Tenta candidatos de locator em ordem de score. deterministico, sem LLM.
+    """
 
     def __init__(self, page: Page):
         self._page = page
 
     def try_fill(self, candidates: list[dict], value: str) -> bool:
-        """Tenta preencher com cada candidato ate funcionar."""
+        """Tenta preencher com cada candidato ate funcionar.
+        """
         for c in candidates:
             try:
                 sel = c["selector"]
@@ -228,7 +233,8 @@ class FallbackRunner:
         return False
 
     def try_click(self, candidates: list[dict]) -> bool:
-        """Tenta clicar com cada candidato ate funcionar."""
+        """Tenta clicar com cada candidato ate funcionar.
+        """
         for c in candidates:
             try:
                 self._page.click(c["selector"], timeout=5000)
@@ -239,7 +245,8 @@ class FallbackRunner:
         return False
 
     def try_fill_with_fallback(self, primary: str, fallbacks: list[str], value: str, tag: str = "") -> tuple[bool, str]:
-        """Tenta fill com seletor primario e fallbacks."""
+        """Tenta fill com seletor primario e fallbacks.
+        """
         all_selectors = [primary] + fallbacks
         for sel in all_selectors:
             try:
@@ -254,7 +261,8 @@ class FallbackRunner:
         return False, ""
 
     def try_click_with_fallback(self, primary: str, fallbacks: list[str]) -> tuple[bool, str]:
-        """Tenta click com seletor primario e fallbacks."""
+        """Tenta click com seletor primario e fallbacks.
+        """
         all_selectors = [primary] + fallbacks
         for sel in all_selectors:
             try:

@@ -1,6 +1,6 @@
-"""Recorder contract tests — covers flush, navigation, overlay injection, and serialization gaps.
+"""Testes de contrato do Recorder — cobre flush, navegacao, injecao de overlay e lacunas de serializacao.
 
-All tests are unit tests; no browser required.
+Todos os testes sao unitarios; nenhum navegador necessario.
 """
 import json
 import os
@@ -15,7 +15,7 @@ from testforge.recorder.recorder_controller import RecorderController
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Auxiliares
 # ---------------------------------------------------------------------------
 
 _EMPTY_PAYLOAD = {"events": [], "steps": [], "commands": [], "fieldSnapshots": [], "valueMutations": []}
@@ -33,11 +33,11 @@ def _make_ctrl(tmp_path, evaluate_return=None):
 
 
 # ---------------------------------------------------------------------------
-# B1: flush_events integration
+# B1: Integracao flush_events
 # ---------------------------------------------------------------------------
 
 class TestFlushEventsIntegration:
-    """flush_events() reads all JS queues in a single CDP call."""
+    """flush_events() le todas as filas JS em uma unica chamada CDP."""
 
     def test_flush_persists_field_snapshots_from_payload(self, tmp_path):
         snapshot = {"timestamp": "2026-01-01T00:00:00Z", "fingerprint": "input#x[name=x]",
@@ -64,11 +64,11 @@ class TestFlushEventsIntegration:
 
 
 # ---------------------------------------------------------------------------
-# B2: Field snapshot flushing
+# B2: Flush de snapshots de campo
 # ---------------------------------------------------------------------------
 
 class TestFieldSnapshotFlushing:
-    """flush_events() persists field snapshots received in the batched payload."""
+    """flush_events() persiste snapshots de campo recebidos no payload em lote."""
 
     def test_happy_path_persists_to_file(self, tmp_path):
         snapshot = {"field": "cpf", "value": "123", "ts": "2026-01-01T00:00:00Z"}
@@ -102,11 +102,11 @@ class TestFieldSnapshotFlushing:
 
 
 # ---------------------------------------------------------------------------
-# B3: Value mutation flushing
+# B3: Flush de mutacoes de valor
 # ---------------------------------------------------------------------------
 
 class TestValueMutationFlushing:
-    """flush_events() persists value mutations received in the batched payload."""
+    """flush_events() persiste mutacoes de valor recebidas no payload em lote."""
 
     def test_happy_path_persists_to_file(self, tmp_path):
         mutation = {"field": "senha", "old": "", "new": "abc", "ts": "2026-01-01T00:00:00Z"}
@@ -140,11 +140,11 @@ class TestValueMutationFlushing:
 
 
 # ---------------------------------------------------------------------------
-# B4: Final state snapshot
+# B4: Snapshot de estado final
 # ---------------------------------------------------------------------------
 
 class TestFinalStateSnapshot:
-    """_capture_final_state_snapshot() writes JSON only when state is non-null."""
+    """_capture_final_state_snapshot() escreve JSON apenas quando estado nao e nulo."""
 
     def test_writes_file_when_state_present(self, tmp_path):
         ctrl, page = _make_ctrl(tmp_path)
@@ -174,11 +174,11 @@ class TestFinalStateSnapshot:
 
 
 # ---------------------------------------------------------------------------
-# B5: Frame navigation
+# B5: Navegacao de frame
 # ---------------------------------------------------------------------------
 
 class TestFrameNavigation:
-    """_on_framenavigated() ignores sub-frames; creates navigation event for main frame."""
+    """_on_framenavigated() ignora sub-frames; cria evento de navegacao para frame principal."""
 
     def _ctrl_for_nav(self, tmp_path):
         page = MagicMock()
@@ -234,11 +234,11 @@ class TestFrameNavigation:
 
 
 # ---------------------------------------------------------------------------
-# B6: Overlay injection via start()
+# B6: Injecao de overlay via start()
 # ---------------------------------------------------------------------------
 
 class TestOverlayInjection:
-    """start() must inject context script and overlay JS via add_init_script."""
+    """start() deve injetar script de contexto e JS de overlay via add_init_script."""
 
     def _start_ctrl(self, tmp_path, **kwargs):
         page = MagicMock()
@@ -280,11 +280,11 @@ class TestOverlayInjection:
 
 
 # ---------------------------------------------------------------------------
-# B7: Start config persistence
+# B7: Persistencia de configuracao do start
 # ---------------------------------------------------------------------------
 
 class TestStartConfigPersistence:
-    """start() must save evidence_level and headless to recording_config metadata."""
+    """start() deve salvar evidence_level e headless nos metadados recording_config."""
 
     def test_metadata_config_saved_on_start(self, tmp_path):
         page = MagicMock()
@@ -309,11 +309,11 @@ class TestStartConfigPersistence:
 
 
 # ---------------------------------------------------------------------------
-# B8: Raw event target mapping
+# B8: Mapeamento de target de evento raw
 # ---------------------------------------------------------------------------
 
 class TestRawEventTargetMapping:
-    """_persist_raw_event() must faithfully map JS target dict to TargetInfo."""
+    """_persist_raw_event() deve mapear fielmente dict target do JS para TargetInfo."""
 
     def _ctrl(self, tmp_path):
         ctrl, _ = _make_ctrl(tmp_path)
@@ -386,7 +386,7 @@ class TestRawEventTargetMapping:
         data = {
             "type": "click",
             "timestamp": "2026-01-01T00:00:00Z",
-            "target": {"tag": "div"},  # minimal — most fields absent
+            "target": {"tag": "div"},  # minimo — maioria dos campos ausentes
         }
         with patch.object(ctrl, "_capture_snapshots"):
             ctrl._persist_raw_event(data)
@@ -397,11 +397,11 @@ class TestRawEventTargetMapping:
 
 
 # ---------------------------------------------------------------------------
-# B9: Stop behavior — sensitive alerts
+# B9: Comportamento do stop — alertas sensiveis
 # ---------------------------------------------------------------------------
 
 class TestStopSensitiveAlerts:
-    """stop() saves sensitive_data_alert only when alerts exist."""
+    """stop() salva sensitive_data_alert apenas quando alertas existem."""
 
     def _ctrl_with_alerts(self, tmp_path, alerts):
         page = MagicMock()
@@ -430,11 +430,11 @@ class TestStopSensitiveAlerts:
 
 
 # ---------------------------------------------------------------------------
-# C1: Auto-updater unit tests
+# C1: Testes unitarios do auto-updater
 # ---------------------------------------------------------------------------
 
 class TestAutoUpdater:
-    """check_and_apply_update() behavior under various config states."""
+    """comportamento do check_and_apply_update() sob varios estados de configuracao."""
 
     def test_no_config_file_returns_false(self, tmp_path):
         from testforge.updater.auto_updater import check_and_apply_update
@@ -528,6 +528,6 @@ class TestAutoUpdater:
 
     def test_corrupt_yaml_returns_false(self, tmp_path):
         from testforge.updater.auto_updater import check_and_apply_update
-        (tmp_path / "testforge_update.yml").write_text(": {\n")  # invalid YAML
+        (tmp_path / "testforge_update.yml").write_text(": {\n")  # YAML invalido
         result = check_and_apply_update(tmp_path)
         assert result is False

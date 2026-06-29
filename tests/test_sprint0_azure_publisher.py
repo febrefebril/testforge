@@ -1,4 +1,4 @@
-"""Sprint 0 — Azure DevOps publisher + Z1+Z5 credential chain tests."""
+"""Sprint 0 — Testes do publisher Azure DevOps + cadeia de credenciais Z1+Z5."""
 from __future__ import annotations
 
 import json
@@ -61,13 +61,13 @@ class TestResolveChainSecretsFile:
         sec.write_text("{ not json")
         creds = resolve_credentials(org="", project="", repo="",
                                       secrets_path=sec)
-        assert creds is None  # nothing else available
+        assert creds is None  # nada mais disponivel
 
 
 class TestResolveChainNothing:
     def test_returns_none_when_no_source(self, monkeypatch, tmp_path):
         monkeypatch.delenv("AZURE_DEVOPS_PAT", raising=False)
-        # azure credentials + git helper absent in test env
+        # credenciais azure + git helper ausentes no ambiente de teste
         creds = resolve_credentials(org="", project="", repo="",
                                       secrets_path=tmp_path / "missing")
         assert creds is None
@@ -98,7 +98,7 @@ class TestPublishFlow:
         diag.mkdir()
         (diag / "session.json").write_text("{}")
         pub = AzureDevOpsPublisher(org="o", project="p", repo="r",
-                                     secrets_path=tmp_path / "missing")
+                                      secrets_path=tmp_path / "missing")
         result = pub.publish("rec_1", str(diag))
         assert result["success"] is False
         assert "PAT" in result["error"]
@@ -112,22 +112,22 @@ class TestPublishFlow:
 
     @patch("testforge.publisher.azure_devops.subprocess.run")
     def test_publish_success_path(self, mock_run, monkeypatch, tmp_path):
-        # Provide PAT via env
+        # Fornece PAT via env
         monkeypatch.setenv("AZURE_DEVOPS_PAT", "tok")
-        # subprocess.run returns OK for every call; final rev-parse returns SHA
+        # subprocess.run retorna OK para toda chamada; rev-parse final retorna SHA
         def _run(args, **kw):
             if "rev-parse" in args:
                 return subprocess.CompletedProcess(args=args, returncode=0,
-                                                     stdout="abc123def\n", stderr="")
+                                                      stdout="abc123def\n", stderr="")
             return subprocess.CompletedProcess(args=args, returncode=0,
-                                                 stdout="", stderr="")
+                                                  stdout="", stderr="")
         mock_run.side_effect = _run
         diag = tmp_path / "diag"
         diag.mkdir()
         (diag / "session.json").write_text('{"x":1}')
         (diag / "steps.jsonl").write_text('{"a":1}\n')
         pub = AzureDevOpsPublisher(org="o", project="p", repo="r",
-                                     secrets_path=tmp_path / "missing")
+                                      secrets_path=tmp_path / "missing")
         result = pub.publish("rec_1", str(diag))
         assert result["success"] is True
         assert result["remote_path"] == "diagnostic/rec_1"

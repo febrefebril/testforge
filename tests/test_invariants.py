@@ -1,13 +1,13 @@
-"""Static invariants enforced in CI.
+"""Invariantes estaticas aplicadas no CI.
 
-This file translates the patterns documented in
-`.planning/REGRESSION-PATTERNS.md` into pytest assertions. Every entry
-in that registry should have at least one test here. When a test fails,
-read the linked pattern entry to understand which bug class is at risk
-of returning, and broaden the fix accordingly.
+Este arquivo traduz os padroes documentados em
+`.planning/REGRESSION-PATTERNS.md` em assercoes pytest. Cada entrada
+nesse registro deve ter ao menos um teste aqui. Quando um teste falha,
+leia a entrada de padrao vinculada para entender qual classe de bug
+esta em risco de retornar, e amplie a correcao adequadamente.
 
-The tests are cheap: pure AST / grep on the source tree, no browser,
-no fixtures. They run on every commit.
+Os testes sao baratos: AST puro / grep na arvore de origem, sem browser,
+sem fixtures. Executam em todo commit.
 """
 from __future__ import annotations
 
@@ -25,31 +25,31 @@ def _read(rel_path: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# P1 — code-duplication-drift
+# P1 — desvio-de-duplicacao-de-codigo
 # ---------------------------------------------------------------------------
 
 class TestP1CodeDuplicationDrift:
-    """Patterns where the same algorithm in N places drifts.
+    """Padroes onde o mesmo algoritmo em N lugares diverge.
 
-    Anchor invariant: every masked-input primitive lives in exactly one
-    location. Fill helpers must delegate to `_fill_masked`. Hotfixes
-    16, 17, 19 are the historical recurrences.
+    Invariante ancora: toda primitiva de entrada mascarada vive em exatamente um
+    local. Helpers de preenchimento devem delegar para `_fill_masked`. Hotfixes
+    16, 17, 19 sao as recorrencias historicas.
     """
 
     def test_press_sequentially_lives_in_one_place(self):
         src = _read("runner/step_executor.py")
         count = src.count("press_sequentially")
         assert count == 1, (
-            f"press_sequentially appears {count} times in step_executor.py — "
-            "must be exactly 1 (inside _fill_masked). A fill helper is "
-            "reimplementing the masked-input path. See "
+            f"press_sequentially aparece {count} vezes em step_executor.py — "
+            "deve ser exatamente 1 (dentro de _fill_masked). Um helper de preenchimento esta "
+            "reimplementando o caminho de entrada mascarada. Veja "
             ".planning/REGRESSION-PATTERNS.md#P1."
         )
 
     def test_step_executor_methods_inside_class(self):
-        """Hotfix 9 shape: a module-level def inserted mid-class
-        orphaned the methods below it as nested dead code. AST check
-        catches that immediately."""
+        """Forma do hotfix 9: um def em nivel de modulo inserido no meio de uma classe
+        orfava os metodos abaixo como codigo morto aninhado. Verificacao AST
+        detecta isso imediatamente."""
         src = _read("runner/step_executor.py")
         tree = ast.parse(src)
         class_methods = set()
@@ -58,9 +58,9 @@ class TestP1CodeDuplicationDrift:
                 for m in node.body:
                     if isinstance(m, ast.FunctionDef):
                         class_methods.add(m.name)
-        # These methods MUST be class methods, not nested in another fn
-        # nor at module level. Hotfix 9 found them lost; we never want
-        # that to repeat.
+        # Estes metodos DEVEM ser metodos de classe, nao aninhados em outra fn
+        # nem em nivel de modulo. Hotfix 9 os encontrou perdidos; nunca queremos
+        # que isso se repita.
         required = {
             "execute", "_execute_click", "_execute_fill",
             "_execute_select", "_fill_input", "_fill_by_aria_label",
@@ -68,28 +68,28 @@ class TestP1CodeDuplicationDrift:
         }
         missing = required - class_methods
         assert not missing, (
-            f"StepExecutor is missing required methods: {missing}. "
-            "A def at module level may have orphaned them as nested code. "
-            "See .planning/REGRESSION-PATTERNS.md#P1, hotfix 9."
+            f"StepExecutor esta sem metodos obrigatorios: {missing}. "
+            "Um def em nivel de modulo pode ter orfanado eles como codigo aninhado. "
+            "Veja .planning/REGRESSION-PATTERNS.md#P1, hotfix 9."
         )
 
 
 # ---------------------------------------------------------------------------
-# P2 — silent-default-swallow
+# P2 — swallowed-padrao-silencioso
 # ---------------------------------------------------------------------------
 
 class TestP2SilentDefaultSwallow:
-    """`try / except Exception: pass` proliferation. Each site must
-    eventually carry a documented reason and a logger call."""
+    """Proliferacao de `try / except Exception: pass`. Cada sitio deve
+    eventualmente carregar uma razao documentada e uma chamada de logger."""
 
-    # Conservative cap. The current count is the baseline we inherit; the
-    # cap goes down as we migrate to a @tolerate decorator (debt R-C1).
+    # Limite conservador. A contagem atual e a linha de base que herdamos; o
+    # limite cai conforme migramos para um decorator @tolerate (divida R-C1).
     _CAP = 80
 
     def test_bare_except_pass_count_is_bounded(self):
-        """The number of `except Exception: pass` sites in src/ must not
-        grow. New tolerance must use a documented decorator, not a bare
-        swallow."""
+        """O numero de sitios `except Exception: pass` em src/ nao deve
+        crescer. Nova tolerancia deve usar um decorator documentado, nao um
+        swallow puro."""
         bare_pattern = re.compile(
             r"except\s+(Exception|BaseException)?:\s*\n\s*pass\s*$",
             re.MULTILINE,
@@ -99,30 +99,30 @@ class TestP2SilentDefaultSwallow:
             text = py.read_text(encoding="utf-8")
             total += len(bare_pattern.findall(text))
         assert total <= self._CAP, (
-            f"`except: pass` count is {total}, cap is {self._CAP}. "
-            "Tolerance must use a decorator that documents the reason. "
-            "See .planning/REGRESSION-PATTERNS.md#P2."
+            f"Contagem de `except: pass` e {total}, limite e {self._CAP}. "
+            "Tolerancia deve usar um decorator que documente a razao. "
+            "Veja .planning/REGRESSION-PATTERNS.md#P2."
         )
 
 
 # ---------------------------------------------------------------------------
-# P3 — unanchored-state
+# P3 — estado-nao-ancorado
 # ---------------------------------------------------------------------------
 
 class TestP3UnanchoredState:
-    """Path / state assumed but not anchored. Producer and consumer must
-    agree."""
+    """Caminho/estado assumido mas nao ancorado. Produtor e consumidor devem
+    concordar."""
 
     def test_field_value_map_writer_reader_round_trip(self, tmp_path):
-        """Hotfix CS-4a shape: the writer of field_value_map.json stores
-        data under {fields, entries, _meta} keys; the reader must
-        consume all three shapes."""
+        """Forma do hotfix CS-4a: o escritor de field_value_map.json armazena
+        dados sob chaves {fields, entries, _meta}; o leitor deve
+        consumir todas as tres formas."""
         import json
         from testforge.cli._interactive_completion import _save_field_value_map
         from testforge.semantic.recording_normalizer import RecordingNormalizer
         from testforge.semantic.model import SemanticTestCase
 
-        # Write via the production writer
+        # Escreve via o escritor de producao
         rec_dir = str(tmp_path)
         _save_field_value_map(rec_dir, {
             "cpf": {
@@ -136,7 +136,7 @@ class TestP3UnanchoredState:
             }
         })
 
-        # Read via the production reader
+        # Le via o leitor de producao
         normalizer = RecordingNormalizer()
         normalizer._current_recording_dir = rec_dir
         stc = SemanticTestCase(test_id="X", source_recording_id="X")
@@ -144,18 +144,18 @@ class TestP3UnanchoredState:
         normalizer._merge_user_supplied_values(stc)
 
         assert "cpf" in stc.field_values, (
-            "Writer/reader contract for field_value_map.json broken. "
-            "See .planning/REGRESSION-PATTERNS.md#P3, CS-4a."
+            "Contrato escritor/leitor para field_value_map.json quebrado. "
+            "Veja .planning/REGRESSION-PATTERNS.md#P3, CS-4a."
         )
         assert stc.field_values["cpf"].value == "12345678900"
 
     def test_value_mutations_writer_reader_round_trip(self, tmp_path):
-        """Hotfix 22 shape: the overlay JS writes value_mutations.jsonl
-        with `{type, timestamp, fingerprint, value}`; the normalizer's
-        `_ir_value_mutations` reads it. Both must agree on the `value`
-        key (not `new_value`) and the fingerprint format
-        `tag#id[name=]`. Pre-hotfix the reader returned an empty list
-        and every masked field looked like `typing_not_captured`."""
+        """Forma do hotfix 22: o overlay JS escreve value_mutations.jsonl
+        com `{type, timestamp, fingerprint, value}`; o normalizador
+        `_ir_value_mutations` le. Ambos devem concordar na chave `value`
+        (nao `new_value`) e no formato de fingerprint
+        `tag#id[name=]`. Pre-hotfix o leitor retornava lista vazia
+        e todo campo mascarado parecia `typing_not_captured`."""
         import json
         from testforge.semantic.recording_normalizer import RecordingNormalizer
 
@@ -171,9 +171,9 @@ class TestP3UnanchoredState:
 
         entries = RecordingNormalizer()._ir_value_mutations(str(tmp_path), [])
         assert len(entries) >= 1, (
-            "value_mutations reader returned 0 entries from a non-empty "
-            "writer file — writer/reader schema drifted. "
-            "See .planning/REGRESSION-PATTERNS.md#P3, hotfix 22."
+            "Leitor de value_mutations retornou 0 entradas de um arquivo "
+            "escritor nao vazio — esquema escritor/leitor divergiu. "
+            "Veja .planning/REGRESSION-PATTERNS.md#P3, hotfix 22."
         )
         assert entries[0]["value"] == "1.000,00"
         ids = entries[0]["identifiers"]
@@ -181,44 +181,44 @@ class TestP3UnanchoredState:
         assert ids["tag"] == "input"
 
     def test_raw_event_target_to_semantic_target_round_trip(self):
-        """Hotfix 22b shape: the overlay JS `_extractTarget` emits the
-        target dict with `element_id`; `_build_target` used to look for
-        `id` only. The contract must read both keys so SemanticTarget
-        always carries the canonical element id."""
+        """Forma do hotfix 22b: o overlay JS `_extractTarget` emite o
+        dicionario target com `element_id`; `_build_target` costumava procurar
+        apenas `id`. O contrato deve ler ambas as chaves para que SemanticTarget
+        sempre carregue o id de elemento canonico."""
         from testforge.semantic.recording_normalizer import RecordingNormalizer
 
         n = RecordingNormalizer()
         overlay_target = {
             "tag": "input",
-            "accessible_name": "Prestação desejada *",
+            "accessible_name": "Prestacao desejada *",
             "placeholder": "R$0,00",
-            "element_id": "mat-input-1",  # overlay schema
+            "element_id": "mat-input-1",  # esquema overlay
             "css_path": "input#mat-input-1",
         }
         target = n._build_target(overlay_target)
         assert target.element_id == "mat-input-1", (
-            "_build_target dropped element_id from the overlay schema. "
-            "Without it, value_mutations cannot correlate to the step. "
-            "See .planning/REGRESSION-PATTERNS.md#P3, hotfix 22b."
+            "_build_target descartou element_id do esquema overlay. "
+            "Sem isso, value_mutations nao pode correlacionar com o step. "
+            "Veja .planning/REGRESSION-PATTERNS.md#P3, hotfix 22b."
         )
-        # Back-compat shape must still populate the same field
+        # Forma back-compat deve ainda popular o mesmo campo
         target_legacy = n._build_target({"tag": "input", "id": "legacy-id"})
         assert target_legacy.element_id == "legacy-id"
 
     def test_final_state_snapshot_writer_reader_round_trip(self, tmp_path):
-        """B16 shape: the overlay JS `_captureFinalState` writes
-        final_state_snapshot.json with `fields[*].identifiers.label`;
-        the normalizer's `_ir_final_state` reads it and must surface the
-        label so the field_key resolves to a meaningful name (not the
-        raw fingerprint like `mat-input-2`).
+        """Forma B16: o overlay JS `_captureFinalState` escreve
+        final_state_snapshot.json com `fields[*].identifiers.label`;
+        o `_ir_final_state` do normalizador le e deve expor o
+        label para que o field_key resolva para um nome significativo (nao o
+        fingerprint bruto como `mat-input-2`).
 
-        Pre-fix B16: the writer dropped label, so the field_key collapsed
-        to the fingerprint and the --complete prompt asked for fields
-        the user already typed."""
+        Pre-fix B16: o escritor descartava label, entao o field_key colapsava
+        para o fingerprint e o prompt --complete pedia campos
+        que o usuario ja tinha digitado."""
         import json
         from testforge.semantic.recording_normalizer import RecordingNormalizer
 
-        # Schema mirrors overlay_inject.js:_snapshotFields (input branch).
+        # Esquema espelha overlay_inject.js:_snapshotFields (branch input).
         payload = {
             "reason": "session_end",
             "timestamp": "2026-06-27T10:05:00Z",
@@ -249,88 +249,88 @@ class TestP3UnanchoredState:
 
         entries = RecordingNormalizer()._ir_final_state(str(tmp_path), [])
         assert len(entries) == 1, (
-            "_ir_final_state dropped the snapshot entry. "
-            "See .planning/REGRESSION-PATTERNS.md#P3, B16."
+            "_ir_final_state descartou a entrada do snapshot. "
+            "Veja .planning/REGRESSION-PATTERNS.md#P3, B16."
         )
         entry = entries[0]
-        # Label survives round-trip
+        # Label sobrevive ao round-trip
         assert entry["identifiers"]["label"] == "CPF", (
-            "Label was dropped between writer and reader. The field_key "
-            "will collapse to the fingerprint and the --complete prompt "
-            "will demand fields the user already typed. "
-            "See .planning/REGRESSION-PATTERNS.md#P3, B16."
+            "Label foi descartado entre escritor e leitor. O field_key "
+            "colapsara para o fingerprint e o prompt --complete "
+            "exigira campos que o usuario ja digitou. "
+            "Veja .planning/REGRESSION-PATTERNS.md#P3, B16."
         )
-        # Canonical field_key is derived from a human-readable identifier,
-        # not the opaque mat-input-N fingerprint.
+        # field_key canonico e derivado de um identificador legivel por humanos,
+        # nao do fingerprint opaco mat-input-N.
         assert "mat-input" not in entry["field_key"], (
-            f"field_key={entry['field_key']!r} still carries the raw "
-            "fingerprint id. Canonicalisation must prefer label/name."
+            f"field_key={entry['field_key']!r} ainda carrega o id de "
+            "fingerprint bruto. Canonizacao deve preferir label/name."
         )
         assert entry["value"] == "539.867.177-49"
         assert entry["source"] == "final_state"
 
 
 # ---------------------------------------------------------------------------
-# P4 — feature-flag-rot
+# P4 — rot-de-feature-flag
 # ---------------------------------------------------------------------------
 
 class TestP4FeatureFlagRot:
-    """Feature flags that never flip rot into dead code. Tracking-only
-    for now — turns into a hard fail once we set a flip deadline."""
+    """Feature flags que nunca sao alternadas apodrecem em codigo morto. Apenas
+    rastreamento por enquanto — se torna falha rigida quando definirmos um prazo."""
 
     _KNOWN_FLAGS = {
-        # name -> {default, owner, flip_or_delete_by}
+        # nome -> {default, owner, flip_or_delete_by}
         "use_cdp_recorder": {"default": False, "flip_or_delete_by": "2026-07-31"},
         "use_pipeline": {"default": False, "flip_or_delete_by": "2026-07-31"},
         "use_v2_compiler": {"default": False, "flip_or_delete_by": "2026-07-31"},
     }
 
     def test_known_flags_have_a_decision_deadline(self):
-        """Every feature flag must have a flip-or-delete deadline. This
-        test currently lists what we know; future PRs adding a flag must
-        register it here."""
+        """Todo feature flag deve ter um prazo para alternar ou deletar. Este
+        teste atualmente lista o que sabemos; PRs futuros que adicionarem uma flag devem
+        registra-la aqui."""
         for name, info in self._KNOWN_FLAGS.items():
             assert "flip_or_delete_by" in info, (
-                f"Flag {name} has no deadline. "
-                "See .planning/REGRESSION-PATTERNS.md#P4."
+                f"Flag {name} nao tem prazo. "
+                "Veja .planning/REGRESSION-PATTERNS.md#P4."
             )
 
 
 # ---------------------------------------------------------------------------
-# P5 — compile-runtime-divergence
+# P5 — divergencia-compile-runtime
 # ---------------------------------------------------------------------------
 
 class TestP5CompileRuntimeDivergence:
-    """Runtime must not silently substitute the compiled action."""
+    """Runtime nao deve substituir silenciosamente a acao compilada."""
 
     def test_click_to_fill_promotion_is_documented(self):
-        """The click → fill silent promotion is the canonical
-        compile/runtime divergence in step_executor. We do not delete
-        it yet (R-E2 in the refactor sprint), but we DO require that
-        every call site emits a fill.attempted span (CS-3). This test
-        asserts the telemetry hook exists in the promotion path."""
+        """A promocao silenciosa click → fill e a divergencia
+        compile/runtime canonica em step_executor. Nao a deletamos
+        ainda (R-E2 no sprint de refatoracao), mas EXIGIMOS que
+        todo ponto de chamada emita um span fill.attempted (CS-3). Este teste
+        afirma que o hook de telemetria existe no caminho de promocao."""
         src = _read("runner/step_executor.py")
-        # The _execute_click branch that calls _fill_input on
-        # missing_fill must reach _fill_masked, which emits the span.
+        # O branch _execute_click que chama _fill_input em
+        # missing_fill deve alcancar _fill_masked, que emite o span.
         assert "_fill_masked" in src
         assert "_emit_fill_span" in src
-        # Every fill helper must delegate, not re-emit the span itself
-        # (see P1 contract).
+        # Todo helper de preenchimento deve delegar, nao re-emitir o span ele mesmo
+        # (veja contrato P1).
 
     def test_datepicker_handler_emits_skip_reason(self):
-        """When the Angular Material datepicker handler suppresses a
-        step, the skip_reason field must be set so the runner UI and
-        the spans can report the decision. Silent drops are forbidden
+        """Quando o handler de datepicker do Angular Material suprime um
+        step, o campo skip_reason deve ser definido para que a UI do runner e
+        os spans possam reportar a decisao. Drops silenciosos sao proibidos
         (hotfix 20)."""
         src = _read("handlers/angular_material.py")
-        # datepicker_dedup is the documented skip_reason for the
-        # completed-via-fill path. The click-only completion path now
-        # does NOT set skip_reason because the clicks ARE the canonical
-        # intent — that's the hotfix-20 invariant.
+        # datepicker_dedup e o skip_reason documentado para o
+        # caminho completed-via-fill. O caminho de completude apenas-click agora
+        # NAO define skip_reason porque os clicks SAO a intencao
+        # canonica — essa e a invariante do hotfix-20.
         assert "datepicker_dedup" in src
-        # Negative invariant: the click-only completion branch (hotfix
-        # 20) must not set skip_reason.
+        # Invariancia negativa: o branch de completude apenas-click (hotfix
+        # 20) nao deve definir skip_reason.
         assert "click-only completion" in src or "Click-only completion" in src, (
-            "The hotfix 20 click-only branch comment is missing — "
-            "regression risk. See .planning/REGRESSION-PATTERNS.md#P5."
+            "O comentario do branch apenas-click do hotfix 20 esta faltando — "
+            "risco de regressao. Veja .planning/REGRESSION-PATTERNS.md#P5."
         )

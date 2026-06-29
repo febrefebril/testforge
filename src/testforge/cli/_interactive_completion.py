@@ -27,11 +27,11 @@ def _trunc(s: str, n: int = 60) -> str:
 
 
 def _build_field_hint(field, stc, ordinal: int, total: int) -> list[str]:
-    """H2: build rich, multi-line context lines so the user identifies which
-    physical field on the recorded page is being asked about.
+    """H2: monta linhas de contexto ricas para que o usuario identifique qual
+    campo fisico na pagina gravada esta sendo perguntado.
 
-    Returned lines render between the field header and the input() prompt.
-    Each piece is best-effort — anything that fails to resolve is omitted.
+    Linhas renderizadas entre o cabecalho do campo e o prompt input().
+    Cada parte e melhor esforco — tudo que falhar ao resolver e omitido.
     """
     lines: list[str] = []
     lines.append(f"     Progresso: {ordinal} de {total}")
@@ -136,13 +136,13 @@ def prompt_missing_fields(
         True se todos os campos resolvidos, False se algum permanecer pendente.
     """
     if not report.pending_fields:
-        print("[TestForge] ✓ Nenhum campo pendente — intencao completa")
+        print("[TestForge] [OK] Nenhum campo pendente — intencao completa")
         _update_recording_metadata(rec_dir, RecordingStatus.intent_complete)
         return True
 
     total_pending = len(report.pending_fields)
-    print(f"\n[TestForge] 🔍 Intencao INCOMPLETA — {total_pending} campo(s) pendente(s)")
-    print(f"[TestForge] 💡 Mostrando contexto enriquecido para distinguir campos repetidos")
+    print(f"\n[TestForge] [BUSCA] Intencao INCOMPLETA — {total_pending} campo(s) pendente(s)")
+    print(f"[TestForge] [DICA] Mostrando contexto enriquecido para distinguir campos repetidos")
     print()
 
     values_provided = {}
@@ -179,24 +179,24 @@ def prompt_missing_fields(
                 "confidence": 1.0,
                 "step_index": field.step_index,
             }
-            print(f"     ✓ Valor registrado: '{val}'")
+            print(f"     [OK] Valor registrado: '{val}'")
         else:
             print(f"     - Pulado (sem valor)")
 
         print()
 
-    # Save provided values to field_value_map.json
+    # Salva valores fornecidos em field_value_map.json
     _save_field_value_map(rec_dir, values_provided)
 
-    # Save to test_data.json
+    # Salva em test_data.json
     test_data_path = _save_test_data(rec_dir, values_provided, recording_id)
 
-    # Re-run normalizer + completeness checker with new values
+    # Re-executa normalizador + verificador de completude com novos valores
     if normalizer is None:
         from testforge.semantic import RecordingNormalizer
         normalizer = RecordingNormalizer()
     try:
-        # Infer app/base_url from recording metadata if available
+        # Infere app/base_url dos metadados da gravacao se disponivel
         meta_path = os.path.join(rec_dir, "recording_metadata.json")
         meta = {}
         if os.path.exists(meta_path):
@@ -213,7 +213,7 @@ def prompt_missing_fields(
         json_path, md_path = save_completeness_report(new_report, report_dir, recording_id)
 
         if new_report.is_complete:
-            print(f"[TestForge] ✓ Todos os campos resolvidos — intencao COMPLETA")
+            print(f"[TestForge] [OK] Todos os campos resolvidos — intencao COMPLETA")
             _update_recording_metadata(rec_dir, RecordingStatus.intent_complete)
         else:
             print(f"[TestForge] [WARN] {new_report.missing_count} campo(s) ainda pendente(s)")
@@ -223,11 +223,11 @@ def prompt_missing_fields(
         return new_report.is_complete
     except Exception as e:
         print(f"[TestForge] [WARN] Erro ao re-verificar completude: {e}")
-        # Fallback: simple count-based check
+        # Fallback: verificacao simples baseada em contagem
         resolved = len(values_provided)
         pending = len(report.pending_fields) - resolved
         if pending == 0:
-            print(f"[TestForge] ✓ Todos os {resolved} campos resolvidos via CLI")
+            print(f"[TestForge] [OK] Todos os {resolved} campos resolvidos via CLI")
             _update_recording_metadata(rec_dir, RecordingStatus.intent_complete)
             return True
         else:
@@ -242,15 +242,15 @@ def create_data_template(
     recording_id: str,
     report: CompletenessReport,
 ) -> str:
-    """Create test_data.template.json for non-interactive mode.
+    """Cria test_data.template.json para modo nao interativo.
 
     Args:
-        rec_dir: Recording directory path.
-        recording_id: Recording ID.
-        report: CompletenessReport with pending fields.
+        rec_dir: Caminho do diretorio de gravacao.
+        recording_id: ID da gravacao.
+        report: CompletenessReport com campos pendentes.
 
     Returns:
-        Path to generated template file.
+        Caminho para o arquivo de template gerado.
     """
     template = {
         "metadata": {
@@ -273,7 +273,7 @@ def create_data_template(
             "source": "template_pending",
         }
 
-    # Include resolved fields too
+    # Inclui campos resolvidos tambem
     for field in report.fields:
         if field.completeness in (FieldCompleteness.resolved,
                                    FieldCompleteness.resolved_with_warning):
@@ -293,14 +293,14 @@ def create_data_template(
 
 
 def _save_field_value_map(rec_dir: str, values: dict) -> str:
-    """Append user-supplied values to field_value_map.json.
+    """Adiciona valores fornecidos pelo usuario ao field_value_map.json.
 
     Args:
-        rec_dir: Recording directory.
-        values: Dict of field_key -> value info.
+        rec_dir: Diretorio da gravacao.
+        values: Dict de field_key -> informacao do valor.
 
     Returns:
-        Path to field_value_map.json.
+        Caminho para field_value_map.json.
     """
     path = os.path.join(rec_dir, "field_value_map.json")
 
@@ -327,7 +327,7 @@ def _save_field_value_map(rec_dir: str, values: dict) -> str:
         }
         existing["entries"].append(entry)
 
-    # Also update metadata
+    # Atualiza metadados tambem
     existing["_meta"] = existing.get("_meta", {})
     existing["_meta"]["updated_at"] = datetime.now(timezone.utc).isoformat()
     existing["_meta"]["sources"] = list(set(
@@ -341,15 +341,15 @@ def _save_field_value_map(rec_dir: str, values: dict) -> str:
 
 
 def _save_test_data(rec_dir: str, values: dict, recording_id: str) -> str:
-    """Update test_data.json with user-supplied values.
+    """Atualiza test_data.json com valores fornecidos pelo usuario.
 
     Args:
-        rec_dir: Recording directory.
-        values: Dict of field_key -> value info.
-        recording_id: Recording ID.
+        rec_dir: Diretorio da gravacao.
+        values: Dict de field_key -> informacao do valor.
+        recording_id: ID da gravacao.
 
     Returns:
-        Path to test_data.json.
+        Caminho para test_data.json.
     """
     path = os.path.join(rec_dir, "test_data.json")
 
@@ -377,7 +377,7 @@ def _save_test_data(rec_dir: str, values: dict, recording_id: str) -> str:
             "recorded_at": datetime.now(timezone.utc).isoformat(),
         }
 
-    # Sensitive data alert (not auto-masking)
+    # Alerta de dados sensiveis (sem mascaramento automatico)
     _sensitive_patterns = [
         r"(?i)cpf|senha|password|cartao|card|credit|token",
     ]
@@ -404,7 +404,7 @@ def _save_test_data(rec_dir: str, values: dict, recording_id: str) -> str:
 
 
 def _update_recording_metadata(rec_dir: str, status: RecordingStatus) -> bool:
-    """Update recording_metadata.json with new status."""
+    """Atualiza recording_metadata.json com novo status."""
     meta_path = os.path.join(rec_dir, "recording_metadata.json")
     if not os.path.exists(meta_path):
         return False

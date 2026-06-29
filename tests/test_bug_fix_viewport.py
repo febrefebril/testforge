@@ -1,4 +1,4 @@
-"""Regression test — Bug 2/6: no_viewport=True in headed mode."""
+"""Teste de regressão — Bug 2/6: no_viewport=True em modo headed."""
 import pytest
 
 
@@ -16,9 +16,9 @@ def test_make_context_kwargs_headed():
 
 
 def test_app_py_no_bare_viewport_none():
-    """app.py must not pass viewport=None to new_context — must use no_viewport=True."""
+    """app.py não deve passar viewport=None para new_context — deve usar no_viewport=True."""
     from pathlib import Path
     src = (Path(__file__).parent.parent / "src/testforge/cli/app.py").read_text(encoding="utf-8")
-    assert "viewport=None" not in src, "viewport=None found — use no_viewport=True for headed mode"
+    assert "viewport=None" not in src, "viewport=None encontrado — use no_viewport=True para modo headed"
     assert "new_context(viewport=_vp)" not in src
     assert "new_context(viewport=viewport)" not in src

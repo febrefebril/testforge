@@ -48,7 +48,7 @@ class TestEvidencePayloadValidation:
     def test_insufficient_dom_too_short(self):
         p = EvidencePayload(
             step_context={"action": "click"},
-            dom_snapshot="<html></html>",  # too short (<100 chars)
+            dom_snapshot="<html></html>",  # muito curto (<100 caracteres)
             console_errors=[{"text": "err"}],
         )
         p.validate()
@@ -60,7 +60,7 @@ class TestEvidencePayloadValidation:
             dom_snapshot="<html><body>" + "a" * 100 + "</body></html>",
         )
         p.validate()
-        # DOM-only is now sufficient (bonus context is optional)
+        # apenas DOM ja e suficiente (contexto bonus opcional)
         assert p.is_sufficient is True
         assert "bonus context missing" in p.insufficiency_reason.lower()
 
@@ -151,13 +151,13 @@ class TestEvidencePayloadFactory:
             step_context={"action": "click"},
             dom_html="<html><body>" + "x" * 100 + "</body></html>",
         )
-        # DOM-only is now sufficient (bonus context optional)
+        # apenas DOM ja e suficiente (contexto bonus opcional)
         assert p.is_sufficient is True
 
 
 class TestEvidenceCollectorLLMPayload:
     def test_build_llm_payload_no_page(self):
-        """Without a Playwright page, payload should be insufficient."""
+        """Sem pagina Playwright, payload deve ser insuficiente."""
         ec = EvidenceCollector(None)
         ec.start("test-run")
         p = ec.build_llm_payload({"action": "click", "selector": "#btn"})
@@ -165,7 +165,7 @@ class TestEvidenceCollectorLLMPayload:
         assert "DOM snapshot missing" in p.insufficiency_reason
 
     def test_build_llm_payload_with_page(self, page: Page):
-        """With a Playwright page, payload should capture DOM."""
+        """Com pagina Playwright, payload deve capturar DOM."""
         page.set_content('<html><body><button id="btn">Click Me Now Please For Minimum Length Test</button><p>Some additional text content here to make sure the DOM is long enough for validation</p></body></html>')
 
         ec = EvidenceCollector(page)
@@ -177,7 +177,7 @@ class TestEvidenceCollectorLLMPayload:
         assert len(p.dom_snapshot) >= 100
 
     def test_build_llm_payload_with_screenshot(self, page: Page):
-        """With include_screenshot=True, screenshot should be in payload."""
+        """Com include_screenshot=True, screenshot deve estar no payload."""
         page.set_content('<html><body>' + ("<p>content for minimum length requirement to pass validation check</p>" * 5) + '</body></html>')
 
         ec = EvidenceCollector(page)
@@ -190,13 +190,13 @@ class TestEvidenceCollectorLLMPayload:
         assert len(p.screenshot_b64) > 0
 
     def test_console_buffer_captures_errors(self, page: Page):
-        """Console errors during execution should be captured."""
+        """Erros de console durante execucao devem ser capturados."""
         page.set_content('<html><body>' + ("<p>filler content for minimum dom length requirement test validation</p>" * 3) + '</body></html>')
 
         ec = EvidenceCollector(page)
         ec.start("test-console")
 
-        # Trigger a console error
+        # Disparar um erro de console
         page.evaluate("console.error('test error message for buffer')")
         page.wait_for_timeout(100)
 
@@ -204,7 +204,7 @@ class TestEvidenceCollectorLLMPayload:
         assert len(p.console_errors) > 0
 
     def test_clear_buffers(self, page: Page):
-        """clear_buffers() should reset console and network buffers."""
+        """clear_buffers() deve redefinir buffers de console e rede."""
         page.set_content('<html><body>' + ("<p>minimum dom length content for validation test check purposes here</p>" * 3) + '</body></html>')
 
         ec = EvidenceCollector(page)
@@ -212,11 +212,11 @@ class TestEvidenceCollectorLLMPayload:
         page.evaluate("console.warn('test warning')")
         page.wait_for_timeout(100)
 
-        # Should have entries
+        # Deve ter entradas
         p1 = ec.build_llm_payload({"action": "click"})
         assert len(p1.console_errors) > 0
 
-        # Clear and verify empty
+        # Limpar e verificar vazio
         ec.clear_buffers()
         p2 = ec.build_llm_payload({"action": "click"})
         assert len(p2.console_errors) == 0

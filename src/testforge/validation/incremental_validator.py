@@ -69,7 +69,7 @@ class IncrementalRecordingValidator:
         self.step_results: list = []
 
     def _get_recording_metadata(self) -> dict:
-        """Load recording metadata from recording.json if it exists."""
+        """Carrega metadados da gravacao de recording.json se existir."""
         meta_path = os.path.join(self.recording_dir, "recording.json")
         if os.path.exists(meta_path):
             with open(meta_path) as f:
@@ -77,10 +77,10 @@ class IncrementalRecordingValidator:
         return {}
 
     def _normalize(self) -> bool:
-        """Normalize raw events into SemanticTestCase.
+        """Normaliza eventos brutos em SemanticTestCase.
 
         Returns:
-            True if normalization succeeded.
+            True se normalizacao bem-sucedida.
         """
         from testforge.semantic.recording_normalizer import RecordingNormalizer
 
@@ -107,10 +107,10 @@ class IncrementalRecordingValidator:
             return False
 
     def _check_completeness(self) -> CompletenessReport:
-        """Check completeness of the normalized recording.
+        """Verifica completude da gravacao normalizada.
 
         Returns:
-            CompletenessReport with per-field status.
+            CompletenessReport com status por campo.
         """
         checker = IntentCompletenessChecker()
         report = checker.check_steps(
@@ -154,20 +154,20 @@ class IncrementalRecordingValidator:
         return report
 
     def _run_incremental(self) -> list:
-        """Run incremental execution on the normalized steps.
+        """Executa execucao incremental nos passos normalizados.
 
-        This wraps IncrementalRunner to validate that steps execute
-        correctly with the resolved field values.
+        Encapsula IncrementalRunner para validar que passos executam
+        corretamente com os valores de campo resolvidos.
 
         Returns:
-            List of IncrementalStepResult objects.
+            Lista de objetos IncrementalStepResult.
         """
         from testforge.runner.incremental_runner import IncrementalRunner
 
         if not self.semantic_test_case or not self.semantic_test_case.steps:
             return []
 
-        # Find the compiled script path if it exists
+        # Encontra o caminho do script compilado se existir
         script_path = self._find_compiled_script()
 
         self.status_history.record(
@@ -176,7 +176,7 @@ class IncrementalRecordingValidator:
         )
 
         if script_path and os.path.exists(script_path):
-            # Use compiled script for playback
+            # Usa script compilado para reproducao
             runner = IncrementalRunner(
                 script_path=script_path,
                 headless=self.headless,
@@ -189,8 +189,8 @@ class IncrementalRecordingValidator:
                 output_root=os.path.join(self.output_dir, "validation_run"),
             )
         else:
-            # Run from semantic steps directly — create a minimal script
-            # that IncrementalRunner can load
+            # Executa diretamente dos passos semanticos — cria script minimo
+            # que IncrementalRunner pode carregar
             runner = self._make_runner_from_steps()
 
         try:
@@ -198,23 +198,23 @@ class IncrementalRecordingValidator:
             self.step_results = report.get("steps", []) if isinstance(report, dict) else []
         except Exception as exc:
             import sys
-            print(f"[TestForge] Erro na validacao incremental: {exc}", file=sys.stderr)
+            print(f"[TestForge] [ERRO] Validacao incremental: {exc}", file=sys.stderr)
             self.step_results = []
 
         return self.step_results
 
     def _find_compiled_script(self) -> str:
-        """Find compiled test script in recording directory."""
+        """Encontra script de teste compilado no diretorio da gravacao."""
         for entry in os.listdir(self.recording_dir):
             if entry.startswith("test_") and entry.endswith(".py"):
                 return os.path.join(self.recording_dir, entry)
         return ""
 
     def _make_runner_from_steps(self):
-        """Create IncrementalRunner configured to run from semantic steps directly.
+        """Cria IncrementalRunner configurado para executar diretamente de passos semanticos.
 
-        Since IncrementalRunner expects a script path, we create a runner
-        configured with just the base URL and steps.
+        Como IncrementalRunner espera um caminho de script, criamos um runner
+        configurado apenas com a URL base e passos.
         """
         from testforge.runner.incremental_runner import IncrementalRunner
 
@@ -238,10 +238,10 @@ class IncrementalRecordingValidator:
         return runner
 
     def _evaluate_gate(self) -> ReadinessReport:
-        """Evaluate readiness gate with current results.
+        """Avalia portao de prontidao com resultados atuais.
 
         Returns:
-            ReadinessReport with final verdict.
+            ReadinessReport com veredito final.
         """
         gate = RecordingReadinessGate()
         report = gate.evaluate(
@@ -259,11 +259,11 @@ class IncrementalRecordingValidator:
 
         self.readiness_report = report
 
-        # Record final status
+        # Registra status final
         if report.verdict == ReadinessVerdict.PASS:
             self.status_history.record(
                 RecordingStatus.ready_for_team,
-                reason="All readiness criteria passed",
+                reason="Todos os criterios de prontidao aprovados",
                 metadata={"verdict": "pass"},
             )
         elif report.verdict == ReadinessVerdict.NEEDS_REVIEW:
@@ -288,7 +288,7 @@ class IncrementalRecordingValidator:
         return report
 
     def _save_status_history(self):
-        """Save status history to recording directory."""
+        """Salva historico de status no diretorio da gravacao."""
         history_path = os.path.join(self.output_dir, "status_history.json")
         with open(history_path, "w", encoding="utf-8") as f:
             json.dump(
@@ -307,18 +307,18 @@ class IncrementalRecordingValidator:
             )
 
     def validate(self) -> ReadinessReport:
-        """Run the full validation pipeline.
+        """Executa o pipeline completo de validacao.
 
-        Steps:
-        1. Load recording metadata
-        2. Normalize raw events → SemanticTestCase
-        3. Check completeness → CompletenessReport
-        4. Run incremental execution → step results
-        5. Evaluate readiness gate → ReadinessReport
-        6. Save all reports
+        Passos:
+        1. Carregar metadados da gravacao
+        2. Normalizar eventos brutos → SemanticTestCase
+        3. Verificar completude → CompletenessReport
+        4. Executar execucao incremental → resultados dos passos
+        5. Avaliar portao de prontidao → ReadinessReport
+        6. Salvar todos os relatorios
 
         Returns:
-            ReadinessReport with final verdict.
+            ReadinessReport com veredito final.
         """
         import sys
 
@@ -328,7 +328,7 @@ class IncrementalRecordingValidator:
         self.application = meta.get("application", "")
         self.base_url = meta.get("base_url", "")
 
-        print(f"[TestForge] 🔍 Validando gravacao: {self.recording_id}", file=sys.stderr)
+        print(f"[TestForge] [BUSCA] Validando gravacao: {self.recording_id}", file=sys.stderr)
 
         # 2. Normalize
         if not self._normalize():
@@ -345,7 +345,7 @@ class IncrementalRecordingValidator:
         total = completeness.total_fields
         missing = completeness.missing_count
         print(
-            f"[TestForge] 📋 Completude: {total} campo(s), "
+            f"[TestForge] [DADOS] Completude: {total} campo(s), "
             f"{'[OK] completo' if completeness.is_complete else f'[FAIL] {missing} ausente(s)'}",
             file=sys.stderr,
         )
@@ -354,7 +354,7 @@ class IncrementalRecordingValidator:
         self._run_incremental()
         step_count = len(self.step_results)
         print(
-            f"[TestForge] 🔄 Validacao incremental: {step_count} step(s) executado(s)",
+            f"[TestForge] [EXEC] Validacao incremental: {step_count} step(s) executado(s)",
             file=sys.stderr,
         )
 
@@ -368,7 +368,7 @@ class IncrementalRecordingValidator:
         return report
 
     def _make_failed_report(self, reason: str) -> ReadinessReport:
-        """Create a failed readiness report when validation cannot run."""
+        """Cria relatorio de prontidao falho quando a validacao nao pode executar."""
         from datetime import datetime, timezone
         report = ReadinessReport(
             recording_id=self.recording_id,

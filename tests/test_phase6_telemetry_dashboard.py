@@ -1,11 +1,11 @@
-"""Phase 6 — zero-dep tracer + static dashboard.
+"""Fase 6 — Tracer sem dependencias + dashboard estatico.
 
-Verifies:
-- Tracer writes JSONL spans with OTel-compatible attrs
-- Disabled tracer is a no-op
-- Span nesting carries trace_id forward and sets parent_span_id
-- LocatorResolver emits a 'resolve' span with level/strategy/score
-- Dashboard renders HTML from spans + catalog without errors
+Verifica:
+- Tracer escreve spans JSONL com atributos compativeis com OTel
+- Tracer desabilitado e no-op
+- Aninhamento de spans propaga trace_id e define parent_span_id
+- LocatorResolver emite span 'resolve' com level/strategy/score
+- Dashboard renderiza HTML a partir de spans + catalog sem erros
 """
 from __future__ import annotations
 
@@ -70,7 +70,7 @@ class TestTracer:
                     pass
             lines = [json.loads(l) for l in open(path) if l.strip()]
             assert len(lines) == 2
-            child, parent = lines  # child ends first → written first
+            child, parent = lines              # filho termina primeiro — escrito primeiro
             assert child["name"] == "child"
             assert parent["name"] == "parent"
             assert child["trace_id"] == parent["trace_id"]
