@@ -901,7 +901,24 @@ def cmd_audit(args):
 
 
 def cmd_run(args):
-    """Executa script Playwright inline com healing L0→L3 via CuradorAutomatico."""
+    """Executa script Playwright inline com healing L0→L3 via CuradorAutomatico.
+
+    DEPRECATED (Sprint 4 do decommission plan, 2026-06-29): este comando reporta
+    metricas falsas em forms complexos — ver [[project-run-legacy-decommission]]
+    e [[feedback-run-metrics-lie]]. Migrar para `testforge run-incremental`.
+    """
+    print(
+        "[TestForge] [WARN] `testforge run` esta deprecated e sera removido em "
+        "uma proxima versao.\n"
+        "  Metrica de cura reportada por este comando NAO eh confiavel — ele "
+        "nao tem oracle pos-step\n"
+        "  nem screen-state tracking, entao curas para tela errada contam como "
+        "PASSED_STEP.\n"
+        "  Use `testforge run-incremental <script>` em vez disso.\n"
+        "  Detalhes: docs/ARCHITECTURE-V2.md / project-run-legacy-decommission.",
+        flush=True,
+    )
+
     script_path = args.script
 
     if not os.path.exists(script_path):
