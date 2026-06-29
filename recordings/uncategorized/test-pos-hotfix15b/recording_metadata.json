@@ -1,0 +1,45 @@
+{
+  "recording_id": "test-pos-hotfix15b",
+  "application": "SIOPI",
+  "base_url": "https://simuladorhabitacao.caixa.gov.br/home",
+  "started_at": "2026-06-29T22:00:09.735580+00:00",
+  "finished_at": "2026-06-29T22:01:06.939422+00:00",
+  "status": "intent_complete",
+  "recording_status": "intent_complete",
+  "status_history": [
+    {
+      "status": "recording",
+      "timestamp": "2026-06-29T22:00:09.748643+00:00",
+      "reason": "Recording started",
+      "metadata": {
+        "application": "SIOPI",
+        "base_url": "https://simuladorhabitacao.caixa.gov.br/home"
+      }
+    },
+    {
+      "status": "stopped",
+      "timestamp": "2026-06-29T22:01:06.939438+00:00",
+      "reason": "Recording stopped by user",
+      "metadata": {}
+    },
+    {
+      "status": "completed_raw",
+      "timestamp": "2026-06-29T22:01:06.941987+00:00",
+      "reason": "Recording finalized",
+      "metadata": {}
+    },
+    {
+      "status": "intent_complete",
+      "timestamp": "2026-06-29T22:01:06.971081+00:00",
+      "reason": "compile --check: intent_complete",
+      "metadata": {}
+    }
+  ],
+  "fingerprint": {
+    "capture_schema_version": 4,
+    "testforge_version": "0.1.0",
+    "overlay_inject_sha256": "c6331687d078acaed0aec1d928a65217405462d5e5083fdc4a52d71f0cce9b20",
+    "git_head_sha": "9e45a4e4e3873e706a3765aad72a7d80ec80c2ff",
+    "recorded_at": "2026-06-29T22:00:09.748601+00:00"
+  }
+}
