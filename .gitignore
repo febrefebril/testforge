@@ -27,3 +27,7 @@ semantic_tests/
 generated_tests/
 /evidence/
 .config/google-chrome-for-testing/
+.claude/
+.testforge/
+evidencias/
+runs/

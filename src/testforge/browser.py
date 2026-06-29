@@ -1,4 +1,4 @@
-"""Centralized browser launcher with CDP-first fallback."""
+"""Lancamento centralizado de navegador com fallback CDP-first."""
 from __future__ import annotations
 import logging
 import os
@@ -39,7 +39,7 @@ def _gpu_args(headless=False):
 def launch_browser(pw, browser_type="chromium", headless=False, cdp_url="", verify_ssl=True):
     errors = []
 
-        # P1: CDP via ENV
+    # P1: CDP via variavel de ambiente
     env_cdp = os.environ.get("TESTFORGE_USE_CDP", "").strip()
     if env_cdp:
         try:
@@ -49,7 +49,7 @@ def launch_browser(pw, browser_type="chromium", headless=False, cdp_url="", veri
         except Exception as e:
             errors.append(f"cdp_env: {e}")
 
-        # P2: CDP via param
+    # P2: CDP via parametro
     if cdp_url:
         try:
             browser = pw.chromium.connect_over_cdp(cdp_url, timeout=10000)
@@ -100,4 +100,4 @@ def launch_browser(pw, browser_type="chromium", headless=False, cdp_url="", veri
     except Exception as e:
         errors.append(f"cdp_fallback: {e}")
 
-    raise RuntimeError("Todas as estratégias de navegador falharam:\n  " + "\n  ".join(errors))
+    raise RuntimeError("Todas as estrategias de navegador falharam:\n  " + "\n  ".join(errors))
