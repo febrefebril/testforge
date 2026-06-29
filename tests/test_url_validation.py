@@ -64,14 +64,14 @@ class TestUrlValidator:
         warnings = validator.validate("http://example.com/page?arg=")
         critical = [w for w in warnings if w.is_critical]
         assert len(critical) >= 1
-        assert any("ends with '='" in w.message for w in critical)
+        assert any("termina com '='" in w.message for w in critical)
 
     def test_url_ends_with_equals_is_truncated(self, validator):
         """URL ending with = (no ?) also indicates truncation."""
         warnings = validator.validate("http://example.com/page?arg=1&other=")
         critical = [w for w in warnings if w.is_critical]
         assert len(critical) >= 2  # ampersand warning + truncation warning
-        assert any("ends with '='" in w.message for w in critical)
+        assert any("termina com '='" in w.message for w in critical)
 
     # --- Truncation: URL ends with ? ---
 
@@ -80,7 +80,7 @@ class TestUrlValidator:
         warnings = validator.validate("http://example.com/page?")
         critical = [w for w in warnings if w.is_critical]
         assert len(critical) >= 1
-        assert any("ends with '?'" in w.message for w in critical)
+        assert any("termina com '?'" in w.message for w in critical)
 
     # --- Truncation: parameter without value ---
 
@@ -89,7 +89,7 @@ class TestUrlValidator:
         warnings = validator.validate("http://example.com/page?arg=1&other")
         critical = [w for w in warnings if w.is_critical]
         assert len(critical) >= 1
-        assert any("no value" in w.message for w in critical)
+        assert any("sem valor" in w.message for w in critical)
 
     # --- No scheme warning ---
 

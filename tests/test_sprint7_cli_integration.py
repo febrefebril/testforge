@@ -312,11 +312,17 @@ class TestFailingValidation:
         with open(md_path) as f:
             md = f.read()
 
-        # QA-friendly: has clear sections
+        # QA-friendly: has clear sections (PT-BR markdown).
         assert "Status" in md
-        assert "Ready" in md or "Review" in md or "Not" in md
+        assert (
+            "Pronto" in md or "Revisao" in md or "Revisão" in md
+            or "Ausente" in md or "Pendente" in md or "Nao Pronto" in md
+        )
         # Has field detail
-        assert "Missing Fields" in md or "Review Required" in md
+        assert (
+            "Campos Ausentes" in md or "Revisao Requerida" in md
+            or "Revisão Requerida" in md
+        )
         # Has next steps
         assert len(md) > 50
 

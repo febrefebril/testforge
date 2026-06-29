@@ -182,7 +182,7 @@ class TestCT_AUTO_5_1:
         with open(md_path) as f:
             md = f.read()
         assert "PASS" in md or "Pass" in md
-        assert "Ready for Team" in md
+        assert "Pronto para o Time" in md
 
     def test_zero_steps_is_valid(self, gate, passing_completeness):
         """No executable steps => trivially passes if completeness ok."""

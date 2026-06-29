@@ -54,26 +54,26 @@ _MATERIAL_ICONS = {
 
 
 def _clean_material_icons(text: str) -> str:
-    """Hotfix BUG 8: strip leading/trailing Material Icon names from a label.
+    """Hotfix BUG 8: remove nomes de Material Icon no inicio/fim de um label.
 
-    Conservative rule: an icon-name token is only removed when there is at
-    least one OTHER (non-icon) token in the label. That way "Login" by
-    itself remains "Login" even though `login` is a Material icon, while
-    "home Página Inicial" correctly becomes "Página Inicial".
+    Regra conservadora: um token de nome de icone so e removido quando ha pelo
+    menos um outro token (nao-icone) no label. Assim "Login" sozinho
+    permanece "Login" mesmo que `login` seja um Material icon, enquanto
+    "home Pagina Inicial" corretamente se torna "Pagina Inicial".
     """
     if not text:
         return text
     s = text.strip()
     tokens = s.split()
     if len(tokens) <= 1:
-        # Single-token label: never strip (could be a legitimate word that
-        # also happens to be a Material icon name).
+        # Label de unico token: nunca remove (pode ser palavra legitima que
+        # tambem e nome de Material icon).
         return s
-    # Leading icon tokens — stop the moment we hit a non-icon, leaving at
-    # least one token in the result.
+    # Tokens de icone no inicio — para no momento em que encontrar um nao-icone, deixando
+    # pelo menos um token no resultado.
     while len(tokens) > 1 and tokens[0].lower() in _MATERIAL_ICONS:
         tokens.pop(0)
-    # Trailing icon tokens — same guard.
+    # Tokens de icone no fim — mesma protecao.
     while len(tokens) > 1 and tokens[-1].lower() in _MATERIAL_ICONS:
         tokens.pop()
     cleaned = re.sub(r"\s+", " ", " ".join(tokens)).strip()
@@ -82,7 +82,7 @@ def _clean_material_icons(text: str) -> str:
 
 # Phrasing chosen to be friendly to Cucumber/behave/pytest-bdd parsers.
 _KIND_PHRASE = {
-    "currency_BR": "com valor monetário",
+    "currency_BR": "com valor monetario",
     "date_BR": "com data",
     "date_ISO": "com data",
     "cpf_BR": "com CPF",
@@ -99,12 +99,12 @@ _KIND_PHRASE = {
 
 
 def _safe_label(target: dict, fallback: str = "") -> str:
-    """Pick the most user-meaningful label, clean Material Icons, escape quotes.
+    """Escolhe o label mais significativo, limpa Material Icons, escapa aspas.
 
-    Hotfix BUG 8+9: previously fell back to a useless 'elemento' literal when
-    the target had no label/text. Now returns the fallback (default empty)
-    so the Gherkin writer can skip the line instead of writing
-    `clico no botão "elemento"`.
+    Hotfix BUG 8+9: anteriormente caia para literal 'elemento' inutil quando
+    o alvo nao tinha label/text. Agora retorna fallback (vazio por padrao)
+    para que o Gherkin writer possa pular a linha em vez de escrever
+    `clico no botao "elemento"`.
     """
     candidates = (
         target.get("accessible_name"),
@@ -123,7 +123,7 @@ def _safe_label(target: dict, fallback: str = "") -> str:
 
 
 class GherkinWriter:
-    """Builds scenario.feature live during recording."""
+    """Constroi scenario.feature ao vivo durante gravacao."""
 
     def __init__(self, session_dir: str, lang: str = "pt") -> None:
         self._dir = session_dir
@@ -148,7 +148,7 @@ class GherkinWriter:
 
     # ------------------------------------------------------------------
     def on_navigation(self, url: str, title: Optional[str] = None) -> None:
-        """First navigation seeds Funcionalidade. Subsequent navs become Dado lines."""
+        """Primeira navegacao sementeia Funcionalidade. Navegacoes subsequentes viram linhas Dado."""
         title = (title or "").strip()
         if self._funcionalidade is None:
             self._funcionalidade = title or url
@@ -163,7 +163,7 @@ class GherkinWriter:
         target: Optional[dict] = None,
         value: Optional[str] = None,
     ) -> Optional[str]:
-        """Append one step line for the given action."""
+        """Adiciona uma linha de passo para a acao dada."""
         target = target or {}
         line = self._render(action, target, value)
         if line:
@@ -172,15 +172,15 @@ class GherkinWriter:
 
     def _render(self, action: str, target: dict, value: Optional[str]) -> Optional[str]:
         label = _safe_label(target)
-        # Hotfix BUG 9: drop steps without a useful label rather than writing
-        # `clico no botão "elemento"`. The forensic analysis showed these lines
-        # are noise that QA teams have to manually delete before running.
+        # Hotfix BUG 9: descarta passos sem label util em vez de escrever
+        # `clico no botao "elemento"`. Analise forense mostrou que essas linhas
+        # sao ruido que times de QA precisam deletar manualmente antes de executar.
         if not label and action in ("click", "submit", "fill", "input",
                                       "select", "select_option"):
             return None
         keyword = self._next_keyword(action)
         if action == "click" or action == "submit":
-            return f'  {keyword} clico no botão "{label}"'
+            return f'  {keyword} clico no botao "{label}"'
         if action in ("fill", "input"):
             kind = detect_value_kind(value)
             suffix = _KIND_PHRASE.get(kind, "")
@@ -201,16 +201,16 @@ class GherkinWriter:
         return f"  # ação não mapeada: {action} {label}"
 
     def _next_keyword(self, action: str) -> str:
-        # Hotfix BUG 9: keyword advance happens *only* when a line is
-        # actually emitted. We rebuilt _render to early-return for empty
-        # labels, so it now calls _next_keyword AFTER the empty check — the
-        # logic below stays the same.
+        # Hotfix BUG 9: avance da keyword acontece *apenas* quando uma linha e
+        # realmente emitida. Reconstruimos _render para retorno antecipado para labels
+        # vazios, entao agora chama _next_keyword APOS a verificacao de vazio — a
+        # logica abaixo permanece a mesma.
         if action == "assert":
             if not self._then_emitted:
                 self._then_emitted = True
-                return "Então"
+                return "Entao"
             return "E"
-        # interactive action
+        # acao interativa
         if not self._first_action_seen:
             self._first_action_seen = True
             self._then_emitted = False  # reset for next Then
@@ -219,15 +219,15 @@ class GherkinWriter:
 
     # ------------------------------------------------------------------
     def auto_cenario_from_sequence(self) -> str:
-        """C4b — derive Cenário name from the most likely intent."""
-        clicks = [l for l in self._buffer if "clico no botão" in l]
+        """C4b — deriva nome do Cenario da intent mais provavel."""
+        clicks = [l for l in self._buffer if "clico no botao" in l]
         if clicks:
             m = re.search(r'"([^"]+)"', clicks[0])
             if m:
                 return f"Fluxo iniciado por '{m.group(1)}'"
         if self._funcionalidade:
-            return f"Cenário em {self._funcionalidade[:60]}"
-        return "Cenário gravado"
+            return f"Cenario em {self._funcionalidade[:60]}"
+        return "Cenario gravado"
 
     def auto_funcionalidade(self) -> str:
         return self._funcionalidade or "Funcionalidade gravada"
@@ -237,7 +237,7 @@ class GherkinWriter:
         funcionalidade_override: str = "",
         cenario_override: str = "",
     ) -> str:
-        """Persist scenario.feature. Returns path."""
+        """Persiste scenario.feature. Retorna caminho."""
         func = (funcionalidade_override or self.auto_funcionalidade()).strip()
         cen = (cenario_override or self.auto_cenario_from_sequence()).strip()
         lines: list[str] = []
@@ -245,7 +245,7 @@ class GherkinWriter:
             lines.append("# language: pt")
         lines.append(f"Funcionalidade: {func}")
         lines.append("")
-        lines.append(f"  Cenário: {cen}")
+        lines.append(f"  Cenario: {cen}")
         for nav in self._navigation_lines:
             lines.append(f"    {nav}")
         for step in self._buffer:
