@@ -166,7 +166,7 @@ class TestPerStepMetrics:
         repo.record_step(StepOutcome.HEALING_APPLIED, step_num=1, action="click",
                          healing_layer="L2")
         s = repo.summary(show_per_step=True)
-        assert "Per-Step Metrics" in s
+        assert "Metricas por Step" in s
         assert "Falhas detectadas:" in s
         assert "Healings tentados:" in s
         assert "Aplicados:" in s
@@ -178,7 +178,7 @@ class TestPerStepMetrics:
         repo = MetricsRepository()
         repo.record_step(StepOutcome.FAILURE_DETECTED, step_num=1, action="click")
         s = repo.summary(show_per_step=False)
-        assert "Per-Step Metrics" not in s
+        assert "Metricas por Step" not in s
         assert "Falhas detectadas:" not in s
 
     def test_step_history_immutable(self):

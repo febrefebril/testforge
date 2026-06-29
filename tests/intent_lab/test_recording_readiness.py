@@ -223,8 +223,10 @@ class TestTwoSimilarFieldsScenario:
             completeness_report=_complete_report(total_fields=2, resolved_count=2),
             step_results=steps,
         )
-        assert r.verdict == ReadinessVerdict.NEEDS_REVIEW
-        assert r.status == RecordingStatus.needs_review
+        # H16 (2026-06-27): healing_rejected now counts as a hard
+        # failure. Pre-H16 this was NEEDS_REVIEW.
+        assert r.verdict == ReadinessVerdict.FAIL
+        assert r.status == RecordingStatus.incomplete_intent
         assert r.failed_steps >= 1
 
 
