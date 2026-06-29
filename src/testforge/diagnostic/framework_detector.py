@@ -1,15 +1,15 @@
-"""Sprint 0 — FrameworkDetector (A3 + A4 combined for maximum precision).
+"""Sprint 0 — FrameworkDetector (A3 + A4 combinados para maxima precisao).
 
-Four detection techniques run together; each produces evidence strings.
-The aggregate `evidence` list explains *why* a framework was claimed.
+Quatro tecnicas de deteccao executadas juntas; cada uma produz strings de evidencia.
+A lista agregada `evidence` explica *por que* um framework foi identificado.
 
 - A1 window.* sniff               (`window.ng`, `window.Vue`, `window.React`, ...)
 - A2 DOM markers                  (`[ng-version]`, `mat-form-field`, `ui-widget`, MUI Mui*)
-- A3 HTTP bundle analysis (CDP)   names of JS bundles loaded
-- A4 custom elements list         non-standard tags `<dsc-input-currency>` etc.
+- A3 HTTP bundle analysis (CDP)   nomes dos bundles JS carregados
+- A4 custom elements list         tags nao padrao `<dsc-input-currency>` etc.
 
-Designed to be resilient: each technique is independently fault-tolerant.
-A failure in CDP does not break window/DOM detection.
+Projetado para ser resiliente: cada tecnica e independentemente tolerante a falhas.
+Uma falha no CDP nao quebra a deteccao window/DOM.
 """
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ _BUNDLE_SIGNATURES = {
     "jsf": [r"javax\.faces\.resource", r"/javax\.faces\."],
 }
 
-# Standard HTML tags we don't count as custom
+# Tags HTML padrao que nao contamos como customizadas
 _STANDARD_TAGS = {
     "html", "head", "body", "div", "span", "p", "a", "button", "input",
     "select", "option", "textarea", "form", "label", "img", "ul", "ol",
@@ -53,13 +53,13 @@ _STANDARD_TAGS = {
 
 
 class FrameworkDetector:
-    """Multi-technique framework detection.
+    """Deteccao de framework multi-tecnica.
 
-    Usage:
-        det = FrameworkDetector(page, cdp_session)  # cdp may be None
-        det.attach()           # starts watching bundles
-        # ... user navigates ...
-        result = det.detect()  # snapshot now
+    Uso:
+        det = FrameworkDetector(page, cdp_session)  # cdp pode ser None
+        det.attach()           # comeca a observar bundles
+        # ... usuario navega ...
+        result = det.detect()  # snapshot agora
         det.detach()
     """
 
@@ -68,13 +68,13 @@ class FrameworkDetector:
         self._cdp = cdp_session
         self._bundles_seen: list[str] = []
         self._listener = None
-        # Hotfix BUG 6: cache last successful detection so finalize() after
-        # browser close still reports the real framework rather than 'unknown'.
+        # Hotfix BUG 6: cacheia ultima deteccao bem-sucedida para que finalize() apos
+        # fechamento do navegador ainda reporte o framework real em vez de 'unknown'.
         self._last_detection: dict | None = None
 
     # ------------------------------------------------------------------
     def attach(self) -> None:
-        """Subscribe to CDP Network events (A3). Safe to call when no CDP."""
+        """Inscreve em eventos CDP Network (A3). Seguro chamar quando nao ha CDP."""
         if self._cdp is None:
             return
         try:
@@ -86,7 +86,7 @@ class FrameworkDetector:
             logger.warning("FrameworkDetector A3 attach failed: %s", exc)
 
     def detach(self) -> None:
-        # CDP listeners auto-clean with the session; nothing explicit needed.
+        # Listeners CDP se limpam automaticamente com a sessao; nada explicito necessario.
         self._listener = None
 
     def _on_response(self, evt: dict) -> None:
@@ -99,7 +99,7 @@ class FrameworkDetector:
 
     # ------------------------------------------------------------------
     def detect(self) -> dict:
-        """Run all 4 techniques and combine. Safe to call multiple times."""
+        """Executa todas as 4 tecnicas e combina. Seguro chamar multiplas vezes."""
         evidence: list[str] = []
         flags: dict[str, Any] = {
             "angular_version": None,
@@ -112,12 +112,12 @@ class FrameworkDetector:
             "zone_js": False,
         }
 
-        # A3: bundle analysis
+        # A3: analise de bundles
         bundle_flags = self._analyze_bundles()
         for fw, hits in bundle_flags.items():
             if hits:
                 if fw == "angular":
-                    # Try to extract version from URL like 'runtime.angular-16.2.0.js'
+                    # Tenta extrair versao de URL como 'runtime.angular-16.2.0.js'
                     for h in hits:
                         m = re.search(r"angular[/-](\d+\.\d+\.\d+)", h)
                         if m:
@@ -138,7 +138,7 @@ class FrameworkDetector:
                 for h in hits[:2]:
                     evidence.append(f"bundle[{fw}]:{h.split('?')[0][-80:]}")
 
-        # A1 + A2 + A4: in-page evaluation
+        # A1 + A2 + A4: avaliacao na pagina
         page_signals = self._page_eval()
         for k, v in page_signals.items():
             if k == "evidence":
@@ -162,15 +162,14 @@ class FrameworkDetector:
 
         flags["primary"] = self._pick_primary(flags)
         flags["evidence"] = evidence
-        # Hotfix BUG 6: cache result iff page evaluation didn't fail
-        # (page_eval_failed shows up in evidence on a closed page).
+        # Hotfix BUG 6: cacheia resultado apenas se page evaluation nao falhou
+        # (page_eval_failed aparece em evidence em pagina fechada).
         page_failed = any("page_eval_failed" in e for e in evidence)
         if not page_failed and flags["primary"] != "unknown":
             self._last_detection = dict(flags)
         elif page_failed and self._last_detection is not None:
             cached = dict(self._last_detection)
-            cached.setdefault("evidence", []).append(
-                "page_eval_failed_at_finalize: served from cache")
+            cached.setdefault("evidence", []).append("page_eval_failed_at_finalize: servido do cache")
             return cached
         return flags
 
@@ -187,7 +186,7 @@ class FrameworkDetector:
         return out
 
     def _page_eval(self) -> dict:
-        """A1 + A2 + A4 inside one page.evaluate to minimize roundtrips."""
+        """A1 + A2 + A4 dentro de um page.evaluate para minimizar roundtrips."""
         js = """
         () => {
           const evidence = [];
@@ -289,7 +288,7 @@ class FrameworkDetector:
 
     @staticmethod
     def _pick_primary(flags: dict) -> str:
-        # Order of precedence: angular_material > angular > primefaces > mui >
+        # Ordem de precedencia: angular_material > angular > primefaces > mui >
         #                      react > vue > jsf > custom > unknown
         if flags.get("angular_material"):
             return "angular-material"

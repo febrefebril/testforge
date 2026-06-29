@@ -126,8 +126,11 @@ class TestEdgeCases:
             completeness_report=_ok_report(),
             step_results=steps,
         )
-        # Skipped steps are not executable => trivially passing
-        assert report.verdict == ReadinessVerdict.PASS
+        # H16 (2026-06-27): all-skipped is no longer a PASS — it
+        # indicates the recording produced zero executable evidence,
+        # which is exactly the GATED_ONLY case (criteria pass but
+        # nothing actually ran).
+        assert report.verdict == ReadinessVerdict.GATED_ONLY
 
     def test_mixed_skipped_and_passed(self):
         gate = RecordingReadinessGate()

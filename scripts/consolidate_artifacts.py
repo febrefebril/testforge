@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Consolidate recordings/ + semantic_tests/ into single document for LLM analysis.
+"""Consolidar gravacoes/ + testes_semanticos/ em unico documento para analise LLM.
 
-Combines recorded browser sessions (raw events, curated steps, metadata)
-with compiled Playwright test code. Produces JSONL or Markdown output
-that an LLM can analyze for test quality, selector reliability,
-healing coverage, and compilation fidelity.
+Combina sessoes de navegador gravadas (eventos brutos, etapas, metadados)
+com codigo de teste Playwright compilado. Produz saida JSONL ou Markdown
+para LLM analisar qualidade de teste, confiabilidade de seletores,
+cobertura de healing e fidelidade de compilacao.
 """
 from __future__ import annotations
 
@@ -14,11 +14,11 @@ from pathlib import Path
 from typing import Any
 
 
-# ── Scan functions ──────────────────────────────────────────────
+# ── Funcoes de varredura ────────────────────────────────────────
 
 
 def scan_recordings(recordings_dir: Path) -> list[dict[str, Any]]:
-    """Scan recording subdirectories. Extract metadata + event/step summaries."""
+    """Varre subdiretorios de gravacao. Extrai metadados + resumos de eventos/etapas."""
     results: list[dict[str, Any]] = []
     if not recordings_dir.exists():
         return results
@@ -32,7 +32,7 @@ def scan_recordings(recordings_dir: Path) -> list[dict[str, Any]]:
 
 
 def _read_recording(rec_dir: Path) -> dict[str, Any] | None:
-    """Read one recording directory into structured dict."""
+    """Le um diretorio de gravacao em dicionario estruturado."""
     entry: dict[str, Any] = {
         "type": "recording",
         "recording_id": rec_dir.name,
@@ -86,7 +86,7 @@ def _read_recording(rec_dir: Path) -> dict[str, Any] | None:
 
 
 def scan_semantic_tests(semantic_dir: Path) -> list[dict[str, Any]]:
-    """Scan semantic test subdirectories. Extract compiled test code + data."""
+    """Varre subdiretorios de teste semantico. Extrai codigo compilado + dados."""
     results: list[dict[str, Any]] = []
     if not semantic_dir.exists():
         return results
@@ -100,7 +100,7 @@ def scan_semantic_tests(semantic_dir: Path) -> list[dict[str, Any]]:
 
 
 def _read_semantic_test(st_dir: Path) -> dict[str, Any] | None:
-    """Read one semantic test directory."""
+    """Le um diretorio de teste semantico."""
     entry: dict[str, Any] = {
         "type": "semantic_test",
         "test_id": st_dir.name,
@@ -116,11 +116,11 @@ def _read_semantic_test(st_dir: Path) -> dict[str, Any] | None:
     return entry if "test_code" in entry else None
 
 
-# ── Pairing ─────────────────────────────────────────────────────
+# ── Pareamento ──────────────────────────────────────────────────
 
 
 def _normalize(name: str) -> str:
-    """Normalize a recording/semantic-test ID for matching."""
+    """Normaliza um ID de gravacao/teste-semantico para correspondencia."""
     if name.lower().startswith("st-"):
         name = name[3:]
     return name.lower().replace("-", "_").replace(" ", "_")
@@ -130,11 +130,11 @@ def pair_artifacts(
     recordings: list[dict[str, Any]],
     semantic_tests: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Pair recordings with semantic tests by fuzzy name match.
+    """Pareia gravacoes com testes semanticos por correspondencia fuzzy.
 
-    Strategy: normalize IDs (strip ST- prefix, lower, replace hyphens/spaces).
-    Recordings without a matching semantic test get `semantic_test: null`.
-    Unmatched semantic tests get `recording: null`.
+    Estrategia: normalizar IDs (remover prefixo ST-, minusculo, substituir hifens/espacos).
+    Gravacoes sem teste semantico correspondente recebem `semantic_test: null`.
+    Testes semanticos nao pareados recebem `recording: null`.
     """
     pairs: list[dict[str, Any]] = []
 
@@ -165,22 +165,22 @@ def pair_artifacts(
     return pairs
 
 
-# ── Output ──────────────────────────────────────────────────────
+# ── Saida ───────────────────────────────────────────────────────
 
 
 def output_jsonl(artifacts: list[dict[str, Any]], output_path: Path) -> None:
-    """Write artifacts as JSONL (one JSON object per line)."""
+    """Escreve artefatos como JSONL (um objeto JSON por linha)."""
     with output_path.open("w", encoding="utf-8") as f:
         for obj in artifacts:
             f.write(json.dumps(obj, ensure_ascii=False, default=str) + "\n")
 
 
 def output_markdown(artifacts: list[dict[str, Any]], output_path: Path) -> None:
-    """Write artifacts as human-readable Markdown report."""
+    """Escreve artefatos como relatorio Markdown legivel."""
     lines: list[str] = [
-        "# TestForge Consolidated Artifacts",
+        "# TestForge Artefatos Consolidados",
         "",
-        f"> Generated from `recordings/` + `semantic_tests/`",
+        f"> Gerado a partir de `recordings/` + `semantic_tests/`",
         "",
     ]
 
@@ -190,9 +190,9 @@ def output_markdown(artifacts: list[dict[str, Any]], output_path: Path) -> None:
         1 for a in artifacts if a.get("recording") and a.get("semantic_test")
     )
 
-    lines.append(f"- **Recordings:** {rec_count}")
-    lines.append(f"- **Semantic Tests:** {st_count}")
-    lines.append(f"- **Paired:** {paired}")
+    lines.append(f"- **Gravacoes:** {rec_count}")
+    lines.append(f"- **Testes Semanticos:** {st_count}")
+    lines.append(f"- **Pareados:** {paired}")
     lines.append("")
 
     for i, art in enumerate(artifacts, 1):
@@ -212,45 +212,45 @@ def output_markdown(artifacts: list[dict[str, Any]], output_path: Path) -> None:
         # Recording section
         if rec:
             meta = rec.get("metadata", {})
-            lines.append(f"### 📼 Recording: `{rec['recording_id']}`")
+            lines.append(f"### [LISTA] Gravacao: `{rec['recording_id']}`")
             lines.append("")
-            lines.append(f"| Field | Value |")
+            lines.append(f"| Campo | Valor |")
             lines.append(f"|---|---|")
-            lines.append(f"| Application | {meta.get('application', '—')} |")
-            lines.append(f"| Base URL | {meta.get('base_url', '—')} |")
+            lines.append(f"| Aplicacao | {meta.get('application', '—')} |")
+            lines.append(f"| URL Base | {meta.get('base_url', '—')} |")
             lines.append(f"| Status | {meta.get('status', '—')} |")
             lines.append(
-                f"| Started | {str(meta.get('started_at', '—'))[:19]} |"
+                f"| Iniciado | {str(meta.get('started_at', '—'))[:19]} |"
             )
             lines.append("")
 
             if raw := rec.get("raw_events"):
-                lines.append(f"- **Raw Events:** {raw['count']}  ")
+                lines.append(f"- **Eventos Brutos:** {raw['count']}  ")
                 lines.append(f"  `{json.dumps(raw.get('by_type', {}))}`")
             if steps := rec.get("steps"):
-                lines.append(f"- **Steps:** {steps['count']}  ")
+                lines.append(f"- **Etapas:** {steps['count']}  ")
                 lines.append(f"  `{json.dumps(steps.get('by_action', {}))}`")
             if net := rec.get("network"):
-                lines.append(f"- **Network:** {net['entries']} entries")
+                lines.append(f"- **Rede:** {net['entries']} entradas")
             if assets := rec.get("assets"):
                 parts = [f"{k}={v}" for k, v in assets.items()]
-                lines.append(f"- **Assets:** {', '.join(parts)}")
+                lines.append(f"- **Recursos:** {', '.join(parts)}")
             lines.append("")
 
         # Semantic test section
         if st:
-            lines.append(f"### 🧪 Semantic Test: `{st['test_id']}`")
-            lines.append(f"- **Test File:** `{st.get('test_file', '—')}`")
+            lines.append(f"### [TESTE] Teste Semantico: `{st['test_id']}`")
+            lines.append(f"- **Arquivo de Teste:** `{st.get('test_file', '—')}`")
             lines.append("")
             if "test_data" in st:
-                lines.append("**Test Data:**")
+                lines.append("**Dados de Teste:**")
                 lines.append("")
                 lines.append("```json")
                 lines.append(json.dumps(st["test_data"], ensure_ascii=False, indent=2))
                 lines.append("```")
                 lines.append("")
             if "test_code" in st:
-                lines.append("**Test Code:**")
+                lines.append("**Codigo de Teste:**")
                 lines.append("")
                 lines.append("```python")
                 lines.append(st["test_code"].rstrip())
@@ -268,28 +268,28 @@ def output_markdown(artifacts: list[dict[str, Any]], output_path: Path) -> None:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
-        description="Consolidate recordings + semantic_tests for LLM analysis",
+        description="Consolidar gravacoes + testes_semanticos para analise LLM",
     )
     parser.add_argument(
         "--recordings-dir",
         default="recordings",
-        help="Path to recordings directory (default: recordings/)",
+        help="Caminho do diretorio de gravacoes (padrao: recordings/)",
     )
     parser.add_argument(
         "--semantic-dir",
         default="semantic_tests",
-        help="Path to semantic_tests directory (default: semantic_tests/)",
+        help="Caminho do diretorio de testes_semanticos (padrao: semantic_tests/)",
     )
     parser.add_argument(
         "--output", "-o",
         default="consolidated_artifacts.jsonl",
-        help="Output file path (default: consolidated_artifacts.jsonl)",
+        help="Caminho do arquivo de saida (padrao: consolidated_artifacts.jsonl)",
     )
     parser.add_argument(
         "--format", "-f",
         choices=("jsonl", "markdown"),
         default="jsonl",
-        help="Output format (default: jsonl)",
+        help="Formato de saida (padrao: jsonl)",
     )
     args = parser.parse_args(argv)
 
@@ -307,11 +307,11 @@ def main(argv: list[str] | None = None) -> None:
         output_jsonl(artifacts, out_path)
 
     print(
-        f"Consolidated {len(recordings)} recordings + "
-        f"{len(semantic_tests)} semantic tests → "
-        f"{len(artifacts)} artifacts"
+        f"Consolidado {len(recordings)} gravacoes + "
+        f"{len(semantic_tests)} testes semanticos → "
+        f"{len(artifacts)} artefatos"
     )
-    print(f"Output: {out_path} ({out_path.stat().st_size:,} bytes)")
+    print(f"Saida: {out_path} ({out_path.stat().st_size:,} bytes)")
 
 
 if __name__ == "__main__":
