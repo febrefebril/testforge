@@ -746,6 +746,21 @@
       '<div id="tf-toast" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 24px;border-radius:8px;font:14px sans-serif;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,0.3)"></div>'
     ].join('\n');
     document.body.appendChild(ov);
+    // Restore saved overlay position from localStorage (persists across page navigations)
+    try {
+      var savedPos = localStorage.getItem('__tfOverlayPosition');
+      if (savedPos) {
+        var pos = JSON.parse(savedPos);
+        var panel = document.getElementById('tf-panel');
+        if (panel && typeof pos.left === 'number' && typeof pos.top === 'number') {
+          var clampedX = Math.max(0, Math.min(pos.left, window.innerWidth - panel.offsetWidth));
+          var clampedY = Math.max(0, Math.min(pos.top, window.innerHeight - panel.offsetHeight));
+          panel.style.right = 'auto';
+          panel.style.left = clampedX + 'px';
+          panel.style.top = clampedY + 'px';
+        }
+      }
+    } catch(_e) {}
     document.getElementById('tf-btn-pause').onclick = function() { window.__tfCommandQueue.push('TOGGLE_PAUSE'); };
     document.getElementById('tf-btn-stop').onclick = function() { _confirmStop(); };
     document.getElementById('tf-btn-assert').onclick = function() { window._tf_enterAssertMode(); };
@@ -961,6 +976,15 @@
     window.__tfDragState = null;
     var panel = document.getElementById('tf-panel');
     if (panel && window.__tfDragMode) panel.style.cursor = 'grab';
+    // Persist overlay position across page navigations
+    try {
+      if (panel && panel.style.left && panel.style.left !== '' && panel.style.top && panel.style.top !== '') {
+        localStorage.setItem('__tfOverlayPosition', JSON.stringify({
+          left: parseInt(panel.style.left),
+          top: parseInt(panel.style.top)
+        }));
+      }
+    } catch(_e) {}
   });
 
   // ---- Load handler ----
