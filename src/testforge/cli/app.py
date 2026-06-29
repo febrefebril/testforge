@@ -36,14 +36,14 @@ import re as _re
 
 
 def _sanitize_name(name: str) -> str:
-    """Sanitiza nome de teste/gravação: remove caracteres especiais, mantém alfanuméricos, underscore, hífen."""
+    """Sanitiza nome de teste/gravacao: remove caracteres especiais, mantem alfanumericos, underscore, hifen."""
     sanitized = _re.sub(r'[^a-zA-Z0-9_-]', '_', name)
     sanitized = _re.sub(r'_+', '_', sanitized).strip('_')
     return sanitized or "unnamed"
 
 
 def _make_context_kwargs(headless: bool, verify_ssl: bool = True) -> dict:
-    """Return browser.new_context kwargs: fixed viewport in headless, no_viewport=True in headed."""
+    """Retorna kwargs do browser.new_context: viewport fixo em headless, no_viewport=True em headed."""
     kwargs: dict = {}
     if headless:
         kwargs["viewport"] = {"width": 1280, "height": 720}
@@ -63,12 +63,12 @@ def _validate_and_warn_url(url: str) -> bool:
         return False
     has_critical = False
     for w in warnings:
-        prefix = "[WARN] CRITICAL" if w.is_critical else "[WARN] Warning"
+        prefix = "[WARN] CRITICO" if w.is_critical else "[WARN] Aviso"
         print(f"[TestForge] {prefix}: {w.message}", file=sys.stderr)
         if w.is_critical:
             has_critical = True
     if has_critical:
-        print("[TestForge] 💡 Tip: wrap URL in quotes when using shell, e.g.:\n"
+        print("[TestForge] [DICA] Coloque a URL entre aspas no shell, ex.:\n"
               "    tf record \"http://example.com/page?arg=1&other=2\"", file=sys.stderr)
     return has_critical
 
@@ -102,7 +102,7 @@ def _update_recording_status(rec_dir: str, rec_id: str,
 
 def _run_post_recording_completion(rec_dir: str, rid: str, args,
                                     auto_complete: bool, no_interactive: bool):
-    """Executa verificação de completude de intenção + prompt interativo opcional após gravação."""
+    """Executa verificacao de completude de intencao + prompt interativo opcional apos gravacao."""
     from testforge.semantic import RecordingNormalizer
     from testforge.validation.intent_completeness import (
         IntentCompletenessChecker,
@@ -114,7 +114,7 @@ def _run_post_recording_completion(rec_dir: str, rid: str, args,
     )
     from testforge.recorder.recording_status import RecordingStatus
 
-    print(f"\n[TestForge] 🔍 Verificando completude da intencao...")
+    print(f"\n[TestForge] [BUSCA] Verificando completude da intencao...")
 
     try:
         normalizer = RecordingNormalizer()
@@ -127,26 +127,26 @@ def _run_post_recording_completion(rec_dir: str, rid: str, args,
 
         report_dir = os.path.join(rec_dir, "completeness")
         json_path, md_path = save_completeness_report(report, report_dir, rid)
-        print(f"[TestForge] ✓ Relatorio: {md_path}")
+        print(f"[TestForge] [OK] Relatorio: {md_path}")
 
         if report.is_complete:
-            print(f"[TestForge] ✓ Intencao COMPLETA ({report.resolved_count} campos)")
+            print(f"[TestForge] [OK] Intencao COMPLETA ({report.resolved_count} campos)")
             _update_recording_status(rec_dir, rid, RecordingStatus.intent_complete)
             return stc, report
 
         print(f"[TestForge] [WARN] Intencao INCOMPLETA — {report.missing_count} pendente(s)")
 
         if no_interactive:
-            # Non-interactive mode: create template
+            # Modo nao-interativo: criar template
             template_path = create_data_template(rec_dir, rid, report)
-            print(f"[TestForge] ✓ Template criado: {template_path}")
+            print(f"[TestForge] [OK] Template criado: {template_path}")
             _update_recording_status(rec_dir, rid, RecordingStatus.incomplete_intent)
-            print(f"[TestForge] 💡 Use: testforge compile --check {rid}")
-            print(f"[TestForge] 💡 Ou forneca valores via --data arquivo.json")
+            print(f"[TestForge] [DICA] Use: testforge compile --check {rid}")
+            print(f"[TestForge] [DICA] Ou forneca valores via --data arquivo.json")
             return stc, report
 
         if auto_complete:
-            # Interactive mode: prompt user for values
+            # Modo interativo: perguntar valores ao usuario
             all_resolved = prompt_missing_fields(rec_dir, rid, report,
                                                   normalizer, stc)
             # Re-read completeness report after user input (prompt may have re-checked)
@@ -169,8 +169,8 @@ def _run_post_recording_completion(rec_dir: str, rid: str, args,
                 print(f"  Use: testforge compile --check {rid}")
             return stc, report
 
-        # Default: no --complete mode, just inform
-        print(f"[TestForge] 💡 Use --complete para informar valores pendentes")
+        # Padrao: sem --complete, apenas informar
+        print(f"[TestForge] [DICA] Use --complete para informar valores pendentes")
         print(f"  Ou: testforge compile --check {rid}")
         return stc, report
 
@@ -183,11 +183,11 @@ def _run_post_recording_completion(rec_dir: str, rid: str, args,
 
 def _run_post_recording_validation(rec_dir: str, rid: str, args,
                                     stc, completeness_report):
-    """Run full validation pipeline: completeness check + readiness gate.
+    """Pipeline completa de validacao: verificacao de completude + readiness gate.
 
-    This is the core of the --validate-before-ready feature.
-    Evaluates completeness, runs incremental validation, and saves
-    a QA-friendly readiness report.
+    Este e o nucleo da funcionalidade --validate-before-ready.
+    Avalia completude, executa validacao incremental e salva
+    um relatorio de readiness para QA.
     """
     from testforge.validation.readiness_gate import (
         RecordingReadinessGate,
@@ -195,18 +195,18 @@ def _run_post_recording_validation(rec_dir: str, rid: str, args,
     )
     from testforge.recorder.recording_status import RecordingStatus
 
-    print(f"\n[TestForge] 🔍 Validando gravacao antes de marcar como pronta...")
+    print(f"\n[TestForge] [BUSCA] Validando gravacao antes de marcar como pronta...")
 
     if completeness_report is None:
         print(f"[TestForge] [WARN] Relatorio de completude nao disponivel")
         return
 
-    # Build field_values dict from the stc
+    # Constroi dicionario field_values a partir do stc
     field_values = {}
     if stc and stc.field_values:
         field_values = stc.field_values
 
-    # Run headless incremental validation in pilot-mode for real step_results
+    # Executa validacao incremental headless em modo piloto para step_results reais
     step_results = []
     if getattr(args, "pilot_mode", False):
         try:
@@ -241,14 +241,14 @@ def _run_post_recording_validation(rec_dir: str, rid: str, args,
     # Save readiness report
     report_dir = os.path.join(rec_dir, "readiness")
     json_path, md_path = save_readiness_report(readiness_report, report_dir)
-    print(f"[TestForge] ✓ Relatorio de readiness: {md_path}")
+    print(f"[TestForge] [OK] Relatorio de readiness: {md_path}")
 
     # Update recording status based on verdict
     if readiness_report.verdict.value == "pass":
         print(f"[TestForge] [OK] Validacao PASSOU — gravacao pronta para o time!")
         _update_recording_status(rec_dir, rid, RecordingStatus.ready_for_team)
     elif readiness_report.verdict.value == "needs_review":
-        print(f"[TestForge] 🔍 Validacao com RESSALVAS — revise o relatorio")
+        print(f"[TestForge] [BUSCA] Validacao com RESSALVAS — revise o relatorio")
         _update_recording_status(rec_dir, rid, RecordingStatus.needs_review)
     else:
         print(f"[TestForge] [FAIL] Validacao FALHOU — corrija os problemas e tente novamente")
@@ -282,7 +282,7 @@ def _check_python_keyboard(page, recorder):
 
 
 def _load_config_defaults() -> dict:
-    """Read defaults: section from .testforge/config.yml. Returns {} on any error."""
+    """Le defaults: secao do .testforge/config.yml. Retorna {} em caso de erro."""
     try:
         from testforge.publisher import GitPublisher
         import yaml
@@ -299,17 +299,17 @@ def _load_config_defaults() -> dict:
 
 
 def _auto_publish_recording(rid: str, rec_dir: str):
-    """Auto-publish recording artifacts to Git repo if env vars configured.
+    """Auto-publica artefatos de gravacao no Git se env vars configuradas.
 
-    Always called — even for incomplete recordings — so the team can diagnose
-    TestForge issues from submission_report.json.
+    Sempre chamada — mesmo para gravacoes incompletas — para que o time possa diagnosticar
+    problemas do TestForge a partir do submission_report.json.
     """
     try:
         from testforge.publisher import GitPublisher
         publisher = GitPublisher.from_config() or GitPublisher.from_env()
         if publisher is None:
             print(
-                "[TestForge] ℹ Git publisher nao configurado. "
+                "[TestForge] [INFO] Git publisher nao configurado. "
                 "Crie .testforge/config.yml ou defina TESTFORGE_GIT_URL.",
                 file=sys.stderr,
             )
@@ -333,7 +333,7 @@ def _auto_publish_recording(rid: str, rec_dir: str):
         result = publisher.publish(rid, recordings_root, semantic_root)
         if result.success:
             sha_short = result.commit_sha[:8] if result.commit_sha else "sem-commit"
-            print(f"[TestForge] ✓ Publicado: {result.remote_path} ({sha_short})")
+            print(f"[TestForge] [OK] Publicado: {result.remote_path} ({sha_short})")
         else:
             print(f"[TestForge] [WARN] Publicacao falhou: {result.error}", file=sys.stderr)
     except Exception as exc:
@@ -370,7 +370,7 @@ def cmd_record(args):
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless, verify_ssl=_verify_ssl)
         context = browser.new_context(**_make_context_kwargs(args.headless, verify_ssl=_verify_ssl))
         page = context.new_page()
-        # Hotfix 15: anchor recordings at the project root, not CWD.
+        # Hotfix 15: ancora recordings na raiz do projeto, nao no CWD.
         recorder = RecorderController(
             page, recordings_root=str(_PROJECT_ROOT / "recordings")
         )
@@ -378,19 +378,19 @@ def cmd_record(args):
         ts = time.strftime("%Y%m%d-%H%M%S")
         rid = _sanitize_name(args.name) if args.name else f"REC-{ts}"
 
-        # Load system/suite/test_case — args override config defaults
+        # Carrega system/suite/test_case — args sobrescrevem defaults do config
         _cfg_defaults = _load_config_defaults()
         _system = getattr(args, 'system', None) or _cfg_defaults.get("system", "") or ""
         _suite = getattr(args, 'suite', None) or ""
         _test_case_arg = getattr(args, 'test_case', None) or args.name or ""
-        # Hotfix BUG 12: when --system is empty but --app is provided, reuse
-        # --app as the system slug so recordings stop landing in `uncategorized/`
-        # whenever the user forgets to pass --system explicitly.
+        # Hotfix BUG 12: quando --system vazio mas --app fornecido, reusa
+        # --app como slug do sistema para gravacoes pararem de cair em `uncategorized/`
+        # quando o usuario esquecer de passar --system explicitamente.
         if not _system:
             _app_value = getattr(args, 'app', None) or ""
             if _app_value:
                 _system = _app_value
-                logger.info("hotfix-12: --system omitted, defaulting to --app=%s", _system)
+                logger.info("hotfix-12: --system omitido, padrao = --app=%s", _system)
 
         print(f"[TestForge] Gravando: {rid}")
         print(f"  URL: {args.url}")
@@ -405,7 +405,7 @@ def cmd_record(args):
         print(f"  Shift+P=pausar | Shift+S=parar | Shift+A=assert")
         print()
 
-        # Sprint 0 mode resolution
+        # Resolucao de modo Sprint 0
         _diag = getattr(args, "diagnostic_mode", False) or \
                 getattr(args, "pipeline_and_diagnostic_mode", False)
         # H17: default = "batched" (immediate caused 5-20s overhead on SIMAX).
@@ -423,10 +423,24 @@ def cmd_record(args):
             diagnostic_mode=_diag,
             replay_mode=_replay_mode,
         )
+        _original_rid = rid
         rid = session.recording_id  # may be suffixed (_2, _3) if original name exists
+        if rid != _original_rid:
+            # B32: be loud — earlier silent suffix-bumps had the user
+            # running `compile --check recordings/<original>` while the
+            # real artefact lived in <original>_<n>.
+            print()
+            print(
+                f"[TestForge] AVISO: gravacao final = '{rid}' "
+                f"(nome '{_original_rid}' ja existia, sufixo adicionado)"
+            )
+            print(
+                f"  Use: testforge compile --check recordings/{rid}"
+            )
+            print()
         _test_case = _test_case_arg or args.name or rid
 
-        # Write system/suite/test_case classification metadata
+        # Escreve metadados de classificacao system/suite/test_case
         _meta_path = str(_PROJECT_ROOT / "recordings" / rid / "recording_metadata.json")
         if os.path.exists(_meta_path):
             with open(_meta_path) as _f:
@@ -447,7 +461,7 @@ def cmd_record(args):
                     recorder.flush_events()
                     result = recorder.handle_commands()
 
-                    # Check for asserts via Python keyboard listener (fallback para sites que bloqueiam JS keydown)
+                    # Verifica asserts via listener de teclado Python (fallback para sites que bloqueiam JS keydown)
                     _check_python_keyboard(page, recorder)
 
                     steps_file = str(_PROJECT_ROOT / "recordings" / rid / "steps.jsonl")
@@ -467,18 +481,18 @@ def cmd_record(args):
                 except KeyboardInterrupt:
                     raise
                 except Exception as _loop_exc:
-                    logger.error("Recording loop error: %s", _loop_exc, exc_info=True)
+                    logger.error("Erro no loop de gravacao: %s", _loop_exc, exc_info=True)
         except KeyboardInterrupt:
             print("\n[TestForge] Interrompido")
 
-        # Hotfix 14: close the browser as soon as the recording loop ends so
-        # the user immediately sees the visible "Gravando…" surface go away.
-        # Previously the Gherkin prompt blocked while the browser was still
-        # open showing the recording banner, and testers thought the
-        # recorder was stuck. We capture the page-dependent artifacts first
-        # (the overlay is gone but the live Page is still useful for
-        # snapshots/flush), then close the browser, then ask for Gherkin in
-        # the terminal — where the next input is now obviously located.
+        # Hotfix 14: fecha o browser assim que o loop de gravacao termina para
+        # que o usuario veja imediatamente a superficie "Gravando..." desaparecer.
+        # Anteriormente o prompt Gherkin bloqueava enquanto o browser ainda estava
+        # aberto mostrando o banner de gravacao, e os testers pensavam que o
+        # recorder estava travado. Capturamos os artefatos dependentes da pagina primeiro
+        # (o overlay desapareceu mas a Page ativa ainda e util para
+        # snapshots/flush), depois fechamos o browser, entao perguntamos o Gherkin no
+        # terminal — onde a proxima entrada agora esta obviamente localizada.
         _browser_closed = getattr(recorder, "_closed", False)
         try:
             recorder.detach_page_listeners()
@@ -493,8 +507,8 @@ def cmd_record(args):
                 recorder.flush_events()
             except Exception:
                 pass
-            # Hotfix 15: snapshot diagnostic framework detection while the
-            # page is still alive — finalize() runs after browser.close().
+            # Hotfix 15: captura deteccao de framework diagnostico enquanto a
+            # pagina ainda esta viva — finalize() roda apos browser.close().
             if recorder._diagnostic is not None:
                 try:
                     recorder._diagnostic.precapture_for_close()
@@ -503,12 +517,12 @@ def cmd_record(args):
         try:
             browser.close()
         except Exception:
-            # Hotfix H1: user may have already closed the browser window.
+            # Hotfix H1: usuario pode ja ter fechado a janela do browser.
             pass
 
-        # Sprint 0: confirm/edit Gherkin AFTER the browser is gone so the
-        # tester's attention is in the terminal. recorder.stop() below
-        # writes the .feature via diagnostic.finalize using these overrides.
+        # Sprint 0: confirmar/editar Gherkin DEPOIS que o browser sumir para que a
+        # atencao do tester esteja no terminal. recorder.stop() abaixo
+        # escreve o .feature via diagnostic.finalize usando esses overrides.
         _gherkin_func = ""
         _gherkin_cen = ""
         if _diag and recorder._diagnostic is not None and recorder._diagnostic.gherkin is not None and not _browser_closed:
@@ -517,7 +531,7 @@ def cmd_record(args):
             print("[TestForge] [STOP] Navegador fechado — finalizando como Shift+S")
         recorder.stop(gherkin_funcionalidade=_gherkin_func, gherkin_cenario=_gherkin_cen)
         recorder.finalize()
-        # Count raw events and display breakdown
+        # Conta eventos brutos e exibe detalhamento
         raw_count = 0
         rec_dir = str(_PROJECT_ROOT / "recordings" / rid)
         steps_jsonl = os.path.join(rec_dir, "steps.jsonl")
@@ -532,8 +546,8 @@ def cmd_record(args):
             if os.path.exists(os.path.join(diag_dir, "scenario.feature")):
                 print(f"[TestForge] Gherkin:    {diag_dir}/scenario.feature")
 
-    # Q4 — `--diagnostic-mode` skips compile/run. `--pipeline-and-diagnostic-mode`
-    # runs both. Plain --diagnostic-mode (no pipeline flag) early-returns.
+    # Q4 — `--diagnostic-mode` pula compile/run. `--pipeline-and-diagnostic-mode`
+    # roda ambos. Apenas --diagnostic-mode (sem flag pipeline) retorna cedo.
     _diagnostic_only = getattr(args, "diagnostic_mode", False) and \
                        not getattr(args, "pipeline_and_diagnostic_mode", False)
     if _diagnostic_only:
@@ -541,7 +555,7 @@ def cmd_record(args):
         _auto_publish_recording(rid, rec_dir)
         return
 
-    # Post-recording: intent completeness check + validation
+    # Pos-gravacao: verificacao de completude de intencao + validacao
     validate_before_ready = getattr(args, 'validate_before_ready', False)
     pilot_mode = getattr(args, 'pilot_mode', False)
     run_validation = validate_before_ready or pilot_mode
@@ -597,7 +611,7 @@ def _publish_diagnostic_to_azure(recording_id: str, diagnostic_dir: str) -> None
 
 
 def _prompt_gherkin_confirm(writer) -> tuple:
-    """C4c — prompt user to confirm or override auto-derived Gherkin metadata."""
+    """C4c — solicita confirmacao ou alteracao do Gherkin auto-derivado."""
     auto_func = writer.auto_funcionalidade()
     auto_cen = writer.auto_cenario_from_sequence()
     print()
@@ -625,12 +639,11 @@ import subprocess  # noqa: E402
 
 
 def _open_in_editor(path: str) -> None:
-    """Hotfix BUG 4: graceful EDITOR resolution.
+    """Hotfix BUG 4: resolucao graciosa do EDITOR.
 
-    Tries $EDITOR first (resolved via shutil.which so /bin/nano-style
-    invalid absolute paths fall through), then a small chain of common
-    editors. If none work, just prints the path so the user can edit
-    manually.
+    Tenta $EDITOR primeiro (resolvido via shutil.which para que paths absolutos
+    invalidos como /bin/nano caiam), depois uma cadeia de editores comuns.
+    Se nenhum funcionar, apenas exibe o caminho para edicao manual.
     """
     candidates: list[str] = []
     env_editor = os.environ.get("EDITOR", "").strip()
@@ -640,8 +653,8 @@ def _open_in_editor(path: str) -> None:
         if fallback not in candidates:
             candidates.append(fallback)
     for cand in candidates:
-        # If the candidate is an absolute path, accept only when the
-        # binary actually exists. Otherwise resolve via shutil.which.
+        # Se o candidato for path absoluto, aceita apenas quando o
+        # binario realmente existe. Caso contrario, resolve via shutil.which.
         if os.path.isabs(cand):
             if not os.path.exists(cand):
                 continue
@@ -683,7 +696,7 @@ def _auto_learn(error_msg: str, solution: str, framework: str = "generic"):
                 status="active",
             )
             rid = catalog.add_recipe(recipe)
-            print(f"  📝 Licao auto-registrada: {rid} ({failure.code})")
+            print(f"  [ANOTACAO] Licao auto-registrada: {rid} ({failure.code})")
             return rid
     except Exception:
         pass
@@ -692,17 +705,42 @@ def _auto_learn(error_msg: str, solution: str, framework: str = "generic"):
 
 def cmd_compile(args):
     rec_id = args.recording
-    # Strip recordings/ prefix if user passes full path
+    # Remove prefixo recordings/ se usuario passar caminho completo
     if rec_id.startswith("recordings/"):
         rec_id = rec_id[len("recordings/"):]
+    rec_id = rec_id.rstrip("/")
     rec_dir = str(_PROJECT_ROOT / "recordings" / rec_id)
-    # Fallback: try user-provided path directly if constructed path doesn't exist
+    # Fallback: tenta path fornecido pelo usuario se path construido nao existir
     if not os.path.isdir(rec_dir) and os.path.isdir(args.recording):
         rec_dir = os.path.abspath(args.recording)
         rec_id = os.path.basename(rec_dir)
     if not os.path.isdir(rec_dir):
-        print(f"[TestForge] ✗ Gravacao nao encontrada: {rec_dir}")
+        print(f"[TestForge] [X] Gravacao nao encontrada: {rec_dir}")
         return
+
+    # B32: if the directory exists but is empty (no raw_events.jsonl —
+    # the recorder bumped the name to <rec_id>_<n> on the last run and
+    # the user typed the original), look for the most recent sibling
+    # <rec_id>_<n> that actually has artefacts and switch to it.
+    raw_events_path = os.path.join(rec_dir, "raw_events.jsonl")
+    if not os.path.isfile(raw_events_path):
+        import glob as _glob
+        siblings = sorted(
+            _glob.glob(str(_PROJECT_ROOT / "recordings" / f"{rec_id}_*")),
+            key=lambda p: os.path.getmtime(p) if os.path.isdir(p) else 0,
+            reverse=True,
+        )
+        for sibling in siblings:
+            sib_events = os.path.join(sibling, "raw_events.jsonl")
+            if os.path.isfile(sib_events):
+                _new_id = os.path.basename(sibling)
+                print(
+                    f"[TestForge] AVISO: '{rec_id}' nao tem raw_events.jsonl. "
+                    f"Usando sibling mais recente: '{_new_id}'"
+                )
+                rec_id = _new_id
+                rec_dir = sibling
+                break
 
     # Le metadata da gravacao (app e url ja estao la)
     meta_path = f"{rec_dir}/recording_metadata.json"
@@ -716,7 +754,7 @@ def cmd_compile(args):
         app = app or meta.get("application", "")
         base_url = base_url or meta.get("base_url", "")
 
-        # Check recording status — block compilation if incomplete
+        # Verifica status da gravacao — bloqueia compilacao se incompleta
         status_str = meta.get("recording_status") or meta.get("status", "")
         try:
             recording_status = RecordingStatus(status_str)
@@ -724,13 +762,13 @@ def cmd_compile(args):
             recording_status = None
 
         if not getattr(args, 'check', False) and recording_status in RecordingStatus.blocked_compile_states():
-            print(f"[TestForge] ✗ Gravacao {rec_id} esta em estado {recording_status.value}")
+            print(f"[TestForge] [X] Gravacao {rec_id} esta em estado {recording_status.value}")
             print(f"  Compilacao bloqueada — complete os valores pendentes primeiro.")
             print(f"  Use: testforge record --complete {rec_id}")
             print(f"  Ou:  testforge compile --check {rec_id}  (gera relatorio de completude)")
             return
 
-    # --audit: run recording auditor (always runs in background if available)
+    # --audit: executa auditoria de gravacao (sempre roda em background se disponivel)
     audit_report = None
     if getattr(args, 'audit', False) or True:  # default: always generate audit
         try:
@@ -739,14 +777,14 @@ def cmd_compile(args):
             audit_report = auditor.audit(rec_dir)
             auditor.print_report(audit_report)
         except Exception as exc:
-            logger.warning("Audit failed (non-fatal): %s", exc)
+            logger.warning("Auditoria falhou (nao-fatal): %s", exc)
 
     try:
         normalizer = RecordingNormalizer()
         stc = normalizer.normalize(rec_dir, f"ST-{rec_id}", app or "app", base_url or "http://localhost")
     except Exception as exc:
-        logger.error("Normalization FAILED: %s", exc, exc_info=True)
-        print(f"[TestForge] ✗ Normalizacao falhou: {exc}")
+        logger.error("Normalizacao FALHOU: %s", exc, exc_info=True)
+        print(f"[TestForge] [X] Normalizacao falhou: {exc}")
         if audit_report:
             audit_report.setdefault("errors", []).append({
                 "phase": "normalize",
@@ -754,11 +792,11 @@ def cmd_compile(args):
             })
         return
 
-    # Output directory (sanitized)
+    # Diretorio de saida (sanitizado)
     safe_rec_id = _sanitize_name(rec_id)
     out_dir = args.output or str(_PROJECT_ROOT / f"semantic_tests/ST-{safe_rec_id}")
 
-    # --check: run IntentCompletenessChecker and save report
+    # --check: executa IntentCompletenessChecker e salva relatorio
     if getattr(args, 'check', False):
         checker = IntentCompletenessChecker()
         report = checker.check_steps(stc.steps, stc.field_values)
@@ -766,12 +804,12 @@ def cmd_compile(args):
         json_path, md_path = save_completeness_report(report, report_dir, rec_id)
 
         if report.is_complete:
-            print(f"[TestForge] ✓ Intent Completeness: COMPLETE ({report.resolved_count} campos)")
-            # Update metadata status
+            print(f"[TestForge] [OK] Completude da Intencao: COMPLETA ({report.resolved_count} campos)")
+            # Atualiza status do metadata
             _update_recording_status(rec_dir, rec_id,
                                       RecordingStatus.intent_complete)
         else:
-            print(f"[TestForge] [WARN] Intent Completeness: INCOMPLETE")
+            print(f"[TestForge] [WARN] Completude da Intencao: INCOMPLETA")
             print(f"  Resolvidos: {report.resolved_count} | Warning: {report.resolved_with_warning_count}")
             print(f"  Revisao: {report.review_required_count} | Pendentes: {report.missing_count}")
             print(f"  Relatorio: {md_path}")
@@ -796,19 +834,19 @@ def cmd_compile(args):
             scenarios=getattr(args, 'scenarios', False),
         )
         data_file = data_path
-        print(f"[TestForge] ✓ Massa de dados: {data_file}")
+        print(f"[TestForge] [OK] Massa de dados: {data_file}")
 
     try:
         compiler = PlaywrightCompiler()
         if getattr(args, "use_v2_compiler", False):
             path = compiler.compile_v2(stc, out_dir, data_file=data_file)
-            print(f"[TestForge] ✓ v2 compile: {path}")
+            print(f"[TestForge] [OK] v2 compile: {path}")
             print(f"  Fallback chain em runtime (LocatorResolver). Candidates em {out_dir}/candidates/")
         else:
             path = compiler.compile(stc, out_dir, data_file=data_file)
     except Exception as exc:
-        logger.error("Compilation FAILED: %s", exc, exc_info=True)
-        print(f"[TestForge] ✗ Compilacao falhou: {exc}")
+        logger.error("Compilacao FALHOU: %s", exc, exc_info=True)
+        print(f"[TestForge] [X] Compilacao falhou: {exc}")
         if audit_report:
             audit_report.setdefault("errors", []).append({
                 "phase": "compile",
@@ -816,36 +854,36 @@ def cmd_compile(args):
             })
         return
 
-    # Generate semantic_steps.jsonl for audit trail
+    # Gera semantic_steps.jsonl para trilha de auditoria
     try:
         semantic_path = compiler.compile_semantic_steps(stc, out_dir)
     except Exception as exc:
-        logger.warning("Semantic steps generation failed (non-fatal): %s", exc)
+        logger.warning("Geracao de steps semanticos falhou (nao-fatal): %s", exc)
         semantic_path = ""
 
-    print(f"[TestForge] ✓ SemanticTestCase: {len(stc.steps)} steps")
-    # Breakdown
+    print(f"[TestForge] [OK] SemanticTestCase: {len(stc.steps)} steps")
+    # Detalhamento
     interactions = sum(1 for s in stc.steps if s.action in ("fill", "click", "select_option"))
     asserts = sum(1 for s in stc.steps if s.action == "assert")
     print(f"[TestForge]   Interacoes: {interactions} | Asserts: {asserts}")
-    print(f"[TestForge] ✓ Script gerado: {path}")
+    print(f"[TestForge] [OK] Script gerado: {path}")
     if semantic_path:
-        print(f"[TestForge] ✓ Semantic steps: {semantic_path}")
+        print(f"[TestForge] [OK] Semantic steps: {semantic_path}")
     if data_file:
-        print(f"[TestForge] ✓ Script data-driven (le {os.path.basename(data_file)})")
+        print(f"[TestForge] [OK] Script data-driven (le {os.path.basename(data_file)})")
 
     with open(path) as f:
         code = f.read()
     try:
         compile(code, path, "exec")
-        print("[TestForge] ✓ Script compila sem erros")
+        print("[TestForge] [OK] Script compila sem erros")
     except SyntaxError as e:
-        logger.error("Syntax error in compiled script: %s", e)
-        print(f"[TestForge] ✗ Erro de sintaxe: {e}")
+        logger.error("Erro de sintaxe no script compilado: %s", e)
+        print(f"[TestForge] [X] Erro de sintaxe: {e}")
 
 
 def cmd_audit(args):
-    """Audit a recording: quality metrics, event analysis, compilation status."""
+    """Audita gravacao: metricas de qualidade, analise de eventos, status de compilacao."""
     rec_id = args.recording
     if rec_id.startswith("recordings/"):
         rec_id = rec_id[len("recordings/"):]
@@ -854,7 +892,7 @@ def cmd_audit(args):
         rec_dir = os.path.abspath(args.recording)
         rec_id = os.path.basename(rec_dir)
     if not os.path.isdir(rec_dir):
-        print(f"[TestForge] Recording not found: {rec_dir}")
+        print(f"[TestForge] Gravacao nao encontrada: {rec_dir}")
         return
     from testforge.recorder.recording_auditor import RecordingAuditor
     auditor = RecordingAuditor()
@@ -867,7 +905,7 @@ def cmd_run(args):
     script_path = args.script
 
     if not os.path.exists(script_path):
-        print(f"[TestForge] ✗ Script nao encontrado: {script_path}")
+        print(f"[TestForge] [X] Script nao encontrado: {script_path}")
         return
 
     metrics = MetricsRepository()
@@ -891,7 +929,7 @@ def cmd_run(args):
     print(f"[TestForge] Executando: {script_path}")
     print(f"  URL base: {base_url}")
 
-    # Check LLM availability
+    # Verifica disponibilidade do LLM
     from testforge.healing.llm_client import is_available
     if is_available():
         print(f"  Healer: LLM real (Azure/OpenAI)")
@@ -923,10 +961,10 @@ def cmd_run(args):
     healed_steps = 0
     failed_steps = 0
     blocked_steps = 0
-    # Track which step indices (0-based) failed irrecoverably (block dependents)
+    # Rastreia indices de steps (0-based) que falharam irrecuperavelmente (bloqueia dependentes)
     failed_step_indices: set = set()
 
-    # BUG-016: RunReport captures full step details (untruncated) saved to file
+    # BUG-016: RunReport captura detalhes completos dos steps (sem truncamento) salvos em arquivo
     run_report = RunReport(
         recording_id=recording_id or "unknown",
         base_url=base_url,
@@ -936,7 +974,7 @@ def cmd_run(args):
 
     _verify_ssl = getattr(args, 'verify_ssl', False)
     if not steps:
-        # Fallback: executa via pytest subprocess (modo antigo)
+        # Fallback: executa via subprocess pytest (modo antigo)
         import subprocess
         try:
             result = subprocess.run(
@@ -976,19 +1014,19 @@ def cmd_run(args):
             page.wait_for_timeout(500)
             print()
 
-            # Post-click validation: verify click had expected effect before proceeding
+            # Validacao pos-clique: verifica se clique teve efeito esperado antes de prosseguir
             def _validate_click(page, url_before: str, step, step_num: int) -> tuple[bool, str]:
-                """Check if click achieved expected outcome. Returns (valid, reason)."""
+                """Verifica se clique atingiu resultado esperado. Retorna (valido, motivo)."""
                 causes_nav = step.context.get("causes_navigation", False) if step.context else False
 
-                # 1. Navigation expected? Verify URL changed
+                # 1. Navegacao esperada? Verifica se URL mudou
                 if causes_nav:
                     page.wait_for_timeout(800)  # brief settle
                     if page.url == url_before:
                         return False, "URL_NOT_CHANGED (navigation expected)"
                     return True, "navigated"
 
-                # 2. No navigation expected — brief wait for DOM render
+                # 2. Navegacao nao esperada — espera breve por renderizacao DOM
                 page.wait_for_timeout(400)
                 return True, "ok"
 
@@ -998,8 +1036,8 @@ def cmd_run(args):
                     page.wait_for_timeout(3000)
                     return
 
-                # No navigation. Check if next step's element exists.
-                # If not, wait up to 12s for async operations (calculations, API calls).
+                # Sem navegacao. Verifica se elemento do proximo step existe.
+                # Se nao, espera ate 12s por operacoes assincronas (calculos, chamadas API).
                 cur_idx = step_num - 1  # 0-based
                 next_step = steps[cur_idx + 1] if cur_idx + 1 < len(steps) else None
                 if next_step and not next_step.skip_reason and next_step.target and next_step.target.candidates:
@@ -1013,11 +1051,11 @@ def cmd_run(args):
                     except Exception:
                         pass  # element didn't appear — fall through to timeout
 
-                # Default fallback
+                # Fallback padrao
                 page.wait_for_timeout(800)
 
             def _click_with_validation(page, candidates, step, step_num, is_submit, causes_navigation) -> tuple[bool, str]:
-                """Try each candidate, validate outcome, return (success, selector_used)."""
+                """Tenta cada candidato, valida resultado, retorna (sucesso, seletor_usado)."""
                 url_before = page.url
 
                 for ci, c in enumerate(candidates):
@@ -1026,10 +1064,10 @@ def cmd_run(args):
                     try:
                         page.click(sel, timeout=5000)
 
-                        # Validate click outcome
+                        # Valida resultado do clique
                         valid, reason = _validate_click(page, url_before, step, step_num)
                         if valid:
-                            # Wait for the consequence: if a next step's element will appear, wait for it
+                            # Aguarda a consequencia: se elemento do proximo step aparecer, aguarda
                             _wait_for_consequence(page, step, step_num, causes_navigation)
                             return True, sel
                         else:
@@ -1048,9 +1086,9 @@ def cmd_run(args):
                 step_num = i + 1
                 action = step.action
 
-                # Check if this step depends on a previously failed blocking step
+                # Verifica se este step depende de um step bloqueante que falhou anteriormente
                 if step.depends_on and not step.skip_reason:
-                    # Parse the 1-based step index from depends_on (e.g., "step_0003")
+                    # Interpreta indice de step 1-based de depends_on (ex: "step_0003")
                     dep_match = _re.match(r'step_(\d+)', step.depends_on)
                     if dep_match:
                         dep_step_idx = int(dep_match.group(1)) - 1  # convert to 0-based
@@ -1059,7 +1097,7 @@ def cmd_run(args):
                             blocked_steps += 1
                 sel = ""
                 candidates = []
-                all_candidates_full = []  # BUG-016: untruncated
+                all_candidates_full = []  # BUG-016: sem truncamento
 
                 if step.target:
                     if step.target.candidates and len(step.target.candidates) > 0:
@@ -1067,13 +1105,13 @@ def cmd_run(args):
                     if step.target.candidates:
                         candidates = [{"selector": c.selector, "score": c.score}
                                       for c in step.target.candidates[:3]]
-                        # BUG-016: full candidates for report (untruncated)
+                        # BUG-016: candidatos completos para relatorio (sem truncamento)
                         all_candidates_full = [{"selector": c.selector, "score": c.score}
                                                for c in step.target.candidates]
 
                 value = step.value or ""
 
-                # BUG-016: StepReport captures full per-step details
+                # BUG-016: StepReport captura detalhes completos por step
                 step_report = StepReport(
                     step_num=step_num,
                     action=action,
@@ -1083,7 +1121,7 @@ def cmd_run(args):
                     is_submit=step.context.get("is_submit", False) if step.context else False,
                 )
 
-                # Check if step was marked as skipped during normalization
+                # Verifica se step foi marcado como ignorado durante normalizacao
                 if step.skip_reason:
                     step_report.skip_reason = step.skip_reason
                     step_report.success = True
@@ -1093,7 +1131,7 @@ def cmd_run(args):
                     continue
 
                 try:
-                    # Wait for calendar overlay if this step targets it
+                    # Aguarda overlay de calendario se este step o almeja
                     if sel and ('cdk-overlay' in sel or 'mat-calendar' in sel or 'mat-datepicker' in sel):
                         try:
                             page.wait_for_selector('.cdk-overlay-container', state='visible', timeout=5000)
@@ -1102,9 +1140,9 @@ def cmd_run(args):
                             pass  # overlay might not be open yet, try anyway
 
                     if action == "navigation":
-                        # Navigate only if step URL differs from current page URL.
-                        # Initial page.goto covers first load; subsequent navigations
-                        # are triggered by clicks/submits with expect_navigation.
+                        # Navega apenas se URL do step diferir da URL atual da pagina.
+                        # page.goto inicial cobre primeira carga; navegacoes subsequentes
+                        # sao acionadas por cliques/submits com expect_navigation.
                         step_url = step.url or ""
                         current_url = page.url
                         if step_url and step_url != current_url:
@@ -1115,7 +1153,7 @@ def cmd_run(args):
                             print(f"  OK Passo {step_num}: navegacao (ja em {current_url})")
 
                     elif action == "fill" and step.target and (step.target.tag or "").lower() == "select":
-                        # Select element: use select_option
+                        # Elemento select: usa select_option
                         if candidates:
                             fallback = FallbackRunner(page)
                             ok = fallback.try_fill(candidates, value)
@@ -1148,12 +1186,12 @@ def cmd_run(args):
                             print(f"  - Passo {step_num}: preenchimento ignorado (sem seletor)")
 
                     elif action == "click":
-                        # Data-driven fill: if clicking an input and we have a data value, fill it first
+                        # Data-driven fill: se clicar em input com valor de dados, preenche primeiro
                         if _data_values and step.target:
                             tag = (step.target.tag or "").lower()
                             if tag in ("input", "textarea"):
                                 label = (step.target.label or step.target.placeholder or "")
-                                # Try exact match first, then partial
+                                # Tenta correspondencia exata primeiro, depois parcial
                                 fill_val = _data_values.get(label, "")
                                 if not fill_val:
                                     for key, val in _data_values.items():
@@ -1163,7 +1201,7 @@ def cmd_run(args):
                                 if fill_val:
                                     sel = step.target.candidates[0].selector if step.target.candidates else ""
                                     try:
-                                        # Check if it's a currency-masked input (needs press_sequentially)
+                                        # Verifica se e input com mascara de moeda (precisa press_sequentially)
                                         has_mask = False
                                         try:
                                             el = page.locator(sel).first
@@ -1173,7 +1211,7 @@ def cmd_run(args):
                                             pass
 
                                         if has_mask:
-                                            # Currency masks work in cents — multiply value by 100
+                                            # Mascaras de moeda funcionam em centavos — multiplica valor por 100
                                             raw_val = str(fill_val).replace(".", "").replace(",", "").replace(" ", "")
                                             try:
                                                 cents = str(int(float(raw_val) * 100))
@@ -1183,7 +1221,7 @@ def cmd_run(args):
                                             page.wait_for_timeout(200)
                                             el.press_sequentially(cents, delay=50)
                                             page.wait_for_timeout(100)
-                                            # Blur so Angular validates the field
+                                            # Tira foco para Angular validar o campo
                                             page.keyboard.press("Tab")
                                             page.wait_for_timeout(300)
                                         else:
@@ -1264,16 +1302,16 @@ def cmd_run(args):
                             step_report.skip_reason = "sem seletor/expected"
                             step_report.success = True
 
-                    # BUG-016: mark step success unless error_message already set (e.g. assert fail)
+                    # BUG-016: marca step sucesso a menos que error_message ja definido (ex: assert falhou)
                     if not step_report.error_message:
                         step_report.success = True
 
                 except Exception as e:
                     failed_steps += 1
                     error_msg = str(e)[:300]
-                    # BUG-016: full untruncated error for report
+                    # BUG-016: erro completo sem truncamento para relatorio
                     step_report.error_message = str(e)
-                    # Include selector info for better classification
+                    # Inclui info do seletor para melhor classificacao
                     if sel:
                         error_msg = f"Passo {step_num}: {action} falhou — seletor '{sel[:80]}' nao encontrado. {error_msg}"
                     elif candidates:
@@ -1283,7 +1321,7 @@ def cmd_run(args):
                         error_msg = f"Passo {step_num}: {action} falhou — sem seletor disponivel. {error_msg}"
                     print(f"  FALHOU Passo {step_num}: {action} FALHOU — {error_msg[:100]}")
 
-                    # BUG-011: per-step metric — falha detectada
+                    # BUG-011: metrica por step — falha detectada
                     metrics.record_step(
                         StepOutcome.FAILURE_DETECTED,
                         step_num=step_num, action=action,
@@ -1295,7 +1333,7 @@ def cmd_run(args):
                         recording_id or "", app_name,
                         debug_healing=getattr(args, 'debug_healing', False),
                     )
-                    # BUG-016: capture full healing details (untruncated)
+                    # BUG-016: captura detalhes completos de healing (sem truncamento)
                     if outcome is not None:
                         step_report.healing_attempted = True
                         step_report.healing_layer = outcome.layer_used
@@ -1319,11 +1357,11 @@ def cmd_run(args):
                         )
 
                         if outcome.status == ProgressResult.PASSED_STEP:
-                            # B19/B20: validate the cure isn't dangerously
-                            # generic before counting as healed. Otherwise
-                            # the legacy `run` happily ships heals like
-                            # `a[href="/"]` repeatedly (oracle approves
-                            # because the home link exists on every page).
+                            # B19/B20: valida que a cura nao e perigosamente
+                            # generica antes de contar como curado. Caso contrario
+                            # o `run` legado envia curas como
+                            # `a[href="/"]` repetidamente (oracle aprova
+                            # porque o link inicial existe em toda pagina).
                             from testforge.runner.dangerous_locator import (
                                 is_dangerously_generic,
                             )
@@ -1332,8 +1370,8 @@ def cmd_run(args):
                                 if outcome.proposal else ""
                             )
                             if is_dangerously_generic(proposed):
-                                # Reject. Demote outcome so the rest of
-                                # the loop treats this step as a failure.
+                                # Rejeita. Rebaixa resultado para que o resto do
+                                # loop trate este step como falha.
                                 print(
                                     f"    Curador: REJEITADO — locator "
                                     f"generico/perigoso: {proposed!r}"
@@ -1364,9 +1402,9 @@ def cmd_run(args):
                                     healing_layer=healing_layer,
                                     selector=selector_used,
                                 )
-                                # B21: also record validated so the
-                                # per-step Validados counter is non-zero
-                                # when heals genuinely pass.
+                            # B21: tambem registra validado para que
+                            # o contador Validados por step seja nao-zero
+                            # quando curas realmente passam.
                                 metrics.record_step(
                                     StepOutcome.ORACLE_VALIDATED,
                                     step_num=step_num, action=action,
@@ -1384,10 +1422,10 @@ def cmd_run(args):
                                 selector=selector_used,
                             )
 
-                    # Track irrecoverable failure for blocking step dependency
+                    # Rastreia falha irrecuperavel para dependencia de step bloqueante
                     if step.blocking:
-                        # Step is considered irrecoverable if healing was not attempted
-                        # or healing was rejected/failed (not passed)
+                        # Step e considerado irrecuperavel se healing nao foi tentado
+                        # ou healing foi rejeitado/falhou (nao passou)
                         healing_saved = (
                             outcome is not None
                             and outcome.status == ProgressResult.PASSED_STEP
@@ -1395,11 +1433,11 @@ def cmd_run(args):
                         if not healing_saved:
                             failed_step_indices.add(i)
 
-                # Track blocking step failure that didn't raise (e.g., assert failure)
+                # Rastreia falha de step bloqueante que nao levantou excecao (ex: assert falhou)
                 if step.blocking and step_report.error_message and i not in failed_step_indices:
                     failed_step_indices.add(i)
 
-                # BUG-016: add full step report to run report
+                # BUG-016: adiciona relatorio completo do step ao run report
                 run_report.add_step(step_report)
 
             browser.close()
@@ -1422,7 +1460,7 @@ def cmd_run(args):
     if layer_used:
         print(f"  Healing layer: {layer_used}")
 
-    # BUG-016: save full untruncated report to file
+    # BUG-016: salva relatorio completo sem truncamento em arquivo
     run_report.failed_steps = failed_steps
     run_report.healed_steps = healed_steps
     if recording_id:
@@ -1447,8 +1485,8 @@ def _heal_step(page, step, error_msg: str, base_url: str, step_num: int,
                recording_id: str, app_name: str, debug_healing: bool = False):
     """Tenta curar um step falho usando o pipeline L0→L3.
 
-    Returns:
-        CurationOutcome, or None if failure is unrecoverable.
+    Retorna:
+        CurationOutcome, ou None se a falha for irrecuperavel.
     """
     classifier = FailureClassifier()
     failure = classifier.classify(error_msg)
@@ -1468,7 +1506,7 @@ def _heal_step(page, step, error_msg: str, base_url: str, step_num: int,
     text_val = step.target.text if step.target else ""
     value = step.value or ""
 
-    # If no selector, try to guess from target data
+    # Se sem seletor, tenta adivinhar a partir dos dados do target
     if not sel and step.target:
         if step.target.element_id:
             sel = f"#{step.target.element_id}"
@@ -1494,7 +1532,7 @@ def _heal_step(page, step, error_msg: str, base_url: str, step_num: int,
 
     payload = collector.build_llm_payload(step_context, include_screenshot=False)
 
-    # Smart step runner that supports all healing strategies
+    # Smart step runner que suporta todas as estrategias de healing
     from testforge.runner.fallback_runner import SmartStepRunner
     smart_runner = SmartStepRunner(page)
 
@@ -1581,8 +1619,8 @@ def cmd_pipeline(args):
     print("  TestForge — Pipeline Completa")
     print("=" * 50)
 
-    # Step 1: Record
-    print("\n📼 Fase 1: Gravacao")
+    # Passo 1: Gravacao
+    print("\n[FITA] Fase 1: Gravacao")
     _verify_ssl = getattr(args, 'verify_ssl', False)
     ts = time.strftime("%Y%m%d-%H%M%S")
     rid = f"PIPE-{ts}"
@@ -1591,7 +1629,7 @@ def cmd_pipeline(args):
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless, verify_ssl=_verify_ssl)
         _vp_kw = _make_context_kwargs(args.headless, verify_ssl=_verify_ssl)
         page = browser.new_context(**_vp_kw).new_page()
-        # Hotfix 15: anchor recordings at the project root, not CWD.
+        # Hotfix 15: ancora recordings na raiz do projeto, nao no CWD.
         recorder = RecorderController(
             page, recordings_root=str(_PROJECT_ROOT / "recordings")
         )
@@ -1623,17 +1661,17 @@ def cmd_pipeline(args):
 
         recorder.stop()
         recorder.finalize()
-        print(f"  ✓ {rid}: {len(os.listdir(f'recordings/{rid}/screenshots'))} screenshots")
+        print(f"  [OK] {rid}: {len(os.listdir(f'recordings/{rid}/screenshots'))} screenshots")
 
-        # Step 2: Compile
-        print("\n⚙ Fase 2: Compilacao")
+        # Passo 2: Compilacao
+        print("\n[ENGRENAGEM] Fase 2: Compilacao")
         normalizer = RecordingNormalizer()
         stc = normalizer.normalize(str(_PROJECT_ROOT / f"recordings/{rid}"), f"ST-{rid}", "pipeline", args.url)
         compiler = PlaywrightCompiler()
         script_path = compiler.compile(stc, f"semantic_tests/ST-{rid}")
-        print(f"  ✓ {len(stc.steps)} steps → {script_path}")
+        print(f"  [OK] {len(stc.steps)} steps → {script_path}")
 
-        # Step 3: Run
+        # Passo 3: Execucao
         print("\n[PLAY] Fase 3: Execucao + Healing")
         _vp_kw2 = _make_context_kwargs(args.headless, verify_ssl=_verify_ssl)
         page2 = browser.new_context(**_vp_kw2).new_page()
@@ -1667,14 +1705,14 @@ def cmd_pipeline(args):
         ])
 
         for r in results:
-            icon = "✓" if r.status == "passed" else "✗"
+            icon = "[OK]" if r.status == "passed" else "[X]"
             print(f"  {icon} {r.oracle_type}: {r.status}")
 
         decision = gate.evaluate(results, {"screenshots": ["x.png"]})
         healed = decision.allowed
 
         if healed:
-            print(f"  ✓ Pipeline concluida — Gate: {decision.state.value}")
+            print(f"  [OK] Pipeline concluida — Gate: {decision.state.value}")
         else:
             print(f"  [WARN] Gate bloqueou: {decision.blocks}")
             # Auto-aprender: registra receita para este padrao de falha
@@ -1689,14 +1727,14 @@ def cmd_pipeline(args):
                 priority=1,
             )
             rid = catalog.add_recipe(recipe)
-            print(f"  📝 Receita de cura registrada: {rid}")
+            print(f"  [ANOTACAO] Receita de cura registrada: {rid}")
 
         browser.close()
 
-    # Step 4: Metrics
-    print("\n📊 Fase 4: Metricas")
+    # Passo 4: Metricas
+    print("\n[GRAFICO] Fase 4: Metricas")
     metrics = MetricsRepository()
-    # BUG-011: per-step recording for inline pipeline steps
+    # BUG-011: registro por step para steps inline do pipeline
     oracle_passed = 0
     for r in results:
         step_num = 1
@@ -1728,13 +1766,13 @@ def cmd_demo_heal(args):
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless, verify_ssl=_verify_ssl)
         _vp_kw = _make_context_kwargs(args.headless, verify_ssl=_verify_ssl)
         page = browser.new_context(**_vp_kw).new_page()
-        # Hotfix 15: anchor recordings at the project root, not CWD.
+        # Hotfix 15: ancora recordings na raiz do projeto, nao no CWD.
         recorder = RecorderController(
             page, recordings_root=str(_PROJECT_ROOT / "recordings")
         )
 
         # Fase 1: Gravar fluxo normal
-        print("📼 Fase 1: Gravando fluxo normal...")
+        print("[FITA] Fase 1: Gravando fluxo normal...")
         recorder.start("HEAL-DEMO", "fake-bank", "http://localhost:8765")
         page.goto("http://localhost:8765")
         page.wait_for_timeout(500)
@@ -1754,16 +1792,16 @@ def cmd_demo_heal(args):
 
         with open(_PROJECT_ROOT / "recordings/HEAL-DEMO/raw_events.jsonl") as f:
             events = [json.loads(l) for l in f]
-        print(f"  ✓ {len(events)} eventos gravados")
+        print(f"  [OK] {len(events)} eventos gravados")
 
         # Fase 2: Compilar
-        print("⚙ Fase 2: Compilando script...")
+        print("[ENGRENAGEM] Fase 2: Compilando script...")
         stc = RecordingNormalizer().normalize("recordings/HEAL-DEMO", "ST-HEAL", "fake-bank", "http://localhost:8765")
         path = PlaywrightCompiler().compile(stc, "semantic_tests/ST-HEAL")
-        print(f"  ✓ Script: {path}")
+        print(f"  [OK] Script: {path}")
 
         # Fase 3: Quebrar seletor
-        print("🔨 Fase 3: Alterando ID do botao (mutation change_id)...")
+        print("[MARTELO] Fase 3: Alterando ID do botao (mutation change_id)...")
         browser.close()
 
     # Abrir pagina com mutacao
@@ -1782,7 +1820,7 @@ def cmd_demo_heal(args):
         print(f"  Seletor original #btnPesquisar: {'existe' if old_exists else 'NAO EXISTE (quebrado!)'}")
 
         # Fase 4: Healing deterministico
-        print("🩹 Fase 4: Executando healing deterministico...")
+        print("[CURA] Fase 4: Executando healing deterministico...")
         fallback = FallbackRunner(page)
 
         page.get_by_placeholder("000.000.000-00").fill("99988877766")
@@ -1797,12 +1835,12 @@ def cmd_demo_heal(args):
         page.wait_for_timeout(500)
 
         if click_ok:
-            print("  ✓ Clique com candidato alternativo funcionou!")
+            print("  [OK] Clique com candidato alternativo funcionou!")
         else:
-            print("  ✗ Nenhum candidato funcionou")
+            print("  [X] Nenhum candidato funcionou")
 
         # Fase 5: Oracle + Gate
-        print("🔍 Fase 5: Validando com Oracle + Gate...")
+        print("[BUSCA] Fase 5: Validando com Oracle + Gate...")
         oracle = OracleRunner(page)
         results = oracle.run_all([
             {"type": "visual_dom", "selector": "#resultadoSection", "expected": "99988877766"},
@@ -1810,7 +1848,7 @@ def cmd_demo_heal(args):
         ])
 
         for r in results:
-            icon = "✓" if r.status == "passed" else "✗"
+            icon = "[OK]" if r.status == "passed" else "[X]"
             print(f"  {icon} {r.oracle_type}: {r.status} — {r.message[:60]}")
 
         gate = PromotionGate()
@@ -1841,7 +1879,7 @@ def cmd_demo_heal(args):
 
 
 def cmd_pilot_report(args):
-    """Generate consolidated pilot readiness report from all recordings."""
+    """Gera relatorio consolidado de readiness do piloto a partir de todas as gravacoes."""
     from testforge.metrics.pilot_metrics import collect_pilot_metrics, save_pilot_report
 
     recordings_dir = args.recordings_dir
@@ -1868,7 +1906,7 @@ def cmd_pilot_report(args):
     print(f"  Total gravacoes: {s['total_recordings']}")
     print(f"  [OK] Prontas: {s['ready_for_team']}")
     print(f"  [WARN] Incompletas: {s['incomplete_intent']}")
-    print(f"  🔍 Revisao: {s['needs_review']}")
+    print(f"  [BUSCA] Revisao: {s['needs_review']}")
     print(f"  Taxa de completude: {s['completion_rate']:.1%}")
 
     if metrics.failures and any(metrics.failures.values()):
@@ -1902,7 +1940,7 @@ def cmd_diagnose(args):
 
 
 def cmd_dashboard(args):
-    """Phase 6: generate static dashboard.html."""
+    """Fase 6: gera dashboard.html estatico."""
     from testforge.metrics.dashboard import write_dashboard
     path = write_dashboard(
         output_path=args.output, spans_path=args.spans, db_path=args.db,
@@ -1912,7 +1950,7 @@ def cmd_dashboard(args):
 
 
 def cmd_catalog_migrate(args):
-    """Phase 4: import legacy JSONL recipes into SQLite intent catalog."""
+    """Fase 4: importa receitas JSONL legadas para o catalogo de intencoes SQLite."""
     from testforge.healing.sqlite_intent_catalog import IntentCatalog
     src = args.source
     db = args.db
@@ -1929,7 +1967,7 @@ def cmd_catalog_migrate(args):
 
 
 def cmd_catalog_export(args):
-    """Phase 4: export SQLite intent catalog to JSONL."""
+    """Fase 4: exporta catalogo de intencoes SQLite para JSONL."""
     from testforge.healing.sqlite_intent_catalog import IntentCatalog
     db = args.db
     out = args.output
@@ -1943,7 +1981,7 @@ def cmd_catalog_export(args):
 
 
 def cmd_send(args):
-    """Re-publish recording artifacts to configured Git repo."""
+    """Re-publica artefatos de gravacao para o repositorio Git configurado."""
     from testforge.publisher import GitPublisher
     rid = args.recording_id
     publisher = GitPublisher.from_config() or GitPublisher.from_env()
@@ -1959,7 +1997,7 @@ def cmd_send(args):
         print(f"[TestForge] Gravacao nao encontrada: {rec_dir}")
         return
 
-    # Apply --system/--suite/--test-case overrides from args or config defaults
+    # Aplica sobreposicoes --system/--suite/--test-case de args ou defaults do config
     _override_system = getattr(args, 'system', None) or ""
     _override_suite = getattr(args, 'suite', None) or ""
     _override_test_case = getattr(args, 'test_case', None) or ""
@@ -1981,22 +2019,22 @@ def cmd_send(args):
     result = publisher.publish(rid, str(_PROJECT_ROOT / "recordings"), str(_PROJECT_ROOT / "semantic_tests"))
     if result.success:
         sha_short = result.commit_sha[:8] if result.commit_sha and result.commit_sha != "(no changes)" else result.commit_sha or "sem-commit"
-        print(f"[TestForge] ✓ Publicado: {result.remote_path}")
+        print(f"[TestForge] [OK] Publicado: {result.remote_path}")
         print(f"  Commit: {sha_short}")
         print(f"  Artefatos: {len(result.artifacts_copied)} arquivo(s)")
     else:
-        print(f"[TestForge] ✗ Falha: {result.error}", file=sys.stderr)
+        print(f"[TestForge] [X] Falha: {result.error}", file=sys.stderr)
         print("[TestForge]   Execute com --verbose para logs detalhados.", file=sys.stderr)
 
 
 def _setup_logging(verbose: bool = False):
-    """Configure structured logging for TestForge components."""
+    """Configura logging estruturado para componentes do TestForge."""
     level = logging.DEBUG if verbose else logging.INFO
     fmt = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-    # Only configure if no handlers exist (don't clobber pytest config)
+    # Configura apenas se nao existirem handlers (nao sobrescreve config do pytest)
     if not logging.getLogger().handlers:
         logging.basicConfig(level=level, format=fmt, datefmt="%H:%M:%S")
-    # Ensure our components log at the right level
+    # Garante que nossos componentes loguem no nivel correto
     for name in ("testforge.recorder", "testforge.semantic", "testforge.cli", "testforge.publisher"):
         logging.getLogger(name).setLevel(level)
 
@@ -2063,7 +2101,7 @@ def main():
     comp = sub.add_parser("compile", help="Compilar gravacao em script Playwright")
     comp.add_argument("recording", help="ID da gravacao (ex: REC-20260613)")
     comp.add_argument("--app", help="Nome da aplicacao")
-    comp.add_argument("--base-url", help="URL base override")
+    comp.add_argument("--base-url", help="Substituir URL base")
     comp.add_argument("--output", help="Diretorio de saida")
     comp.add_argument("--data", action="store_true", help="Extrair massa de dados para JSON externo")
     comp.add_argument("--scenarios", action="store_true", help="Gerar JSON com suporte a multiplos cenarios")
@@ -2130,7 +2168,7 @@ def main():
     admin = sub.add_parser("admin", help="(Sprint 0) Comandos administrativos (instalar PAT, etc)")
     admin_sub = admin.add_subparsers(dest="admin_cmd")
     install_pat = admin_sub.add_parser("install-pat", help="Salva credenciais Azure DevOps em ~/.testforge/secrets (0600)")
-    install_pat.add_argument("--pat", required=True, help="Personal Access Token")
+    install_pat.add_argument("--pat", required=True, help="Token de Acesso Pessoal (PAT)")
     install_pat.add_argument("--org", required=True)
     install_pat.add_argument("--project", required=True)
     install_pat.add_argument("--repo", required=True)
@@ -2168,7 +2206,7 @@ def main():
     dash.add_argument("--spans", default=str(_PROJECT_ROOT / ".testforge/spans.jsonl"),
                      help="JSONL de spans (default: .testforge/spans.jsonl)")
     dash.add_argument("--db", default=str(_PROJECT_ROOT / ".testforge/intent_catalog.sqlite"),
-                     help="SQLite intent catalog")
+                     help="Catalogo de intencoes SQLite")
     dash.set_defaults(func=cmd_dashboard)
 
     # catalog-migrate (Phase 4: JSONL → SQLite intent catalog)
@@ -2182,9 +2220,9 @@ def main():
     # catalog-export (Phase 4: SQLite → JSONL for git tracking)
     catexp = sub.add_parser("catalog-export", help="(Fase 4) Exporta intent catalog SQLite para JSONL")
     catexp.add_argument("--db", default=str(_PROJECT_ROOT / ".testforge/intent_catalog.sqlite"),
-                         help="SQLite source")
+                         help="SQLite fonte")
     catexp.add_argument("--output", default=str(_PROJECT_ROOT / ".testforge/intent_catalog.jsonl"),
-                         help="JSONL destination")
+                         help="Destino JSONL")
     catexp.set_defaults(func=cmd_catalog_export)
 
     # send (Git publisher)
@@ -2196,7 +2234,7 @@ def main():
     send.set_defaults(func=cmd_send)
 
     args = parser.parse_args()
-    # Setup logging before running command
+    # Configura logging antes de executar comando
     _setup_logging(verbose=getattr(args, 'verbose', False))
     if args.command:
         args.func(args)
