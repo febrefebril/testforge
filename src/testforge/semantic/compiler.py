@@ -335,42 +335,75 @@ class PlaywrightCompiler:
         lines.append(f"BASE_URL = \"{tc.base_url}\"")
         lines.append("")
 
-        safe_name = re.sub(r'[^a-zA-Z0-9_]', '_', tc.test_id).lower()
-        safe_name = re.sub(r'_+', '_', safe_name).strip('_')
-        lines.append(f"def test_{safe_name}(page: Page):")
-        lines.append(f'    """{tc.application or "Fluxo gravado"} — source: {tc.source_recording_id}."""')
-        lines.append("")
-        lines.append("    # Navegacao inicial: carrega pagina sob teste")
-        lines.append(f"    page.goto(BASE_URL)")
-        lines.append("")
+        base_safe = re.sub(r'[^a-zA-Z0-9_]', '_', tc.test_id).lower()
+        base_safe = re.sub(r'_+', '_', base_safe).strip('_')
 
-        step_idx = 0
-        for action in tc.steps:
-            # Injeta espera de overlay antes de passos de overlay
-            if action.context.get("overlay_step") and not action.context.get("overlay_trigger"):
-                lines.append("    # Aguarda overlay (calendario, modal, dialog)")
-                lines.append("    try:")
-                lines.append("        page.wait_for_selector('.cdk-overlay-container', state='visible', timeout=5000)")
-                lines.append("        page.wait_for_timeout(300)")
-                lines.append("    except Exception:")
-                lines.append("        pass")
+        # B29: when the recorder marked scenario boundaries with Shift+N,
+        # emit one pytest function per segment so failures isolate to the
+        # scenario that broke. Default (single segment) → one function as
+        # before.
+        segments = list(getattr(tc, "scenario_segments", None) or [])
+        if not segments:
+            segments = [{
+                "start_step": 0,
+                "end_step_exclusive": len(tc.steps),
+                "name": "default",
+            }]
 
-            if action.action == "navigation":
-                # Navegacao redundante ignorada — pagina ja carregada via BASE_URL.
-                continue
-            elif action.action in ("fill", "select_option") and action.target and (action.target.tag or "").lower() == "select":
-                step_idx += 1
-                lines.extend(self._gen_select(action, step_idx, data_file, field_values, data_file_dict))
-            elif action.action == "fill":
-                step_idx += 1
-                lines.extend(self._gen_fill(action, step_idx, data_file, field_values, data_file_dict))
-            elif action.action == "click":
-                step_idx += 1
-                is_submit = action.context.get("is_submit", False) if action.context else False
-                lines.extend(self._gen_click(action, step_idx, is_submit=is_submit))
-            elif action.action == "assert":
-                step_idx += 1
-                lines.extend(self._gen_assert(action, step_idx))
+        def _seg_safe(name: str, idx: int) -> str:
+            n = re.sub(r'[^a-zA-Z0-9_]', '_', (name or "").lower())
+            n = re.sub(r'_+', '_', n).strip('_')
+            return n or f"cenario_{idx + 1}"
+
+        for seg_idx, seg in enumerate(segments):
+            start = max(0, int(seg.get("start_step", 0)))
+            end = max(start, int(seg.get("end_step_exclusive", len(tc.steps))))
+            seg_name = seg.get("name") or f"cenario_{seg_idx + 1}"
+            if len(segments) == 1:
+                fn_name = f"test_{base_safe}"
+            else:
+                fn_name = f"test_{base_safe}__{_seg_safe(seg_name, seg_idx)}"
+            lines.append(f"def {fn_name}(page: Page):")
+            doc_app = tc.application or "Fluxo gravado"
+            scenario_doc = (
+                f" — cenário: {seg_name}" if len(segments) > 1 else ""
+            )
+            lines.append(
+                f'    """{doc_app} — source: {tc.source_recording_id}{scenario_doc}."""'
+            )
+            lines.append("")
+            lines.append("    # Navegacao inicial: carrega pagina sob teste")
+            lines.append(f"    page.goto(BASE_URL)")
+            lines.append("")
+
+            step_idx = 0
+            for action in tc.steps[start:end]:
+                # Injeta espera de overlay antes de passos de overlay
+                if action.context.get("overlay_step") and not action.context.get("overlay_trigger"):
+                    lines.append("    # Aguarda overlay (calendario, modal, dialog)")
+                    lines.append("    try:")
+                    lines.append("        page.wait_for_selector('.cdk-overlay-container', state='visible', timeout=5000)")
+                    lines.append("        page.wait_for_timeout(300)")
+                    lines.append("    except Exception:")
+                    lines.append("        pass")
+
+                if action.action == "navigation":
+                    # Navegacao redundante ignorada — pagina ja carregada via BASE_URL.
+                    continue
+                elif action.action in ("fill", "select_option") and action.target and (action.target.tag or "").lower() == "select":
+                    step_idx += 1
+                    lines.extend(self._gen_select(action, step_idx, data_file, field_values, data_file_dict))
+                elif action.action == "fill":
+                    step_idx += 1
+                    lines.extend(self._gen_fill(action, step_idx, data_file, field_values, data_file_dict))
+                elif action.action == "click":
+                    step_idx += 1
+                    is_submit = action.context.get("is_submit", False) if action.context else False
+                    lines.extend(self._gen_click(action, step_idx, is_submit=is_submit))
+                elif action.action == "assert":
+                    step_idx += 1
+                    lines.extend(self._gen_assert(action, step_idx))
+            lines.append("")
 
         return "\n".join(lines) + "\n"
 
