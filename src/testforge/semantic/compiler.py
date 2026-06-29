@@ -1,12 +1,12 @@
-"""TestForge — Playwright Python Compiler.
+"""TestForge — Compilador Python Playwright.
 
-Le SemanticTestCase e gera script Python executavel com fallback loop.
+Le SemanticTestCase e gera script Python executavel com loop de fallback.
 Suporte a data-driven testing: extrai valores para JSON externo.
 
-Phase 3: optional `compile_v2` emits a minimal script that delegates
-the fallback chain to the runtime LocatorResolver. Each step's
-candidates are persisted to `<output_dir>/candidates/step_NNN.json`
-and looked up at run time. The legacy `compile` is unchanged.
+Fase 3: `compile_v2` opcional emite script minimalista que delega
+a cadeia de fallback ao LocatorResolver em runtime. Candidatos de cada
+passo sao persistidos em `<output_dir>/candidates/step_NNN.json`
+e consultados em tempo de execucao. O `compile` legado permanece inalterado.
 """
 import logging
 import os
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 def _derive_intent(action: SemanticAction) -> str:
-    """Use target.intent_text if present, else derive from attributes."""
+    """Usa target.intent_text se presente, senao deriva de atributos."""
     target = action.target
     if target and target.intent_text:
         return target.intent_text
@@ -42,7 +42,7 @@ def _derive_intent(action: SemanticAction) -> str:
 
 
 def _candidates_dict(target: SemanticTarget) -> list[dict]:
-    """Serialize target.candidates to plain JSON-ready dicts."""
+    """Serializa target.candidates para dicts simples prontos para JSON."""
     out: list[dict] = []
     for c in target.candidates or []:
         item = {
@@ -69,7 +69,7 @@ class PlaywrightCompiler:
     """Gera script Playwright Python a partir de SemanticTestCase."""
 
     # ------------------------------------------------------------------
-    # Phase 3: v2 compiler
+    # Fase 3: compilador v2
     # ------------------------------------------------------------------
     def compile_v2(
         self,
@@ -77,14 +77,14 @@ class PlaywrightCompiler:
         output_dir: str,
         data_file: str = "",
     ) -> str:
-        """Emit a minimal script that delegates resolution to LocatorResolver.
+        """Emite script minimalista que delega resolucao ao LocatorResolver.
 
-        Side-effects:
-        - writes `<output_dir>/candidates/step_NNN.json` per step
-        - writes `<output_dir>/test_<safe_id>.py` calling step.click/fill/...
+        Efeitos colaterais:
+        - escreve `<output_dir>/candidates/step_NNN.json` por passo
+        - escreve `<output_dir>/test_<safe_id>.py` chamando step.click/fill/...
 
-        The compiled script contains NO try/except fallback chain — the
-        runtime resolver consumes the per-step candidate files.
+        O script compilado NAO contem cadeia de fallback try/except — o
+        resolvedor em runtime consome os arquivos de candidato por passo.
         """
         os.makedirs(output_dir, exist_ok=True)
         candidates_dir = os.path.join(output_dir, "candidates")
@@ -95,14 +95,14 @@ class PlaywrightCompiler:
         script_path = os.path.join(output_dir, f"test_{safe_id}.py")
 
         lines: list[str] = []
-        lines.append('"""Compiled by TestForge v2 compiler — fallback chain runs in runtime LocatorResolver."""')
+        lines.append('"""Compilado pelo TestForge v2 — cadeia de fallback executa no LocatorResolver em runtime."""')
         lines.append("from playwright.sync_api import Page")
         lines.append("from testforge.runtime import step")
         lines.append("")
         lines.append(f"BASE_URL = {_json.dumps(test_case.base_url)}")
         lines.append("")
         lines.append(f"def test_{safe_id}(page: Page):")
-        lines.append(f'    """{test_case.application or "Recorded flow"} — source: {test_case.source_recording_id}."""')
+        lines.append(f'    """{test_case.application or "Fluxo gravado"} — source: {test_case.source_recording_id}."""')
         lines.append("    step.go(page, BASE_URL)")
 
         step_idx = 0
@@ -140,7 +140,7 @@ class PlaywrightCompiler:
         return script_path
 
     def _emit_v2_call(self, action: SemanticAction, intent: str, step_filename: str) -> str:
-        """Render one `step.<verb>(page, ...)` call for the v2 script."""
+        """Renderiza uma chamada `step.<verb>(page, ...)` para o script v2."""
         intent_lit = _json.dumps(intent, ensure_ascii=False)
         file_lit = _json.dumps(step_filename)
         value_lit = _json.dumps(action.value or "", ensure_ascii=False)
@@ -158,7 +158,7 @@ class PlaywrightCompiler:
             expected = action.target.text if action.target and action.target.text else (action.value or "")
             expected_lit = _json.dumps(expected, ensure_ascii=False)
             return f"step.assert_text(page, intent={intent_lit}, expected={expected_lit}, candidates_file={file_lit})"
-        # Unknown action — emit a stub so the script remains syntactically valid.
+        # Acao desconhecida — emite um stub para o script permanecer sintaticamente valido.
         return (
             f"# TODO: unsupported v2 action {action.action!r} — "
             f"intent={intent_lit}, candidates_file={file_lit}"
@@ -217,19 +217,19 @@ class PlaywrightCompiler:
         test_case: SemanticTestCase,
         output_dir: str,
     ) -> str:
-        """Generate semantic_steps.jsonl alongside compiled script.
+        """Gera semantic_steps.jsonl junto com script compilado.
 
-        Each line is a self-contained JSON object representing one
-        semantic step — includes action, value, target, candidates,
-        url, context, and skip_reason for full audit trail.
+        Cada linha eh um objeto JSON autocontido representando um
+        passo semantico — inclui action, value, target, candidates,
+        url, context e skip_reason para trilha de auditoria completa.
 
-        Returns path to generated file.
+        Retorna caminho para arquivo gerado.
         """
         os.makedirs(output_dir, exist_ok=True)
         path = os.path.join(output_dir, "semantic_steps.jsonl")
 
         with open(path, "w", encoding="utf-8") as f:
-            # Header line: metadata
+            # Linha de cabecalho: metadados
             metadata = {
                 "type": "metadata",
                 "test_id": test_case.test_id,
@@ -240,7 +240,7 @@ class PlaywrightCompiler:
             }
             f.write(_json.dumps(metadata, ensure_ascii=False) + "\n")
 
-            # One step per line
+            # Um passo por linha
             for step in test_case.steps:
                 record = self._step_to_record(step)
                 f.write(_json.dumps(record, ensure_ascii=False) + "\n")
@@ -248,7 +248,7 @@ class PlaywrightCompiler:
         return path
 
     def _step_to_record(self, step: SemanticAction) -> dict:
-        """Convert a SemanticAction to a JSONL record dict."""
+        """Converte um SemanticAction em dict de registro JSONL."""
         record: dict = {"action": step.action}
         if step.value:
             record["value"] = step.value
@@ -307,7 +307,7 @@ class PlaywrightCompiler:
         data_file_dict: Optional[dict] = None,
     ) -> str:
         lines = []
-        lines.append('"""Teste gerado pelo TestForge — fonte de verdade: SemanticTestCase."""')
+        lines.append('"""Teste gerado pelo TestForge — fonte da verdade: SemanticTestCase."""')
         lines.append("from playwright.sync_api import Page, expect")
         lines.append("import json, os, re")
         lines.append("from testforge.runtime.healer import resolve_selector")
@@ -316,13 +316,13 @@ class PlaywrightCompiler:
             # Data-driven: carrega JSON externo no script gerado
             data_path = os.path.basename(data_file)
             lines.append("")
-            lines.append(f"# Dados de teste: fixture JSON externo")
+            lines.append(f"# Dados de teste: fixture JSON externa")
             lines.append(f"_DATA_FILE = os.path.join(os.path.dirname(__file__), \"{data_path}\")")
             lines.append("_data = {}")
             lines.append("if os.path.exists(_DATA_FILE):")
             lines.append("    with open(_DATA_FILE) as f:")
             lines.append("        _raw = json.load(f)")
-            lines.append("    # Suporte a formato flat e scenario-based")
+            lines.append("    # Suporte a formato plano e baseado em cenario")
             lines.append("    if \"scenarios\" in _raw:")
             lines.append("        _data = _raw[\"scenarios\"].get(\"default\", {})")
             lines.append("    elif \"fields\" in _raw:")
@@ -340,15 +340,15 @@ class PlaywrightCompiler:
         lines.append(f"def test_{safe_name}(page: Page):")
         lines.append(f'    """{tc.application or "Fluxo gravado"} — source: {tc.source_recording_id}."""')
         lines.append("")
-        lines.append("    # Navegação inicial: carrega página sob teste")
+        lines.append("    # Navegacao inicial: carrega pagina sob teste")
         lines.append(f"    page.goto(BASE_URL)")
         lines.append("")
 
         step_idx = 0
         for action in tc.steps:
-            # Injetar espera de overlay antes de steps de overlay
+            # Injeta espera de overlay antes de passos de overlay
             if action.context.get("overlay_step") and not action.context.get("overlay_trigger"):
-                lines.append("    # Aguarda overlay (calendário, modal, dialog)")
+                lines.append("    # Aguarda overlay (calendario, modal, dialog)")
                 lines.append("    try:")
                 lines.append("        page.wait_for_selector('.cdk-overlay-container', state='visible', timeout=5000)")
                 lines.append("        page.wait_for_timeout(300)")
@@ -356,7 +356,7 @@ class PlaywrightCompiler:
                 lines.append("        pass")
 
             if action.action == "navigation":
-                # Navegação redundante ignorada — página já carregada via BASE_URL.
+                # Navegacao redundante ignorada — pagina ja carregada via BASE_URL.
                 continue
             elif action.action in ("fill", "select_option") and action.target and (action.target.tag or "").lower() == "select":
                 step_idx += 1
@@ -375,7 +375,7 @@ class PlaywrightCompiler:
         return "\n".join(lines) + "\n"
 
     def _data_field_name(self, action: SemanticAction) -> str:
-        """Get the JSON field name for a fill action's value."""
+        """Obtem nome do campo JSON para o valor de uma acao fill."""
         if action.target:
             label = (action.target.label or "").strip()
             if label:
@@ -386,7 +386,7 @@ class PlaywrightCompiler:
         return ""
 
     def _resolve_field_key(self, action: SemanticAction) -> str:
-        """Retorna a chave do campo para lookup em field_values ou data_file_dict.
+        """Retorna chave do campo para consulta em field_values ou data_file_dict.
 
         Usa label > placeholder > campo gerado como prioridade.
         """
@@ -415,32 +415,32 @@ class PlaywrightCompiler:
     ) -> str:
         """Resolve valor de fill com prioridade: field_values > data_file > original.
 
-        Ordem de resolução (em tempo de compilação):
-        1. field_values[field_key].value  — valor capturado na gravação (preferido)
-        2. data_file_dict[field_key]      — injeção externa via --data (fallback de missing_fill)
-        3. data_file (caminho)            — script gerado lê JSON em runtime
+        Ordem de resolucao (em tempo de compilacao):
+        1. field_values[field_key].value  — valor capturado na gravacao (preferido)
+        2. data_file_dict[field_key]      — injecao externa via --data (fallback missing_fill)
+        3. data_file (caminho)            — script gerado le JSON em runtime
         4. action.value                   — valor hardcoded original (fallback final)
         """
         value = action.value or ""
         escaped_value = value.replace('"', '\\"')
         field_key = self._resolve_field_key(action)
 
-        # Prioridade 1: field_values com valor não-vazio
+        # Prioridade 1: field_values com valor nao vazio
         if field_values and field_key and field_key in field_values:
             fv = field_values[field_key]
             resolved = fv.value
-            # Prioridade 2: data_file_dict preenche missing_fill quando value está vazio
+            # Prioridade 2: data_file_dict preenche missing_fill quando value esta vazio
             if not resolved and data_file_dict and field_key in data_file_dict:
                 resolved = str(data_file_dict[field_key])
             escaped_resolved = resolved.replace('"', '\\"')
             return f'"{escaped_resolved}"'
 
-        # Prioridade 3: data_file_dict sem field_values (injeção direta)
+        # Prioridade 3: data_file_dict sem field_values (injecao direta)
         if data_file_dict and field_key and field_key in data_file_dict:
             escaped_resolved = str(data_file_dict[field_key]).replace('"', '\\"')
             return f'"{escaped_resolved}"'
 
-        # Prioridade 4: script gerado lê JSON em runtime (comportamento original)
+        # Prioridade 4: script gerado le JSON em runtime (comportamento original)
         if data_file:
             field = self._data_field_name(action)
             if field:
@@ -454,16 +454,16 @@ class PlaywrightCompiler:
         return "'" + sel.replace("\\", "\\\\").replace("'", "\\'") + "'"
 
     def _playwright_locator_expr(self, target: SemanticTarget | None) -> str | None:
-        """Generate Playwright-native locator expression from target info.
+        """Gera expressao de localizador nativo Playwright a partir do alvo.
 
-        Returns e.g. \"page.get_by_role('button', name='Submit')\" or None.
-        Priority: role+name > test_id > label > placeholder > role > text.
+        Retorna ex.: \"page.get_by_role('button', name='Submit')\" ou None.
+        Prioridade: role+nome > test_id > label > placeholder > role > texto.
         """
         if not target:
             return None
         t = target
 
-        # 1. get_by_role + name (most semantic, accessible)
+        # 1. get_by_role + nome (mais semantico, acessivel)
         if t.role and t.accessible_name:
             role = self._esc(t.role)
             name = self._esc(t.accessible_name)
@@ -473,7 +473,7 @@ class PlaywrightCompiler:
         if t.test_id:
             return f"page.get_by_test_id({self._esc(t.test_id)})"
 
-        # 3. get_by_label (for input/textarea/select)
+        # 3. get_by_label (para input/textarea/select)
         if t.label:
             return f"page.get_by_label({self._esc(t.label)})"
 
@@ -485,14 +485,14 @@ class PlaywrightCompiler:
         if t.role:
             return f"page.get_by_role({self._esc(t.role)})"
 
-        # 6. get_by_text for clickable elements
+        # 6. get_by_text para elementos clicaveis
         if t.text and t.tag in ("button", "a", "span", "div", "label"):
             return f"page.get_by_text({self._esc(t.text[:60])})"
 
         return None
 
     def _top_css_selectors(self, target: SemanticTarget | None, limit: int = 5) -> list[str]:
-        """Return top N CSS selector strings from candidates."""
+        """Retorna os N principais seletores CSS dos candidatos."""
         candidates = target.candidates if target else []
         sorted_c = sorted(candidates, key=lambda c: c.score, reverse=True)
         return [c.selector for c in sorted_c[:limit]]
@@ -517,11 +517,11 @@ class PlaywrightCompiler:
         return "input"
 
     def _l0_5_role_expr(self, target: SemanticTarget | None) -> str | None:
-        """Generate L0.5 get_by_role with regex fuzzy name matching.
+        """Gera L0.5 get_by_role com correspondencia fuzzy regex de nome.
 
-        Returns e.g. \"page.get_by_role('button', name=re.compile(re.escape('Enviar'), re.I))\"
-        or None when role/accessible_name unavailable.
-        Tried AFTER primary PW locator fails, BEFORE CSS fallback loop.
+        Retorna ex.: \"page.get_by_role('button', name=re.compile(re.escape('Enviar'), re.I))\"
+        ou None quando role/accessible_name indisponivel.
+        Tentado APOS falha do localizador PW principal, ANTES do loop CSS fallback.
         """
         if not target or not target.role:
             return None
@@ -534,15 +534,15 @@ class PlaywrightCompiler:
                 f"name=re.compile(re.escape({escaped_name}), re.I))")
 
     def _l0_5_role_expr_str(self, target: SemanticTarget | None) -> str | None:
-        """Like _l0_5_role_expr but returns raw string for expect() usage.
+        """Similar a _l0_5_role_expr mas retorna string crua para uso com expect().
 
-        Returns e.g. \"page.get_by_role('button', name=re.compile(...))\"
-        without wrapping in ..._str — used when the expr is passed to expect().
+        Retorna ex.: \"page.get_by_role('button', name=re.compile(...))\"
+        sem envolver em ..._str — usado quando expressao eh passada para expect().
         """
         return self._l0_5_role_expr(target)
 
     def _fingerprint_to_code(self, fingerprint: dict) -> str:
-        """Serialize fingerprint dict to inline Python dict literal."""
+        """Serializa dict fingerprint para literal dict Python inline."""
         if not fingerprint:
             return "None"
         items = []
@@ -567,12 +567,12 @@ class PlaywrightCompiler:
         action_code: str,
         wait_code: str = "",
     ) -> list[str]:
-        """Generate CSS fallback lines: resolve_selector (healer) or legacy for-loop.
+        """Gera linhas de fallback CSS: resolve_selector (healer) ou laco for-legado.
 
-        Args:
-            action_code: Single-line template with {sel} placeholder,
-                         e.g. ``page.fill({sel}, "abc")``.
-            wait_code: Optional wait line, e.g. ``page.wait_for_timeout(200)``.
+        Argumentos:
+            action_code: Template de linha unica com placeholder {sel},
+                         ex.: ``page.fill({sel}, "abc")``.
+            wait_code: Linha de espera opcional, ex.: ``page.wait_for_timeout(200)``.
         """
         lines: list[str] = []
         sels_str = ", ".join(self._esc(s) for s in css_sels)
@@ -588,7 +588,7 @@ class PlaywrightCompiler:
             if wait_code:
                 lines.append(f"{indent}    {wait_code}")
             lines.append(f"{indent}else:")
-            lines.append(f'{indent}    raise AssertionError(f"step {step_idx} falhou '
+            lines.append(f'{indent}    raise AssertionError(f"passo {step_idx} falhou '
                           f'— nenhum candidato corresponde ao fingerprint")')
         else:
             lines.append(f"{indent}for _sel in _sels:")
@@ -609,7 +609,7 @@ class PlaywrightCompiler:
         field_values: Optional[dict[str, FieldValueMap]] = None,
         data_file_dict: Optional[dict] = None,
     ) -> list[str]:
-        """Gera page.select_option() com Playwright locator + fallback."""
+        """Gera page.select_option() com localizador Playwright + fallback."""
         value = self._resolved_value(action, idx, data_file, field_values, data_file_dict)
         pw_expr = self._playwright_locator_expr(action.target)
         css_sels = self._top_css_selectors(action.target)
@@ -647,7 +647,7 @@ class PlaywrightCompiler:
                 lines.append(f"        page.select_option({self._esc(fallback)}, {value})")
                 lines.append("        page.wait_for_timeout(200)")
         else:
-            # CSS-only fallback
+            # Fallback apenas CSS
             if css_sels:
                 action_tpl = _sel_call("{sel}")
                 lines.extend(self._gen_healer_loop(
@@ -669,7 +669,7 @@ class PlaywrightCompiler:
         field_values: Optional[dict[str, FieldValueMap]] = None,
         data_file_dict: Optional[dict] = None,
     ) -> list[str]:
-        """Gera page.fill() com Playwright locator + fallback loop CSS."""
+        """Gera page.fill() com localizador Playwright + loop de fallback CSS."""
         value = self._resolved_value(action, idx, data_file, field_values, data_file_dict)
         pw_expr = self._playwright_locator_expr(action.target)
         css_sels = self._top_css_selectors(action.target)
@@ -707,7 +707,7 @@ class PlaywrightCompiler:
                 lines.append(f"        page.fill({self._esc(fallback)}, {value})")
                 lines.append("        page.wait_for_timeout(200)")
         else:
-            # CSS-only fallback
+            # Fallback apenas CSS
             if css_sels:
                 action_tpl = _fill_call("{sel}")
                 lines.extend(self._gen_healer_loop(
@@ -728,7 +728,7 @@ class PlaywrightCompiler:
         lines = [f"    # Step {idx}: click"]
 
         def _gen_click_pw(pw_expr: str, indent: str = "") -> list[str]:
-            """Generate click via Playwright locator."""
+            """Gera clique via localizador Playwright."""
             clines = []
             if is_submit:
                 clines.append(f"{indent}with page.expect_navigation(wait_until='load'):")
@@ -738,7 +738,7 @@ class PlaywrightCompiler:
             return clines
 
         def _gen_click_css(sel: str, indent: str = "") -> list[str]:
-            """Generate click via CSS selector."""
+            """Gera clique via seletor CSS."""
             clines = []
             if is_submit:
                 clines.append(f"{indent}with page.expect_navigation(wait_until='load'):")
@@ -751,13 +751,13 @@ class PlaywrightCompiler:
             if is_submit:
                 return ""  # expect_navigation waits for load
             if causes_navigation:
-                return f"{indent}page.wait_for_timeout(3000)  # SPA navigation"
-            return f"{indent}page.wait_for_timeout(800)  # wait for DOM render"
+                return f"{indent}page.wait_for_timeout(3000)  # Navegacao SPA"
+            return f"{indent}page.wait_for_timeout(800)  # aguarda renderizacao DOM"
 
         def _gen_click_resolve(
             sels: list[str], step_idx: int, indent: str,
         ) -> list[str]:
-            """CSS fallback block — healer or legacy for-loop for click."""
+            """Bloco de fallback CSS — healer ou laco legado para clique."""
             clines: list[str] = []
             sels_str = ", ".join(self._esc(s) for s in sels)
             has_fp = bool(action.target and action.target.fingerprint)
@@ -772,7 +772,7 @@ class PlaywrightCompiler:
                 if wl:
                     clines.append(wl)
                 clines.append(f"{indent}else:")
-                clines.append(f'{indent}    raise AssertionError(f"click step {step_idx} falhou '
+                clines.append(f'{indent}    raise AssertionError(f"passo de clique {step_idx} falhou '
                               f'— nenhum candidato corresponde ao fingerprint")')
             else:
                 clines.append(f"{indent}for _sel in _sels:")
@@ -813,7 +813,7 @@ class PlaywrightCompiler:
                 if wl3:
                     lines.append(wl3)
         else:
-            # CSS-only
+            # Apenas CSS
             if css_sels:
                 lines.extend(_gen_click_resolve(css_sels, idx, "    "))
             else:
@@ -829,19 +829,19 @@ class PlaywrightCompiler:
         lines.append("")
         return lines
 
-    _BAD_ASSERT_EXPRS = {"body", "html"}
+    _BAD_ASSERT_EXPRS = {"body", "html"}  # Expressoes de assert invalidas
 
     def _gen_assert(self, action: SemanticAction, idx: int) -> list[str]:
         assert_type = action.context.get("assert_type", "textual") if action.context else "textual"
         expected = action.value or ""
-        lines = [f"    # Step {idx}: assert ({assert_type})"]
+        lines = [f"    # Passo {idx}: assert ({assert_type})"]
 
-        # Try Playwright locator first, fallback to CSS
+        # Tenta localizador Playwright primeiro, fallback para CSS
         pw_expr = self._playwright_locator_expr(action.target)
         if pw_expr:
             locator_expr = pw_expr
         else:
-            # L0.5: fuzzy get_by_role with regex before CSS
+            # L0.5: get_by_role fuzzy com regex antes de CSS
             l0_5_expr = self._l0_5_role_expr(action.target)
             if l0_5_expr:
                 locator_expr = l0_5_expr
@@ -854,16 +854,16 @@ class PlaywrightCompiler:
                 elif action.target and action.target.text:
                     locator_expr = f"page.get_by_text({self._esc(action.target.text[:60])})"
                 else:
-                    lines.append(f"    # SKIP: assert on unknown element — re-record with Shift+A")
+                    lines.append(f"    # SKIP: assert em elemento desconhecido — regrave com Shift+A")
                     return lines
 
-        # Extract raw locator string from pw_expr for bad-check
+        # Extrai string crua do localizador de pw_expr para verificacao
         raw = locator_expr.lower()
         if any(bad in raw for bad in self._BAD_ASSERT_EXPRS):
             if "get_by" in raw or "locator" in raw:
-                pass  # Playwright locators with body/html are fine (e.g. get_by_role)
+                pass  # Localizadores Playwright com body/html sao ok (ex.: get_by_role)
             else:
-                lines.append(f"    # SKIP: assert on body/page (no element selected) — re-record with Shift+A")
+                lines.append(f"    # SKIP: assert em body/pagina (nenhum elemento selecionado) — regrave com Shift+A")
                 return lines
 
         if assert_type == "textual" or assert_type == "automatico":

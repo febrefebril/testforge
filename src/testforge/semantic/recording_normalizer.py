@@ -217,13 +217,13 @@ def _compound_candidates(target_data: dict, tag: str) -> list:
 
 
 class RecordingNormalizer:
-    """Converte raw events em SemanticTestCase.
+    """Converte eventos brutos em SemanticTestCase.
 
-    Phase 2: optional `use_v2_locator` flag enables the modern
-    super-selector extractor (`semantic.locator.LocatorExtractor`)
-    in parallel with the legacy `_build_target` heuristics. When on,
-    v2 candidates are appended after legacy candidates; downstream
-    code that ignores the new fields keeps working unchanged.
+    Fase 2: flag opcional `use_v2_locator` ativa o extrator moderno
+    de super-seletores (`semantic.locator.LocatorExtractor`)
+    em paralelo com as heuristicas legadas `_build_target`. Quando ligado,
+    candidatos v2 sao adicionados apos candidatos legados; codigo
+    downstream que ignora os novos campos continua funcionando inalterado.
     """
 
     def __init__(self, use_v2_locator: bool = False,
@@ -234,16 +234,16 @@ class RecordingNormalizer:
         if self._use_v2:
             from .locator import LocatorExtractor
             self._v2_extractor = LocatorExtractor()
-        # H22b: per-instance dedupe diagnostics. Read by tests + the
-        # future CLI command that surfaces how often setter_hook still
-        # contributes after H22a. Reset on each `normalize()` call.
+        # H22b: diagnosticos de dedup por instancia. Lido por testes + o
+        # futuro comando CLI que mostra quantas vezes setter_hook ainda
+        # contribui apos H22a. Reiniciado a cada chamada `normalize()`.
         self.ir_dedupe_stats: dict = self._fresh_dedupe_stats()
 
     def _build_load_dedup_compact_pipeline(self):
-        """Phase 5: lazy-construct Pipes&Filters pipeline.
+        """Fase 5: constroi pipeline Pipes&Filters lazy.
 
-        Imported lazily to avoid a circular import between stages and
-        this module (stages reference RecordingNormalizer methods).
+        Importado lazy para evitar import circular entre stages e
+        este modulo (stages referenciam metodos de RecordingNormalizer).
         """
         from .stages import (
             CompactStage, DedupStage, LoadStage, Pipeline,
@@ -256,19 +256,19 @@ class RecordingNormalizer:
 
     def normalize(self, recording_dir: str, test_id: str = "",
                   application: str = "", base_url: str = "") -> SemanticTestCase:
-        # Hotfix BUG 13: remember the recording dir so _merge_user_supplied_values
-        # can locate field_value_map.json without changing the public method
-        # signature consumed by every caller.
+        # Hotfix BUG 13: lembra diretorio de gravacao para _merge_user_supplied_values
+        # localizar field_value_map.json sem alterar a assinatura do metodo
+        # publico consumido por todos os chamadores.
         self._current_recording_dir = recording_dir
-        # H22b: fresh dedupe stats per call so consumers can read them
-        # without state leaking across recordings.
+        # H22b: estatisticas de dedup frescas por chamada para consumidores
+        # lerem sem vazamento de estado entre gravacoes.
         self.ir_dedupe_stats = self._fresh_dedupe_stats()
-        # H22 followup: warn if the recording was produced by a recorder
-        # with a different capture schema. Saves us from claiming bugs
-        # against artefacts the current recorder no longer produces.
+        # H22 followup: avisar se gravacao foi produzida por um gravador
+        # com esquema de captura diferente. Evita atribuir bugs a
+        # artefatos que o gravador atual nao produz mais.
         self._verify_recording_fingerprint(recording_dir)
-        # Phase 5: optional Pipes & Filters pipeline for the load + dedup
-        # + compact stages. Output is byte-identical to the legacy path.
+        # Fase 5: pipeline opcional Pipes & Filters para estagios load + dedup
+        # + compact. Saida eh byte-identica ao caminho legado.
         if self._use_pipeline:
             from .stages import NormalizationContext
             ctx = NormalizationContext(
@@ -290,24 +290,24 @@ class RecordingNormalizer:
 
             logger.info("Normalizing recording_dir=%s raw_events=%d",
                          os.path.basename(recording_dir), len(raw_events))
-            # Log per-type breakdown before dedup
+            # Log da quebra por tipo antes do dedup
             type_counts = {}
             for ev in raw_events:
                 et = ev.get("type", "unknown")
                 type_counts[et] = type_counts.get(et, 0) + 1
             logger.debug("Raw event types: %s", type_counts)
 
-            # Run dedup BEFORE compaction: removes periodic DOM snapshot cycles
-            # (e.g. radio button spam) so consecutive fills on the same field
-            # become adjacent and get properly collapsed.
+            # Executa dedup ANTES da compactacao: remove ciclos periodicos de
+            # snapshot DOM (ex.: spam de radio button) para que fills consecutivos
+            # no mesmo campo fiquem adjacentes e sejam colapsados corretamente.
             pre_dedup = len(raw_events)
             raw_events = self._remove_snapshot_duplicates(raw_events)
             after_dedup = len(raw_events)
             logger.debug("After _remove_snapshot_duplicates: %d → %d (-%d)",
                           pre_dedup, after_dedup, pre_dedup - after_dedup)
-            # Collapse individual-key keypress sequences before fill compaction.
-            # mat-autocomplete may emit one keypress per character instead of
-            # accumulated fill events — rebuild the full typed string first.
+            # Colapsa sequencias de keypress de tecla individual antes da compactacao.
+            # mat-autocomplete pode emitir um keypress por caractere em vez de
+            # eventos fill acumulados — reconstroi a string digitada completa primeiro.
             raw_events = self._compact_keypress_sequences(raw_events)
             raw_events = self._compact_fill_events(raw_events)
             after_compact = len(raw_events)
@@ -324,9 +324,9 @@ class RecordingNormalizer:
             base_url=base_url,
         )
 
-        # H20: track scenario boundaries as we convert events. Each
-        # `scenario_boundary` raw event ends the current segment and
-        # starts the next one. The boundary itself is not a step.
+        # H20: rastreia limites de cenario conforme convertemos eventos. Cada
+        # evento bruto `scenario_boundary` encerra o segmento atual e
+        # inicia o proximo. O limite em si nao eh um passo.
         _scenario_boundaries: list[dict] = []
         converted = 0
         for raw in raw_events:
@@ -346,8 +346,8 @@ class RecordingNormalizer:
                 logger.error("Failed to convert event id=%s: %s",
                               raw.get("event_id", "?"), exc, exc_info=True)
 
-        # Materialise segments. Default: one segment covering all steps.
-        # With N boundaries we get N+1 segments.
+        # Materializa segmentos. Padrao: um segmento cobrindo todos os passos.
+        # Com N limites temos N+1 segmentos.
         total_steps = len(stc.steps)
         if _scenario_boundaries:
             segs: list[dict] = []
@@ -360,16 +360,16 @@ class RecordingNormalizer:
                     "name": f"scenario_{len(segs) + 1}",
                 })
                 prev_end = end
-            # Last segment runs to the end. Pick its name from the most
-            # recent boundary that named the *next* scenario.
+            # Ultimo segmento vai ate o fim. Pega nome do limite mais
+            # recente que nomeou o *proximo* cenario.
             last_name = _scenario_boundaries[-1]["name"] or f"scenario_{len(segs) + 1}"
             segs.append({
                 "start_step": prev_end,
                 "end_step_exclusive": total_steps,
                 "name": last_name,
             })
-            # Drop empty segments (consecutive boundaries with no steps
-            # between them).
+            # Descarta segmentos vazios (limites consecutivos sem passos
+            # entre eles).
             stc.scenario_segments = [
                 s for s in segs if s["end_step_exclusive"] > s["start_step"]
             ]
@@ -395,18 +395,18 @@ class RecordingNormalizer:
                     steps_count += 1
                 logger.debug("Loaded %d steps (asserts) from steps.jsonl", steps_count)
 
-        # Post-process: detect and mark skipped steps
-        # Detect overlays FIRST — deduplication excludes overlay steps
+        # Pos-processamento: detecta e marca passos pulados
+        # Detecta overlays PRIMEIRO — dedup exclui passos de overlay
         self._detect_overlay_steps(stc.steps)
         self._deduplicate_steps(stc.steps)
         self._mark_non_actionable(stc.steps)
         self._detect_step_dependencies(stc.steps)
         self._detect_navigation_clicks(stc.steps)
-        # Phase B: reconstruct from evidence BEFORE missing_fill heuristics
+        # Fase B: reconstroi a partir de evidencias ANTES das heuristicas missing_fill
         self._reconstruct_intents(stc, recording_dir)
         self._detect_missing_fills(stc.steps)
         self._build_field_value_map(stc)
-        # Phase B semantic dedup: component handlers + prefill clicks
+        # Dedup semantico Fase B: handlers de componente + prefill clicks
         for handler in HANDLERS:
             handler.normalize(stc.steps)
         self._eliminate_prefill_clicks(stc.steps)
@@ -424,11 +424,11 @@ class RecordingNormalizer:
         return stc
 
     def _eliminate_prefill_clicks(self, steps: list) -> None:
-        """Mark click steps that are immediately followed by fill on same element as skipped.
+        """Marca como pulados clicks seguidos imediatamente por fill no mesmo elemento.
 
-        Angular Material inputs require a click to focus before fill, but Playwright's
-        fill() already handles focus internally. Recording both click + fill on the same
-        element produces a healed click step every run — eliminate the noise.
+        Inputs Angular Material precisam de click para focar antes do fill, mas o
+        fill() do Playwright ja gerencia foco internamente. Gravar click + fill no mesmo
+        elemento produz um passo de click curado a cada execucao — elimina o ruido.
         """
         for i in range(len(steps) - 1):
             curr = steps[i]
@@ -447,9 +447,9 @@ class RecordingNormalizer:
                 continue
             if nxt.action == "fill" and curr_tag not in ("input", "textarea"):
                 continue
-            # Same element: prefer element_id, then accessible_name, then selector.
-            # Selector alone is ambiguous when two distinct fields share the same
-            # placeholder (e.g. two "R$0,00" inputs on one form).
+            # Mesmo elemento: prefere element_id, depois accessible_name, depois selector.
+            # Selector so eh ambiguo quando dois campos distintos compartilham o mesmo
+            # placeholder (ex.: dois inputs "R$0,00" em um formulario).
             curr_id = (curr.target.element_id or "") if curr.target else ""
             nxt_id = (nxt.target.element_id or "") if nxt.target else ""
             curr_name = (curr.target.accessible_name or "") if curr.target else ""
@@ -466,11 +466,11 @@ class RecordingNormalizer:
                 curr.skip_reason = "prefill_click_noise"
 
     def _audit_blind_spots(self, stc) -> None:
-        """Detect patterns where user intent was likely missed by the recorder.
+        """Detecta padroes onde intencao do usuario provavelmente foi perdida pelo gravador.
 
-        Blind spots are systematic, not random. After Phase B reconstruction,
-        fields resolved via evidence (setter_hook, snapshot_diff, etc.) are
-        excluded from the report.
+        Pontos cegos sao sistematicos, nao aleatorios. Apos reconstrucao Fase B,
+        campos resolvidos via evidencia (setter_hook, snapshot_diff, etc.) sao
+        excluidos do relatorio.
         """
         steps = stc.steps
         blind_spots = []
@@ -500,7 +500,7 @@ class RecordingNormalizer:
             tag = (s_curr.target.tag or "").lower() if s_curr.target else ""
             ctx = getattr(s_curr, "context", {}) or {}
 
-            # Skip if evidence reconstruction already resolved this step
+            # Pula se reconstrucao por evidencia ja resolveu este passo
             if ctx.get("_has_reconstructed_values") or (s_curr.value or "").strip():
                 continue
             field_key = self._canonical_field_key(
@@ -513,7 +513,7 @@ class RecordingNormalizer:
             if field_key in resolved_keys:
                 continue
 
-            # Pattern: click on input with gap, no fill event between
+            # Padrao: click em input com intervalo, sem evento fill entre
             if s_curr.action == "click" and tag in ("input", "textarea"):
                 if s_next.action != "fill" and gap_s > 2.0:
                     label = (s_curr.target.accessible_name
@@ -528,7 +528,7 @@ class RecordingNormalizer:
                         "resolution": "data-file or submit_form_values",
                     })
 
-            # Pattern: click on label (radio/checkbox) without reconstructed value
+            # Padrao: click em label (radio/checkbox) sem valor reconstruido
             if s_curr.action == "click" and tag == "label":
                 label_text = (s_curr.target.text or s_curr.target.label or "").strip()
                 if label_text and self._canonical_field_key(label_text) not in resolved_keys:
@@ -542,7 +542,7 @@ class RecordingNormalizer:
                             "resolution": "checked_transition or data-file",
                         })
 
-            # Pattern: click on select, no select_option event
+            # Padrao: click em select, sem evento select_option
             if s_curr.action == "click" and tag == "select":
                 if s_next.action != "select_option":
                     blind_spots.append({
@@ -551,7 +551,7 @@ class RecordingNormalizer:
                         "resolution": "data-file",
                     })
 
-            # Pattern: long gap between any two clicks (likely complex interaction)
+            # Padrao: intervalo longo entre dois clicks (provavelmente interacao complexa)
             if gap_s > 10.0:
                 blind_spots.append({
                     "step": i_curr + 1,
@@ -560,9 +560,9 @@ class RecordingNormalizer:
                     "resolution": "review manually",
                 })
 
-            # GT-01: Shadow DOM closed mode — custom element (tag with hyphen)
-            # is a potential shadow host. The recorder captures clicks on the host
-            # but fill events inside closed shadow root are invisible.
+            # GT-01: Shadow DOM modo fechado — elemento customizado (tag com hifen)
+            # eh um potencial host shadow. O gravador captura clicks no host
+            # mas eventos fill dentro de shadow root fechado sao invisiveis.
             if s_curr.action in ("click", "fill") and tag and "-" in tag:
                 # Custom element names contain at least one hyphen per HTML spec.
                 # If there's no fill event following this step, the internal
@@ -579,8 +579,8 @@ class RecordingNormalizer:
                         "resolution": "shadow-root agent or data-file",
                     })
 
-            # GT-02: Iframe element click — recorder cannot inject JS inside
-            # cross-origin iframes. Events inside are invisible.
+            # GT-02: Clique em iframe — gravador nao pode injetar JS dentro
+            # de iframes cross-origin. Eventos internos sao invisiveis.
             if s_curr.action == "click" and tag == "iframe":
                 blind_spots.append({
                     "step": i_curr + 1,
@@ -590,8 +590,8 @@ class RecordingNormalizer:
                     "resolution": "manual curation in steps.jsonl or same-origin required",
                 })
 
-        # GT-01 (cont.): Also scan all steps for custom elements with fill actions
-        # that might indicate shadow DOM field interaction
+        # GT-01 (cont.): Tambem varre todos os passos por elementos customizados
+        # com acoes fill que podem indicar interacao com campo shadow DOM
         for i, step in enumerate(steps):
             if step.skip_reason:
                 continue
@@ -614,14 +614,14 @@ class RecordingNormalizer:
         stc.blind_spots = blind_spots
         if blind_spots:
             import sys
-            print(f"[TestForge] [WARN] {len(blind_spots)} blind spot(s) detectado(s):", file=sys.stderr)
+            print(f"[TestForge] [AVISO] {len(blind_spots)} ponto(s) cego(s) detectado(s):", file=sys.stderr)
             for bs in blind_spots:
-                print(f"  Step {bs['step']}: {bs['pattern']} ({bs.get('label', bs.get('gap_seconds', ''))}) → {bs['resolution']}", file=sys.stderr)
+                print(f"  Passo {bs['step']}: {bs['pattern']} ({bs.get('label', bs.get('gap_seconds', ''))}) → {bs['resolution']}", file=sys.stderr)
 
     def _reconstruct_intents(self, stc, recording_dir: str) -> None:
-        """Reconstruct fill intents from evidence sources (inline IntentReconstructor).
+        """Reconstroi intencoes de fill a partir de fontes de evidencia (IntentReconstructor inline).
 
-        Sources: value_mutations, snapshots, form_values, network, final_state, polling.
+        Fontes: value_mutations, snapshots, form_values, network, final_state, polling.
         """
         entries = self._ir_all(recording_dir, stc.steps)
 
@@ -634,7 +634,7 @@ class RecordingNormalizer:
             identifiers = entry.get("identifiers", {})
 
             target_indices = {step_idx}
-            # Also match label/radio clicks by text similarity
+            # Tambem corresponde clicks em label/radio por similaridade de texto
             entry_label = (identifiers.get("label") or value or "").strip().lower()
             for i, step in enumerate(stc.steps):
                 if step.action != "click" or not step.target:
@@ -675,22 +675,22 @@ class RecordingNormalizer:
                 src = e.get("source", "unknown")
                 sources[src] = sources.get(src, 0) + 1
             src_desc = ", ".join(f"{k}={v}" for k, v in sources.items())
-            print(f"[TestForge] 🔄 IntentReconstructor: {len(entries)} campo(s) reconstituido(s) ({src_desc})", file=sys.stderr)
+            print(f"[TestForge] [RECONSTRUCAO] IntentReconstructor: {len(entries)} campo(s) reconstituido(s) ({src_desc})", file=sys.stderr)
 
     def _build_field_value_map(self, stc) -> None:
-        """Build field_value_map linking field identifiers, values, and intentions.
+        """Constroi field_value_map ligando identificadores de campo, valores e intencoes.
 
-        Each step that involves a form field (input/textarea/select) contributes
-        to the map. Sources in priority:
-        1. form_values: captured at submit time (most reliable)
-        2. fill events: recorded values (polling or native input)
-        3. missing_fill: detected gap, value from form_values or empty (needs data_file)
+        Cada passo que envolve campo de formulario (input/textarea/select) contribui
+        para o mapa. Fontes em prioridade:
+        1. form_values: capturado no submit (mais confiavel)
+        2. fill events: valores gravados (polling ou input nativo)
+        3. missing_fill: lacuna detectada, valor de form_values ou vazio (precisa data_file)
 
-        The map is stored in stc.field_values: canonical_key → FieldValueMap.
+        O mapa eh armazenado em stc.field_values: chave_canonica -> FieldValueMap.
         """
         from .model import FieldValueMap
 
-        # First pass: collect fill events with their identifiers
+        # Primeira passada: coleta eventos fill com seus identificadores
         fill_registry = {}  # canonical_key -> {identifiers, value, step_index}
         for i, step in enumerate(stc.steps):
             if step.action not in ("fill", "click"):
@@ -797,8 +797,8 @@ class RecordingNormalizer:
                         existing["source"] = "fill_event"
                         existing["step_index"] = i
 
-        # Also check if form_values were captured outside input click context
-        # (some submit events carry form_values without preceding input clicks)
+        # Tambem verifica se form_values foram capturados fora de contexto de click em input
+        # (alguns eventos submit carregam form_values sem clicks precedentes em input)
         for i, step in enumerate(stc.steps):
             ctx = getattr(step, "context", {}) or {}
             form_vals = ctx.get("form_values") or {}
@@ -815,8 +815,8 @@ class RecordingNormalizer:
                         "step_index": i,
                     }
 
-        # Sprint 4: incorporate reconstructed values (snapshot_diff, network_payload)
-        # These come from _reconstruct_intents() stored in step.context["_reconstructed_values"]
+        # Sprint 4: incorpora valores reconstruidos (snapshot_diff, network_payload)
+        # Estes vem de _reconstruct_intents() armazenados em step.context["_reconstructed_values"]
         for i, step in enumerate(stc.steps):
             ctx = getattr(step, "context", {}) or {}
             rec_vals = ctx.get("_reconstructed_values") or []
@@ -839,7 +839,7 @@ class RecordingNormalizer:
                         }
                     else:
                         existing = fill_registry[canonical]
-                        # H22a: single source of truth in IR_SOURCE_PRIORITY.
+                        # H22a: fonte unica da verdade em IR_SOURCE_PRIORITY.
                         existing_priority = RecordingNormalizer.IR_SOURCE_PRIORITY.get(existing["source"], 0)
                         new_priority = RecordingNormalizer.IR_SOURCE_PRIORITY.get(source, 0)
                         if new_priority > existing_priority or not existing["value"]:
@@ -849,13 +849,13 @@ class RecordingNormalizer:
                             existing["source"] = source
                             existing["step_index"] = i
 
-        # Secondary dedup: same physical field with different canonical keys (by element_id).
-        # fill_event keys by placeholder, setter_hook keys by element_id — same element, two entries.
-        # H22a: single source of truth in IR_SOURCE_PRIORITY.
+        # Dedup secundario: mesmo campo fisico com chaves canonicas diferentes (por element_id).
+        # fill_event chaveia por placeholder, setter_hook por element_id — mesmo elemento, duas entradas.
+        # H22a: fonte unica da verdade em IR_SOURCE_PRIORITY.
         _source_priority_map = RecordingNormalizer.IR_SOURCE_PRIORITY
         el_id_to_key: dict[str, str] = {}
         keys_to_drop: set = set()
-        # Track loser→winner pairs so we can merge identifiers after deciding
+        # Rastreia pares perdedor→vencedor para mesclar identificadores apos decisao
         merge_pairs: list[tuple[str, str]] = []  # (loser_key, winner_key)
         for canonical, entry in fill_registry.items():
             el_id = (entry.get("identifiers") or {}).get("id", "").strip()
@@ -875,9 +875,9 @@ class RecordingNormalizer:
                 else:
                     keys_to_drop.add(canonical)
                     merge_pairs.append((canonical, existing_canonical))
-        # Merge identifiers from dropped entries into their winners so that
-        # _resolve_field_value can still find fields by aria_label/label/placeholder
-        # even when the winner only has element_id in its identifiers.
+        # Mescla identificadores de entradas descartadas nos vencedores para que
+        # _resolve_field_value ainda encontre campos por aria_label/label/placeholder
+        # mesmo quando vencedor so tem element_id em seus identificadores.
         for loser_key, winner_key in merge_pairs:
             loser = fill_registry.get(loser_key) or {}
             winner = fill_registry.get(winner_key)
@@ -902,38 +902,35 @@ class RecordingNormalizer:
                     step_index=entry["step_index"],
                 )
 
-        # Hotfix BUG 13: merge user-supplied values from field_value_map.json.
-        # `--complete` writes that file but the normalizer historically ignored
-        # it on subsequent runs, so the second invocation re-reported every
-        # field as missing. Now we overlay user_supplied_cli entries with
-        # priority over fill events but without overwriting verified
-        # form_values.
+        # Hotfix BUG 13: mescla valores fornecidos pelo usuario de field_value_map.json.
+        # `--complete` escreve esse arquivo mas o normalizador historicamente ignorava
+        # ele em execucoes subsequentes, entao a segunda invocacao re-reportava todo
+        # campo como ausente. Agora sobrepomos entradas user_supplied_cli com
+        # prioridade sobre fill events mas sem sobrescrever form_values verificados.
         self._merge_user_supplied_values(stc)
 
     def _merge_user_supplied_values(self, stc) -> None:
-        """CS-4a: read field_value_map.json written by `--complete` prompt.
+        """CS-4a: le field_value_map.json escrito pelo prompt `--complete`.
 
-        The writer (`_save_field_value_map` in _interactive_completion.py)
-        stores values in two shapes:
+        O escritor (`_save_field_value_map` em _interactive_completion.py)
+        armazena valores em dois formatos:
 
-            { "fields": { "<key>": "<value>", ... },
+            { "fields": { "<chave>": "<valor>", ... },
               "entries": [ {"field_key": ..., "value": ..., ...}, ... ],
               "_meta": { ... } }
 
-        The previous reader iterated `data.items()` expecting a flat
-        `{ "<key>": {"value": ..., "source": ...}, ... }` map and so
-        skipped every entry (the dict's only keys are "fields",
-        "entries", "_meta" — none of which match the expected shape).
-        That silently lost every value the tester typed via --complete,
-        which surfaced in run-incremental as `fill [FAIL]` on
-        `input[aria-label="CPF"]` because stc.field_values had no CPF
-        entry, the runner fell through to el.fill on an empty string,
-        and the field stayed blank.
+        O leitor anterior iterava `data.items()` esperando um mapa plano
+        `{ "<chave>": {"value": ..., "source": ...}, ... }` e portanto
+        pulava toda entrada (as unicas chaves do dict sao "fields",
+        "entries", "_meta" — nenhuma corresponde ao formato esperado).
+        Isso perdia silenciosamente todo valor que o testador digitou via --complete,
+        que aparecia em run-incremental como `fill [FALHA]` em
+        `input[aria-label="CPF"]` porque stc.field_values nao tinha entrada CPF,
+        o runner caia para el.fill em string vazia, e o campo ficava em branco.
 
-        Fix: consume the "entries" list first (richest payload), then
-        the "fields" map (backward compat for any legacy writer). Skip
-        the "_meta" key explicitly so future format changes do not
-        accidentally pick it up.
+        Correcao: consumir lista "entries" primeiro (payload mais rico), depois
+        mapa "fields" (compatibilidade retroativa). Pular chave "_meta"
+        explicitamente para que mudancas futuras de formato nao a peguem acidentalmente.
         """
         from .model import FieldValueMap
         rec_dir = getattr(self, "_current_recording_dir", "") or ""
@@ -959,22 +956,61 @@ class RecordingNormalizer:
             nonlocal merged
             if not raw_key or not value:
                 return False
-            canonical = self._canonical_field_key(raw_key)
+            # B30: quando o escritor armazenou o valor sob chave sintetica
+            # `step_N` / `field_step_N` (fallback do normalizador quando
+            # placeholders missing_fill nao tinham identificador resolvido),
+            # reassocia ao label real / element_id do passo no momento da
+            # aplicacao. Assim o _resolve_field_value do runner consegue
+            # corresponder a entrada pelo aria-label ou element_id do
+            # SemanticAction em vez da chave sintetica.
+            rebound_key = raw_key
+            rebound_identifiers = dict(identifiers or {})
+            looks_synthetic = (
+                raw_key.startswith("step_")
+                or raw_key.startswith("field_step_")
+                or raw_key.startswith("select_step_")
+            )
+            if looks_synthetic and 0 <= step_index < len(stc.steps):
+                tgt = getattr(stc.steps[step_index], "target", None)
+                if tgt is not None:
+                    candidate = (
+                        getattr(tgt, "accessible_name", None)
+                        or getattr(tgt, "label", None)
+                        or getattr(tgt, "name", None)
+                        or getattr(tgt, "placeholder", None)
+                        or getattr(tgt, "element_id", None)
+                        or ""
+                    )
+                    if candidate:
+                        rebound_key = candidate
+                    # Preserva identificadores descobertos para que runner
+                    # possa resolver por qualquer um deles.
+                    if not rebound_identifiers.get("label") and getattr(tgt, "label", None):
+                        rebound_identifiers["label"] = tgt.label
+                    if not rebound_identifiers.get("aria_label") and getattr(tgt, "accessible_name", None):
+                        rebound_identifiers["aria_label"] = tgt.accessible_name
+                    if not rebound_identifiers.get("placeholder") and getattr(tgt, "placeholder", None):
+                        rebound_identifiers["placeholder"] = tgt.placeholder
+                    if not rebound_identifiers.get("id") and getattr(tgt, "element_id", None):
+                        rebound_identifiers["id"] = tgt.element_id
+                    if not rebound_identifiers.get("name") and getattr(tgt, "name", None):
+                        rebound_identifiers["name"] = tgt.name
+            canonical = self._canonical_field_key(rebound_key)
             existing = stc.field_values.get(canonical)
             if existing and existing.source == "form_values":
                 return False
             stc.field_values[canonical] = FieldValueMap(
                 field_key=canonical,
                 value=str(value),
-                intention=intention or f"fill {raw_key} with '{value}' (user supplied)",
-                identifiers=identifiers or {},
+                intention=intention or f"fill {rebound_key} with '{value}' (user supplied)",
+                identifiers=rebound_identifiers,
                 source=source,
                 step_index=step_index,
             )
             merged += 1
             return True
 
-        # 1. New shape: "entries" list with full metadata per item.
+        # 1. Novo formato: lista "entries" com metadados completos por item.
         entries = data.get("entries") or []
         if isinstance(entries, list):
             for entry in entries:
@@ -989,8 +1025,8 @@ class RecordingNormalizer:
                     step_index=entry.get("step_index", -1),
                 )
 
-        # 2. New shape: "fields" map (key → value) — covers entries that
-        #    might exist there without an "entries" partner.
+        # 2. Novo formato: mapa "fields" (chave → valor) — cobre entradas que
+        #    podem existir la sem parceiro em "entries".
         fields = data.get("fields") or {}
         if isinstance(fields, dict):
             for raw_key, value in fields.items():
@@ -998,9 +1034,9 @@ class RecordingNormalizer:
                     continue
                 _apply(raw_key, value)
 
-        # 3. Legacy shape: top-level dict where each key is a field and
-        #    each value is a payload dict. Skip the reserved "_meta",
-        #    "fields", "entries" keys we already handled.
+        # 3. Formato legado: dict top-level onde cada chave eh um campo e
+        #    cada valor eh um dict payload. Pula chaves reservadas "_meta",
+        #    "fields", "entries" que ja tratamos.
         reserved = {"_meta", "fields", "entries"}
         for raw_key, payload in data.items():
             if raw_key in reserved or raw_key.startswith("_"):
@@ -1026,22 +1062,22 @@ class RecordingNormalizer:
         if stc.field_values:
             import sys
             source_icons = {
-                "form_values": "✓", "fill_event": "○", "missing_fill": "[WARN]",
-                "setter_hook": "⚡", "checked_transition": "◈",
-                "snapshot_diff": "◉", "network_payload": "◎", "final_state": "◇",
+                "form_values": "[OK]", "fill_event": "[O]", "missing_fill": "[AVISO]",
+                "setter_hook": "[RAIO]", "checked_transition": "[DIA]",
+                "snapshot_diff": "[DIF]", "network_payload": "[REDE]", "final_state": "[FIM]",
             }
-            print(f"[TestForge] 📋 {len(stc.field_values)} campo(s) mapeado(s):", file=sys.stderr)
+            print(f"[TestForge] [LISTA] {len(stc.field_values)} campo(s) mapeado(s):", file=sys.stderr)
             for key, fvm in stc.field_values.items():
                 icon = source_icons.get(fvm.source, "?")
                 val_display = fvm.value if fvm.value else "<pendente>"
                 print(f"  {icon} {key}: {val_display} ({fvm.source})", file=sys.stderr)
             missing = [k for k, v in stc.field_values.items() if not v.value]
             if missing:
-                print(f"  💡 {len(missing)} campo(s) sem valor — usar --data data.json", file=sys.stderr)
+                print(f"  [DICA] {len(missing)} campo(s) sem valor — usar --data data.json", file=sys.stderr)
 
     @staticmethod
     def _canonical_field_key(key: str) -> str:
-        """Normalize field identifier to canonical key for matching."""
+        """Normaliza identificador de campo para chave canonica de correspondencia."""
         if not key:
             return "unknown"
         k = key.strip().lower()
@@ -1052,7 +1088,7 @@ class RecordingNormalizer:
 
     @staticmethod
     def _build_fill_intention(step, field_key: str, value: str, step_index: int) -> str:
-        """Build human-readable intention string for a field fill action."""
+        """Constroi string de intencao legivel para acao de fill em campo."""
         tag = (step.target.tag or "").lower() if step.target else ""
         label = (
             (step.target.accessible_name or "")
@@ -1069,18 +1105,18 @@ class RecordingNormalizer:
         return " ".join(parts)
 
     def _compact_keypress_sequences(self, raw_events: list) -> list:
-        """Convert sequences of single-char keypress events into one accumulated fill event.
+        """Converte sequencias de eventos keypress de caractere unico em evento fill acumulado.
 
-        Some recorders emit individual key events (value = single char or empty, key = single
-        char) rather than accumulated fill events. This method detects such sequences and
-        rebuilds the full value by concatenating individual keys.
+        Alguns gravadores emitem eventos de tecla individual (valor=caractere unico ou vazio,
+        tecla=caractere unico) em vez de eventos fill acumulados. Este metodo detecta tais
+        sequencias e reconstroi o valor completo concatenando teclas individuais.
 
-        - Backspace: removes last accumulated character.
-        - Enter / Tab: terminates the sequence (creates the fill then stops).
-        - Accumulated fill events (value length > 1): passed through unchanged so that
-          _compact_fill_events can handle them normally.
+        - Backspace: remove ultimo caractere acumulado.
+        - Enter / Tab: termina a sequencia (cria o fill e para).
+        - Eventos fill acumulados (valor > 1 caractere): passam inalterados para que
+          _compact_fill_events possa trata-los normalmente.
 
-        Must run BEFORE _compact_fill_events.
+        Deve executar ANTES de _compact_fill_events.
         """
         if not raw_events:
             return raw_events
@@ -1090,7 +1126,7 @@ class RecordingNormalizer:
                 return False
             value = event.get("value") or ""
             key = event.get("key") or ""
-            # Accumulated fill: value > 1 char — not an individual keypress
+            # Fill acumulado: valor > 1 char — nao eh keypress individual
             if len(value) > 1:
                 return False
             return True
@@ -1144,8 +1180,8 @@ class RecordingNormalizer:
                 last_event = ev
                 j += 1
 
-            # Only synthesize a fill event when 2+ events were consumed AND
-            # we built a non-empty string. Otherwise pass through unchanged.
+            # So sintetiza evento fill quando 2+ eventos foram consumidos E
+            # construimos string nao vazia. Senao passa inalterado.
             if j > i + 1 and accumulated:
                 synthetic = dict(last_event)
                 synthetic["type"] = "fill"
@@ -1159,17 +1195,17 @@ class RecordingNormalizer:
         return result
 
     def _compact_fill_events(self, raw_events: list) -> list:
-        """Compact sequential fill events on same element.
+        """Compacta eventos fill sequenciais no mesmo elemento.
 
-        When user types into a field, the recorder captures each keystroke as a
-        separate fill/keypress event. Consecutive events on the same target
-        are collapsed — only the final event (which holds the complete typed
-        value) is kept.
+        Quando usuario digita em um campo, o gravador captura cada tecla como
+        evento fill/keypress separado. Eventos consecutivos no mesmo alvo
+        sao colapsados — apenas o evento final (que contem o valor completo
+        digitado) eh mantido.
 
-        Note: time-based grouping (500ms window) was REMOVED because slow
-        typists produce keystroke gaps exceeding 500ms. Using the same-target
-        heuristic is safer: if the next event targets the same element, it's
-        part of the same typing sequence, regardless of time gap.
+        Nota: agrupamento por tempo (janela 500ms) foi REMOVIDO porque
+        digitadores lentos produzem intervalos de tecla excedendo 500ms. Usar
+        heuristica do mesmo alvo eh mais seguro: se proximo evento tem mesmo
+        alvo, faz parte da mesma sequencia de digitacao, independente do intervalo.
         """
         if not raw_events:
             return raw_events
@@ -1231,16 +1267,16 @@ class RecordingNormalizer:
         return compacted
 
     def _remove_snapshot_duplicates(self, raw_events: list) -> list:
-        """Remove periodic DOM snapshot fill events (duplicate cycles).
+        """Remove eventos fill de snapshot periodico DOM (ciclos duplicados).
 
-        The recorder captures periodic snapshots of ALL visible form fields.
-        These produce duplicate fill events for the same element with the
-        same value, cycling through fields in a predictable pattern.
-        Keep only the first occurrence of each (element, value) pair.
+        O gravador captura snapshots periodicos de TODOS os campos de formulario
+        visiveis. Isso produz eventos fill duplicados para o mesmo elemento com
+        mesmo valor, ciclando pelos campos em padrao previsivel.
+        Mantem apenas primeira ocorrencia de cada par (elemento, valor).
 
-        Field re-fills with different values (e.g. currency: 10000 → 100000)
-        are preserved because the value differs. Only true duplicates
-        (same element, same value) are removed.
+        Re-preenchimentos com valores diferentes (ex.: moeda: 10000 -> 100000)
+        sao preservados porque o valor difere. Apenas duplicatas verdadeiras
+        (mesmo elemento, mesmo valor) sao removidas.
         """
         if not raw_events:
             return raw_events
@@ -1271,10 +1307,10 @@ class RecordingNormalizer:
         event_type = raw.get("type", "")
         target_data = raw.get("target") or {}
 
-        # Normalize target_data field names from recorder format to
-        # _build_target() expected format.
-        # Recorder stores element_id + attributes dict; _build_target
-        # expects flat fields: id, name, placeholder, label, etc.
+        # Normaliza nomes de campos de target_data do formato do gravador para
+        # formato esperado por _build_target().
+        # Gravador armazena element_id + dict attributes; _build_target
+        # espera campos planos: id, name, placeholder, label, etc.
         if target_data:
             if "element_id" in target_data and "id" not in target_data:
                 target_data["id"] = target_data["element_id"]
@@ -1293,23 +1329,23 @@ class RecordingNormalizer:
                 page_title=raw.get("page_title"),
             )
 
-        # postback events are server-side page reloads after form submission.
-        # They are not separate user actions — the submit already implies navigation.
-        # Skip them to avoid page reload flicker in recorded tests.
+        # Eventos postback sao recarregamentos de pagina do lado servidor apos submit.
+        # Nao sao acoes de usuario separadas — o submit ja implica navegacao.
+        # Pula para evitar flicker de recarregamento em testes gravados.
         if event_type == "postback":
             return None
 
         target = self._build_target(target_data)
 
-        # Skip click events with no target candidates — recording artifacts
-        # (clicks outside any recognizable element, e.g. background/whitespace).
+        # Pula eventos click sem candidatos de alvo — artefatos de gravacao
+        # (clicks fora de elemento reconhecivel, ex.: fundo/espaco em branco).
         if event_type == "click" and not target.candidates:
             return None
 
-        # Radio and checkbox inputs: Playwright fill() does not support
-        # these element types. Convert to click action — the target
-        # selector (label:has-text or name-based) will find the element
-        # and clicking the label propagates to the native radio/checkbox.
+        # Inputs radio e checkbox: Playwright fill() nao suporta
+        # estes tipos de elemento. Converte para acao click — o seletor
+        # de alvo (label:has-text ou baseado em nome) encontrara o elemento
+        # e clicar no label propaga para o radio/checkbox nativo.
         attrs = target_data.get("attributes") or {}
         if event_type == "fill" and attrs.get("type") in ("radio", "checkbox"):
             event_type = "click"
@@ -1338,7 +1374,7 @@ class RecordingNormalizer:
                 context["postback_url"] = raw["postback_url"]
             if raw.get("is_postback"):
                 context["is_postback"] = True
-            # Carry form field values captured at submit time
+            # Carrega valores de campos de formulario capturados no submit
             if raw.get("form_values"):
                 context["form_values"] = raw["form_values"]
         return SemanticAction(
@@ -1357,7 +1393,7 @@ class RecordingNormalizer:
             expected = _clean_text(step.get("expected_value", ""), max_len=200)
             target_data = {
                 "tag": step.get("tag_name", "") or step.get("tagName", ""),
-                # Use cleaned expected_value as text so has-text candidate is clean
+                # Usa expected_value limpo como texto para candidato has-text ficar limpo
                 "text": expected or step.get("accessible_name", "") or step.get("text", ""),
                 "id": step.get("element_id", ""),
                 "accessible_name": step.get("aria_label", "") or step.get("accessible_name", "") or attrs.get("aria-label", ""),
@@ -1373,7 +1409,7 @@ class RecordingNormalizer:
                 value=expected,
                 context={"assert_type": assert_type, "assert_state": assert_state},
             )
-        # Non-assert curated steps (fill, click, select_option, etc.)
+        # Passos curados nao-assert (fill, click, select_option, etc.)
         if step_action in ("fill", "click", "select_option", "navigation"):
             target_data = {
                 "tag": step.get("tagName", ""),
@@ -1404,20 +1440,20 @@ class RecordingNormalizer:
         text = target_data.get("text") or ""
         tag = (target_data.get("tag") or "").lower()
 
-        # 0. data-testid (most stable)
+        # 0. data-testid (mais estavel)
         if target_data.get("test_id"):
             tid = target_data["test_id"]
             candidates.append(LocatorCandidate("test_id", f"[data-testid=\"{tid}\"]", 0.80, f"test_id={tid}"))
             candidates.extend(_attr_css_variants("test_id", tid, tag, 0.80, "test_id"))
 
-        # 0.1 data-* attributes (generic)
+        # 0.1 Atributos data-* (genericos)
         data_attrs = target_data.get("data_attrs") or {}
         for attr_name, attr_value in data_attrs.items():
             if attr_name.startswith("data-") and attr_value and len(attr_value) < 60:
                 sel = f"[{attr_name}='{attr_value}']"
                 candidates.append(LocatorCandidate("data_attr", sel, 0.65, f"{attr_name}={attr_value}"))
 
-        # 0.2 <a href="..."> — route-based locator stable across Tailwind class changes
+        # 0.2 <a href="..."> — localizador baseado em rota estavel entre mudancas de classe Tailwind
         if tag == "a":
             _href = (target_data.get("all_attributes") or {}).get("href") or ""
             if _href and not _href.startswith("javascript:") and not _href.startswith("#") and len(_href) < 200:
@@ -1425,7 +1461,7 @@ class RecordingNormalizer:
                 candidates.append(LocatorCandidate("href", f'a[href="{_href}"]', _href_score, f"href={_href}"))
                 candidates.extend(_attr_css_variants("href", _href, "a", _href_score, "href"))
 
-        # For <select> elements: prefer name/id, NEVER use label + input
+        # Para elementos <select>: prefere name/id, NUNCA usa label + input
         if tag == "select":
             if target_data.get("name"):
                 sel = f"select[name='{target_data['name']}']"
@@ -1434,7 +1470,7 @@ class RecordingNormalizer:
                 candidates.append(LocatorCandidate("id", f"#{target_data['id']}", 0.90, f"select id={target_data['id']}"))
             if target_data.get("label"):
                 candidates.append(LocatorCandidate("label", f"select[aria-label='{target_data['label']}']", 0.75, f"select aria-label={target_data['label']}"))
-            # Fallback: text content (options text)
+            # Fallback: conteudo de texto (texto das opcoes)
             if text:
                 select_text = _clean_text(text)[:40]
                 select_score = 0.10 if _is_generic_text(select_text) else 0.35
@@ -1450,8 +1486,8 @@ class RecordingNormalizer:
             has_name = bool(name and len(name) <= 40)
             if has_name:
                 selector += f"[name=\"{name}\"]"
-            # Bare role (no accessible name in selector) is ambiguous — deprioritize below text-based selectors.
-            # On pages with multiple role=button elements, bare role clicks wrong element.
+            # Role so (sem accessible name no seletor) eh ambiguo — prioriza abaixo de seletores baseados em texto.
+            # Em paginas com multiplos elementos role=button, role so clica elemento errado.
             candidates.append(LocatorCandidate("role", selector, 0.95 if has_name else 0.45, "role + accessible name"))
 
         if target_data.get("label") and target_data.get("id"):
@@ -1467,20 +1503,20 @@ class RecordingNormalizer:
                 candidates.append(LocatorCandidate("label", f"label[for=\"{el_id}\"]", 0.90, f"label for={el_id}"))
         elif target_data.get("label"):
             label = target_data["label"]
-            # Adjacent sibling: <label>Text</label> + <input> (most HTML forms)
+            # Irmao adjacente: <label>Texto</label> + <input> (maioria formularios HTML)
             candidates.append(LocatorCandidate("label", f"label:has-text(\"{label}\") + input", 0.85, f"label adjacent={label}"))
-            # JUST the label element itself — clicking label fires native input events.
-            # Catches Material Design where input is nested INSIDE the label:
-            #   <label>Text <input type="radio"></label>
-            # Also catches cases where label click propagates correctly.
+            # APENAS o proprio elemento label — clicar no label dispara eventos nativos de input.
+            # Captura Material Design onde input esta ANINHADO dentro do label:
+            #   <label>Texto <input type="radio"></label>
+            # Tambem captura casos onde clique no label propaga corretamente.
             candidates.append(LocatorCandidate("label", f"label:has-text(\"{label}\")", 0.80, f"label click={label}"))
 
         if target_data.get("placeholder"):
             ph = target_data["placeholder"]
             ptag = (target_data.get("tag") or "").lower()
-            # Prefer input[placeholder] over bare [placeholder] — Angular wrappers
-            # (dsc-input-currency) share placeholders with native inputs, causing
-            # strict mode violations and fill() failures on non-input elements.
+            # Prefere input[placeholder] em vez de [placeholder] simples — wrappers Angular
+            # (dsc-input-currency) compartilham placeholders com inputs nativos, causando
+            # violacoes de strict mode e falhas de fill() em elementos nao-input.
             if ptag in ("input", "textarea", "select"):
                 sel = f"{ptag}[placeholder=\"{ph}\"]"
             else:
@@ -1501,20 +1537,20 @@ class RecordingNormalizer:
         if target_data.get("text"):
             text = _clean_text(target_data["text"])
             if text:
-                # Penalize generic text like "OK", "Cancelar", "Selecione" — brittle locators
+                # Penaliza texto generico como "OK", "Cancelar", "Selecione" — localizadores fragieis
                 text_score = 0.10 if _is_generic_text(text) else 0.55
-                # Length penalty: long has-text() is fragile (truncated text, partial matches)
+                # Penalidade de tamanho: has-text() longo eh fragil (texto truncado, correspondencias parciais)
                 # 0-20 chars: 0, 20-40: -0.05, 40-60: -0.10
                 if len(text) > 40:
                     text_score -= 0.10
                 elif len(text) > 20:
                     text_score -= 0.05
-                # Always include tag when available — bare :has-text() clicks on child elements
-                # instead of the link/button itself, breaking SPA navigation.
-                # When element has an interactive role, add role constraint: parent containers
-                # also have-text the same string, so div:has-text() matches them and clicks
-                # the wrong sibling (e.g. center card of 3). div[role="button"]:has-text()
-                # is unambiguous because containers do not carry role="button".
+                # Sempre inclui tag quando disponivel — :has-text() puro clica em elementos
+                # filho em vez do link/botao, quebrando navegacao SPA.
+                # Quando elemento tem role interativo, adiciona restricao de role: containers
+                # pai tambem tem o mesmo texto, entao div:has-text() encontra eles e clica
+                # no irmao errado (ex.: card central de 3). div[role="button"]:has-text()
+                # eh inequivoco porque containers nao carregam role="button".
                 tag = (target_data.get("tag") or "").lower()
                 elem_role = (target_data.get("role") or "").lower()
                 _interactive_roles = {"button", "listitem", "option", "menuitem", "tab", "radio", "checkbox", "link", "menuitemcheckbox", "menuitemradio"}
@@ -1526,12 +1562,12 @@ class RecordingNormalizer:
                     candidates.append(LocatorCandidate("text", f":has-text(\"{text}\")", text_score, "visible text"))
 
 
-        # -- Contenteditable detection (GT-08) --
-        # When the element has contenteditable=true and no stable locator was found,
-        # generate a direct attribute selector. Playwright supports fill() on [contenteditable].
-        # Must check key EXISTENCE before checking value: .get("contenteditable", "") returns ""
-        # for elements that lack the attribute entirely, making "" in ("true","") → True for all
-        # elements (false positive). Only fire when the key is actually present in the DOM.
+        # -- Deteccao de contenteditable (GT-08) --
+        # Quando elemento tem contenteditable=true e nenhum localizador estavel foi encontrado,
+        # gera seletor de atributo direto. Playwright suporta fill() em [contenteditable].
+        # Deve verificar EXISTENCIA da chave antes de checar valor: .get("contenteditable", "") retorna ""
+        # para elementos sem o atributo, fazendo "" in ("true","") → True para todos
+        # os elementos (falso positivo). So dispara quando chave esta realmente presente no DOM.
         _attrs_dict = target_data.get("attributes") or {}
         _all_attrs_dict = target_data.get("all_attributes") or {}
         if "contenteditable" in _attrs_dict:
@@ -1557,19 +1593,19 @@ class RecordingNormalizer:
                     _ce_text_score, f"contenteditable with text: {ce_text}"
                 ))
 
-        # Structural CSS path fallback — stable relative path in DOM tree
+        # Fallback de caminho CSS estrutural — caminho relativo estavel na arvore DOM
         css_path = target_data.get("css_path") or ""
         if css_path and len(css_path) > 4 and ">" in css_path:
             candidates.append(LocatorCandidate("css_path", css_path, 0.60, "css_path"))
 
-        # nth-child for disambiguation — always add when available so healing
-        # can use positional fallback for sibling buttons/tabs with similar text
+        # nth-child para desambiguacao — sempre adiciona quando disponivel para healing
+        # usar fallback posicional para botoes/abas irmaos com texto similar
         nth = target_data.get("nth_child") or 0
         tag = target_data.get("tag") or ""
         if nth > 0 and tag:
             candidates.append(LocatorCandidate("nth_child", f"{tag}:nth-child({nth})", 0.35, "nth-child position"))
 
-        # aria-label for input/textarea when role not available
+        # aria-label para input/textarea quando role nao disponivel
         if not target_data.get("role"):
             aria_label = (target_data.get("aria_attrs", {}).get("aria-label", "") or
                          (target_data.get("all_attributes") or {}).get("aria-label", "") or
@@ -1584,7 +1620,7 @@ class RecordingNormalizer:
         # Compound selectors: combine 2 attributes for higher specificity
         candidates.extend(_compound_candidates(target_data, tag))
 
-        # Build fingerprint: flat dict of all available attributes for runtime healing
+        # Constroi fingerprint: dict plano de todos atributos disponiveis para healing em runtime
         _nth = target_data.get("nth_child", 0) or 0
         _class_list = target_data.get("class_list") or []
         _parent_tag = target_data.get("parent_tag") or ""
@@ -1604,15 +1640,15 @@ class RecordingNormalizer:
             "href": (target_data.get("all_attributes") or {}).get("href", "")
                      or target_data.get("href", ""),
         }
-        # Remove empty values to keep fingerprint compact
+        # Remove valores vazios para manter fingerprint compacto
         fingerprint = {k: v for k, v in fingerprint.items() if v}
 
-        # Sort candidates by score (descending) for deterministic ordering
+        # Ordena candidatos por score (descendente) para ordenacao deterministica
         candidates.sort(key=lambda c: c.score, reverse=True)
 
-        # Phase 2: append v2 super-selector candidates when enabled.
-        # v2 candidates carry intent_text + per-attribute stability;
-        # legacy candidates remain first to preserve current selection.
+        # Fase 2: anexa candidatos v2 de super-seletor quando ativado.
+        # Candidatos v2 carregam intent_text + estabilidade por atributo;
+        # candidatos legados permanecem primeiro para preservar selecao atual.
         intent_text = None
         if self._use_v2 and self._v2_extractor is not None:
             try:
@@ -1623,18 +1659,19 @@ class RecordingNormalizer:
             except Exception as exc:
                 logger.warning("v2 locator extractor failed: %s", exc)
 
-        # Hotfix 22b / pattern P3: the overlay JS emits the element id
-        # under the key `element_id` (see overlay_inject.js _extractTarget).
-        # The previous reader looked for `id` and got None for every
-        # input, so id-based correlation in _ir_value_mutations always
-        # fell through to nearest-by-timestamp and the per-page fill
-        # values landed under fingerprint keys (mat_input_N) instead of
-        # the aria-label canonical keys. Read both keys for safety.
-        # B14/B17: surface the shadow host when the recorder noted that
-        # the element lived inside an open shadow root. Adds a high-
-        # priority candidate that scopes the locator through the host so
-        # Playwright doesn't have to pierce a deep tree blindly. Closed
-        # shadow roots arrive here as None and stay as a blind spot.
+        # Hotfix 22b / padrao P3: o JS do overlay emite o id do elemento
+        # sob a chave `element_id` (veja overlay_inject.js _extractTarget).
+        # O leitor anterior procurava por `id` e recebia None para todo
+        # input, entao correlacao por id em _ir_value_mutations sempre
+        # caia para nearest-by-timestamp e os valores fill por pagina
+        # ficavam sob chaves fingerprint (mat_input_N) em vez das chaves
+        # canonicas aria-label. Le ambas chaves por seguranca.
+        # B14/B17: expoe o shadow host quando gravador notou que o
+        # elemento vivia dentro de um shadow root aberto. Adiciona
+        # candidato de alta prioridade que escopa o localizador pelo
+        # host para Playwright nao precisar penetrar arvore profunda
+        # cegamente. Shadow roots fechados chegam aqui como None e
+        # permanecem como ponto cego.
         shadow_host = target_data.get("shadow_host")
         if shadow_host and isinstance(shadow_host, dict):
             host_sel = shadow_host.get("host_selector") or ""
@@ -1678,7 +1715,7 @@ class RecordingNormalizer:
         )
 
     def _steps_identical(self, a: SemanticAction, b: SemanticAction) -> bool:
-        """Check if two steps are identical (same action, value, target candidates)."""
+        """Verifica se dois passos sao identicos (mesma action, value, target candidates)."""
         if a.action != b.action:
             return False
         if (a.value or "") != (b.value or ""):
@@ -1694,15 +1731,15 @@ class RecordingNormalizer:
         return True
 
     def _deduplicate_steps(self, steps: list) -> None:
-        """Mark consecutive duplicate steps with skip_reason.
+        """Marca passos duplicados consecutivos com skip_reason.
 
-        Consecutive steps with identical action, value, and target candidates
-        are flagged as duplicates. Only the first occurrence is kept active;
-        subsequent ones get skip_reason = 'Step N: skipped — duplicate'.
+        Passos consecutivos com mesma action, value e target candidates
+        sao marcados como duplicatas. Apenas primeira ocorrencia permanece ativa;
+        subsequentes recebem skip_reason = 'Passo N: pulado — duplicado'.
 
-        Does NOT deduplicate overlay steps (calendar, modal, dialog) where
-        repeated clicks are intentional incremental navigation (e.g., clicking
-        previous-month multiple times to reach a distant year).
+        NAO deduplica passos de overlay (calendario, modal, dialog) onde
+        clicks repetidos sao navegacao incremental intencional (ex.: clicar
+        mes-anterior multiplas vezes para alcancar ano distante).
         """
         for i in range(1, len(steps)):
             prev = steps[i - 1]
@@ -1712,14 +1749,13 @@ class RecordingNormalizer:
                 # Skip deduplication for overlay steps — repeated clicks are intentional
                 if curr.context.get("overlay_step") or prev.context.get("overlay_step"):
                     continue
-                curr.skip_reason = f"Step {i + 1}: skipped — duplicate"
+                curr.skip_reason = f"Passo {i + 1}: pulado — duplicado"
 
     def _mark_non_actionable(self, steps: list) -> None:
-        """Mark steps with no actionable target as skipped.
+        """Marca passos sem alto acionavel como pulados.
 
-        Steps with action in (click, fill) that have a target but zero
-        locator candidates cannot be executed reliably. Mark them with
-        skip_reason = 'non-actionable target'.
+        Passos com action em (click, fill) que tem target mas zero
+        candidatos de localizador nao podem ser executados confiavelmente.
         """
         ACTIONABLE_ACTIONS = {"click", "fill"}
         for i, step in enumerate(steps):
@@ -1731,19 +1767,19 @@ class RecordingNormalizer:
                 step.skip_reason = "non-actionable target"
 
     def _detect_step_dependencies(self, steps: list) -> None:
-        """Detect step dependencies for cascading failure prevention.
+        """Detecta dependencias entre passos para prevencao de falha em cascata.
 
-        When consecutive data-entry actions (fill, click, select_option)
-        occur on the same page with at least one <select> element involved,
-        they are likely dependent: the first select populates the next
-        dropdown (e.g., UF → Edifício → Data on SIMAX).
+        Quando acoes consecutivas de entrada de dados (fill, click, select_option)
+        ocorrem na mesma pagina com pelo menos um elemento <select> envolvido,
+        elas sao provavelmente dependentes: o primeiro select popula o proximo
+        dropdown (ex.: UF → Edificio → Data no SIMAX).
 
-        The first step in the chain is marked `blocking: True`. Subsequent
-        steps get `depends_on` referencing the blocking step by its 1-based
-        index (e.g., 'step_0003').
+        O primeiro passo da cadeia eh marcado `blocking: True`. Passos
+        subsequentes recebem `depends_on` referenciando o passo bloqueante
+        pelo seu indice baseado em 1 (ex.: 'passo_0003').
 
-        Steps that already have explicit `depends_on` or `blocking` set
-        (via curated steps.jsonl) are preserved and not auto-detected.
+        Passos que ja tem `depends_on` ou `blocking` explicto (via steps.jsonl
+        curado) sao preservados e nao auto-detectados.
         """
         # Find groups of consecutive data-entry steps between navigation
         # boundaries. Only create dependency when at least one <select>
@@ -1798,34 +1834,34 @@ class RecordingNormalizer:
                     # Subsequent steps depend on the first
                     for k in range(chain_start + 1, chain_end):
                         step_num = chain_start + 1  # 1-based index
-                        steps[k].depends_on = f"step_{step_num:04d}"
+                        steps[k].depends_on = f"passo_{step_num:04d}"
 
             i = chain_end
 
     def _detect_overlay_steps(self, steps: list) -> None:
-        """Detect steps inside overlay containers (calendar, modal, dialog)."""
+        """Detecta passos dentro de containers overlay (calendario, modal, dialog)."""
         OVERLAY_PATTERNS = ['cdk-overlay', 'mat-calendar', 'mat-datepicker', 'modal', 'dialog']
 
         for i, step in enumerate(steps):
             if not step.target or not step.target.candidates:
                 continue
-            # Check if any candidate selector targets an overlay element
+            # Verifica se algum seletor candidato tem como alvo elemento overlay
             is_overlay = any(
                 any(p in c.selector for p in OVERLAY_PATTERNS)
                 for c in step.target.candidates
             )
             if is_overlay:
                 step.context["overlay_step"] = True
-                # Mark the step BEFORE as the overlay trigger
+                # Marca passo ANTERIOR como gatilho do overlay
                 if i > 0 and steps[i-1].action == "click" and not steps[i-1].context.get("overlay_step"):
                     steps[i-1].context["overlay_trigger"] = True
 
     def _detect_navigation_clicks(self, steps: list) -> None:
-        """Detect clicks that cause URL changes (SPA navigation).
+        """Detecta clicks que causam mudancas de URL (navegacao SPA).
 
-        Compares consecutive non-navigation steps: if the URL changes between
-        step A and step B, marks step A with causes_navigation=True so the
-        compiler injects wait_for_load_state('networkidle') after the click.
+        Compara passos consecutivos nao-navegacao: se URL muda entre
+        passo A e passo B, marca passo A com causes_navigation=True para
+        compilador injetar wait_for_load_state('networkidle') apos o click.
         """
         # Build list of (index, step) for non-navigation steps
         actionable = [(i, s) for i, s in enumerate(steps)
@@ -1843,7 +1879,7 @@ class RecordingNormalizer:
 
     @staticmethod
     def _normalize_url(url: str) -> str:
-        """Strip trailing slash and query params for URL comparison."""
+        """Remove barra final e params de consulta para comparacao de URL."""
         if not url:
             return ""
         parsed = urlparse(url)
@@ -1852,14 +1888,14 @@ class RecordingNormalizer:
         return urlunparse((parsed.scheme, parsed.netloc, path, "", "", ""))
 
     def _detect_missing_fills(self, steps: list) -> None:
-        """Detect clicks on inputs lacking fill events (currency-masked fields).
+        """Detecta clicks em inputs sem eventos fill (campos com mascara de moeda).
 
-        Phase B: runs AFTER _reconstruct_intents. Skips steps already resolved
-        by evidence (setter_hook, snapshot_diff, checked_transition, etc.).
+        Fase B: executa APOS _reconstruct_intents. Pula passos ja resolvidos
+        por evidencia (setter_hook, snapshot_diff, checked_transition, etc.).
         """
         from datetime import datetime
 
-        # First: propagate form_values from submit events to preceding input clicks
+        # Primeiro: propaga form_values de eventos submit para clicks em input precedentes
         for i, step in enumerate(steps):
             ctx = getattr(step, "context", {}) or {}
             form_vals = ctx.get("form_values") or {}
@@ -1914,34 +1950,38 @@ class RecordingNormalizer:
                         or ""
                     )
 
-    # ── IntentReconstruction (merged from intent_reconstructor.py) ──────────
+    # ── Reconstrucao de Intencao (mesclado de intent_reconstructor.py) ──────
 
-    # H22a (2026-06-27): final_state promoted above setter_hook.
+    # H22a (2026-06-27): final_state promovido acima de setter_hook.
     #
-    # The Material currencymask spike showed that real keyboard typing
-    # never fires the value setter (browser-native typing bypasses it).
-    # `setter_hook` (value_mutations.jsonl) only captures JS-driven
-    # writes from masks that delegate to the prototype setter. For the
-    # instance-only override pattern (ng2-currency-mask, SIOPI), it
-    # captures nothing.
+    # O spike Material currencymask mostrou que digitacao real de teclado
+    # nunca dispara o value setter (digitacao nativa do navegador o contorna).
+    # `setter_hook` (value_mutations.jsonl) so captura escritas via JS
+    # de mascaras que delegam ao setter do prototipo. Para o padrao de
+    # sobrescrita apenas de instancia (ng2-currency-mask, SIOPI), nao
+    # captura nada.
     #
-    # `final_state` (final_state_snapshot.json) reads `el.value` at
-    # session end, which goes through whatever instance getter the mask
-    # exposes — so it returns the canonical formatted value regardless
-    # of how the mask is wired. It is therefore a higher-fidelity
-    # primary source for any input the user has actually finished
-    # typing into.
+    # `final_state` (final_state_snapshot.json) le `el.value` ao final
+    # da sessao, que passa pelo getter de instancia que a mascara expoe
+    # — entao retorna o valor formatado canonico independente de como
+    # a mascara esta conectada. Portanto eh uma fonte primaria de maior
+    # fidelidade para qualquer input que o usuario realmente terminou
+    # de digitar.
     #
-    # See .planning/spikes/SPIKE-keyboard-type-mask.md (H22 section)
-    # and the 2026-06-27 H22 entry in DECISIONS-LOG.md.
+    # Veja .planning/spikes/SPIKE-keyboard-type-mask.md (secao H22)
+    # e entrada H22 de 2026-06-27 em DECISIONS-LOG.md.
     IR_SOURCE_PRIORITY = {
         "form_values": 100,
-        # H21: user typed the value in the recorder's inline prompt right
-        # after the mask intercepted it. Highest single-source confidence
-        # short of a real form submit.
+        # H21: usuario digitou valor no prompt inline do gravador
+        # logo apos a mascara intercepta-lo. Maior confianca de fonte
+        # unica abaixo de submit real.
         "user_supplied_inline": 90,
+        # B30: prompt CLI retrospectivo --complete. Usuario digitou valor
+        # mas teve que recorda-lo apos o fato, entao ligeiramente menor
+        # que o prompt inline fresco.
+        "user_supplied_cli": 89,
         "fill_event": 80,
-        "final_state": 79,      # H22a: promoted from 55, now above setter_hook
+        "final_state": 79,      # H22a: promovido de 55, agora acima de setter_hook
         "setter_hook": 78,
         "checked_transition": 72,
         "snapshot_diff": 70,
@@ -1951,7 +1991,7 @@ class RecordingNormalizer:
     }
 
     def _ir_all(self, recording_dir: str, steps: list) -> list[dict]:
-        """Run all IR strategies, return deduped FieldValueMap entries."""
+        """Executa todas estrategias IR, retorna entradas FieldValueMap deduplicadas."""
         entries = []
         entries.extend(self._ir_value_mutations(recording_dir, steps))
         entries.extend(self._ir_snapshots(recording_dir, steps))
@@ -1963,9 +2003,9 @@ class RecordingNormalizer:
         return self._ir_dedupe_entries(entries)
 
     def _ir_inline_field_values(self, recording_dir: str, steps: list) -> list[dict]:
-        """H21: read inline_field_value events from raw_events.jsonl
-        (emitted by the overlay when the user supplied a value through
-        the mask-interception prompt). Source = user_supplied_inline."""
+        """H21: le eventos inline_field_value de raw_events.jsonl
+        (emitidos pelo overlay quando usuario forneceu valor pelo
+        prompt de interceptacao de mascara). Fonte = user_supplied_inline."""
         path = os.path.join(recording_dir, "raw_events.jsonl")
         if not os.path.exists(path):
             return []
@@ -2019,10 +2059,10 @@ class RecordingNormalizer:
             return entries
         return entries
 
-    # ── Polling ──────────────────────────────────────────────────────────────
+    # ── Polling ─────────────────────────────────────────────────────────────
 
     def _ir_polling(self, recording_dir: str, steps: list) -> list[dict]:
-        """Extract values from field_snapshots.jsonl with source=polling."""
+        """Extrai valores de field_snapshots.jsonl com fonte=polling."""
         snapshots_path = os.path.join(recording_dir, "field_snapshots.jsonl")
         if not os.path.exists(snapshots_path):
             return []
@@ -2087,40 +2127,40 @@ class RecordingNormalizer:
             })
         return entries
 
-    # ── Value mutations (setter hooks) ──────────────────────────────────────
+    # ── Mutacoes de valor (setter hooks) ────────────────────────────────────
 
     def _ir_value_mutations(self, recording_dir: str, steps: list) -> list[dict]:
-        """Read value_mutations.jsonl — programmatic value changes.
+        """Le value_mutations.jsonl — mudancas programaticas de valor.
 
-        Hotfix 22 / pattern P3: the overlay JS (overlay_inject.js
-        _hookValue) writes mutations with this exact schema:
+        Hotfix 22 / padrao P3: o JS do overlay (overlay_inject.js
+        _hookValue) escreve mutacoes com este esquema exato:
 
             {"type": "value_mutation",
              "timestamp": "ISO",
-             "fingerprint": "<tag>#<id>[name=<name>]",
-             "value": "<typed value>"}
+             "fingerprint": "<tag>#<id>[name=<nome>]",
+             "value": "<valor digitado>"}
 
-        The previous reader hunted for `new_value`, `tag`, `id`, `name`,
-        and `old_value` — fields that the overlay never emits. The
-        `value` key was only consulted for `type == "content_edit"`, so
-        the entire stream of input mutations on masked fields (Caixa
-        currency, CPF, etc.) was discarded as if it had no value. That
-        is why prestação_desejada_*, renda_mensal_*, valor_do_imóvel_*
-        and friends went to --complete and forced the tester to retype
-        9 values they had already typed during recording.
+        O leitor anterior procurava por `new_value`, `tag`, `id`, `name`,
+        e `old_value` — campos que o overlay nunca emite. A chave
+        `value` so era consultada para `type == "content_edit"`, entao
+        todo fluxo de mutacoes de input em campos com mascara (Caixa
+        moeda, CPF, etc.) era descartado como se nao tivesse valor. Por
+        isso prestacao_desejada_*, renda_mensal_*, valor_do_imovel_*
+        e amigos iam para --complete e forcavam o testador a redigitar
+        9 valores que ja tinham digitado durante gravacao.
 
-        New behavior:
+        Novo comportamento:
 
-        - Read `value` from every mutation (single source of truth).
-        - Derive tag/id/name from the fingerprint
-          (`<tag>#<id>[name=<name>]`).
-        - Keep the LAST non-empty value per fingerprint — the mask's
-          progressive formatting means earlier values are partial
-          ("100,00" → "1.000,00" → "10.000,00"), only the final one
-          is the user's intended value.
-        - Mask-detection is applied to the final value so the
-          downstream resolver knows whether to expect digit-only typing
-          at run time.
+        - Le `value` de toda mutacao (fonte unica da verdade).
+        - Deriva tag/id/name do fingerprint
+          (`<tag>#<id>[name=<nome>]`).
+        - Mantem ULTIMO valor nao vazio por fingerprint — a formatacao
+          progressiva da mascara significa que valores anteriores sao
+          parciais ("100,00" → "1.000,00" → "10.000,00"), so o final
+          eh o valor pretendido pelo usuario.
+        - Deteccao de mascara aplicada ao valor final para que o
+          resolvedor downstream saiba se deve esperar digitacao apenas
+          numerica em runtime.
         """
         path = os.path.join(recording_dir, "value_mutations.jsonl")
         if not os.path.exists(path):
@@ -2138,20 +2178,20 @@ class RecordingNormalizer:
         if not mutations:
             return []
 
-        # Keep last non-empty value per fingerprint (chronological order
-        # is the file order — _hookValue appends synchronously).
+        # Mantem ultimo valor nao vazio por fingerprint (ordem cronologica
+        # eh ordem do arquivo — _hookValue anexa sincronamente).
         by_fp: dict[str, dict] = {}
         for mut in mutations:
             fp = (mut.get("fingerprint") or "").strip()
             if not fp:
                 continue
-            # Both "value_mutation" and "content_edit" carry the value
-            # under the "value" key. The previous code special-cased
-            # content_edit and missed value_mutation.
+            # Tanto "value_mutation" quanto "content_edit" carregam o valor
+            # sob a chave "value". O codigo anterior tratava content_edit
+            # como caso especial e perdia value_mutation.
             value = (mut.get("value") or "").strip()
             if not value:
-                # Skip empty mutations (initial field state); keep prior
-                # non-empty if any.
+                # Pula mutacoes vazias (estado inicial do campo); mantem
+                # anterior nao vazio se houver.
                 continue
             by_fp[fp] = {
                 "value": value,
@@ -2162,7 +2202,7 @@ class RecordingNormalizer:
         if not by_fp:
             return []
 
-        # Parse `<tag>#<id>[name=<name>]` to recover identifiers.
+        # Analisa `<tag>#<id>[name=<nome>]` para recuperar identificadores.
         fp_re = _re.compile(
             r"^(?P<tag>[a-z]+)#(?P<id>[^\[]*)\[name=(?P<name>[^\]]*)\]$"
         )
@@ -2181,13 +2221,13 @@ class RecordingNormalizer:
             ts = mut["timestamp"]
             is_masked = self._ir_detect_masked_field(value)
 
-            # Hotfix 22: the fingerprint by itself yields a canonical key
-            # like "mat_input_5" that the runtime resolver cannot match
-            # against the live page's aria-label / placeholder. Prefer
-            # the step whose target.element_id equals the mutation's
-            # `id` field — that step's aria-label is the one the runtime
-            # resolver will see. Fall back to nearest-by-timestamp when
-            # no id match exists.
+            # Hotfix 22: o fingerprint por si so produz chave canonica
+            # como "mat_input_5" que o resolvedor runtime nao consegue
+            # corresponder ao aria-label / placeholder da pagina ativa.
+            # Prefere o passo cujo target.element_id iguala o campo `id`
+            # da mutacao — o aria-label desse passo eh o que o resolvedor
+            # runtime vera. Cai para nearest-by-timestamp quando nao
+            # ha correspondencia de id.
             step_idx = -1
             if el_id:
                 id_token = f"#{el_id}"
@@ -2198,10 +2238,10 @@ class RecordingNormalizer:
                     if (getattr(target, "element_id", "") or "") == el_id:
                         step_idx = i
                         break
-                    # Also match when the step's selector chain references
-                    # the element (datepicker toggle clicks → input id appears
-                    # in a sibling step's selector, but the underlying input
-                    # is the one we want labels from).
+                    # Tambem corresponde quando cadeia de seletores do passo
+                    # referencia o elemento (clicks em toggle datepicker -> id
+                    # do input aparece no seletor de passo irmao, mas o input
+                    # subjacente eh o qual queremos labels).
                     candidates = getattr(target, "candidates", None) or []
                     for c in candidates:
                         sel = getattr(c, "selector", "") or ""
@@ -2226,9 +2266,9 @@ class RecordingNormalizer:
                     label_text = (getattr(target, "label", "") or "")
                     target_id = (getattr(target, "element_id", "") or "")
 
-            # Pick the strongest semantic key available. The runtime
-            # resolver tries aria_label > label > placeholder > id, so
-            # we match its priority here.
+            # Escolhe chave semantica mais forte disponivel. O resolvedor
+            # runtime tenta aria_label > label > placeholder > id, entao
+            # correspondemos sua prioridade aqui.
             canonical_source = (
                 aria_label or label_text or placeholder
                 or name or target_id or el_id or fp
@@ -2256,10 +2296,10 @@ class RecordingNormalizer:
             })
         return entries
 
-    # ── Snapshot diff + checked transitions ─────────────────────────────────
+    # ── Diff de snapshot + transicoes checked ──────────────────────────────
 
     def _ir_snapshots(self, recording_dir: str, steps: list) -> list[dict]:
-        """Detect value/checked changes between field snapshots."""
+        """Detecta mudancas de valor/checked entre snapshots de campo."""
         snapshots_path = os.path.join(recording_dir, "field_snapshots.jsonl")
         if not os.path.exists(snapshots_path):
             return []
@@ -2343,10 +2383,10 @@ class RecordingNormalizer:
             "source": source, "step_index": step_idx, "fingerprint": fp,
         }
 
-    # ── Final state snapshot ────────────────────────────────────────────────
+    # ── Snapshot de estado final ───────────────────────────────────────────
 
     def _ir_final_state(self, recording_dir: str, steps: list) -> list[dict]:
-        """Read final_state_snapshot.json as fallback."""
+        """Le final_state_snapshot.json como fallback."""
         path = os.path.join(recording_dir, "final_state_snapshot.json")
         if not os.path.exists(path):
             return []
@@ -2389,10 +2429,10 @@ class RecordingNormalizer:
             })
         return entries
 
-    # ── Form values ─────────────────────────────────────────────────────────
+    # ── Valores de formulario ──────────────────────────────────────────────
 
     def _ir_form_values(self, steps: list) -> list[dict]:
-        """Extract form_values from submit step contexts."""
+        """Extrai form_values de contextos de passos submit."""
         entries = []
         for i, step in enumerate(steps):
             ctx = getattr(step, "context", {}) or {}
@@ -2411,10 +2451,10 @@ class RecordingNormalizer:
                 })
         return entries
 
-    # ── Network payload ─────────────────────────────────────────────────────
+    # ── Payload de rede ────────────────────────────────────────────────────
 
     def _ir_network(self, recording_dir: str, steps: list) -> list[dict]:
-        """Parse POST/PUT request payloads for form field values."""
+        """Analisa payloads de requisicoes POST/PUT para valores de campos."""
         network_path = os.path.join(recording_dir, "network_log.json")
         if not os.path.exists(network_path):
             return []
@@ -2464,10 +2504,11 @@ class RecordingNormalizer:
                 })
         return entries
 
-    # ── IR helpers ──────────────────────────────────────────────────────────
+    # ── Auxiliares IR ──────────────────────────────────────────────────────
 
     @staticmethod
     def _ir_detect_masked_field(value: str, raw_value: str = "") -> bool:
+        """Detecta se valor corresponde a padrao de campo com mascara."""
         if not value:
             return False
         MASK_PATTERN = _re.compile(r'^[\d\s.,/\-()]+$')
@@ -2488,9 +2529,9 @@ class RecordingNormalizer:
         return any(p.match(value) for p in KNOWN_MASKS)
 
     def _verify_recording_fingerprint(self, recording_dir: str) -> None:
-        """Read recording_metadata.json, compare its fingerprint block
-        against the current recorder, log a single warning + cache the
-        result on `self.fingerprint_check` for callers."""
+        """Le recording_metadata.json, compara bloco fingerprint com
+        gravador atual, loga aviso unico + cacheia resultado em
+        `self.fingerprint_check` para chamadores."""
         from testforge.recorder.capture_fingerprint import verify_fingerprint
         meta_path = os.path.join(recording_dir, "recording_metadata.json")
         metadata: dict = {}
@@ -2507,6 +2548,7 @@ class RecordingNormalizer:
 
     @staticmethod
     def _fresh_dedupe_stats() -> dict:
+        """Retorna dict de estatisticas de dedup zerado."""
         return {
             "loser_counts": {},
             "winner_counts": {},
@@ -2516,16 +2558,15 @@ class RecordingNormalizer:
         }
 
     def _ir_dedupe_entries(self, entries: list[dict]) -> list[dict]:
-        """Dedupe by field_key, keeping the highest-priority source.
+        """Deduplica por field_key, mantendo fonte de maior prioridade.
 
-        H22b: records per-call diagnostics on `self.ir_dedupe_stats` so
-        we can measure whether `setter_hook` is still load-bearing now
-        that `final_state` is primary. Stats inform the H22c decision
-        (delete _hookValue entirely).
+        H22b: registra diagnosticos por chamada em `self.ir_dedupe_stats` para
+        medir se `setter_hook` ainda eh essencial agora que `final_state` eh
+        primario. Estatisticas informam decisao H22c (deletar _hookValue completamente).
         """
         best: dict[str, dict] = {}
-        # Count uncontested entries (sources that landed first with no
-        # competitor) before dedupe collapses them.
+        # Conta entradas incontestes (fontes que chegaram primeiro sem
+        # competidor) antes do dedup colapsa-las.
         seen_sources_per_key: dict[str, set] = {}
         for entry in entries:
             key = entry.get("field_key", "")
@@ -2561,8 +2602,8 @@ class RecordingNormalizer:
                 )
                 if src == "setter_hook" and old_src == "final_state":
                     self.ir_dedupe_stats["setter_hook_dominated_by_final_state"] += 1
-        # After everything is settled, count fields that final_state or
-        # setter_hook owned alone (no competitor present for the key).
+        # Apos tudo resolvido, conta campos que final_state ou
+        # setter_hook possuiam sozinhos (sem competidor presente para chave).
         for key, srcs in seen_sources_per_key.items():
             if srcs == {"final_state"}:
                 self.ir_dedupe_stats["final_state_uncontested"] += 1
@@ -2572,6 +2613,7 @@ class RecordingNormalizer:
 
     @staticmethod
     def _ir_find_nearest_step_index(steps: list, timestamp: str) -> int:
+        """Encontra indice do passo mais proximo dado timestamp."""
         if not timestamp or not steps:
             return 0
         try:
@@ -2597,6 +2639,7 @@ class RecordingNormalizer:
 
     @staticmethod
     def _ir_parse_payload(post_data: str, url: str) -> dict:
+        """Analisa payload POST para extrair pares chave/valor."""
         if not post_data:
             return {}
         post_data = post_data.strip()
@@ -2618,6 +2661,7 @@ class RecordingNormalizer:
 
     @staticmethod
     def _ir_build_field_identifiers(steps: list) -> dict:
+        """Constroi mapa de identificadores de campo dos passos."""
         ids = {}
         for step in steps:
             if not step.target:
@@ -2636,6 +2680,7 @@ class RecordingNormalizer:
 
     @staticmethod
     def _ir_match_by_url(payload_url: str, steps: list) -> int:
+        """Corresponde URL de payload a passo por URL."""
         if not payload_url:
             return -1
         for i, step in enumerate(steps):
@@ -2651,6 +2696,7 @@ class RecordingNormalizer:
         key: str, value: str, payload: dict,
         steps: list, field_identifiers: dict,
     ) -> tuple[int, float]:
+        """Correlaciona chave de payload de rede com passo correspondente."""
         canonical_key = key.strip().lower().replace(" ", "_").replace("-", "_")
         if canonical_key in field_identifiers:
             for i, step in enumerate(steps):
