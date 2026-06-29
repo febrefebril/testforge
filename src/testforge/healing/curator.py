@@ -210,13 +210,26 @@ class CuradorAutomatico:
         best = high_confidence[0]
 
         def _proposal_from_recipe() -> LLMHealingProposal:
+            # B33 (2026-06-29): recipes that fix the step via solution_js
+            # (e.g. `el.click()` force-click) have no solution_selector.
+            # B23 attached an empty `new_locator` for those, and the
+            # dangerous-locator filter then rejected the cure even though
+            # it actually passed the step. Use the step's original
+            # selector as a stand-in so downstream display + validation
+            # have something non-empty to work with.
+            locator = best.solution_selector or ""
+            if not locator:
+                locator = step_data.get("selector", "") or ""
             return LLMHealingProposal(
                 taxonomy_id=getattr(best, "taxonomy_id", "") or "",
                 family=family or "",
                 strategy=best.solution_strategy or "catalog",
-                new_locator=best.solution_selector or "",
+                new_locator=locator,
                 confidence=0.95,
-                rationale=f"L0 catalog recipe {best.recipe_id}",
+                rationale=(
+                    f"L0 catalog recipe {best.recipe_id}"
+                    + (" (js-only)" if not best.solution_selector else "")
+                ),
             )
 
         if not self._step_runner:
