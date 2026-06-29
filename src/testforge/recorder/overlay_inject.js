@@ -18,6 +18,8 @@
   window.__tfPendingSubmit = null;
   window.__tfLastFillValue = {};
   window.__tfLastSnapshotKey = {};
+  window.__tfFillDebounceTimers = window.__tfFillDebounceTimers || new WeakMap();
+  window.__tfFillDebounceMs = 250;
 
   // ---- Cross-page state restoration ----
   try {
@@ -319,6 +321,34 @@
   })();
 
   // ---- Value mutation setter hooks ----
+  // Bug fix (Sprint A, 2026-06-29): Material currencymask + datepicker use
+  // the native value setter directly (el.value = ...) instead of letting the
+  // browser dispatch an 'input' event. Pure addEventListener('input') never
+  // fires for those fields, so raw_events.jsonl was getting zero fill events
+  // for currency / date inputs. The setter hook now also schedules a debounced
+  // _pushEvent('fill', el) so those values land in raw_events for the
+  // normalizer to pick up. Diagnostic in [[project-recorder-input-capture-gap]].
+  function _scheduleFillFromMutation(el) {
+    if (!el || !el.tagName) return;
+    if (window.__tfAssertWaiting) return;
+    if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA') return;
+    try {
+      var prev = window.__tfFillDebounceTimers.get(el);
+      if (prev) clearTimeout(prev);
+    } catch(_e) {}
+    var t = setTimeout(function() {
+      try {
+        var key = _fillKey(el);
+        var val = (el.value || '').trim();
+        if (val === '') return;
+        if (window.__tfLastFillValue[key] === val) return;
+        window.__tfLastFillValue[key] = val;
+        _pushEvent('fill', el);
+      } catch(_e) {}
+    }, window.__tfFillDebounceMs);
+    try { window.__tfFillDebounceTimers.set(el, t); } catch(_e) {}
+  }
+
   function _hookValue(proto) {
     var orig = Object.getOwnPropertyDescriptor(proto, 'value');
     if (!orig || !orig.set) return;
@@ -332,6 +362,7 @@
           fingerprint: this.tagName.toLowerCase() + '#' + (this.id||'') + '[name=' + (this.name||'') + ']',
           value: String(v).substring(0, 200)
         });
+        try { _scheduleFillFromMutation(this); } catch(_e) {}
       },
       configurable: true
     });
@@ -339,6 +370,36 @@
   _hookValue(HTMLInputElement.prototype);
   _hookValue(HTMLSelectElement.prototype);
   _hookValue(HTMLTextAreaElement.prototype);
+
+  // ---- Periodic snapshot fallback ----
+  // Defensive fallback when the setter hook itself is bypassed (e.g. mask
+  // composing value via DOM property setter on a wrapped element, or framework
+  // dispatching value updates after hookValue but before our debounce can flush).
+  // Scans visible input/textarea every 500ms and emits a fill event when the
+  // current value differs from the cached last-known value. Dedup via
+  // __tfLastFillValue so we never double-emit something the input listener or
+  // setter hook already captured.
+  window.__tfPeriodicFillScanInterval = window.__tfPeriodicFillScanInterval || null;
+  function _periodicFillScan() {
+    if (window.__tfAssertWaiting) return;
+    var els = document.querySelectorAll('input, textarea');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (el.type === 'checkbox' || el.type === 'radio' || el.type === 'hidden') continue;
+      var rect = el.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) continue;
+      var val = (el.value || '').trim();
+      if (val === '') continue;
+      var key = _fillKey(el);
+      if (window.__tfLastFillValue[key] === val) continue;
+      window.__tfLastFillValue[key] = val;
+      _pushEvent('fill', el);
+    }
+  }
+  try {
+    if (window.__tfPeriodicFillScanInterval) clearInterval(window.__tfPeriodicFillScanInterval);
+    window.__tfPeriodicFillScanInterval = setInterval(_periodicFillScan, 500);
+  } catch(_e) {}
 
   // ---- Assert helpers ----
   function _detectState(el) {
