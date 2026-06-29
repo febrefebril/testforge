@@ -80,6 +80,10 @@ class IncrementalStepResult:
     evidence_after: dict = field(default_factory=dict)
     duration_ms: int = 0
     skip_reason: str = ""
+    screen_state_before: dict = field(default_factory=dict)
+    screen_state_after: dict = field(default_factory=dict)
+    screen_state_drift: bool = False
+    screen_state_drift_reason: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -97,4 +101,8 @@ class IncrementalStepResult:
             "evidence_after": self.evidence_after,
             "duration_ms": self.duration_ms,
             "skip_reason": self.skip_reason,
+            "screen_state_before": self.screen_state_before,
+            "screen_state_after": self.screen_state_after,
+            "screen_state_drift": self.screen_state_drift,
+            "screen_state_drift_reason": self.screen_state_drift_reason,
         }

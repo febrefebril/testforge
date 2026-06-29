@@ -27,6 +27,7 @@ from .step_precondition import StepPreconditionValidator
 from .step_executor import StepExecutor
 from .step_postcondition import StepPostconditionValidator
 from .incremental_ui import IncrementalUI
+from .screen_state import ScreenState, capture_screen_state, compare as compare_screen_state
 
 
 # B19/B20: centralizado em runner/dangerous_locator. Re-exportado aqui para
@@ -89,6 +90,9 @@ class IncrementalRunner:
         self.promotion_gate = None
 
         self.ui = IncrementalUI(verbose=verbose)
+
+        self._prev_state_after: Optional[ScreenState] = None
+        self._screen_state_log: list = []
 
     def _load_script_metadata(self):
         if not os.path.exists(self.script_path):
@@ -619,6 +623,31 @@ class IncrementalRunner:
 
     _BODY_SELECTORS = {"body", "#body", "html", "#html", "xpath=/html/body", "xpath=//body"}
 
+    def _safe_capture_state(self) -> Optional[ScreenState]:
+        if not self.page:
+            return None
+        try:
+            return capture_screen_state(self.page)
+        except Exception:
+            return None
+
+    def _attach_screen_state(self, result, state_before, state_after, diff):
+        if state_before is not None:
+            result.screen_state_before = state_before.to_dict()
+        if state_after is not None:
+            result.screen_state_after = state_after.to_dict()
+        if diff is not None:
+            result.screen_state_drift = not diff.matched
+            result.screen_state_drift_reason = diff.reason
+        self._screen_state_log.append({
+            "step_num": result.step_num,
+            "action": result.action,
+            "state_before": state_before.to_dict() if state_before else None,
+            "state_after": state_after.to_dict() if state_after else None,
+            "drift": result.screen_state_drift,
+            "drift_reason": result.screen_state_drift_reason,
+        })
+
     def _run_one_step(self, index, step):
         step_num = index + 1
         started = time.time()
@@ -778,7 +807,12 @@ class IncrementalRunner:
             self._init_components()
 
             for i, step in enumerate(self.steps):
+                state_before = self._safe_capture_state()
+                diff = compare_screen_state(self._prev_state_after, state_before)
                 result = self._run_one_step(i, step)
+                state_after = self._safe_capture_state()
+                self._attach_screen_state(result, state_before, state_after, diff)
+                self._prev_state_after = state_after
                 self.step_results.append(result)
                 self.ui.step(i + 1, len(self.steps), result)
                 if self.replay_recorder:
@@ -827,6 +861,7 @@ class IncrementalRunner:
                 json.dumps(report, indent=2, ensure_ascii=False, default=str), encoding="utf-8"
             )
             self._write_healing_report(out_dir)
+            self._write_screen_states(out_dir)
             # Record aggregate run metrics before writing
             if self.metrics:
                 any_healing = any(r.healing for r in self.step_results if r.healing and r.healing.attempted)
@@ -836,6 +871,17 @@ class IncrementalRunner:
             print(f"[TestForge] Falha ao escrever relatorio: {exc}")
         self.ui.summary(totals)
         return report
+
+    def _write_screen_states(self, out_dir):
+        if not self._screen_state_log:
+            return
+        path = out_dir / "screen_states.jsonl"
+        with path.open("w", encoding="utf-8") as f:
+            for entry in self._screen_state_log:
+                f.write(json.dumps(entry, ensure_ascii=False, default=str) + "\n")
+        drift_count = sum(1 for e in self._screen_state_log if e.get("drift"))
+        if drift_count:
+            print(f"  [SCREEN] {drift_count}/{len(self._screen_state_log)} step(s) com drift de tela")
 
     def _write_healing_report(self, out_dir):
         lines = ["# TestForge Healing Report", ""]
