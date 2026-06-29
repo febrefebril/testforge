@@ -1,0 +1,263 @@
+{
+  "reason": "user_stop",
+  "timestamp": "2026-06-29T22:10:43.561Z",
+  "url": "https://simuladorhabitacao.caixa.gov.br/simulacao",
+  "page_title": "Simulador",
+  "fields": [
+    {
+      "timestamp": "2026-06-29T22:10:43.561Z",
+      "fingerprint": "input#mat-input-2[name=]",
+      "identifiers": {
+        "id": "mat-input-2",
+        "name": null,
+        "label": null,
+        "placeholder": "000.000.000-00",
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "text",
+      "value": "022.442.581-14",
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-06-29T22:10:43.561Z",
+      "fingerprint": "input#mat-input-0[name=]",
+      "identifiers": {
+        "id": "mat-input-0",
+        "name": null,
+        "label": null,
+        "placeholder": "DD/MM/AAAA",
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": null,
+      "value": "12/11/1970",
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-06-29T22:10:43.561Z",
+      "fingerprint": "input#mat-input-3[name=]",
+      "identifiers": {
+        "id": "mat-input-3",
+        "name": null,
+        "label": null,
+        "placeholder": "(00) 00000-0000",
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "text",
+      "value": "(61) 98767-6534",
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-06-29T22:10:43.561Z",
+      "fingerprint": "input#mat-input-1[name=]",
+      "identifiers": {
+        "id": "mat-input-1",
+        "name": null,
+        "label": null,
+        "placeholder": "R$ 0,00",
+        "aria-label": "Renda bruta  mensal * "
+      },
+      "tag": "input",
+      "type": "text",
+      "value": " 1.000,00 ",
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-06-29T22:10:43.561Z",
+      "fingerprint": "input#mat-radio-0-input[name=possui3AnosCLT]",
+      "identifiers": {
+        "id": "mat-radio-0-input",
+        "name": "possui3AnosCLT",
+        "label": "Sim, tenho 3 anos ou mais",
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "radio",
+      "value": "S",
+      "checked": true,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-06-29T22:10:43.561Z",
+      "fingerprint": "input#mat-radio-1-input[name=possui3AnosCLT]",
+      "identifiers": {
+        "id": "mat-radio-1-input",
+        "name": "possui3AnosCLT",
+        "label": "N\u00e3o, tenho menos de 3 anos",
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "radio",
+      "value": "N",
+      "checked": false,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-06-29T22:10:43.561Z",
+      "fingerprint": "input#mat-radio-2-input[name=existeOutroComprador]",
+      "identifiers": {
+        "id": "mat-radio-2-input",
+        "name": "existeOutroComprador",
+        "label": "Sim, tenho!",
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "radio",
+      "value": "S",
+      "checked": true,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-06-29T22:10:43.561Z",
+      "fingerprint": "input#mat-radio-3-input[name=existeOutroComprador]",
+      "identifiers": {
+        "id": "mat-radio-3-input",
+        "name": "existeOutroComprador",
+        "label": "N\u00e3o, s\u00f3 eu",
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "radio",
+      "value": "N",
+      "checked": false,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-06-29T22:10:43.561Z",
+      "fingerprint": "input#mat-mdc-checkbox-0-input[name=]",
+      "identifiers": {
+        "id": "mat-mdc-checkbox-0-input",
+        "name": null,
+        "label": "",
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "checkbox",
+      "value": "on",
+      "checked": true,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-06-29T22:10:43.561Z",
+      "fingerprint": "input#tokenDigit1[name=]",
+      "identifiers": {
+        "id": "tokenDigit1",
+        "name": null,
+        "label": null,
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "number",
+      "value": "",
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-06-29T22:10:43.561Z",
+      "fingerprint": "input#tokenDigit2[name=]",
+      "identifiers": {
+        "id": "tokenDigit2",
+        "name": null,
+        "label": null,
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "number",
+      "value": "",
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-06-29T22:10:43.561Z",
+      "fingerprint": "input#tokenDigit3[name=]",
+      "identifiers": {
+        "id": "tokenDigit3",
+        "name": null,
+        "label": null,
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "number",
+      "value": "",
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-06-29T22:10:43.561Z",
+      "fingerprint": "input#tokenDigit4[name=]",
+      "identifiers": {
+        "id": "tokenDigit4",
+        "name": null,
+        "label": null,
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "number",
+      "value": "",
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-06-29T22:10:43.561Z",
+      "fingerprint": "input#tokenDigit5[name=]",
+      "identifiers": {
+        "id": "tokenDigit5",
+        "name": null,
+        "label": null,
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "number",
+      "value": "",
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-06-29T22:10:43.561Z",
+      "fingerprint": "input#tokenDigit6[name=]",
+      "identifiers": {
+        "id": "tokenDigit6",
+        "name": null,
+        "label": null,
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "number",
+      "value": "",
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    }
+  ]
+}
