@@ -93,6 +93,11 @@ class IncrementalRunner:
 
         self._prev_state_after: Optional[ScreenState] = None
         self._screen_state_log: list = []
+        # Sprint 2 (2026-06-29): current step's screen-state baseline so
+        # _build_healing_payload can attach drift context when escalating
+        # to L3 LLM. Set at start of each step in run() loop.
+        self._current_step_state_before: Optional[ScreenState] = None
+        self._current_step_drift = None
 
     def _load_script_metadata(self):
         if not os.path.exists(self.script_path):
@@ -314,6 +319,18 @@ class IncrementalRunner:
             step_context["field_value"] = ctx["resolved_value"]
         if ctx.get("resolved_intention"):
             step_context["field_intention"] = ctx["resolved_intention"]
+        # Sprint 2 (2026-06-29): screen-state drift sinaliza ao LLM que o
+        # step pode estar rodando na tela errada (cura anterior pulou para
+        # home, etc). Antes este contexto so existia no relatorio post-mortem.
+        # Agora vai inline no payload — LLM decide entre propor locator
+        # alternativo (mesma tela) vs propor navegacao (estamos na errada).
+        drift = self._current_step_drift
+        if drift is not None and not drift.matched:
+            step_context["screen_state_drift"] = True
+            step_context["screen_state_drift_reason"] = drift.reason
+            state_before = self._current_step_state_before
+            if state_before is not None:
+                step_context["current_screen_signature"] = state_before.signature()[:200]
         return self.evidence_collector.build_llm_payload(
             step_context=step_context,
             include_screenshot=False,
@@ -809,10 +826,19 @@ class IncrementalRunner:
             for i, step in enumerate(self.steps):
                 state_before = self._safe_capture_state()
                 diff = compare_screen_state(self._prev_state_after, state_before)
+                self._current_step_state_before = state_before
+                self._current_step_drift = diff
+                if diff is not None and not diff.matched:
+                    print(
+                        f"  [SCREEN] drift detectado antes step {i + 1}: {diff.reason[:120]}",
+                        flush=True,
+                    )
                 result = self._run_one_step(i, step)
                 state_after = self._safe_capture_state()
                 self._attach_screen_state(result, state_before, state_after, diff)
                 self._prev_state_after = state_after
+                self._current_step_state_before = None
+                self._current_step_drift = None
                 self.step_results.append(result)
                 self.ui.step(i + 1, len(self.steps), result)
                 if self.replay_recorder:
