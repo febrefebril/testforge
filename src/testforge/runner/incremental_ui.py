@@ -62,3 +62,12 @@ class IncrementalUI:
                   "failed", "blocked", "skipped"):
             v = totals.get(k, 0)
             self._w(f"  {k:>20}: {v}")
+        # Sprint 3 do decommission plan: assert_hit_rate eh a metrica de
+        # sucesso real. Show inline para o usuario nao precisar abrir o
+        # relatorio. Formato "Asserts: X de Y (Z%)".
+        asserts_total = totals.get("asserts_total", 0)
+        if asserts_total > 0:
+            asserts_hit = totals.get("asserts_hit", 0)
+            pct = 100.0 * asserts_hit / asserts_total
+            marker = "[OK]" if asserts_hit == asserts_total else "[MISS]"
+            self._w(f"  {'asserts':>20}: {asserts_hit} de {asserts_total} ({pct:.0f}%) {marker}")
