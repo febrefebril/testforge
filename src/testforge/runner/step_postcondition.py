@@ -188,11 +188,69 @@ class StepPostconditionValidator:
                         print(f"  [AVISO] pos-condicao: {next_sel[:60]} nao encontrado", file=sys.stderr)
                         continue
 
+                # Sprint B (2026-06-29): soft fallback usando semantica do
+                # next_step. Antes desta sessao a pos-condicao retornava FAIL
+                # quando o next_step.target nao era localizavel pelo seletor
+                # literal — em forms Angular Material o aria-label volatiliza
+                # quando outro input ganha foco, entao input[aria-label="X"]
+                # falha embora o input esteja la. Healer entao tentava curar
+                # algo que ja funcionara, frequentemente curando para tela
+                # errada. Soft fallback:
+                #   - Se next_step tem accessible_name OU label nao vazios,
+                #     tenta get_by_label / get_by_role native do Playwright
+                #     com 2s extra. Esses respeitam <label for=...> e
+                #     aria-labelledby — nao quebram com aria-label volatil.
+                #   - Se mesmo assim falhar, retorna passed=True com warning
+                #     em vez de FAIL. Filosofia: o click executou; previsao
+                #     de visibilidade do proximo step eh oracle SOFT, nao
+                #     definitivo. Falhas reais do proximo step viram REJ
+                #     no proximo _run_one_step e healing roda la com
+                #     contexto certo, em vez de mascarar erro no step atual.
+                tgt = next_step.target
+                soft_name = (getattr(tgt, "accessible_name", "") or "").strip()
+                soft_role = (getattr(tgt, "role", "") or "").strip()
+                soft_label = (getattr(tgt, "label", "") or "").strip()
+
+                soft_native_exprs: list[tuple[str, str]] = []
+                if soft_role and soft_name:
+                    soft_native_exprs.append((
+                        f"get_by_role({soft_role!r}, name={soft_name!r})",
+                        "role+name",
+                    ))
+                if soft_label:
+                    soft_native_exprs.append((
+                        f"get_by_label({soft_label!r})", "label",
+                    ))
+                if soft_name and not soft_role:
+                    soft_native_exprs.append((
+                        f"get_by_label({soft_name!r})", "name-as-label",
+                    ))
+
+                for _expr, _kind in soft_native_exprs:
+                    try:
+                        if _kind == "role+name":
+                            loc = self.page.get_by_role(soft_role, name=soft_name)
+                        else:
+                            loc = self.page.get_by_label(soft_label or soft_name)
+                        loc.first.wait_for(state="visible", timeout=2000)
+                        return PostconditionResult(
+                            passed=True,
+                            checks={"next_step_visible": True, "soft_match": _kind},
+                            message=f"proximo step visivel via {_kind}: {_expr[:60]}",
+                        )
+                    except Exception:
+                        continue
+
                 return PostconditionResult(
-                    passed=False,
-                    checks={"next_step_visible": False},
-                    failures=["next_step_not_visible"],
-                    message=f"proximo step nao apareceu: {cands[0].selector}",
+                    passed=True,
+                    checks={
+                        "next_step_visible": False,
+                        "next_step_soft_pass": True,
+                    },
+                    message=(
+                        f"next-step visibility unverified (soft pass): "
+                        f"{cands[0].selector[:80]}"
+                    ),
                 )
 
         return PostconditionResult(

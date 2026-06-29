@@ -524,11 +524,65 @@ class PlaywrightCompiler:
 
         return None
 
+    # Sprint B (2026-06-29): seletores que sao "so placeholder" ou
+    # "so name comum" e que aparecem em formularios SIOPI tipicos (multiplos
+    # inputs com mesma mascara) provocam healing para tela errada. Filtrados
+    # aqui — o resolvedor runtime ainda tem fingerprint para disambiguar
+    # entre os candidatos mais especificos (aria-label+placeholder, etc).
+    _SPRINT_B_GENERIC_PLACEHOLDERS = {
+        "r$0,00", "r$ 0,00", "0,00", "dd/mm/aaaa", "dd/mm/yyyy",
+        "(00) 00000-0000", "000.000.000-00", "00.000.000/0000-00",
+        "00000-000", "00000000",
+    }
+
+    @classmethod
+    def _is_ambiguous_only_selector(cls, selector: str) -> bool:
+        """True quando seletor consiste so de placeholder/nome generico sem
+        outro atributo desambiguador (aria-label, id, name customizado).
+
+        Exemplos verdadeiros:
+          input[placeholder="R$0,00"]
+          input[placeholder^="DD/MM/AAAA"]
+
+        Exemplos falsos (manter):
+          input[placeholder="R$0,00"][aria-label="Renda mensal *"]
+          input#renda
+        """
+        if not selector or "[" not in selector:
+            return False
+        body = selector.split("[", 1)[1]
+        # Multiplos atributos = nao ambiguo
+        if body.count("[") >= 1:
+            return False
+        if "]" not in body:
+            return False
+        attr_body = body.split("]", 1)[0]
+        if "=" not in attr_body:
+            return False
+        attr_name, _, attr_value = attr_body.partition("=")
+        attr_name = attr_name.rstrip("^$*~|").strip()
+        attr_value = attr_value.strip().strip('"').strip("'")
+        if attr_name not in ("placeholder",):
+            return False
+        return attr_value.lower() in cls._SPRINT_B_GENERIC_PLACEHOLDERS
+
     def _top_css_selectors(self, target: SemanticTarget | None, limit: int = 5) -> list[str]:
-        """Retorna os N principais seletores CSS dos candidatos."""
+        """Retorna os N principais seletores CSS dos candidatos.
+
+        Filtra seletores ambiguos (placeholder generico isolado) quando ja
+        existe um seletor mais especifico no topo da lista — evita que o
+        compiler emita uma cascata onde a 3a tentativa eh um seletor que
+        casa com 2-3 inputs do form e o healing acaba acertando o errado.
+        """
         candidates = target.candidates if target else []
         sorted_c = sorted(candidates, key=lambda c: c.score, reverse=True)
-        return [c.selector for c in sorted_c[:limit]]
+        sels = [c.selector for c in sorted_c[:limit]]
+        if not sels:
+            return sels
+        has_specific = any(not self._is_ambiguous_only_selector(s) for s in sels)
+        if not has_specific:
+            return sels
+        return [s for s in sels if not self._is_ambiguous_only_selector(s)]
 
     def _fallback_selector(self, action: SemanticAction) -> str:
         t = action.target
