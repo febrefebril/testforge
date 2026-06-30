@@ -166,7 +166,8 @@ class RecorderController:
                 const fsnap = window.__tfFieldSnapshotQueue || []; window.__tfFieldSnapshotQueue = [];
                 const vmuts = window.__tfValueMutationQueue || []; window.__tfValueMutationQueue = [];
                 const ksts  = window.__tfKeystrokeQueue     || []; window.__tfKeystrokeQueue     = [];
-                return {events: evts, steps: steps, commands: cmds, fieldSnapshots: fsnap, valueMutations: vmuts, keystrokes: ksts};
+                const rrweb = window.__tfRrwebQueue         || []; window.__tfRrwebQueue         = [];
+                return {events: evts, steps: steps, commands: cmds, fieldSnapshots: fsnap, valueMutations: vmuts, keystrokes: ksts, rrwebEvents: rrweb};
             }""")
             raw_events   = payload.get("events", [])
             raw_steps    = payload.get("steps", [])
@@ -174,6 +175,7 @@ class RecorderController:
             raw_fsnaps   = payload.get("fieldSnapshots", [])
             raw_vmuts    = payload.get("valueMutations", [])
             raw_ksts     = payload.get("keystrokes", [])
+            raw_rrweb    = payload.get("rrwebEvents", [])
 
             if raw_commands:
                 self._command_queue.extend(raw_commands)
@@ -209,9 +211,11 @@ class RecorderController:
                 self._save_value_mutation(mut)
             for kst in raw_ksts:
                 self._save_keystroke(kst)
-            if raw_fsnaps or raw_vmuts or raw_ksts:
-                logger.debug("Flushed %d field snapshots, %d value mutations, %d keystrokes",
-                             len(raw_fsnaps), len(raw_vmuts), len(raw_ksts))
+            for rrev in raw_rrweb:
+                self._save_rrweb_event(rrev)
+            if raw_fsnaps or raw_vmuts or raw_ksts or raw_rrweb:
+                logger.debug("Flushed %d field snapshots, %d value mutations, %d keystrokes, %d rrweb",
+                             len(raw_fsnaps), len(raw_vmuts), len(raw_ksts), len(raw_rrweb))
         except Exception as exc:
             # Hotfix BUG 2: closed-target errors during the recorder's
             # natural shutdown are not real failures — log at debug only.
@@ -701,6 +705,12 @@ class RecorderController:
         path = os.path.join(self._store._session_dir, "keystroke_buffer.jsonl")
         with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(keystroke_data, default=str) + "\n")
+
+    def _save_rrweb_event(self, event_data: dict):
+        """Append rrweb-lite DOM mutation event to rrweb_events.jsonl. Sprint R."""
+        path = os.path.join(self._store._session_dir, "rrweb_events.jsonl")
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(event_data, default=str) + "\n")
 
     def _save_value_mutation(self, mutation_data: dict):
         """Append a value mutation to value_mutations.jsonl."""

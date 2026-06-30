@@ -5,6 +5,149 @@
 (function() {
   "use strict";
 
+  // ---- Sprint P: finder.js (antonmedv/finder MIT) bundled inline ----
+  // Generates minimum unique CSS selector. Replaces naive cssParts DOM walk.
+  var _tfFinder = (function() {
+    var _acceptedAttrNames = new Set(['role', 'name', 'aria-label', 'rel', 'href']);
+    function _finderAttr(name, value) {
+      var nameOk = _acceptedAttrNames.has(name) || (name.startsWith('data-') && _wordLike(name));
+      var valueOk = (_wordLike(value) && value.length < 100) || (value.startsWith('#') && _wordLike(value.slice(1)));
+      return nameOk && valueOk;
+    }
+    function _wordLike(name) {
+      if (/^[a-z\-]{3,}$/i.test(name)) {
+        var words = name.split(/-|[A-Z]/);
+        for (var wi = 0; wi < words.length; wi++) {
+          if (words[wi].length <= 2 || /[^aeiou]{4,}/i.test(words[wi])) return false;
+        }
+        return true;
+      }
+      return false;
+    }
+    function _tie(element, config) {
+      var level = [];
+      var elementId = element.getAttribute('id');
+      if (elementId && config.idName(elementId)) level.push({ name: '#' + CSS.escape(elementId), penalty: 0 });
+      for (var ci = 0; ci < element.classList.length; ci++) {
+        var cn = element.classList[ci];
+        if (config.className(cn)) level.push({ name: '.' + CSS.escape(cn), penalty: 1 });
+      }
+      for (var ai = 0; ai < element.attributes.length; ai++) {
+        var a = element.attributes[ai];
+        if (config.attr(a.name, a.value)) level.push({ name: '[' + CSS.escape(a.name) + '="' + CSS.escape(a.value) + '"]', penalty: 2 });
+      }
+      var tName = element.tagName.toLowerCase();
+      if (config.tagName(tName)) {
+        level.push({ name: tName, penalty: 5 });
+        var idx = _indexOf(element, tName);
+        if (idx !== undefined) level.push({ name: tName + ':nth-of-type(' + idx + ')', penalty: 10 });
+      }
+      var nth = _indexOf(element);
+      if (nth !== undefined) level.push({ name: tName + ':nth-child(' + nth + ')', penalty: 50 });
+      return level;
+    }
+    function _indexOf(input, tName) {
+      var parent = input.parentNode;
+      if (!parent) return undefined;
+      var child = parent.firstChild;
+      if (!child) return undefined;
+      var i = 0;
+      while (child) {
+        if (child.nodeType === Node.ELEMENT_NODE && (tName === undefined || child.tagName.toLowerCase() === tName)) i++;
+        if (child === input) break;
+        child = child.nextSibling;
+      }
+      return i;
+    }
+    function _selectorStr(path) {
+      var node = path[0];
+      var query = node.name;
+      for (var i = 1; i < path.length; i++) {
+        var lv = path[i].level || 0;
+        query = node.level === lv - 1 ? path[i].name + ' > ' + query : path[i].name + ' ' + query;
+        node = path[i];
+      }
+      return query;
+    }
+    function _penaltySum(path) { return path.reduce(function(acc, n) { return acc + n.penalty; }, 0); }
+    function _byPenalty(a, b) { return _penaltySum(a) - _penaltySum(b); }
+    function _unique(path, root) {
+      var css = _selectorStr(path);
+      switch (root.querySelectorAll(css).length) {
+        case 0: throw new Error('No node: ' + css);
+        case 1: return true;
+        default: return false;
+      }
+    }
+    function* _combinations(stack, path) {
+      path = path || [];
+      if (stack.length > 0) {
+        for (var ni = 0; ni < stack[0].length; ni++) yield* _combinations(stack.slice(1), path.concat(stack[0][ni]));
+      } else {
+        yield path;
+      }
+    }
+    function* _search(input, config, root) {
+      var stack = [], paths = [], current = input, i = 0;
+      while (current && current !== root) {
+        var level = _tie(current, config);
+        for (var li = 0; li < level.length; li++) level[li].level = i;
+        stack.push(level);
+        current = current.parentElement;
+        i++;
+        paths.push(..._combinations(stack));
+        if (i >= config.seedMinLength) {
+          paths.sort(_byPenalty);
+          for (var pi = 0; pi < paths.length; pi++) yield paths[pi];
+          paths = [];
+        }
+      }
+      paths.sort(_byPenalty);
+      for (var pi2 = 0; pi2 < paths.length; pi2++) yield paths[pi2];
+    }
+    function* _optimize(path, input, config, root, startTime) {
+      if (path.length > 2 && path.length > config.optimizedMinLength) {
+        for (var i = 1; i < path.length - 1; i++) {
+          if (new Date().getTime() - startTime.getTime() > config.timeoutMs) return;
+          var np = path.slice();
+          np.splice(i, 1);
+          if (_unique(np, root) && root.querySelector(_selectorStr(np)) === input) {
+            yield np;
+            yield* _optimize(np, input, config, root, startTime);
+          }
+        }
+      }
+    }
+    function _findRootDoc(rootNode, defaults, input) {
+      var sr = input.getRootNode && input.getRootNode();
+      if (sr && sr.constructor && sr.constructor.name === 'ShadowRoot') return sr;
+      if (rootNode.nodeType === Node.DOCUMENT_NODE) return rootNode;
+      if (rootNode === defaults.root) return rootNode.ownerDocument;
+      return rootNode;
+    }
+    function finder(input, options) {
+      if (!input || input.nodeType !== Node.ELEMENT_NODE) throw new Error('Not an element');
+      if (input.tagName.toLowerCase() === 'html') return 'html';
+      var defaults = { root: document.body, idName: _wordLike, className: _wordLike, tagName: function() { return true; }, attr: _finderAttr, timeoutMs: 1000, seedMinLength: 3, optimizedMinLength: 2, maxNumberOfPathChecks: Infinity };
+      var config = Object.assign({}, defaults, options || {});
+      var startTime = new Date();
+      var root = _findRootDoc(config.root, defaults, input);
+      var foundPath, count = 0;
+      for (var cand of _search(input, config, root)) {
+        if (new Date().getTime() - startTime.getTime() > config.timeoutMs || count >= config.maxNumberOfPathChecks) {
+          throw new Error('Timeout');
+        }
+        count++;
+        if (_unique(cand, root)) { foundPath = cand; break; }
+      }
+      if (!foundPath) throw new Error('Selector not found');
+      var optimized = [..._optimize(foundPath, input, config, root, startTime)];
+      optimized.sort(_byPenalty);
+      return _selectorStr(optimized.length > 0 ? optimized[0] : foundPath);
+    }
+    return finder;
+  })();
+
   // ---- State Init ----
   window.__tfEventQueue = window.__tfEventQueue || [];
   window.__tfStepQueue = window.__tfStepQueue || [];
@@ -26,6 +169,10 @@
   // sequencia exata de teclas — backspace, dead keys, ctrl+a, etc.
   // Reconstrucao do valor final fica em normalizer._ir_keystroke_buffer.
   window.__tfKeystrokeQueue = window.__tfKeystrokeQueue || [];
+  // Sprint R: rrweb-lite DOM mutation timeline. Lightweight MutationObserver-based
+  // replay recorder. Format compatible with rrweb incremental snapshots (type=3).
+  // Used as tiebreaker for ambiguous steps in normalizer.
+  window.__tfRrwebQueue = window.__tfRrwebQueue || [];
 
   // ---- Cross-page state restoration ----
   try {
@@ -92,10 +239,85 @@
     return null;
   }
 
-  // Sprint J (2026-06-30): material_field_label extracted from mat-form-field
-  // wrapper. SIOPI calculadora reusa aria-label volatil + mat-input-N renumbera
-  // entre sessoes; mat-label dentro do mat-form-field eh estavel e semantico.
-  // Compiler emite locator `mat-form-field:has(mat-label:text-is("X")) input`.
+  // Sprint O: ACCNAME 1.2 subset — generalizes accessible name for any framework.
+  // Replaces Material-only _extractMaterialFieldLabel.
+  // Priority: aria-labelledby > aria-label > label[for] / wrapping label >
+  //           framework wrapper label (mat-label, .v-label, .p-float-label, MUI, etc) > title.
+  function _computeAccessibleName(el) {
+    if (!el) return null;
+    // 1. aria-labelledby (highest priority per ACCNAME)
+    var lby = el.getAttribute && el.getAttribute('aria-labelledby');
+    if (lby) {
+      var ids = lby.trim().split(/\s+/);
+      var parts = [];
+      for (var li = 0; li < ids.length; li++) {
+        var ref = document.getElementById(ids[li]);
+        if (ref) { var t = (ref.textContent || '').trim(); if (t) parts.push(t); }
+      }
+      if (parts.length) return parts.join(' ').substring(0, 200);
+    }
+    // 2. aria-label
+    var al = el.getAttribute && el.getAttribute('aria-label');
+    if (al && al.trim()) return al.trim().substring(0, 200);
+    // 3. label[for=id]
+    if (el.id) {
+      var lf = document.querySelector('label[for="' + CSS.escape(el.id) + '"]');
+      if (lf) { var lt = (lf.textContent || '').trim(); if (lt) return lt.substring(0, 200); }
+    }
+    // 4. Wrapping <label>
+    var cur = el.parentElement;
+    var hops = 0;
+    while (cur && cur !== document.body && hops < 6) {
+      if (cur.tagName === 'LABEL') {
+        var wt = (cur.textContent || '').replace((el.value || ''), '').trim();
+        if (wt) return wt.substring(0, 200);
+      }
+      cur = cur.parentElement;
+      hops++;
+    }
+    // 5. Framework wrapper label (Angular Material, MUI, Vuetify, PrimeVue, etc.)
+    var WRAPPER_SELECTORS = [
+      'mat-form-field', '.mat-form-field', '.mat-mdc-form-field',  // Angular Material
+      '.MuiFormControl-root', '.MuiTextField-root',                 // MUI
+      '.v-input', '.v-field',                                       // Vuetify
+      '.p-float-label', '.p-field',                                 // PrimeVue
+      '.field', '.form-group', '.form-field',                       // generic
+    ];
+    var LABEL_SELECTORS = [
+      'mat-label', '.mat-form-field-label', '.mat-mdc-form-field-label',
+      '.MuiInputLabel-root', '.v-label', 'legend', 'label',
+    ];
+    cur = el.parentElement;
+    hops = 0;
+    while (cur && cur !== document.body && hops < 10) {
+      var curTag = (cur.tagName || '').toLowerCase();
+      var isWrapper = WRAPPER_SELECTORS.some(function(sel) {
+        try { return cur.matches(sel); } catch(_e) { return false; }
+      });
+      if (isWrapper || curTag === 'fieldset') {
+        for (var si = 0; si < LABEL_SELECTORS.length; si++) {
+          try {
+            var labelEl = cur.querySelector(LABEL_SELECTORS[si]);
+            if (labelEl) {
+              var txt = (labelEl.textContent || '').trim();
+              if (txt) return txt.substring(0, 200);
+            }
+          } catch(_e) {}
+        }
+        break;
+      }
+      cur = cur.parentElement;
+      hops++;
+    }
+    // 6. title fallback
+    var ti = el.getAttribute && el.getAttribute('title');
+    if (ti && ti.trim()) return ti.trim().substring(0, 200);
+    return null;
+  }
+
+  // Sprint J callers expect material_field_label. Fast-path for Angular Material
+  // (mat-form-field ancestor walk with hops limit); falls back to _computeAccessibleName
+  // (Sprint O ACCNAME superset) for MUI/Vuetify/PrimeFaces/generic.
   function _extractMaterialFieldLabel(el) {
     if (!el) return null;
     var cur = el;
@@ -113,7 +335,8 @@
       cur = cur.parentElement;
       hops += 1;
     }
-    return null;
+    // Sprint O: fall through to ACCNAME for non-Material frameworks
+    return _computeAccessibleName(el);
   }
 
   function _extractTarget(el) {
@@ -133,18 +356,24 @@
     var labelEl = el.id ? document.querySelector('label[for="' + el.id + '"]') : null;
     var elText = (el.textContent||'').trim().substring(0,200) || null;
     var materialLabel = _extractMaterialFieldLabel(el);
-    // Simple CSS path: tag + id (no full DOM walk)
-    var cssParts = [];
-    var cur = el;
-    while (cur && cur !== document.body && cur !== document.documentElement) {
-      var s = (cur.tagName||'').toLowerCase();
-      if (cur.id) { s += '#' + cur.id; }
-      else if (typeof cur.className === 'string') {
-        var firstClass = cur.className.trim().split(/\s+/)[0];
-        if (firstClass && !firstClass.startsWith('tf-')) s += '.' + firstClass;
+    // Sprint P: finder generates minimum unique CSS selector; fallback to naive walk
+    var cssPath = '';
+    try {
+      cssPath = _tfFinder(el, { seedMinLength: 4 });
+    } catch (_fe) {
+      var cssParts = [];
+      var cur = el;
+      while (cur && cur !== document.body && cur !== document.documentElement) {
+        var s = (cur.tagName||'').toLowerCase();
+        if (cur.id) { s += '#' + cur.id; }
+        else if (typeof cur.className === 'string') {
+          var firstClass = cur.className.trim().split(/\s+/)[0];
+          if (firstClass && !firstClass.startsWith('tf-')) s += '.' + firstClass;
+        }
+        cssParts.unshift(s);
+        cur = cur.parentElement;
       }
-      cssParts.unshift(s);
-      cur = cur.parentElement;
+      cssPath = cssParts.join(' > ');
     }
     var shadow = _findShadowHost(el);
     return {
@@ -163,7 +392,7 @@
       value: (el.value||'').substring(0,100) || null,
       href: el.getAttribute('href') || null,
       onclick: el.getAttribute('onclick') || null,
-      css_path: cssParts.join(' > ') || '',
+      css_path: cssPath || '',
       // Shadow DOM context (B14/B17). Mabl-style "shadow_parent" so the
       // runner can do page.locator(host).locator(child) when the element
       // lives inside an OPEN shadow root. Closed roots can't be walked
@@ -195,13 +424,16 @@
   function _pushEvent(type, el) {
     var target = _extractTarget(el || document.activeElement);
     ++window.__tfEventCounter;
+    var maskedVal = (el && el.value) ? el.value.substring(0, 200) : null;
+    var rawVal = (type === 'fill' || type === 'fill_intermediate') ? _extractRawMaskValue(el) : null;
     window.__tfEventQueue.push({
       type: type,
       timestamp: new Date().toISOString(),
       url: window.location.href,
       page_title: document.title,
       target: target,
-      value: (el && el.value) ? el.value.substring(0,200) : null
+      value: maskedVal,
+      raw_value: rawVal  // Sprint Q: unmasked value when mask lib detected; null otherwise
     });
   }
 
@@ -224,6 +456,7 @@
         tag: tag,
         type: el.getAttribute('type') || null,
         value: (el.value || '').substring(0, 200),
+        raw_value: _extractRawMaskValue(el),  // Sprint Q: unmasked value when mask detected
         checked: (el.type === 'checkbox' || el.type === 'radio') ? el.checked : null,
         visibility: (rect.width > 0 && rect.height > 0) ? 'visible' : 'hidden',
         enabled: !el.disabled
@@ -398,6 +631,109 @@
       }
     } catch(_e) {}
   }, true);
+
+  // ---- Sprint Q: mask raw value extraction ----
+  // Detects common mask libs and extracts raw (unmasked) value.
+  // Covers ng-currency-mask (Caixa SIOPI: el._mask), Inputmask (RobinHerbots),
+  // Cleave.js (el._cleave), IMask (el.imask), data-raw-value attribute.
+  // Returns null when no mask detected (caller uses el.value as-is).
+  function _extractRawMaskValue(el) {
+    if (!el) return null;
+    try {
+      // ng-currency-mask (Caixa SIOPI) — el._mask with getRawValue()
+      if (el._mask && typeof el._mask.getRawValue === 'function') {
+        var rv = el._mask.getRawValue();
+        if (rv !== null && rv !== undefined) return String(rv);
+      }
+      // ng-currency-mask fallback — _maskedValue vs value diverge; look for _rawValue
+      if (el._rawValue !== undefined && el._rawValue !== null) return String(el._rawValue);
+      // Inputmask (RobinHerbots): el.inputmask.unmaskedvalue()
+      if (el.inputmask && typeof el.inputmask.unmaskedvalue === 'function') {
+        return String(el.inputmask.unmaskedvalue());
+      }
+      // Cleave.js: el._cleave.getRawValue()
+      if (el._cleave && typeof el._cleave.getRawValue === 'function') {
+        return String(el._cleave.getRawValue());
+      }
+      // IMask: el.imask.unmaskedValue
+      if (el.imask && el.imask.unmaskedValue !== undefined) {
+        return String(el.imask.unmaskedValue);
+      }
+      // data-raw-value attribute (some custom masks)
+      var dRaw = el.getAttribute && (el.getAttribute('data-raw-value') || el.getAttribute('data-unmasked'));
+      if (dRaw !== null && dRaw !== undefined && dRaw !== '') return dRaw;
+    } catch (_e) {}
+    return null;
+  }
+
+  // ---- Sprint R: rrweb-lite — lightweight DOM mutation timeline ----
+  // MutationObserver watching attributes + childList on form-bearing subtrees.
+  // Emits rrweb-compatible records (type=3 IncrementalSnapshot, source=0 Mutation).
+  // Python side collects __tfRrwebQueue and writes rrweb_events.jsonl.
+  (function _sprintR_rrwebLite() {
+    var _rrwebSeq = 0;
+    function _rrPush(data) {
+      try {
+        window.__tfRrwebQueue.push({ timestamp: Date.now(), seq: ++_rrwebSeq, data: data });
+        if (window.__tfRrwebQueue.length > 2000) window.__tfRrwebQueue.splice(0, 500);
+      } catch(_e) {}
+    }
+    function _elFingerprint(el) {
+      if (!el || !el.tagName) return null;
+      var tag = el.tagName.toLowerCase();
+      return tag + '#' + (el.id || '') + '[name=' + ((el.getAttribute && el.getAttribute('name')) || '') + ']';
+    }
+    // Watch attribute + value changes on all input/textarea/select
+    function _attachValueWatcher(el) {
+      if (!el || el.__tfRrwatched) return;
+      el.__tfRrwatched = true;
+      var lastVal = el.value !== undefined ? el.value : el.textContent;
+      function _check() {
+        var cur = el.value !== undefined ? el.value : el.textContent;
+        if (cur !== lastVal) {
+          _rrPush({ type: 3, source: 5 /* Input */, id: _elFingerprint(el), text: String(cur).substring(0, 200), isChecked: el.checked });
+          lastVal = cur;
+        }
+      }
+      el.addEventListener('input', _check, true);
+      el.addEventListener('change', _check, true);
+    }
+    function _scanInputs() {
+      try {
+        document.querySelectorAll('input, textarea, select, [contenteditable]').forEach(_attachValueWatcher);
+      } catch(_e) {}
+    }
+    // MutationObserver for DOM changes (new elements, attribute changes)
+    try {
+      var _rr_mo = new MutationObserver(function(mutations) {
+        for (var mi = 0; mi < mutations.length; mi++) {
+          var m = mutations[mi];
+          if (m.type === 'childList') {
+            m.addedNodes.forEach(function(n) {
+              if (n.nodeType !== Node.ELEMENT_NODE) return;
+              _rrPush({ type: 3, source: 0 /* Mutation */, adds: [{ tag: (n.tagName||'').toLowerCase(), id: _elFingerprint(n), attrs: { id: n.id || null, class: (n.className || null) } }] });
+              n.querySelectorAll && n.querySelectorAll('input, textarea, select').forEach(_attachValueWatcher);
+              _attachValueWatcher(n);
+            });
+            m.removedNodes.forEach(function(n) {
+              if (n.nodeType !== Node.ELEMENT_NODE) return;
+              _rrPush({ type: 3, source: 0, removes: [{ id: _elFingerprint(n) }] });
+            });
+          } else if (m.type === 'attributes') {
+            var target = m.target;
+            var attrVal = target.getAttribute && target.getAttribute(m.attributeName);
+            _rrPush({ type: 3, source: 0, attributeName: m.attributeName, attributeValue: attrVal, id: _elFingerprint(target) });
+          }
+        }
+      });
+      _rr_mo.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-hidden', 'aria-expanded', 'disabled', 'class', 'style', 'value'] });
+    } catch(_e) {}
+    // Initial scan + periodic rescan for dynamically added inputs
+    _scanInputs();
+    setInterval(_scanInputs, 2000);
+    // Full DOM snapshot marker at start
+    _rrPush({ type: 2 /* FullSnapshot */, url: window.location.href });
+  })();
 
   // ---- Value mutation setter hooks ----
   // Bug fix (Sprint A, 2026-06-29): Material currencymask + datepicker use

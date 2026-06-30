@@ -430,6 +430,9 @@ class RecordingNormalizer:
         click eh REVELADOR (precisa virar fill subordinado, nao prefill noise)
         — sem ele o input nao aparece no replay e o fill subsequente falha.
 
+        Sprint S: olha 3 snapshots mais proximos; se ALGUM mostrar hidden
+        preserva o click como revelador (mais resiliente a timing de 2s).
+
         Retorna True conservador (skip permitido) quando snapshot ausente ou
         ambiguo — mantem comportamento legado se nao houver evidencia.
         """
@@ -448,9 +451,8 @@ class RecordingNormalizer:
             click_ts = _dt.fromisoformat(click_ts_str.replace("Z", "+00:00"))
         except (ValueError, AttributeError):
             return True
-        # Acha snapshot mais proximo do timestamp do click
-        nearest = None
-        nearest_gap = None
+        # Coleta todos snapshots do target dentro de 5s, ordena por proximidade
+        candidates: list[tuple[float, dict]] = []
         with open(path, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
@@ -460,7 +462,6 @@ class RecordingNormalizer:
                     entry = json.loads(line)
                 except json.JSONDecodeError:
                     continue
-                # Cada linha pode ser snapshot batch ou item individual
                 batch = entry.get("snapshots")
                 items = batch if isinstance(batch, list) else [entry]
                 for snap in items:
@@ -475,12 +476,17 @@ class RecordingNormalizer:
                     if target_id not in fp:
                         continue
                     gap = abs((snap_ts - click_ts).total_seconds())
-                    if nearest_gap is None or gap < nearest_gap:
-                        nearest = snap
-                        nearest_gap = gap
-        if nearest is None or nearest_gap is None or nearest_gap > 5.0:
+                    if gap <= 5.0:
+                        candidates.append((gap, snap))
+        if not candidates:
             return True
-        return (nearest.get("visibility") or "").lower() == "visible"
+        # Sprint S: top 3 mais proximos; se QUALQUER UM for hidden → click revelador
+        candidates.sort(key=lambda x: x[0])
+        top3 = candidates[:3]
+        for _gap, snap in top3:
+            if (snap.get("visibility") or "").lower() == "hidden":
+                return False
+        return True
 
     # Sprint F (2026-06-30): roles + tokens em selectors que indicam click
     # de troca de tab/secao/expansao. Nunca tratar como prefill noise mesmo
@@ -1484,10 +1490,16 @@ class RecordingNormalizer:
             # Carrega valores de campos de formulario capturados no submit
             if raw.get("form_values"):
                 context["form_values"] = raw["form_values"]
+        # Sprint Q: prefer raw_value (unmasked) over value when mask lib detected
+        fill_value = raw.get("value")
+        raw_mask_val = raw.get("raw_value")
+        if action == "fill" and raw_mask_val is not None and raw_mask_val != fill_value:
+            fill_value = raw_mask_val
+            context["masked_display_value"] = raw.get("value")
         return SemanticAction(
             action=action,
             target=target,
-            value=raw.get("value"),
+            value=fill_value,
             url=raw.get("url"),
             page_title=raw.get("page_title"),
             context=context,
