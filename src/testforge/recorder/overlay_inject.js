@@ -7,6 +7,9 @@
 
   // ---- Sprint P: finder.js (antonmedv/finder MIT) bundled inline ----
   // Generates minimum unique CSS selector. Replaces naive cssParts DOM walk.
+  // Sprint P fix: exclude Angular/framework RUNTIME STATE classes — they are
+  // volatile (change between record and replay) and produce unstable selectors.
+  var _VOLATILE_CLASS_RE = /^(ng-|mat-calendar-body-active|mat-calendar-body-today|mat-calendar-body-selected|mat-focus-indicator|mat-ripple|cdk-|focused|active|selected|hover|disabled|invalid|valid|pristine|dirty|touched|untouched|open|closed|expanded|collapsed)/;
   var _tfFinder = (function() {
     var _acceptedAttrNames = new Set(['role', 'name', 'aria-label', 'rel', 'href']);
     function _finderAttr(name, value) {
@@ -15,6 +18,8 @@
       return nameOk && valueOk;
     }
     function _wordLike(name) {
+      // Reject volatile runtime-state class names
+      if (_VOLATILE_CLASS_RE.test(name)) return false;
       if (/^[a-z\-]{3,}$/i.test(name)) {
         var words = name.split(/-|[A-Z]/);
         for (var wi = 0; wi < words.length; wi++) {
