@@ -1080,5 +1080,23 @@
   // ---- Public aliases ----
   window._tf_snapshotFields = _snapshotFields;
   window._tf_captureFinalState = _captureFinalState;
-  window.__tfFieldSnapshotInterval = setInterval(function() { _tf_snapshotFields(); }, 2000);
+  // Bug fix (2026-06-30): periodic field snapshot bug — _snapshotFields
+  // retorna array mas nunca era enviado ao __tfFieldSnapshotQueue. Resultado:
+  // field_snapshots.jsonl nunca era escrito mesmo com infra completa nos dois
+  // lados (recorder_controller._save_field_snapshot existe; flush_events
+  // ja itera fieldSnapshots). Sprint A2 (input_visibility_check) dependia
+  // desse arquivo, entao nunca disparava em recordings reais — A2 era
+  // efetivamente no-op nas rodadas test-pos-hotfix14a-16d. Wrap acumula
+  // o batch no queue para o flush periodico pegar.
+  window.__tfFieldSnapshotInterval = setInterval(function() {
+    try {
+      var snaps = _tf_snapshotFields();
+      if (snaps && snaps.length) {
+        window.__tfFieldSnapshotQueue.push({
+          timestamp: new Date().toISOString(),
+          snapshots: snaps,
+        });
+      }
+    } catch(_e) {}
+  }, 2000);
 })();

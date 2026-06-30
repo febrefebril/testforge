@@ -938,12 +938,31 @@ class IncrementalRunner:
         # Sprint 3 do decommission plan (2026-06-29): assert_hit_rate. Soma
         # asserts no script + asserts atingidos. Alimenta MetricsRepository
         # antes do _finalize_report consolidar.
-        asserts = [r for r in self.step_results if r.action == "assert"]
-        t["asserts_total"] = len(asserts)
-        t["asserts_hit"] = sum(1 for r in asserts if r.status in self._ASSERT_HIT_STATUSES)
+        #
+        # Fix (2026-06-30): denominador eh o total de asserts no SCRIPT
+        # compilado (self.steps), nao so os asserts que chegaram a executar.
+        # Antes: stop-on-failure em step 5 com 3 asserts no script => reportava
+        # "0 de 0" se nenhum assert tinha rodado, mascarando a regressao real.
+        # Agora: "0 de 3" mesmo se a execucao parou antes de qualquer assert.
+        assert_results = [r for r in self.step_results if r.action == "assert"]
+        script_steps = getattr(self, "steps", None) or []
+        asserts_total_in_script = sum(
+            1 for s in script_steps if getattr(s, "action", "") == "assert"
+        )
+        # Fallback: se nao temos self.steps populado (run abortou cedo),
+        # usa os asserts executados como denominador.
+        t["asserts_total"] = asserts_total_in_script or len(assert_results)
+        t["asserts_hit"] = sum(
+            1 for r in assert_results if r.status in self._ASSERT_HIT_STATUSES
+        )
         if self.metrics:
-            for r in asserts:
+            # Asserts executados: registra individualmente. Asserts no script
+            # que nunca rodaram: registra como miss para refletir denominador.
+            for r in assert_results:
                 self.metrics.record_assert(hit=r.status in self._ASSERT_HIT_STATUSES)
+            unreached = max(t["asserts_total"] - len(assert_results), 0)
+            for _ in range(unreached):
+                self.metrics.record_assert(hit=False)
         return t
 
     def _finalize_report(self, totals):
