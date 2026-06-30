@@ -31,6 +31,12 @@ from .scorer import attribute_stability
 STRATEGY_WEIGHTS = {
     "playwright_native": 1.00,
     "playwright_native_scoped": 0.98,
+    # Sprint M (2026-06-30): material_form_field eh ancora estrutural mais
+    # estavel que aria-label (volatiliza no blur) e mat-input-N id
+    # (renumera). Score 0.99 acima de test_id e aria_label. Compiler ja
+    # emitia este candidate em Sprint J; resolver agora reconhece o nome
+    # de estrategia para metrics + healing rollups.
+    "material_form_field": 0.99,
     "test_id_css": 0.85,
     "aria_label_css": 0.85,
     "label_css": 0.80,
@@ -74,6 +80,24 @@ class LocatorExtractor:
         )
 
         candidates: list[LocatorCandidate] = []
+
+        # 0) Sprint M (2026-06-30): material_form_field ancora estrutural.
+        # mat-form-field eh wrapper estavel — mat-label dentro persiste entre
+        # sessoes mesmo quando aria-label do input volatiliza. Material Angular
+        # cobre SIOPI 100%; generaliza para qualquer site Material via .mat-form-field.
+        material_label = target_data.get("material_field_label")
+        if material_label:
+            tag = (target_data.get("tag") or "input").lower()
+            esc = material_label.replace("\\", "\\\\").replace('"', '\\"')
+            mat_sel = f'mat-form-field:has(mat-label:has-text("{esc}")) {tag}'
+            candidates.append(self._mk(
+                strategy="material_form_field",
+                selector=mat_sel,
+                base_stability=0.99,
+                target_data=target_data,
+                intent=intent,
+                reason=f"mat-form-field anchor mat-label='{material_label}'",
+            ))
 
         # 1) Playwright-native (highest tier)
         native = emit_playwright_call(target_data)
