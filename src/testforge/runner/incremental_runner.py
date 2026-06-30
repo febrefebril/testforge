@@ -112,7 +112,13 @@ class IncrementalRunner:
                 except Exception:
                     pass
             if "source:" in line and not self.recording_id:
-                tok = line.split("source:")[-1].strip().rstrip(chr(34) + chr(39) + ".")
+                tok = line.split("source:")[-1].strip()
+                # Multi-scenario compiled docstring carries " — cenário: ..." suffix.
+                # Strip it before stripping trailing quote/period characters so the
+                # recording_id remains a valid directory name.
+                if " — cenário:" in tok:
+                    tok = tok.split(" — cenário:")[0].strip()
+                tok = tok.rstrip(chr(34) + chr(39) + ".")
                 self.recording_id = tok
 
     def _load_semantic_steps(self):
