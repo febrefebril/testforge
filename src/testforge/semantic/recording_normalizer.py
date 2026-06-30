@@ -2126,7 +2126,133 @@ class RecordingNormalizer:
         entries.extend(self._ir_final_state(recording_dir, steps))
         entries.extend(self._ir_polling(recording_dir, steps))
         entries.extend(self._ir_inline_field_values(recording_dir, steps))
+        entries.extend(self._ir_keystroke_buffer(recording_dir, steps))
         return self._ir_dedupe_entries(entries)
+
+    def _ir_keystroke_buffer(self, recording_dir: str, steps: list) -> list[dict]:
+        """Sprint L (2026-06-30): le keystroke_buffer.jsonl e reconstroi o
+        valor que o usuario REALMENTE digitou, bypassando setter hook e mask.
+
+        Estrategia:
+        1. Agrupa keystrokes por (fingerprint, sessao de digitacao).
+           Sessao = sequencia de keystrokes com gap < 1500ms.
+        2. Aplica edits: Backspace, Delete, ctrl+a, etc para reconstruir
+           string final.
+        3. Filtra modifier keys e named keys (Tab, Enter, Shift, etc).
+        4. Resultado: ultima sessao por fingerprint vira candidato
+           field_value_map com source='keystroke'.
+        """
+        path = os.path.join(recording_dir, "keystroke_buffer.jsonl")
+        if not os.path.exists(path):
+            return []
+        entries: list[dict] = []
+        keystrokes: list[dict] = []
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    keystrokes.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+        if not keystrokes:
+            return []
+
+        from datetime import datetime as _dt
+        by_fp: dict[str, list[dict]] = {}
+        for k in keystrokes:
+            fp = (k.get("fingerprint") or "").strip()
+            if not fp:
+                continue
+            by_fp.setdefault(fp, []).append(k)
+
+        for fp, ks_list in by_fp.items():
+            ks_list.sort(key=lambda d: d.get("timestamp", ""))
+            # Particiona em sessoes (gap >= 1500ms)
+            sessions: list[list[dict]] = [[]]
+            last_ts = None
+            for k in ks_list:
+                ts_str = k.get("timestamp", "")
+                try:
+                    ts = _dt.fromisoformat(ts_str.replace("Z", "+00:00"))
+                except (ValueError, AttributeError):
+                    sessions[-1].append(k)
+                    continue
+                if last_ts is not None and (ts - last_ts).total_seconds() >= 1.5:
+                    sessions.append([])
+                sessions[-1].append(k)
+                last_ts = ts
+            if not sessions[-1]:
+                sessions.pop()
+            if not sessions:
+                continue
+            # Pega ultima sessao — ground-truth do que ficou no campo
+            last_session = sessions[-1]
+            value = self._ir_reconstruct_from_keystrokes(last_session)
+            if not value:
+                continue
+
+            last_ks = last_session[-1]
+            aria = (last_ks.get("accessible_name") or "").strip()
+            placeholder = (last_ks.get("placeholder") or "").strip()
+            canonical = self._canonical_field_key(aria or placeholder or fp)
+
+            step_idx = self._ir_find_nearest_step_index(
+                steps, last_ks.get("timestamp", "")
+            )
+
+            entries.append({
+                "field_key": canonical,
+                "value": value,
+                "intention": (
+                    f"fill {aria or placeholder or fp} with '{value}' "
+                    f"(reconstructed from keystroke_buffer)"
+                ),
+                "identifiers": {
+                    "aria_label": aria,
+                    "placeholder": placeholder,
+                    "fingerprint": fp,
+                },
+                "source": "keystroke",
+                "step_index": step_idx,
+                "fingerprint": fp,
+            })
+        return entries
+
+    @staticmethod
+    def _ir_reconstruct_from_keystrokes(session: list[dict]) -> str:
+        """Aplica eventos keydown sequenciais para reconstruir string final.
+        Trata Backspace, Delete, e named keys. Ignora modifiers puros."""
+        buf: list[str] = []
+        cursor = 0
+        for k in session:
+            ctrl = bool(k.get("ctrl") or k.get("meta"))
+            key = k.get("key") or ""
+            kind = k.get("kind", "")
+            if ctrl and key.lower() in ("a", "x"):
+                # Select-all + delete = clear
+                buf.clear()
+                cursor = 0
+                continue
+            if ctrl and key.lower() == "v":
+                # Paste — sem evento input nao da pra recuperar conteudo.
+                # Marca placeholder pra normalizer indicar fallback.
+                continue
+            if kind == "named":
+                if key == "Backspace":
+                    if cursor > 0 and buf:
+                        cursor -= 1
+                        del buf[cursor]
+                elif key == "Delete":
+                    if cursor < len(buf):
+                        del buf[cursor]
+                # Tab/Enter/Arrow/Escape/Shift/etc nao afetam buffer
+                continue
+            if kind == "char" and key:
+                buf.insert(cursor, key)
+                cursor += 1
+        return "".join(buf).strip()
 
     def _ir_inline_field_values(self, recording_dir: str, steps: list) -> list[dict]:
         """H21: le eventos inline_field_value de raw_events.jsonl

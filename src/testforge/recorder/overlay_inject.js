@@ -20,6 +20,12 @@
   window.__tfLastSnapshotKey = {};
   window.__tfFillDebounceTimers = window.__tfFillDebounceTimers || new WeakMap();
   window.__tfFillDebounceMs = 400;
+  // Sprint L (2026-06-30): keystroke buffer por target. Captura keydown
+  // raw como ground-truth do digitado, bypassa setter hook + mask. Diferente
+  // do value_mutations (que so vê o resultado pos-mask), aqui temos a
+  // sequencia exata de teclas — backspace, dead keys, ctrl+a, etc.
+  // Reconstrucao do valor final fica em normalizer._ir_keystroke_buffer.
+  window.__tfKeystrokeQueue = window.__tfKeystrokeQueue || [];
 
   // ---- Cross-page state restoration ----
   try {
@@ -345,6 +351,53 @@
       }
     }, true);
   })();
+
+  // ---- Sprint L: keystroke buffer (ground-truth do digitado) ----
+  // Captura toda keydown em campos editaveis com fingerprint do alvo +
+  // metadata (key, code, modifiers, inputType). Bypassa setter hook +
+  // mask + framework controlled input — keystrokes sao sempre disparados
+  // pelo browser independente do que React/Angular/mask fazem depois.
+  function _keystrokeFingerprint(el) {
+    if (!el || !el.tagName) return "unknown";
+    var tag = el.tagName.toLowerCase();
+    return tag + "#" + (el.id || "") + "[name=" + (el.name || "") + "]";
+  }
+  function _isTextEditable(el) {
+    if (!el || !el.tagName) return false;
+    var tag = el.tagName.toLowerCase();
+    if (tag === "input") {
+      var t = (el.type || "text").toLowerCase();
+      return t !== "checkbox" && t !== "radio" && t !== "hidden"
+        && t !== "submit" && t !== "button" && t !== "file";
+    }
+    return tag === "textarea" || el.isContentEditable === true;
+  }
+  document.addEventListener("keydown", function(e) {
+    if (window.__tfAssertWaiting) return;
+    var el = e.target;
+    if (!_isTextEditable(el)) return;
+    try {
+      window.__tfKeystrokeQueue.push({
+        timestamp: new Date().toISOString(),
+        fingerprint: _keystrokeFingerprint(el),
+        key: e.key || "",
+        code: e.code || "",
+        ctrl: !!e.ctrlKey, meta: !!e.metaKey, alt: !!e.altKey, shift: !!e.shiftKey,
+        // length-1 visible char or named key (Backspace, Enter, Tab, Delete, ...)
+        kind: (e.key && e.key.length === 1) ? "char" : "named",
+        // accessible_name + placeholder + material_field_label permite ao
+        // normalizer correlacionar keystrokes ao semantic intent sem precisar
+        // re-walking DOM no normalizer time
+        accessible_name: (el.getAttribute && (el.getAttribute("aria-label") || "")) || "",
+        placeholder: (el.getAttribute && (el.getAttribute("placeholder") || "")) || "",
+        url: window.location.href,
+      });
+      // Cap buffer para evitar OOM em sessoes longas
+      if (window.__tfKeystrokeQueue.length > 5000) {
+        window.__tfKeystrokeQueue.splice(0, window.__tfKeystrokeQueue.length - 5000);
+      }
+    } catch(_e) {}
+  }, true);
 
   // ---- Value mutation setter hooks ----
   // Bug fix (Sprint A, 2026-06-29): Material currencymask + datepicker use
@@ -1146,4 +1199,67 @@
       }
     } catch(_e) {}
   }, 2000);
+
+  // ---- Sprint event delegation (2026-06-30) ----
+  // Iframe (same-origin) + Shadow DOM (open) event delegation.
+  // Listeners no window do top frame nao penetram nem iframe content
+  // (different document) nem shadow root closed boundaries. Sites com
+  // dialogs Material em mat-dialog overlay tem shadow root open + iframes
+  // de mapas + recaptcha frames cross-origin (estes ultimos ignoraveis
+  // por browser policy). Aqui scaneia documentos acessiveis e re-registra
+  // os listeners criticos. Re-scaneia periodicamente para pegar shadow
+  // roots criados dinamicamente.
+  window.__tfDelegatedRoots = window.__tfDelegatedRoots || new WeakSet();
+  function _delegateToRoot(root) {
+    if (!root || window.__tfDelegatedRoots.has(root)) return;
+    try { window.__tfDelegatedRoots.add(root); } catch(_e) {}
+    try {
+      root.addEventListener("click", function(e) {
+        try {
+          var el = e.target;
+          if (!el) return;
+          if (el.id === "tf-panel" || (el.closest && el.closest("#tf-panel"))) return;
+          if (window.__tfAssertWaiting) return;
+          _pushEvent("click", el);
+        } catch(_e2) {}
+      }, true);
+      root.addEventListener("input", function(e) {
+        try {
+          var el = e.target;
+          if (!el) return;
+          if (window.__tfAssertWaiting) return;
+          _scheduleFillFromMutation(el);
+        } catch(_e2) {}
+      }, true);
+    } catch(_e) {}
+  }
+  function _scanIframesAndShadows() {
+    // Same-origin iframes
+    try {
+      var iframes = document.querySelectorAll("iframe");
+      iframes.forEach(function(iframe) {
+        try {
+          var iDoc = iframe.contentDocument
+                     || (iframe.contentWindow && iframe.contentWindow.document);
+          if (iDoc) _delegateToRoot(iDoc);
+        } catch(_cross) { /* cross-origin: browser bloqueia */ }
+      });
+    } catch(_e) {}
+    // Open shadow roots — scan all elements and check shadowRoot
+    try {
+      var all = document.querySelectorAll("*");
+      var count = 0;
+      for (var i = 0; i < all.length; i++) {
+        if (count > 500) break;
+        var sr = all[i].shadowRoot;
+        if (sr && sr.mode === "open") {
+          _delegateToRoot(sr);
+          count += 1;
+        }
+      }
+    } catch(_e) {}
+  }
+  // Initial scan + periodic rescan
+  _scanIframesAndShadows();
+  window.__tfDelegationInterval = setInterval(_scanIframesAndShadows, 3000);
 })();

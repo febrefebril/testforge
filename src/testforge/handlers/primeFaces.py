@@ -56,9 +56,52 @@ class PrimeFacesHandler(ComponentHandler):
         pass
 
     def execute(self, page, step) -> str:
+        """MVP (2026-06-30): cobre SelectOneMenu + Dropdown + Calendar.
+
+        PrimeFaces patterns:
+        - SelectOneMenu / p-dropdown: trigger eh `.ui-selectonemenu` /
+          `.p-dropdown`, listbox abre como sibling `.ui-selectonemenu-panel`.
+        - Calendar / p-calendar: trigger eh icon clickable; panel `.ui-datepicker`
+          aparece como floating. Para data direta, fill no input nativo
+          `<input id="..._input">` funciona.
+        - AutoComplete / p-autocomplete: typing + click suggestion.
+        """
+        target = getattr(step, "target", None)
+        value = (getattr(step, "value", "") or "").strip()
+        candidates = []
+        if target and getattr(target, "candidates", None):
+            candidates = [c.selector for c in target.candidates if c.selector]
+        primary = candidates[0] if candidates else ""
+        primary_lower = (primary or "").lower()
+        # SelectOneMenu / Dropdown
+        if any(cls in primary_lower for cls in ("ui-selectonemenu", "p-dropdown")):
+            page.locator(primary).first.click(timeout=5000)
+            # Panel selectonemenu / dropdown-panel
+            panel_sel = '.ui-selectonemenu-panel:visible, .p-dropdown-panel:visible'
+            page.wait_for_selector(panel_sel, state="visible", timeout=4000)
+            if value:
+                page.get_by_text(value, exact=False).first.click(timeout=4000)
+                return f"pf_dropdown:{value}"
+            return primary
+        # Calendar — preenche input nativo associado
+        if any(cls in primary_lower for cls in ("ui-datepicker", "p-calendar")):
+            input_sel = (primary.split(' ')[0] + "_input"
+                         if "_input" not in primary else primary)
+            try:
+                page.locator(input_sel).first.fill(value, timeout=5000)
+                return f"pf_calendar:{value}"
+            except Exception:
+                page.locator(primary).first.click(timeout=5000)
+                return primary
+        # AutoComplete — typing
+        if "p-autocomplete" in primary_lower or "ui-autocomplete" in primary_lower:
+            page.locator(primary).first.fill(value, timeout=5000)
+            page.wait_for_timeout(400)
+            page.get_by_text(value, exact=False).first.click(timeout=3000)
+            return f"pf_autocomplete:{value}"
         raise NotImplementedError(
-            "PrimeFacesHandler.execute() not yet implemented. "
-            "Falling through to default runner."
+            f"PrimeFacesHandler.execute(): padrao PF nao mapeado em '{primary[:80]}'. "
+            "Cai pro default runner."
         )
 
     def heal(self, evidence, error: str) -> Optional[object]:

@@ -165,13 +165,15 @@ class RecorderController:
                 const cmds  = window.__tfCommandQueue       || []; window.__tfCommandQueue       = [];
                 const fsnap = window.__tfFieldSnapshotQueue || []; window.__tfFieldSnapshotQueue = [];
                 const vmuts = window.__tfValueMutationQueue || []; window.__tfValueMutationQueue = [];
-                return {events: evts, steps: steps, commands: cmds, fieldSnapshots: fsnap, valueMutations: vmuts};
+                const ksts  = window.__tfKeystrokeQueue     || []; window.__tfKeystrokeQueue     = [];
+                return {events: evts, steps: steps, commands: cmds, fieldSnapshots: fsnap, valueMutations: vmuts, keystrokes: ksts};
             }""")
             raw_events   = payload.get("events", [])
             raw_steps    = payload.get("steps", [])
             raw_commands = payload.get("commands", [])
             raw_fsnaps   = payload.get("fieldSnapshots", [])
             raw_vmuts    = payload.get("valueMutations", [])
+            raw_ksts     = payload.get("keystrokes", [])
 
             if raw_commands:
                 self._command_queue.extend(raw_commands)
@@ -205,8 +207,11 @@ class RecorderController:
                 self._save_field_snapshot(batch)
             for mut in raw_vmuts:
                 self._save_value_mutation(mut)
-            if raw_fsnaps or raw_vmuts:
-                logger.debug("Flushed %d field snapshots, %d value mutations", len(raw_fsnaps), len(raw_vmuts))
+            for kst in raw_ksts:
+                self._save_keystroke(kst)
+            if raw_fsnaps or raw_vmuts or raw_ksts:
+                logger.debug("Flushed %d field snapshots, %d value mutations, %d keystrokes",
+                             len(raw_fsnaps), len(raw_vmuts), len(raw_ksts))
         except Exception as exc:
             # Hotfix BUG 2: closed-target errors during the recorder's
             # natural shutdown are not real failures — log at debug only.
@@ -459,6 +464,91 @@ class RecorderController:
                     event.ax_snapshot_path = self._store.save_ax_snapshot(eid, ax_tree)
             except Exception as exc:
                 logger.debug("AX snapshot failed for %s: %s", eid, exc)
+        # DOM diff suggestion (2026-06-30): apos cada step capturado,
+        # tira assinatura leve do DOM. Diff com a anterior vira sugestao
+        # de assert para o pos-grav review — Cypress Studio AI style.
+        try:
+            self._capture_dom_diff_signature(event)
+        except Exception as exc:
+            logger.debug("dom diff signature failed for %s: %s", eid, exc)
+
+    def _capture_dom_diff_signature(self, event: RawRecordedEvent):
+        """Captura DOM signature + compara com anterior, persiste diff."""
+        try:
+            sig = self._page.evaluate("""() => {
+                const out = { url: location.href, title: document.title, elements: {} };
+                const sel = 'h1,h2,h3,h4,p,.alert,.message,.toast,'
+                          + '[role=alert],[role=status],[aria-live],'
+                          + '[role=heading],mat-error,.mat-error,.toast-message';
+                const seen = new Set();
+                document.querySelectorAll(sel).forEach(el => {
+                    const text = (el.textContent || '').trim().substring(0, 120);
+                    if (!text) return;
+                    const tag = el.tagName.toLowerCase();
+                    const key = tag + '#' + (el.id || el.className || '').substring(0, 30)
+                              + ':' + text.substring(0, 40);
+                    if (seen.has(key)) return;
+                    seen.add(key);
+                    out.elements[key] = text;
+                });
+                document.querySelectorAll('input,textarea').forEach(el => {
+                    if (!el.value) return;
+                    const id = (el.name || el.id
+                                || el.getAttribute('aria-label')
+                                || el.getAttribute('placeholder') || '').substring(0, 40);
+                    if (!id) return;
+                    out.elements['INPUT:' + id] = el.value.substring(0, 100);
+                });
+                return out;
+            }""")
+            if not sig:
+                return
+            prev = getattr(self, "_prev_dom_signature", None)
+            self._prev_dom_signature = sig
+            if prev is None:
+                return
+            diff = self._compute_dom_diff(prev, sig)
+            if not diff:
+                return
+            entry = {
+                "event_id": event.event_id,
+                "timestamp": event.timestamp,
+                "before_url": prev.get("url"),
+                "after_url": sig.get("url"),
+                "before_title": prev.get("title"),
+                "after_title": sig.get("title"),
+                "changes": diff,
+                "confidence": min(1.0, len(diff) / 5.0),
+            }
+            path = os.path.join(self._store._session_dir, "suggested_assertions.jsonl")
+            with open(path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(entry, default=str) + "\n")
+        except Exception:
+            return
+
+    @staticmethod
+    def _compute_dom_diff(before: dict, after: dict) -> list:
+        """Compara assinaturas DOM, retorna lista de mudancas (appeared,
+        disappeared, changed). Limitado a 20 itens para nao explodir tamanho."""
+        if not before or not after:
+            return []
+        changes: list = []
+        b_elems = before.get("elements", {}) or {}
+        a_elems = after.get("elements", {}) or {}
+        for key, val in a_elems.items():
+            if key not in b_elems:
+                changes.append({"type": "appeared", "key": key, "value": val})
+            elif b_elems[key] != val:
+                changes.append({"type": "changed", "key": key,
+                                "old": b_elems[key], "new": val})
+            if len(changes) >= 20:
+                return changes
+        for key, val in b_elems.items():
+            if key not in a_elems:
+                changes.append({"type": "disappeared", "key": key, "value": val})
+            if len(changes) >= 20:
+                return changes
+        return changes
 
     def _on_request(self, request: Request):
         post_data = None
@@ -605,6 +695,12 @@ class RecorderController:
         path = os.path.join(self._store._session_dir, "field_snapshots.jsonl")
         with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(snapshot_data, default=str) + "\n")
+
+    def _save_keystroke(self, keystroke_data: dict):
+        """Append keystroke event to keystroke_buffer.jsonl. Sprint L."""
+        path = os.path.join(self._store._session_dir, "keystroke_buffer.jsonl")
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(keystroke_data, default=str) + "\n")
 
     def _save_value_mutation(self, mutation_data: dict):
         """Append a value mutation to value_mutations.jsonl."""
