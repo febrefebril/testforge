@@ -52,6 +52,11 @@ class SemanticTarget:
     #   {host_selector, host_tag, host_id, mode}
     # None quando na arvore do documento ou dentro de shadow root fechado.
     shadow_host: Optional[dict] = None
+    # Sprint J (2026-06-30): texto do mat-label dentro do mat-form-field
+    # ancestral, quando aplicavel. Usado pelo compiler para emitir locator
+    # `mat-form-field:has(mat-label:has-text("X")) input`, imune a
+    # renumeracao de mat-input-N + aria-label volatil dos forms SIOPI.
+    material_field_label: Optional[str] = None
 
 
 @dataclass

@@ -1804,6 +1804,24 @@ class RecordingNormalizer:
                     f"shadow host {host_sel} -> {inner_sel}",
                 ))
 
+        material_label = target_data.get("material_field_label")
+        # Sprint J (2026-06-30): emite locator estrutural baseado no
+        # mat-form-field como TOPO da cascata. Cobre o caso comum SIOPI:
+        # aria-label volatiliza apos blur, mat-input-N renumera entre
+        # sessoes; mat-label dentro do mat-form-field eh estavel.
+        if material_label:
+            inner_tag = (target_data.get("tag") or "input").lower()
+            esc = (material_label.replace("\\", "\\\\").replace('"', '\\"'))
+            mat_sel = (
+                f'mat-form-field:has(mat-label:has-text("{esc}")) {inner_tag}'
+            )
+            candidates.insert(0, LocatorCandidate(
+                "material_form_field",
+                mat_sel,
+                0.99,
+                f"mat-form-field anchor mat-label='{material_label}'",
+            ))
+
         return SemanticTarget(
             role=target_data.get("role"),
             accessible_name=target_data.get("accessible_name"),
@@ -1819,6 +1837,7 @@ class RecordingNormalizer:
             fingerprint=fingerprint,
             intent_text=intent_text,
             shadow_host=shadow_host if isinstance(shadow_host, dict) else None,
+            material_field_label=material_label,
         )
 
     def _steps_identical(self, a: SemanticAction, b: SemanticAction) -> bool:

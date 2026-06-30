@@ -86,6 +86,30 @@
     return null;
   }
 
+  // Sprint J (2026-06-30): material_field_label extracted from mat-form-field
+  // wrapper. SIOPI calculadora reusa aria-label volatil + mat-input-N renumbera
+  // entre sessoes; mat-label dentro do mat-form-field eh estavel e semantico.
+  // Compiler emite locator `mat-form-field:has(mat-label:text-is("X")) input`.
+  function _extractMaterialFieldLabel(el) {
+    if (!el) return null;
+    var cur = el;
+    var hops = 0;
+    while (cur && cur !== document.body && cur !== document.documentElement && hops < 8) {
+      var tag = (cur.tagName || '').toLowerCase();
+      if (tag === 'mat-form-field' || (cur.classList && cur.classList.contains('mat-form-field'))) {
+        var matLabel = cur.querySelector('mat-label, .mat-form-field-label, .mat-mdc-form-field-label, label.mat-label');
+        if (matLabel) {
+          var text = (matLabel.textContent || '').trim();
+          if (text) return text.substring(0, 120);
+        }
+        break;
+      }
+      cur = cur.parentElement;
+      hops += 1;
+    }
+    return null;
+  }
+
   function _extractTarget(el) {
     if (!el || el === document.body || el === document.documentElement) return null;
     var rect = el.getBoundingClientRect ? el.getBoundingClientRect() : {};
@@ -102,6 +126,7 @@
     }
     var labelEl = el.id ? document.querySelector('label[for="' + el.id + '"]') : null;
     var elText = (el.textContent||'').trim().substring(0,200) || null;
+    var materialLabel = _extractMaterialFieldLabel(el);
     // Simple CSS path: tag + id (no full DOM walk)
     var cssParts = [];
     var cur = el;
@@ -137,7 +162,8 @@
       // runner can do page.locator(host).locator(child) when the element
       // lives inside an OPEN shadow root. Closed roots can't be walked
       // from outside; expect shadow=null in that case.
-      shadow_host: shadow
+      shadow_host: shadow,
+      material_field_label: materialLabel
     };
   }
 
