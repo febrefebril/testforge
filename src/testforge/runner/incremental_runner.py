@@ -371,6 +371,66 @@ class IncrementalRunner:
             return False
         return strategy not in allowed
 
+    @staticmethod
+    def _canonical_text(s) -> str:
+        if not s or not isinstance(s, str):
+            return ""
+        import re as _re
+        return _re.sub(r"[^a-z0-9]+", "", s.lower()).strip()
+
+    def _fingerprint_match(self, proposed_locator: str, step) -> tuple[bool, str]:
+        """Sprint B2 (2026-06-30): valida que o locator proposto pelo curador
+        resolve para um elemento com texto/aria-label parecidos com o target
+        original do step. Defesa contra LLM curando 'Calcular' para 'Confirmar'
+        em outro componente (observado em test-pos-hotfix15d).
+
+        Retorna (matched, reason). matched=True quando nao temos evidencia
+        suficiente — best-effort, nao quebra fluxo em casos ambiguos.
+        """
+        if not self.page or not step.target:
+            return True, "no_target"
+        def _as_str(v):
+            return v if isinstance(v, str) else ""
+        expected = (
+            _as_str(getattr(step.target, "accessible_name", ""))
+            or _as_str(getattr(step.target, "label", ""))
+            or _as_str(getattr(step.target, "text", ""))
+        ).strip()
+        if not expected or len(expected) < 3:
+            return True, "expected_too_short"
+        expected_norm = self._canonical_text(expected)
+        if not expected_norm:
+            return True, "expected_empty_canonical"
+        try:
+            loc = self.page.locator(proposed_locator).first
+            actual_name = (loc.get_attribute("aria-label", timeout=1500) or "").strip()
+            if not actual_name:
+                actual_name = (loc.text_content(timeout=1500) or "").strip()
+        except Exception:
+            return True, "resolve_unavailable"
+        if not actual_name:
+            return True, "actual_empty"
+        actual_norm = self._canonical_text(actual_name)
+        if not actual_norm:
+            return True, "actual_empty_canonical"
+        if expected_norm in actual_norm or actual_norm in expected_norm:
+            return True, "substring_match"
+        # Jaccard de conjunto de caracteres — robusto contra repetidos.
+        # Char overlap simples (`ch in actual_norm` somando) falsei aprovava
+        # "calcular" vs "confirmar" (5/8 = 0.62 cruzava 0.6) porque
+        # consideraria cada repeticao independente. Conjunto descarta isso.
+        exp_set = set(expected_norm)
+        act_set = set(actual_norm)
+        union = exp_set | act_set
+        if union:
+            jaccard = len(exp_set & act_set) / len(union)
+            if jaccard >= 0.6:
+                return True, f"jaccard:{jaccard:.2f}"
+        return False, (
+            f"fingerprint_mismatch expected={expected[:40]!r} "
+            f"actual={actual_name[:40]!r}"
+        )
+
     def _validate_curator_proposal(self, outcome, step, original_selector):
         failures = []
         if outcome is None:
@@ -405,6 +465,11 @@ class IncrementalRunner:
                 )
             ):
                 failures.append("same_locator_as_failed_original")
+            # Sprint B2: fingerprint match. So checa quando upstream OK.
+            if proposal.new_locator and not failures:
+                matched, reason = self._fingerprint_match(proposal.new_locator, step)
+                if not matched:
+                    failures.append(f"fingerprint_mismatch:{reason}")
         return len(failures) == 0, failures
 
     def _map_curation_outcome(self, outcome, original_selector, failure_phase, original_error):

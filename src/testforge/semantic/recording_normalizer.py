@@ -409,7 +409,7 @@ class RecordingNormalizer:
         # Dedup semantico Fase B: handlers de componente + prefill clicks
         for handler in HANDLERS:
             handler.normalize(stc.steps)
-        self._eliminate_prefill_clicks(stc.steps)
+        self._eliminate_prefill_clicks(stc.steps, recording_dir)
         self._audit_blind_spots(stc)
 
         # Log final step breakdown
@@ -423,16 +423,112 @@ class RecordingNormalizer:
                      len(stc.steps), action_types, skipped)
         return stc
 
-    def _eliminate_prefill_clicks(self, steps: list) -> None:
+    @staticmethod
+    def _input_visible_at_click(recording_dir: str, click_step, target_id: str) -> bool:
+        """Sprint A2 (2026-06-30): le field_snapshots.jsonl e retorna True se o
+        input alvo estava VISIVEL durante a janela do click. Quando hidden o
+        click eh REVELADOR (precisa virar fill subordinado, nao prefill noise)
+        — sem ele o input nao aparece no replay e o fill subsequente falha.
+
+        Retorna True conservador (skip permitido) quando snapshot ausente ou
+        ambiguo — mantem comportamento legado se nao houver evidencia.
+        """
+        if not recording_dir or not target_id:
+            return True
+        path = os.path.join(recording_dir, "field_snapshots.jsonl")
+        if not os.path.exists(path):
+            return True
+        click_ts_str = ""
+        if getattr(click_step, "context", None):
+            click_ts_str = (click_step.context.get("timestamp") or "")
+        if not click_ts_str:
+            return True
+        from datetime import datetime as _dt
+        try:
+            click_ts = _dt.fromisoformat(click_ts_str.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            return True
+        # Acha snapshot mais proximo do timestamp do click
+        nearest = None
+        nearest_gap = None
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                # Cada linha pode ser snapshot batch ou item individual
+                batch = entry.get("snapshots")
+                items = batch if isinstance(batch, list) else [entry]
+                for snap in items:
+                    snap_ts_str = snap.get("timestamp") or entry.get("timestamp") or ""
+                    if not snap_ts_str:
+                        continue
+                    try:
+                        snap_ts = _dt.fromisoformat(snap_ts_str.replace("Z", "+00:00"))
+                    except ValueError:
+                        continue
+                    fp = snap.get("fingerprint") or ""
+                    if target_id not in fp:
+                        continue
+                    gap = abs((snap_ts - click_ts).total_seconds())
+                    if nearest_gap is None or gap < nearest_gap:
+                        nearest = snap
+                        nearest_gap = gap
+        if nearest is None or nearest_gap is None or nearest_gap > 5.0:
+            return True
+        return (nearest.get("visibility") or "").lower() == "visible"
+
+    # Sprint F (2026-06-30): roles + tokens em selectors que indicam click
+    # de troca de tab/secao/expansao. Nunca tratar como prefill noise mesmo
+    # se imediatamente seguidos por fill — o click navega container, nao
+    # focuses input.
+    _TAB_LIKE_ROLES = {"tab", "menuitem", "menuitemradio", "menuitemcheckbox", "option"}
+    _TAB_LIKE_SELECTOR_TOKENS = (
+        "mat-tab", "mat-expansion-panel-header", "mat-step-header",
+        "[role=\"tab\"]", "[role='tab']", "aria-controls=",
+        "cdk-step-header",
+    )
+
+    @classmethod
+    def _is_tab_like_click(cls, click_step) -> bool:
+        target = getattr(click_step, "target", None)
+        if target is None:
+            return False
+        role = (getattr(target, "role", "") or "").lower()
+        if role in cls._TAB_LIKE_ROLES:
+            return True
+        candidates = getattr(target, "candidates", None) or []
+        for c in candidates[:5]:
+            sel = (getattr(c, "selector", "") or "").lower()
+            if any(token in sel for token in cls._TAB_LIKE_SELECTOR_TOKENS):
+                return True
+        return False
+
+    def _eliminate_prefill_clicks(self, steps: list, recording_dir: str = "") -> None:
         """Marca como pulados clicks seguidos imediatamente por fill no mesmo elemento.
 
         Inputs Angular Material precisam de click para focar antes do fill, mas o
         fill() do Playwright ja gerencia foco internamente. Gravar click + fill no mesmo
         elemento produz um passo de click curado a cada execucao — elimina o ruido.
+
+        Sprint A2 (2026-06-30): nao pula click quando o input alvo NAO estava
+        visivel no field_snapshot mais proximo do click — nesse caso o click
+        eh revelador (tab/accordion/scroll) e seu skip quebra o playback. Bug
+        observado em test-pos-hotfix15b/c: step "click Renda mensal" foi pulado
+        + step "fill Renda mensal" REJ porque input estava em tab oculta.
         """
         for i in range(len(steps) - 1):
             curr = steps[i]
             if curr.skip_reason or curr.action != "click":
+                continue
+            # Sprint F (2026-06-30): clicks de tab/expansion-panel/menu nunca
+            # sao noise — eles trocam de secao do form e revelam inputs em
+            # outra view. Detecta por role ou tokens conhecidos no selector.
+            if self._is_tab_like_click(curr):
                 continue
             # Find next non-skipped step
             nxt = None
@@ -462,8 +558,19 @@ class RecordingNormalizer:
                 same = curr_name == nxt_name
             else:
                 same = bool(curr_sel) and curr_sel == nxt_sel
-            if same:
+            if not same:
+                continue
+            # Sprint A2: input visivel = click eh noise; hidden = click revela.
+            visible_at_click = self._input_visible_at_click(
+                recording_dir, curr, curr_id or nxt_id,
+            )
+            if visible_at_click:
                 curr.skip_reason = "prefill_click_noise"
+            else:
+                # Mantem click; anota razao para diagnostico
+                if curr.context is None:
+                    curr.context = {}
+                curr.context["preserved_reason"] = "input_hidden_at_click_time"
 
     def _audit_blind_spots(self, stc) -> None:
         """Detecta padroes onde intencao do usuario provavelmente foi perdida pelo gravador.

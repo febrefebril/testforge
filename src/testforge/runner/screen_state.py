@@ -70,6 +70,10 @@ class ScreenState:
     title: str = ""
     top_roles: list = field(default_factory=list)
     timestamp: str = ""
+    # Sprint B3 (2026-06-30): heading detectado primeiro na pagina (h1/h2).
+    # Em SPAs onde URL + role set mudam pouco entre telas (calculadora ->
+    # confirmacao), o heading muda quase sempre.
+    top_heading: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -77,7 +81,7 @@ class ScreenState:
     def signature(self) -> str:
         """Hashable summary for cheap equality checks."""
         roles_sig = "|".join(f"{r.get('role','')}:{r.get('name','')}" for r in self.top_roles)
-        return f"{self.url}::{self.title}::{roles_sig}"
+        return f"{self.url}::{self.title}::{self.top_heading}::{roles_sig}"
 
 
 @dataclass
@@ -85,11 +89,18 @@ class ScreenStateDiff:
     matched: bool = True
     url_changed: bool = False
     title_changed: bool = False
+    heading_changed: bool = False
     role_overlap: float = 1.0
     reason: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+# Sprint B3 (2026-06-30): threshold subido de 0.6 para 0.75 — em SPAs Material
+# o conjunto de botoes/links "Voltar Avancar Calcular" repete entre telas
+# distintas, entao 60% overlap eh comum mesmo em navegacao real.
+_ROLE_OVERLAP_THRESHOLD = 0.75
 
 
 def capture_screen_state(page) -> ScreenState:
@@ -111,6 +122,12 @@ def capture_screen_state(page) -> ScreenState:
         ]
     except Exception:
         state.top_roles = []
+    # Sprint B3: top_heading extraido das roles. heading-role primeiro nao
+    # vazio. Mantem-se cheap (ja temos os roles em memoria).
+    for r in state.top_roles:
+        if r.get("role") == "heading" and r.get("name", "").strip():
+            state.top_heading = r["name"][:100]
+            break
     return state
 
 
@@ -132,6 +149,7 @@ def compare(prev: Optional[ScreenState], curr: Optional[ScreenState]) -> ScreenS
     curr_url = (curr.url or "").split("?")[0].split("#")[0]
     diff.url_changed = prev_url != curr_url
     diff.title_changed = (prev.title or "") != (curr.title or "")
+    diff.heading_changed = (prev.top_heading or "") != (curr.top_heading or "")
 
     prev_keys = {(r.get("role", ""), r.get("name", "")) for r in prev.top_roles}
     curr_keys = {(r.get("role", ""), r.get("name", "")) for r in curr.top_roles}
@@ -147,7 +165,9 @@ def compare(prev: Optional[ScreenState], curr: Optional[ScreenState]) -> ScreenS
         reasons.append(f"url:{prev_url}->{curr_url}")
     if diff.title_changed:
         reasons.append(f"title:{prev.title!r}->{curr.title!r}")
-    if diff.role_overlap < 0.6:
+    if diff.heading_changed and (prev.top_heading or curr.top_heading):
+        reasons.append(f"heading:{(prev.top_heading or '<none>')!r}->{(curr.top_heading or '<none>')!r}")
+    if diff.role_overlap < _ROLE_OVERLAP_THRESHOLD:
         reasons.append(f"role_overlap:{diff.role_overlap:.2f}")
 
     diff.matched = not reasons

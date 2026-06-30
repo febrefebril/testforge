@@ -298,6 +298,7 @@ class StepExecutor:
             try:
                 el = page.locator(sel_pattern)
                 if el.count() == 1:
+                    self._ensure_input_visible(el.first)
                     self._fill_masked(
                         el, value,
                         fill_path="_fill_input",
@@ -533,6 +534,24 @@ class StepExecutor:
                 continue
         raise last_error or ValueError(f"click falhou — todos os selectores tentados ({len(selectors)})")
 
+    def _ensure_input_visible(self, loc) -> None:
+        """Sprint A3 (2026-06-30): garante que o input esta no viewport e
+        visivel antes de tentar fill. Material muitas vezes renderiza inputs
+        em tabs/accordions fora do viewport — sem isso o fill falha com
+        'element not interactable' mesmo quando o locator resolve. Custos:
+        ate 2s scroll + ate 5s visibility wait quando necessario; quando o
+        elemento ja esta visivel ambos retornam imediato. Sem raise — se nao
+        conseguir, deixa a primitiva de fill seguir e quem decide eh ela.
+        """
+        try:
+            loc.scroll_into_view_if_needed(timeout=2000)
+        except Exception:
+            pass
+        try:
+            loc.wait_for(state="visible", timeout=5000)
+        except Exception:
+            pass
+
     def _execute_fill(self, step, selectors, data_values, field_value_map=None):
         if not selectors:
             raise ValueError("fill sem selector")
@@ -554,6 +573,7 @@ class StepExecutor:
                 continue
             try:
                 el = self.page.locator(selector).first
+                self._ensure_input_visible(el)
                 # CS-1: primitiva unica de fill. Trata deteccao de mask,
                 # limpar com triplo-clique, ramos de digito-cru / data-formatada /
                 # fill-simples, e emite o span fill.attempted.

@@ -49,6 +49,20 @@ def cmd_run_incremental(args):
         report = runner.run()
         summary = report.get("summary", {})
         failed = summary.get("failed", 0) + summary.get("healing_rejected", 0)
+        # Sprint D (2026-06-30): --strict-asserts faz o run sair com codigo
+        # nao-zero quando algum assert do script nao foi atingido. Sem isso
+        # CI nao detecta regressao real (failed=0 nao significa assert_hit=1).
+        # Default off para compat — pipelines existentes precisam optar.
+        if getattr(args, "strict_asserts", False):
+            asserts_total = summary.get("asserts_total", 0)
+            asserts_hit = summary.get("asserts_hit", 0)
+            if asserts_total > 0 and asserts_hit < asserts_total:
+                print(
+                    f"[TestForge] [STRICT] {asserts_hit} de {asserts_total} asserts atingidos"
+                    f" — exit 1 (--strict-asserts)",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
         sys.exit(0 if failed == 0 else 1)
     except FileNotFoundError as exc:
         print(f"[TestForge] [X] {exc}", file=sys.stderr)
@@ -83,5 +97,8 @@ def register(sub):
                      help="Log payloads LLM + respostas brutas em stderr")
     inc.add_argument("--verify-ssl", action="store_true", default=False,
                      help="Verificar certificado SSL (default: ignorar certificados SSL)")
+    inc.add_argument("--strict-asserts", dest="strict_asserts", action="store_true",
+                     default=False,
+                     help="Exit 1 quando asserts_hit < asserts_total (Sprint D 2026-06-30)")
     inc.set_defaults(func=cmd_run_incremental)
     return inc
