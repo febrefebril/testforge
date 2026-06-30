@@ -13,6 +13,8 @@ from pathlib import Path
 
 from playwright.sync_api import Page, Request, Response
 
+from testforge.diagnostic.framework_detector import FrameworkDetector
+
 from .cdp_snapshot import CDPSnapshotter
 from .raw_event import RawRecordedEvent, TargetInfo
 from .raw_recording_store import RawRecordingStore
@@ -46,10 +48,13 @@ class RecorderController:
         self._paused = False
         self._headless = False
         self._evidence_level = "light"
-        # Phase 1: parallel CDP/tracing capture (feature-flagged)
-        self._use_cdp = False
+        # Phase 1: parallel CDP/tracing capture (active by default)
+        self._use_cdp = True
         self._tracing: TracingManager | None = None
         self._cdp: CDPSnapshotter | None = None
+        # Framework detection (active by default)
+        self._framework: str = "unknown"
+        self._detector: FrameworkDetector | None = None
         # Sprint 0: diagnostic mode (feature-flagged)
         self._diagnostic_mode = False
         self._diagnostic = None  # DiagnosticSession instance
@@ -66,7 +71,7 @@ class RecorderController:
         system: str = "",
         suite: str = "",
         test_case: str = "",
-        use_cdp: bool = False,
+        use_cdp: bool = True,
         diagnostic_mode: bool = False,
         replay_mode: str = "batched",   # H17: was "immediate"
     ) -> RecordingSession:
@@ -95,13 +100,19 @@ class RecorderController:
             pass
 
         # Phase 1: start Playwright tracing + attach CDP for AX-tree snapshots.
-        # Runs in parallel with legacy JS overlay capture. Feature-flagged.
+        # Runs in parallel with legacy JS overlay capture. Active by default.
         if self._use_cdp:
             self._tracing = TracingManager(self._page)
             self._tracing.start(session.session_dir, recording_id)
             self._cdp = CDPSnapshotter(self._page)
             self._cdp.attach()
             logger.info("Phase 1 capture enabled: tracing + CDP AX snapshots")
+
+        # Framework detection ativo por padrao — adapta captura ao framework detectado
+        cdp_session = self._cdp._session if self._cdp and self._cdp._enabled else None
+        self._detector = FrameworkDetector(self._page, cdp_session)
+        self._detector.attach()
+        self._detect_framework()
 
         # Sprint 0: diagnostic recorder (rich telemetry collection)
         self._diagnostic_mode = bool(diagnostic_mode)
@@ -181,7 +192,9 @@ class RecorderController:
                         "ts": datetime.now(timezone.utc).timestamp(),
                     })
             if type_counts:
-                logger.debug("Flushed %d events: %s", len(raw_events), type_counts)
+                logger.debug("Flushed %d events: %s | counters raw=%d steps=%d commands=%d",
+                             len(raw_events), type_counts,
+                             self._event_counter, self._step_counter, len(self._command_queue))
 
             for step_data in raw_steps:
                 self._persist_step(step_data)
@@ -268,6 +281,11 @@ class RecorderController:
                 self._tracing.stop()
             except Exception as exc:
                 logger.error("Tracing stop failed: %s", exc)
+        if self._detector is not None:
+            try:
+                self._detector.detach()
+            except Exception:
+                pass
         if self._cdp is not None:
             try:
                 self._cdp.detach()
@@ -429,7 +447,8 @@ class RecorderController:
             pass
         try:
             dom = self._page.content()
-            event.dom_snapshot_path = self._store.save_dom(eid, dom)
+            if dom and len(dom.strip()) >= 20:
+                event.dom_snapshot_path = self._store.save_dom(eid, dom)
         except Exception:
             pass
         # Phase 1: AX-tree snapshot via CDP (parallel to legacy DOM snapshot).
@@ -541,6 +560,9 @@ class RecorderController:
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
+    # BUG-007: dedup navigation events — skip if URL hasn't changed
+    _last_nav_url: str | None = None
+
     def _on_framenavigated(self, frame):
         """Track main-frame navigation from Python side."""
         if frame != self._page.main_frame:
@@ -551,6 +573,10 @@ class RecorderController:
         except Exception:
             current_url = frame.url
             page_title = ""
+        # Skip navigations where the URL hasn't changed (reloads, SIMAX flicker)
+        if current_url == self._last_nav_url:
+            return
+        self._last_nav_url = current_url
         self._event_counter += 1
         nav_event = RawRecordedEvent(
             event_id=f"evt_{self._event_counter:05d}",
@@ -569,6 +595,8 @@ class RecorderController:
             except Exception:
                 pass
         logger.info("Navigation detected: %s — %s", current_url, page_title[:60])
+        # Re-detect framework apos navegacao (SPA pode mudar de framework)
+        self._detect_framework()
 
     # ---- Sprint 3: Field snapshot & value mutation persistence ----
 
@@ -598,5 +626,30 @@ class RecorderController:
                     json.dump(final_state, f, indent=2, default=str)
         except Exception:
             pass
+
+    # ---- Framework detection ----
+    def _detect_framework(self) -> str:
+        """Detecta framework e adapta estrategias de captura no overlay."""
+        if self._detector is None:
+            return "unknown"
+        try:
+            result = self._detector.detect()
+            new_fw = result.get("primary", "unknown")
+            if new_fw != "unknown":
+                self._framework = new_fw
+                logger.info("Framework detected: %s (evidence: %s)",
+                            new_fw, result.get("evidence", [])[:3])
+                # Sinaliza para o overlay JS adaptar estrategias
+                try:
+                    if new_fw in ("react", "mui"):
+                        self._page.evaluate("window.__tfReactCompat = true")
+                    elif new_fw in ("angular", "angular-material"):
+                        self._page.evaluate("window.__tfAngularCompat = true")
+                except Exception:
+                    pass
+            return self._framework
+        except Exception as exc:
+            logger.debug("Framework detection failed: %s", exc)
+            return self._framework
 
     # --- Overlay JS injected from overlay_inject.js (loaded at module level) ---

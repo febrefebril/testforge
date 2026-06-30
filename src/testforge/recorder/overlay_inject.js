@@ -19,7 +19,7 @@
   window.__tfLastFillValue = {};
   window.__tfLastSnapshotKey = {};
   window.__tfFillDebounceTimers = window.__tfFillDebounceTimers || new WeakMap();
-  window.__tfFillDebounceMs = 250;
+  window.__tfFillDebounceMs = 400;
 
   // ---- Cross-page state restoration ----
   try {
@@ -188,8 +188,8 @@
   // ---- Push event to queue ----
   function _pushEvent(type, el) {
     var target = _extractTarget(el || document.activeElement);
+    ++window.__tfEventCounter;
     window.__tfEventQueue.push({
-      event_id: 'evt_' + String(++window.__tfEventCounter).padStart(5,'0'),
       type: type,
       timestamp: new Date().toISOString(),
       url: window.location.href,
@@ -513,6 +513,16 @@
             return;
           }
           if (mut.type === 'attributes' && mut.attributeName) {
+            if (mut.attributeName === 'value') {
+              var el = mut.target;
+              if (el && el.tagName) {
+                var tag = el.tagName.toLowerCase();
+                if ((tag === 'input' || tag === 'textarea') && !window.__tfAssertWaiting) {
+                  _scheduleFillFromMutation(el);
+                }
+              }
+              return;
+            }
             var attrRole = mut.target.getAttribute && mut.target.getAttribute('role');
             if (attrRole && ['combobox', 'listbox', 'slider', 'spinbutton', 'searchbox', 'textbox'].indexOf(attrRole) !== -1) {
               if (mut.attributeName === 'aria-valuenow' || mut.attributeName === 'aria-valuetext') {
@@ -535,7 +545,7 @@
         subtree: true,
         characterData: true,
         attributes: true,
-        attributeFilter: ['aria-valuenow', 'aria-valuetext', 'contenteditable']
+        attributeFilter: ['aria-valuenow', 'aria-valuetext', 'contenteditable', 'value']
       });
       window.__tfMutationObserver = observer;
     } catch(_e) { /* MutationObserver unavailable */ }
@@ -620,7 +630,10 @@
       } catch(_ignore) {}
       return;
     }
-    if (el && el.tagName === 'SELECT') return;
+    if (el && el.tagName === 'SELECT') {
+      _pushEvent('select_option', el);
+      return;
+    }
     _pushEvent('click', el);
     setTimeout(function() {
       var _sc = document.getElementById('tf-step-count');
@@ -645,11 +658,7 @@
     if (window.__tfAssertWaiting) return;
     var el = e.target;
     if (!el) return;
-    var key = _fillKey(el);
-    var val = (el.value || el.textContent || '').trim();
-    if (window.__tfLastFillValue[key] === val) return;
-    window.__tfLastFillValue[key] = val;
-    _pushEvent('fill', el);
+    _scheduleFillFromMutation(el);
   }, true);
 
   window.addEventListener('change', function(e) {
@@ -1086,8 +1095,8 @@
       }
       if (!alreadyRestored) {
         var pending = window.__tfPendingSubmit;
+        ++window.__tfEventCounter;
         window.__tfEventQueue.push({
-          event_id: 'evt_' + String(++window.__tfEventCounter).padStart(5,'0'),
           type: 'postback',
           timestamp: new Date().toISOString(),
           url: window.location.href,
