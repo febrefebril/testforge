@@ -1,0 +1,62 @@
+{
+  "reason": "user_stop",
+  "timestamp": "2026-06-30T19:43:18.213Z",
+  "url": "https://simuladorhabitacao.caixa.gov.br/calculadora",
+  "page_title": "Simulador",
+  "fields": [
+    {
+      "timestamp": "2026-06-30T19:43:18.213Z",
+      "fingerprint": "input#mat-input-0[name=]",
+      "identifiers": {
+        "id": "mat-input-0",
+        "name": null,
+        "label": null,
+        "placeholder": "DD/MM/AAAA",
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": null,
+      "value": "17/02/1984",
+      "raw_value": "17021984",
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-06-30T19:43:18.213Z",
+      "fingerprint": "input#mat-input-3[name=]",
+      "identifiers": {
+        "id": "mat-input-3",
+        "name": null,
+        "label": null,
+        "placeholder": "R$0,00",
+        "aria-label": "Renda mensal *"
+      },
+      "tag": "input",
+      "type": "text",
+      "value": " 1.000,00 ",
+      "raw_value": null,
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-06-30T19:43:18.213Z",
+      "fingerprint": "input#mat-input-4[name=]",
+      "identifiers": {
+        "id": "mat-input-4",
+        "name": null,
+        "label": null,
+        "placeholder": "R$0,00",
+        "aria-label": "Valor do im\u00f3vel *"
+      },
+      "tag": "input",
+      "type": "text",
+      "value": " 1.000.000,00 ",
+      "raw_value": null,
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    }
+  ]
+}
