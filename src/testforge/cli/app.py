@@ -340,25 +340,96 @@ def _auto_publish_recording(rid: str, rec_dir: str):
         print(f"[TestForge] [WARN] Erro de publicacao (nao-bloqueante): {exc}", file=sys.stderr)
 
 
+def _record_qa_wizard(args):
+    """Wizard QA-focused para gravacao (2026-06-30): pergunta SO o que o
+    testador precisa saber — nome do teste, sistema, suite, caso de teste.
+    Tudo que eh tecnico (modo diagnostico, --complete, captura cdp) eh ON
+    por padrao e fica invisivel. Para CI use --no-wizard.
+
+    Prompts so disparam quando stdin eh TTY e --no-wizard nao foi passado.
+    Valores ja informados via flag NUNCA sao re-perguntados.
+    """
+    if getattr(args, "no_wizard", False):
+        return args
+    if not sys.stdin.isatty():
+        return args
+
+    cfg_defaults = _load_config_defaults()
+
+    def _ask(prompt: str, default: str = "") -> str:
+        suffix = f" [{default}]" if default else ""
+        try:
+            val = input(f"  {prompt}{suffix}: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return default
+        return val or default
+
+    print()
+    print("[TestForge] Nova gravacao — informe so o que importa para QA:")
+    print()
+
+    if not args.name:
+        ts = time.strftime("%Y%m%d-%H%M%S")
+        default_name = f"REC-{ts}"
+        args.name = _ask("Nome do teste", default_name)
+
+    if not getattr(args, "system", "") and not getattr(args, "app", ""):
+        default_sys = cfg_defaults.get("system", "") or ""
+        sys_val = _ask("Sistema/aplicacao", default_sys)
+        if sys_val:
+            args.system = sys_val
+            if not getattr(args, "app", ""):
+                args.app = sys_val
+
+    if not getattr(args, "suite", ""):
+        default_suite = cfg_defaults.get("suite", "") or ""
+        args.suite = _ask("Suite de testes", default_suite)
+
+    if not getattr(args, "test_case", ""):
+        args.test_case = _ask("Caso de teste", args.name or "")
+
+    print()
+    return args
+
+
 def cmd_record(args):
     """Grava fluxo de teste com comandos de teclado."""
     # Validate URL before any operation
     if not args.url:
         print("[TestForge] Erro: URL obrigatoria para iniciar nova gravacao.")
         print()
-        print("  Exemplos:")
-        print("    testforge record \"https://sistema/\" --name CT-001 --browser chrome")
-        print("    testforge record \"https://sistema/\" --system SIOPI --suite credito --test-case CT-001")
+        print("  Modo simples (recomendado):")
+        print("    testforge record \"https://sistema/\"")
+        print("    (o wizard pergunta nome/sistema/suite/caso de teste)")
+        print()
+        print("  Modo direto (CI):")
+        print("    testforge record \"https://sistema/\" --no-wizard \\")
+        print("      --name CT-001 --system SIOPI --suite credito --test-case CT-001")
         print()
         print("  Organizacao no Git (--system, --suite, --test-case):")
         print("    recordings/{system}/{suite}/{test_case}/{recording_id}/")
         print()
         print("  Configurar publicacao: .testforge/config.yml ou env vars")
-        print("    TESTFORGE_GIT_URL, TESTFORGE_GIT_TOKEN, TESTFORGE_GIT_BRANCH")
         print()
-        print("  Ajuda:")
+        print("  Ajuda completa:")
         print("    testforge record --help")
         return
+
+    # Wizard QA antes de qualquer setup tecnico — campos faltantes viram prompt
+    # so quando stdin eh TTY e --no-wizard nao foi passado.
+    args = _record_qa_wizard(args)
+
+    # Sprint UX (2026-06-30): defaults para flags tecnicas. Antes o usuario
+    # precisava lembrar `--complete --pipeline-and-diagnostic-mode` toda vez,
+    # caso contrario a gravacao saia incompleta. Agora ambos ON por padrao;
+    # use `--no-complete` ou `--no-pipeline-and-diagnostic-mode` para abrir mao.
+    if not getattr(args, "no_complete", False) and not getattr(args, "complete", False):
+        args.complete = True
+    if (not getattr(args, "no_pipeline_and_diagnostic_mode", False)
+            and not getattr(args, "pipeline_and_diagnostic_mode", False)
+            and not getattr(args, "diagnostic_mode", False)):
+        args.pipeline_and_diagnostic_mode = True
 
     no_interactive = getattr(args, 'no_interactive', False)
     auto_complete = getattr(args, 'complete', False) and not no_interactive
@@ -2085,7 +2156,14 @@ def main():
     rec.add_argument("--browser", choices=["chromium", "chrome", "edge"], default="chromium",
                      help="Browser preferido (default: chromium)")
     rec.add_argument("--complete", action="store_true",
-                     help="Verificar completude e perguntar valores pendentes")
+                     help="(default ON) Verificar completude e perguntar valores pendentes")
+    rec.add_argument("--no-complete", dest="no_complete", action="store_true",
+                     help="Desliga completude (uso CI / batch).")
+    rec.add_argument("--no-wizard", dest="no_wizard", action="store_true",
+                     help="Pula wizard QA interativo (uso CI). Default: prompt em TTY.")
+    rec.add_argument("--no-pipeline-and-diagnostic-mode",
+                     dest="no_pipeline_and_diagnostic_mode", action="store_true",
+                     help="Desliga modo pipeline+diagnostic (ON por padrao).")
     rec.add_argument("--no-interactive", action="store_true",
                      help="Nao perguntar valores — criar template")
     rec.add_argument("--validate-before-ready", action="store_true",

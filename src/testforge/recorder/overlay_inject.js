@@ -381,6 +381,18 @@
     Object.defineProperty(proto, 'value', {
       get: orig.get,
       set: function(v) {
+        // React controlled inputs use _valueTracker (internal SyntheticEvent
+        // shadow value) to short-circuit re-renders. If we set value without
+        // resetting the tracker, React sees old === new and the onChange
+        // handler never fires — meaning the framework state stays stale.
+        // Resetting tracker to '' forces React to detect the diff on next
+        // render and fire onChange properly. No-op when not on React.
+        // Reference: refined-github/set-react-input-value.ts pattern.
+        try {
+          if (this._valueTracker && typeof this._valueTracker.setValue === 'function') {
+            this._valueTracker.setValue('');
+          }
+        } catch(_e) {}
         orig.set.call(this, v);
         window.__tfValueMutationQueue.push({
           type: 'value_mutation',
