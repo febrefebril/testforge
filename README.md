@@ -1,10 +1,10 @@
-# TestForge v0.4.1
+# TestForge v0.4.2
 
-**Gravador inteligente de testes E2E com self-healing determinístico L0→L3, validação incremental de intenção + ComponentHandler system para Angular Material, PrimeFaces e React MUI**
+**Gravador inteligente de testes E2E com self-healing determinístico L0→L3, validação incremental de intenção, Diagnostic Mode, Architecture v2 + ComponentHandler system para Angular Material, PrimeFaces e React MUI**
 
 [![Tests](https://img.shields.io/badge/tests-800%2B%20passed-brightgreen)](tests/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
-[![Commits](https://img.shields.io/badge/commits-344-blue)](https://github.com/febrefebril/testforge)
+[![Commits](https://img.shields.io/badge/commits-550-blue)](https://github.com/febrefebril/testforge)
 [![Handlers](https://img.shields.io/badge/handlers-5-orange)](src/testforge/handlers/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -22,9 +22,13 @@ Testes E2E quebram constantemente por fragilidade de seletores em aplicações e
 
 Gravar **intenção**, não seletores. O recorder captura: role, accessible name, texto visível, contexto. Isso vira um contrato semântico (SemanticTestCase). Na execução, se o seletor falhar, o motor deterministico gera candidatos alternativos ordenados por score. Se todos falharem, o LLM (Azure GPT-4.1-mini) é acionado como último recurso.
 
-**Novo v0.4.1:** Sistema **ComponentHandler** que detecta e executa componentes de UI framework-specific (Angular Material, PrimeFaces, React MUI) de forma determinística, sem depender de healing. Cada handler sabe abrir overlays, selecionar opções, navegar tabs — reduzindo healing L3 em ~40% para componentes cobertos.
+**Novo v0.4.2:** **Diagnostic Mode** — Modo standalone de coleta de telemetria para equipes de QA, com FrameworkDetector, CaptureQualityTracker, ReplayCheck e GherkinWriter em português.
 
-**Novo:** Pipeline de validação de intenção que detecta campos perdidos, pergunta valores ao QA, valida incrementalmente, e gera relatório de readiness.
+**Novo v0.4.2:** **Architecture v2 (Phases 1-7)** — Playwright tracing + CDP AX-tree capture parallel, v2 LocatorExtractor, LocatorResolver, SQLite intent catalog L0, Pipes & Filters pipeline, zero-dep tracer + dashboard, YAML-driven ComponentResolver.
+
+**Novo v0.4.2:** **Sprint 0 Hotfixes** — 30+ correções no recorder, normalizer, runner, CLI, publisher, diagnostic e healing. Recorder Sprints A-J-M-O-P-Q-R-S: Material anchors, ACCNAME v1.2, rrweb-lite, finder CSS, mask raw value capture. Refactor: overlay JS extraído para `overlay_inject.js`, IntentReconstructor merged no RecordingNormalizer.
+
+**v0.4.1:** Sistema **ComponentHandler** que detecta e executa componentes de UI framework-specific (Angular Material, PrimeFaces, React MUI) de forma determinística, sem depender de healing. Cada handler sabe abrir overlays, selecionar opções, navegar tabs — reduzindo healing L3 em ~40% para componentes cobertos. Pipeline de validação de intenção que detecta campos perdidos, pergunta valores ao QA, valida incrementalmente, e gera relatório de readiness.
 
 ---
 
@@ -41,6 +45,38 @@ QA grava fluxo → MIS captura intenção → Compiler gera script → Runner ex
                     ↓
          PilotMetrics → Dashboard consolidado
 ```
+
+### Diagnostic Mode (Sprint 0 — v0.4.2)
+
+Modo standalone de coleta de telemetria que enriquece decisões com dados reais:
+
+| Componente | Função |
+|-----------|--------|
+| `FrameworkDetector` | CDP bundle analysis + window/DOM/custom-elements |
+| `CaptureQuality` | value_kind regex, framework_signal, blind_spots |
+| `ReplayCheck` | Immediate (B1) ou batched (B4) Locator probe |
+| `GherkinWriter` | Live `scenario.feature` (pt-BR), C4b auto-derive + C4c confirm |
+| `TelemetryStore` | JSONL primary + OTel spans (E4) |
+
+```bash
+testforge record --diagnostic-mode <url>
+# ou
+testforge diagnose <url>
+```
+
+### Architecture v2 (Phases 1-7)
+
+Feature-flagged migration com novas capacidades:
+
+| Phase | Componente | Opt-in |
+|-------|-----------|--------|
+| 1 | Playwright tracing + CDP AX-tree (parallel) | `--use-cdp-recorder` |
+| 2 | v2 LocatorExtractor + Playwright codegen + intent | `use_v2_locator=True` |
+| 3 | LocatorResolver + step API + v2 compiler | `--use-v2-compiler` |
+| 4 | SQLite intent-keyed catalog + persistent L0 | `sqlite_catalog=...` |
+| 5 | Pipes & Filters pipeline (4 extracted stages) | `use_pipeline=True` |
+| 6 | Zero-dep tracer + static dashboard.html | `TESTFORGE_TRACING=0` |
+| 7 | YAML-driven ComponentResolver | `ComponentResolver()` |
 
 ### Component Handler System (v0.4.1)
 
@@ -275,7 +311,7 @@ testforge run script.py
 
 ```bash
 # Todos os testes
-pytest tests/ -v                    # 194 testes
+pytest tests/ -v                    # 200+ testes
 
 # Testes por sprint
 pytest tests/test_sprint3_field_snapshots.py -v   # 35 testes
@@ -285,8 +321,8 @@ pytest tests/intent_lab/ -v                       # 93 testes
 pytest tests/test_sprint7_cli_integration.py -v   # 11 testes
 pytest tests/test_sprint8_pilot_metrics.py -v     # 11 testes
 
-# Testes de curadoria (por família)
-pytest tests/test_pages/ -v         # 39 testes
+# Diagnostic Mode tests
+pytest tests/test_diagnostic/ -v    # Sprint 0 tests
 
 # Testes de classificação
 pytest tests/test_pages/ -k "classification" -v
@@ -295,13 +331,14 @@ pytest tests/test_pages/ -k "classification" -v
 | Suite | Testes | Descrição |
 |-------|--------|-----------|
 | Sprint 3 | 35 | Field snapshots, setter hooks, MutationObserver |
-| Sprint 4 | 32 | Intent reconstructor (3 estratégias) |
+| Sprint 4 | 32 | Intent reconstructor (8 estratégias) |
 | Sprint 5 | 12 | RecordingReadinessGate + IncrementalRecordingValidator |
 | Sprint 6 | 93 | Intent Lab pages + test infrastructure |
 | Sprint 7 | 11 | CLI integration (--validate-before-ready) |
 | Sprint 8 | 11 | Pilot metrics, failure categorization, dashboard |
 | Curadoria | 39 | Healing por família (1 por família) |
-| **Total** | **194** | **100% pass** |
+| Sprint 0 | 20+ | Diagnostic Mode, hotfix regression |
+| **Total** | **200+** | **100% pass** |
 
 ---
 
@@ -315,7 +352,7 @@ pytest tests/test_pages/ -k "classification" -v
 | Storage | JSONL + filesystem (zero DB) |
 | LLM | Azure OpenAI / OpenAI (httpx) |
 | Testes | pytest + pytest-playwright |
-| Diagramas | PlantUML (14 diagramas) |
+| Diagramas | PlantUML (20+ diagramas) |
 | Pipeline | BMAD → GSD Core → Git |
 
 ---
@@ -324,39 +361,70 @@ pytest tests/test_pages/ -k "classification" -v
 
 ```
 src/testforge/
-├── handlers/       # (NOVO v0.4.1) ComponentHandler system
+├── handlers/       # ComponentHandler system (v0.4.1)
 │   ├── __init__.py             # Registry + detect_handler()
 │   ├── component_handler.py    # ABC: detect, normalize, execute, heal
+│   ├── component_resolver.py   # YAML-driven resolver (v2 Phase 7)
 │   ├── cdk_overlay.py          # Shared CDK overlay utilities
 │   ├── angular_material.py     # mat-select, autocomplete, dialog, tabs
 │   ├── primeFaces.py           # Skeleton
 │   └── react_mui.py            # Skeleton
-├── cli/            # Comandos: record, compile, run, pipeline, demo-heal,
-│   │               #      run-incremental, pilot-report
+├── diagnostic/    # Sprint 0 — Diagnostic Mode
+│   ├── framework_detector.py   # A3 CDP + A4 window/DOM analysis
+│   ├── capture_quality.py      # Value_kind regex, blind_spots
+│   ├── replay_check.py         # Immediate/batched Locator probe
+│   ├── gherkin_writer.py       # Live scenario.feature (pt-BR)
+│   ├── telemetry_store.py      # JSONL + OTel spans (E4)
+│   └── session.py              # DiagnosticSession orchestrator
+├── cli/            # Comandos: record, compile, run, pipeline, diagnose
 │   ├── _interactive_completion.py  # Prompt para valores pendentes
 │   └── _run_incremental_patch.py  # Comando run-incremental
 ├── recorder/       # Recorder sensorial (Playwright nativo)
-│   ├── recording_status.py        # Máquina de estados da gravação
-│   ├── recorder_controller.py     # Controller com network capture
-│   └── raw_recording_store.py     # Armazenamento raw
+│   ├── overlay_inject.js       # JS overlay extraído (v0.4.2)
+│   ├── tracing_manager.py      # Playwright tracing (v2 Phase 1)
+│   ├── cdp_snapshot.py         # CDP AX-tree capture (v2 Phase 1)
+│   ├── recording_session.py
+│   ├── recording_status.py     # Máquina de estados da gravação
+│   ├── recorder_controller.py  # Controller + network capture
+│   └── raw_recording_store.py  # Armazenamento raw
 ├── semantic/       # MIS: normalizer, compiler, data_extractor
-│   └── intent_reconstructor.py    # 3 estratégias (Sprint 4)
+│   ├── recording_normalizer.py # Normalizer + intent reconstruction (8 estratégias)
+│   ├── locator/                # v2 Phase 2 — LocatorExtractor
+│   │   ├── intent.py           # Intent text normalization
+│   │   ├── scorer.py           # Candidate scoring
+│   │   ├── playwright_codegen.py  # PW codegen
+│   │   └── extractor.py        # v2 extractor
+│   ├── stages/                 # v2 Phase 5 — Pipes & Filters
+│   │   ├── base.py             # Stage ABC
+│   │   ├── context.py          # Context aggregator
+│   │   └── stage_*.py          # Extracted stages
+│   └── compiler.py             # PlaywrightCompiler (v1 + v2)
+├── runtime/        # v2 Phase 3 — Runtime resolver
+│   ├── resolver.py             # LocatorResolver
+│   ├── step.py                 # Step API
+│   ├── _pw_dispatch.py         # Playwright dispatch
+│   └── errors.py               # Runtime errors
 ├── validation/     # Validação de intenção
-│   ├── intent_completeness.py     # IntentCompletenessChecker
-│   ├── readiness_gate.py          # RecordingReadinessGate
-│   ├── incremental_validator.py   # IncrementalRecordingValidator
-│   └── url_validator.py           # Validação de URL
-├── metrics/        # MetricsRepository + PilotMetrics (Sprint 8)
-│   └── pilot_metrics.py           # Métricas agregadas do piloto
+│   ├── intent_completeness.py  # IntentCompletenessChecker
+│   ├── readiness_gate.py       # RecordingReadinessGate
+│   ├── incremental_validator.py  # IncrementalRecordingValidator
+│   └── url_validator.py        # Validação de URL
+├── metrics/        # Métricas
+│   ├── pilot_metrics.py        # Métricas agregadas do piloto (Sprint 8)
+│   └── telemetry.py            # Zero-dep tracer (v2 Phase 6)
 ├── reporting/      # RunReport + StepReport
 ├── healing/        # L0: catalog, L2: agents, L3: llm_healer, curator
-│   └── agents/     # 6 agentes: selector, timing, context, state, dom, input
+│   ├── healing_catalog.py      # L0 JSONL catalog
+│   ├── sqlite_intent_catalog.py # L0 SQLite catalog (v2 Phase 4)
+│   └── agents/                 # 6 agentes: selector, timing, context, state, dom, input
+├── config/
+│   └── component_patterns.yaml # Declarative component patterns (v2 Phase 7)
 ├── evidence/       # EvidenceCollector + store
 ├── oracle/         # OracleRunner (visual_dom, business_state)
 ├── promotion/      # PromotionGate
 ├── taxonomy/       # 11 famílias, 88 códigos, 51 keywords
 ├── runner/         # FallbackRunner + SmartStepRunner (10 estratégias)
-│   └── incremental_runner.py      # Runner passo a passo (Sprint 5)
+│   └── incremental_runner.py   # Runner passo a passo (Sprint 5)
 └── actionability/  # Verificação de actionability
 
 tests/
@@ -397,26 +465,23 @@ oh -p "tarefa"          # OpenHarness modo prompt
 
 | Documento | Conteúdo |
 |-----------|----------|
-| [SPRINT-REVIEW.md](docs/SPRINT-REVIEW.md) | Roteiro da sprint review |
-| [PLANO-DE-TESTE.md](docs/PLANO-DE-TESTE.md) | 27+ casos de teste manuais |
-| [PLANO-TESTE-INTENT-LAB.md](docs/PLANO-TESTE-INTENT-LAB.md) | 14 casos manuais do Intent Lab |
-| [BUGS.md](docs/BUGS.md) | 5 bugs documentados e corrigidos |
-| [TUTORIAL-LLM-HEALING.md](docs/TUTORIAL-LLM-HEALING.md) | Guia de uso do LLM healing |
-| [run-incremental.md](docs/run-incremental.md) | Guia do executor incremental |
-| [Sprint Plan](docs/testforge_plano_sprints_intent_readiness.md) | Plano completo de 8 sprints |
+| [Visão Geral](docs/OVERVIEW.md) | 5-min overview executivo |
+| [Quick Start](docs/USER-GUIDE/QUICK-START.md) | Grave seu primeiro teste em 5 min |
+| [Diagnostic Mode](docs/ARCHITECTURE-V2.md) | Diagnostic Mode + Architecture v2 (Phases 1-7) |
+| [Arquitetura](docs/ARQUITETURA/FASES.md) | Visão geral das Fases A-D |
+| [Diagramas PNG](docs/diagramas/png/) | 20+ diagramas PlantUML |
 | [STATE.md](.planning/STATE.md) | Estado atual do projeto |
-| [Diagramas PNG](docs/diagramas/png/) | 14 diagramas PlantUML |
 
 ---
 
-## 📊 Métricas (v0.4.1)
+## 📊 Métricas (v0.4.2)
 
 | Métrica | Valor |
 |---------|-------|
-| Commits | 344 |
+| Commits | 550+ |
 | Testes | 800+ |
 | Módulos | 40+ |
-| Diagramas | 15 (1 novo: handler delegation) |
+| Diagramas | 20+ (5 novos: diagnostic, v2 pipeline, v2 flow, assert, data-driven) |
 | ComponentHandlers | 5 (Angular Material, PrimeFaces, React MUI, CDK Overlay, ABC) |
 | Estratégias healing | 10 |
 | Famílias cobertas | 11/11 |
@@ -424,8 +489,10 @@ oh -p "tarefa"          # OpenHarness modo prompt
 | LAB pages | 21 (LAB-01 a LAB-16) |
 | LLM validado | ✅ Azure GPT-4.1-mini |
 | Sprints ComponentHandler | 6/6 (Sprints 1-6) |
-| Páginas Intent Lab | 21 (LAB-01 a LAB-16) |
-| Estratégias reconstructor | 3 (snapshot_diff, form_values, network_payload) |
+| Sprints Recorder (v0.4.2) | A, A2, A3, B, B2, B3, D, F, J, M, O, P, Q, R, S |
+| Architecture v2 Phases | 7/7 (Phases 1-7 shipped) |
+| Hotfixes Sprint 0 | 30+ |
+| Estratégias reconstructor | 8 (value_mutations, snapshots, form_values, network, final_state, polling, inline_field_values, keystroke_buffer) |
 | Critérios readiness | 5 |
 | Falhas categorizadas | 7 tipos |
 

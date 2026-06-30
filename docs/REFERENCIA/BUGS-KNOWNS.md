@@ -1,8 +1,8 @@
 # TestForge — Bugs Conhecidos e Resolvidos
 
-**Versão:** 0.4.1  
-**Última atualização:** 2026-06-23  
-**Status:** Consolidado de BUGS.md + bugs.md + v0.4.1 fixes
+**Versão:** 0.4.2  
+**Última atualização:** 2026-06-30  
+**Status:** Consolidado — Sprint 0 hotfixes (30+ bugs corrigidos)
 
 ---
 

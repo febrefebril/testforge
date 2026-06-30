@@ -1,7 +1,7 @@
-# TestForge v0.4.0 — Resumo de Consolidação de Documentação
+# TestForge v0.4.2 — Resumo de Consolidação de Documentação
 
-**Data:** 2026-06-20  
-**Versão:** v0.4.0  
+**Data:** 2026-06-30  
+**Versão:** v0.4.2  
 **Responsável:** André PN  
 **Status:** ✅ Completo
 
@@ -54,7 +54,7 @@ mkdir -p .planning/ARCHIVE
 
 **Ações:**
 - Criar `docs/REFERENCIA/BUGS-KNOWNS.md` (311 linhas)
-  - Seção 1: 5 bugs corrigidos em v0.3.1
+  - Seção 1: 30+ bugs corrigidos em v0.4.2
   - Seção 2: 20 bugs abertos (P0/P1/P2)
   - Seção 3: 3 limitações conhecidas
   - Estatísticas e priorização recomendada
@@ -273,19 +273,13 @@ docs/
 
 ## 🔗 Próximos Passos
 
-### Imediato (v0.4.0)
+### Concluído (v0.4.2)
 
-1. Atualizar `README.md` na raiz com link para `docs/INDEX.md`
-2. Adicionar seção "Documentação" no README
-3. Verificar se `.gitignore` cobre `.planning/ARCHIVE/` corretamente
-
-### Futuro (v0.4.1+)
-
-1. Criar stubs de USER-GUIDE/ (QUICK-START, GRAVAR-FLUXO, TROUBLESHOOTING)
-2. Criar stubs de TUTORIAIS/ faltantes (01-04, 07-08)
-3. Preencher ARQUITETURA/ faltantes (FLUXO-SEMANTIC-MIS, etc)
-4. Revisar PESQUISA/ para completude
-5. Atualizar DIAGRAMAS/ com DIAGRAMA-HEALING.md novo
+1. ✅ README.md atualizado com v0.4.2, Sprint 0, Architecture v2
+2. ✅ USER-GUIDE/ completo (QUICK-START, GRAVAR-FLUXO, TROUBLESHOOTING)
+3. ✅ ARQUITETURA/ atualizado (FASES, DIAGRAMA-VERSIONING)
+4. ✅ DIAGRAMAS/ atualizado (20+ diagramas, Diagnostic Mode, v2 pipeline)
+5. ✅ CHANGELOG.md atualizado com Sprint 0 hotfixes
 
 ---
 
@@ -311,7 +305,7 @@ docs/
 
 ---
 
-**Data de conclusão:** 2026-06-20  
-**Versão:** v0.4.0  
+**Data de conclusão:** 2026-06-30  
+**Versão:** v0.4.2  
 **Responsável:** André PN  
-**Status final:** ✅ COMPLETO E VALIDADO
+**Status final:** ✅ COMPLETO — Atualizado para v0.4.2 (Sprint 0 + Architecture v2)

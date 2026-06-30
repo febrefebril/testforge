@@ -126,6 +126,18 @@ cat recordings/meu_primeiro_teste/script.py
 
 ## Principais Características
 
+### ✅ Diagnostic Mode (Sprint 0)
+
+- FrameworkDetector: análise de CDP bundle + window/DOM/custom-elements
+- CaptureQualityTracker: value_kind regex, framework_signal, blind_spots
+- ReplayCheck: probe de localizadores (imediato ou batch)
+- GherkinWriter: geração de `scenario.feature` em português
+- Publisher Azure DevOps (G4 + Z1+Z5)
+```bash
+testforge record --diagnostic-mode <url>
+testforge diagnose <url>
+```
+
 ### ✅ Gravação Inteligente
 
 - Captura cliques, preenchimentos, navegações
@@ -133,7 +145,26 @@ cat recordings/meu_primeiro_teste/script.py
 - Detecta intenção mesmo em campos com máscara JS
 - Suporta SPA (React, Angular, Vue, PrimeFaces)
 
-### ✅ Component Handler System (Novo v0.4.1)
+### ✅ Diagnostic Mode (Novo v0.4.2)
+
+- Modo standalone de coleta de telemetria para equipes de QA
+- `FrameworkDetector` — análise de CDP bundle + window/DOM/custom-elements
+- `CaptureQualityTracker` — value_kind regex, framework_signal, blind_spots
+- `ReplayCheck` — probe de localizadores (imediato ou batch)
+- `GherkinWriter` — geração de `scenario.feature` em português
+- Publisher para Azure DevOps (G4 + Z1+Z5)
+
+### ✅ Architecture v2 (Phases 1-7)
+
+- **Phase 1:** Playwright tracing + CDP AX-tree capture (paralelo)
+- **Phase 2:** v2 LocatorExtractor + Playwright codegen + intent normalization
+- **Phase 3:** LocatorResolver + step API + v2 compiler
+- **Phase 4:** SQLite intent-keyed catalog + persistent L0
+- **Phase 5:** Pipes & Filters pipeline (4 extracted stages)
+- **Phase 6:** Zero-dep tracer + static dashboard.html
+- **Phase 7:** YAML-driven ComponentResolver
+
+### ✅ Component Handler System (v0.4.1)
 
 - Handlers específicos por framework (Angular Material, PrimeFaces, React MUI)
 - `detect_handler()` → delega execução para handler correto
@@ -206,6 +237,10 @@ Métricas
 
 **Fase D (⏳ Em Progresso)** — Executor com healing L0-L3 completo
 
+**🎯 Diagnostic Mode (✅ v0.4.2)** — Sprint 0: FrameworkDetector, CaptureQuality, ReplayCheck, GherkinWriter, TelemetryStore
+
+**🎯 Architecture v2 (✅ Phases 1-7)** — Tracing, CDP, v2 locator, resolver, SQLite catalog, pipes & filters, telemetry, dashboard, component resolver
+
 **🎯 ComponentHandler System (✅ v0.4.1)** — Sprints 1-6: Angular Material completo + PrimeFaces/React MUI skeletons
 
 **🎯 Native Playwright Locators + Auto-Healing (✅ v0.4.2)** — Compiler gera get_by_role/label/placeholder; L0.5 fuzzy regex; compound multi-attr candidates; HealCatalog auto-learning; IntentReconstructor merged em RecordingNormalizer
@@ -216,7 +251,8 @@ Métricas
 
 1. **Testers:** [Guia Rápido](USER-GUIDE/QUICK-START.md) — Comece a gravar em 5 min
 2. **Developers:** [Arquitetura](ARQUITETURA/FASES.md) — Entenda as 4 fases
-3. **Pesquisadores:** [Análise LLM](PESQUISA/ANALISE-LLM.md) — Como o LLM valida
+3. **Developers:** [Architecture v2](ARCHITECTURE-V2.md) — Phases 1-7 migration
+4. **Pesquisadores:** [Análise LLM](PESQUISA/ANALISE-LLM.md) — Como o LLM valida
 
 ---
 
@@ -241,5 +277,5 @@ R: Não! TestForge gera o código. Mas saber Playwright ajuda a entender o outpu
 
 ---
 
-**Última atualização:** 2026-06-24  
+**Última atualização:** 2026-06-30  
 **Versão:** v0.4.2

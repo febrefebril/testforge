@@ -1,7 +1,7 @@
 # Versionamento e Sincronização de Diagramas
 
-**Versão**: v0.4.2 (2026-06-24)  
-**Status**: Fase A congelada — Fase B/D em progresso — Native Playwright locators + HealCatalog auto-learning implementados
+**Versão**: v0.4.2 (2026-06-30)  
+**Status**: Fase A congelada — Fase B/D em progresso — Sprint 0 hotfixes + Diagnostic Mode + Architecture v2 (Phases 1-7)
 
 ## 🎯 Objetivo
 
@@ -126,7 +126,20 @@ Cada milestone (v0.4.0, v0.4.1, v0.5.0, etc.) deve:
 2. Regenerar PNGs
 3. Committar com tag: `git tag -a v0.4.1-diagrams -m "Diagrams v0.4.1"`
 
-### v0.4.2 (2026-06-24) — Diagramas atualizados
+### v0.4.2 (2026-06-30) — Diagramas atualizados (Sprint 0)
+- **NEW:** `fluxograma-diagnostic-mode.puml` — Diagnostic Mode pipeline
+- **NEW:** `fluxograma-pipeline-v2.puml` — v2 Pipeline (Phases 1-7)
+- **NEW:** `sequencia-fluxo-completo-v2.puml` — v2 Complete flow
+- **NEW:** `sequencia-assert-flow.puml` — Assert flow (Shift+A)
+- **NEW:** `sequencia-diagnostic-gherkin.puml` — Diagnostic Gherkin flow
+- **NEW:** `sequencia-data-driven.puml` — Data-driven flow
+- **NEW:** `sequencia-handler-delegation.puml` — Handler delegation flow
+- `c4-container.puml`, `componentes-llm-healing.puml`, `fluxograma-pipeline-v1.puml` updated for v0.4.2
+- `c4-context-v1.puml`, `componentes-v1.puml` bumped to v0.4.2
+- Diagnostic mode + v2 architecture + Sprint 0 features reflected
+- 20+ PUML files + PNGs regenerated
+
+### v0.4.2 (2026-06-24) — Diagramas atualizados (Phase 1-7)
 - `c4-container.puml`: RecorderController + overlay_inject.js, RecordingNormalizer + compound/fingerprint, PlaywrightCompiler + native locators + L0.5, HealingCatalog + auto-learn
 - `fluxograma-pipeline-v1.puml`: Recorder + framenavigated, MIS + compound candidates + fingerprint, Compiler + native PW locators + L0.5
 - PNGs a regenerar

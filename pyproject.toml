@@ -1,6 +1,6 @@
 [project]
 name = "testforge"
-version = "0.1.0"
+version = "0.4.2"
 description = "Gravador inteligente de testes E2E com self-healing deterministico"
 requires-python = ">=3.10"
 dependencies = [

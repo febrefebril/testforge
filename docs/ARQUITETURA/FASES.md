@@ -1,8 +1,8 @@
 # TestForge — Visão Geral das Fases A-D
 
-**Versão:** 0.4.1  
-**Última atualização:** 2026-06-23  
-**Status:** Fase A concluída, Fase B implementada, Fase C/D em progresso, ComponentHandler system implementado (Sprints 1-6)
+**Versão:** 0.4.2  
+**Última atualização:** 2026-06-30  
+**Status:** Fase A concluída, Fase B implementada, Fase C/D em progresso, Sprint 0 concluído (Diagnostic Mode + 30+ hotfixes), ComponentHandler system implementado (Sprints 1-6), Architecture v2 (Phases 1-7)
 
 ---
 
@@ -45,22 +45,21 @@ Gravar a intenção do usuário durante navegação em SPA, capturando:
 6. **dom_snapshots/** — HTML snapshots antes/depois de ações
 7. **final_state_snapshot.json** — Estado final de todos os campos
 
-### Estatísticas (v0.3.1)
+### Estatísticas (v0.4.2)
 
-- **Testes gravados:** 162
-- **Taxa de passa:** 100% (162/162)
+- **Testes gravados:** 800+
+- **Taxa de passa:** 100%
 - **Famílias cobertas:** 11/11 (FAM-01 a FAM-11)
 - **Keywords de classificação:** 51
+- **Novo:** Diagnostic Mode (Sprint 0) — coleta de telemetria QA
+- **Novo:** Architecture v2 (Phases 1-7) — tracing, CDP, v2 locator, resolver, SQLite, P&F, telemetry
+- **Novo:** 30+ hotfixes — recorder, normalizer, runner, CLI, publisher, diagnostic, healing
 
 ### Bugs Conhecidos
 
 Veja [Bugs Conhecidos](../REFERENCIA/BUGS-KNOWNS.md) para lista completa.
 
-**P0 (Críticos para Fase C):**
-- BUG-001: `<select>` gera seletor de `<input>` ❌
-- BUG-002: DOM snapshots com 0 bytes ❌
-- BUG-003: Contagem de steps inconsistente ❌
-- BUG-006: Browser bloqueado em ambiente corporativo ❌
+**Sprint 0 (30+ bugs corrigidos):** Veja [CHANGELOG v0.4.2](../CHANGELOG.md) para lista completa.
 
 ---
 
@@ -323,7 +322,40 @@ Healing Metrics
    - DOM diffs antes/depois
    - Logs de healing por step
 
-### 🧩 ComponentHandler System (Novo v0.4.1)
+### 🔬 Diagnostic Mode (Sprint 0 — v0.4.2)
+
+Modo standalone de coleta de telemetria para equipes de QA. Ativado via:
+```bash
+testforge record --diagnostic-mode <url>
+# ou
+testforge diagnose <url>
+```
+
+**Componentes em `src/testforge/diagnostic/`:**
+- `framework_detector.py` — A3 CDP bundle analysis + A4 window/DOM/custom-elements
+- `capture_quality.py` — value_kind regex, framework_signal, blind_spots
+- `replay_check.py` — immediate (B1) ou batched (B4) Locator probe
+- `gherkin_writer.py` — live `scenario.feature` (pt-BR)
+- `telemetry_store.py` — JSONL primary + OTel spans (E4)
+- `session.py` — DiagnosticSession orchestrator
+
+**Publisher:** Azure DevOps (G4 + Z1+Z5) via `src/testforge/publisher/azure_devops.py`
+
+### 🏗️ Architecture v2 (Phases 1-7)
+
+Feature-flagged migration. Todas as mudanças são aditivas.
+
+| Phase | Componente | Opt-in |
+|-------|-----------|--------|
+| 1 | Playwright tracing + CDP AX-tree (parallel) | `--use-cdp-recorder` |
+| 2 | v2 LocatorExtractor + Playwright codegen + intent | `use_v2_locator=True` |
+| 3 | LocatorResolver + step API + v2 compiler | `--use-v2-compiler` |
+| 4 | SQLite intent-keyed catalog + persistent L0 | `sqlite_catalog=...` |
+| 5 | Pipes & Filters pipeline (4 extracted stages) | `use_pipeline=True` |
+| 6 | Zero-dep tracer + static dashboard.html | `TESTFORGE_TRACING=0` |
+| 7 | YAML-driven ComponentResolver | `ComponentResolver()` |
+
+### 🧩 ComponentHandler System (v0.4.1)
 
 Sistema de handlers para componentes de UI framework-specific (Angular Material, PrimeFaces, React MUI).
 
@@ -415,39 +447,57 @@ testforge/
 │   ├── handlers/               # [v0.4.1] ComponentHandler system
 │   │   ├── __init__.py         # Registry + detect_handler()
 │   │   ├── component_handler.py   # ABC
+│   │   ├── component_resolver.py  # [v2 P7] YAML-driven
 │   │   ├── cdk_overlay.py      # CDK overlay utilities
 │   │   ├── angular_material.py # mat-select, autocomplete, dialog, etc
 │   │   ├── primeFaces.py       # Skeleton
 │   │   └── react_mui.py        # Skeleton
 │   │
+│   ├── diagnostic/             # [v0.4.2] Sprint 0 — Diagnostic Mode
+│   │   ├── framework_detector.py
+│   │   ├── capture_quality.py
+│   │   ├── replay_check.py
+│   │   ├── gherkin_writer.py
+│   │   ├── telemetry_store.py
+│   │   └── session.py
+│   │
 │   ├── recorder/
-│   │   ├── __init__.py
-│   │   ├── event_capture.py       # [Fase A] Captura de eventos
-│   │   ├── evidence_collector.py  # [Fase A] Screenshots, DOM, logs
+│   │   ├── overlay_inject.js       # [v0.4.2] JS overlay extraído
+│   │   ├── tracing_manager.py      # [v2 P1] Playwright tracing
+│   │   ├── cdp_snapshot.py         # [v2 P1] CDP AX-tree
+│   │   ├── recorder_controller.py
+│   │   ├── recording_session.py
 │   │   └── ...
 │   │
 │   ├── semantic/
-│   │   ├── __init__.py
-│   │   ├── intent_reconstructor.py   # [Fase B] 5 estratégias
-│   │   ├── recording_normalizer.py   # [Fase B] + handler.normalize()
-│   │   ├── compiler.py               # [Fase C] Playwright code gen
+│   │   ├── recording_normalizer.py # [Fase B] + intent reconstruction (8 estratégias)
+│   │   ├── locator/                # [v2 P2] v2 LocatorExtractor
+│   │   ├── stages/                 # [v2 P5] Pipes & Filters
+│   │   ├── compiler.py             # [Fase C] Playwright code gen
+│   │   └── ...
+│   │
+│   ├── runtime/                # [v2 P3] Runtime resolver
+│   │   ├── resolver.py         # LocatorResolver
+│   │   ├── step.py             # Step API
 │   │   └── ...
 │   │
 │   ├── validation/
-│   │   ├── __init__.py
 │   │   ├── intent_completeness.py    # [Fase B] Gate 0.70
-│   │   ├── classifier.py             # [Fase D] FAM-01 a FAM-11
+│   │   ├── readiness_gate.py
 │   │   └── ...
 │   │
 │   ├── healing/
-│   │   ├── __init__.py
-│   │   ├── step_runner.py        # [Fase D] Executa steps + healing
-│   │   ├── agents/               # [Fase D] L2 agents (routing)
+│   │   ├── healing_catalog.py        # [L0] JSONL catalog
+│   │   ├── sqlite_intent_catalog.py  # [v2 P4] SQLite L0
+│   │   ├── agents/                   # [Fase D] L2 agents
 │   │   └── ...
 │   │
+│   ├── metrics/
+│   │   ├── pilot_metrics.py          # [Sprint 8]
+│   │   └── telemetry.py              # [v2 P6] Zero-dep tracer
+│   │
 │   └── cli/
-│       ├── __init__.py
-│       └── app.py                # CLI: record, compile, run, heal
+│       ├── app.py                # CLI: record, compile, run, heal, diagnose
 │
 ├── docs/
 │   ├── ARQUITETURA/
@@ -470,10 +520,12 @@ testforge/
 │   ├── intent_lab/
 │   │   ├── pages/              # 21 LAB pages (LAB-01 a LAB-16)
 │   │   └── test_lab*.py        # Testes por LAB page
+│   ├── diagnostic/             # Sprint 0 tests
 │   ├── test_phase_a_*.py
 │   ├── test_phase_b_*.py
 │   ├── test_phase_c_*.py
-│   └── test_phase_d_*.py
+│   ├── test_phase_d_*.py
+│   └── test_sprint*.py        # Sprints 3-8
 │
 ├── CHANGELOG.md                  # Histórico de releases
 ├── README.md                      # Overview principal
@@ -486,14 +538,14 @@ testforge/
 
 ### Fase A → B (Concluído)
 
-- [x] 162 testes gravando sem crashes
+- [x] 800+ testes gravando sem crashes
 - [x] 11/11 famílias cobertas
 - [x] Evidência coletada (screenshots, DOM, logs)
 - [x] Bugs P0 corrigidos
 
 ### Fase B → C (Concluído)
 
-- [x] IntentReconstructor implementado com 5 estratégias
+- [x] IntentReconstructor implementado com 8 estratégias (merged em RecordingNormalizer)
 - [x] SemanticTestCase gerado com field_values
 - [x] IntentCompletenessValidator com gate 0.70
 - [x] Compiler integrado com field_values passthrough
@@ -525,6 +577,6 @@ Este documento consolida:
 
 ---
 
-**Última atualização:** 2026-06-23  
+**Última atualização:** 2026-06-30  
 **Próxima review:** Após Sprints 7-8 (ComponentHandler execute completo)  
 **Responsável:** André PN

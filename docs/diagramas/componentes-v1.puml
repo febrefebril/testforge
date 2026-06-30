@@ -1,5 +1,5 @@
 @startuml
-title TestForge v0.3.1 — Componentes (28 modulos, 100 commits, 162 testes)
+title TestForge v0.4.2 — Componentes (40+ modulos, 550+ commits, 800+ testes)
 
 skinparam packageStyle rectangle
 skinparam backgroundColor #FFFFFF
