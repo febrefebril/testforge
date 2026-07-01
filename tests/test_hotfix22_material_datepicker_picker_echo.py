@@ -72,7 +72,10 @@ def _siopi_sequence(fill_placeholder="DD/MM/AAAA", fill_element_id=""):
 
 
 def test_picker_echo_fill_via_placeholder_keeps_clicks():
-    """SIOPI-shaped: placeholder DD/MM/AAAA on fill target → picker echo."""
+    """SIOPI-shaped: placeholder DD/MM/AAAA on fill target → picker echo.
+    Direct-fill nao funciona (Material datepicker rejeita fill direto quando
+    bind ativo). Volta ao click-based path.
+    """
     handler = AngularMaterialHandler()
     steps = _siopi_sequence(fill_placeholder="DD/MM/AAAA")
     handler._dedup_datepicker_sequences(steps)

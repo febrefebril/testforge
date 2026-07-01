@@ -714,6 +714,20 @@
   function _extractRawMaskValue(el) {
     if (!el) return null;
     try {
+      // Hotfix 22 (direct-fill mode): datepicker inputs NAO usam raw_value.
+      // Valor formatado (DD/MM/YYYY) eh o que direct-fill mode precisa
+      // downstream. Skip TODA extracao raw pra evitar corromper value
+      // com "01011968" quando queremos "01/01/1968".
+      var isDatepicker = (
+        el.classList && el.classList.contains('mat-datepicker-input') ||
+        el.hasAttribute && (el.hasAttribute('data-mat-calendar') || el.hasAttribute('matDatepicker'))
+      );
+      if (isDatepicker) return null;
+      var ph = el.getAttribute && (el.getAttribute('placeholder') || '');
+      if (ph && /^\s*[dDmMaAyYhHsS][dDmMaAyYhHsS\/\-\.:]{4,}/.test(ph)) {
+        return null;
+      }
+
       // ng-currency-mask (Caixa SIOPI) — el._mask with getRawValue()
       if (el._mask && typeof el._mask.getRawValue === 'function') {
         var rv = el._mask.getRawValue();

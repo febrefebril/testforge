@@ -299,11 +299,22 @@ class AngularMaterialHandler(ComponentHandler):
                 and _fill_target_is_material_datepicker(steps[found_fill])
             )
 
+            # Hotfix 22 (direct-fill mode ATTEMPT — REVERTIDO):
+            # Testado com test-pos-hotfix27_2: Material datepicker input REJEITA
+            # `el.fill("01/01/1968")` porque `data-mat-calendar` binding ativo
+            # faz input comportar-se como readonly durante interacao. Runtime
+            # fill sempre REJ. Voltamos ao path click-based (Sprint J + hotfix 20)
+            # e aceitamos limitacoes de calendar positional cells.
+            # Follow-up: implementar backtrack architecture (user's original ask)
+            # ou detectar direct-fill failure e retry com clicks.
+
             if picker_echo_fill:
                 # Hotfix 22: Material datepicker input received a fill because
                 # the picker wrote to it — the click sequence is the canonical
                 # intent. Keep clicks; skip the picker-echo fill (input is
                 # effectively readonly at runtime).
+                # NOTA: so cai aqui se fill nao tem formato DD/MM/YYYY valido
+                # (ex.: raw digits "01011968" pre-fix f1c1881).
                 steps[found_fill].skip_reason = "datepicker_picker_echo_fill"
                 i = found_fill + 1
             elif found_fill > seq_start:

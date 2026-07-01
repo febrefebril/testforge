@@ -66,7 +66,11 @@ def test_calendar_clicks_preserved_not_dedup():
 def test_picker_echo_fill_is_skipped():
     """Fill que vem apos o day-cell click e o echo do picker escrevendo
     no input Material. Deve receber skip_reason `datepicker_picker_echo_fill`
-    para o runtime nao tentar preencher (input readonly-ish rejeita)."""
+    para o runtime nao tentar preencher (input readonly-ish rejeita).
+
+    NOTA: direct-fill mode foi testado e falhou (Material rejeita fill
+    direto quando bind ativo). Voltamos ao click-based path.
+    """
     stc = _normalize()
     picker_fills = [
         s for s in stc.steps

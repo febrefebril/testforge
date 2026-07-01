@@ -1573,7 +1573,23 @@ class RecordingNormalizer:
         # Sprint Q: prefer raw_value (unmasked) over value when mask lib detected
         fill_value = raw.get("value")
         raw_mask_val = raw.get("raw_value")
-        if action == "fill" and raw_mask_val is not None and raw_mask_val != fill_value:
+        # Hotfix 22 (direct-fill mode): NAO substitui value com raw_value quando
+        # target eh datepicker input. Direct-fill precisa do valor formatado
+        # (DD/MM/YYYY) para type direto no input Material. Recordings legacy
+        # com raw_value="01011968" pre-fix continuam funcionando via detect
+        # abaixo (placeholder DD/MM/AAAA / mat-datepicker-input).
+        _is_datepicker_target = False
+        _tgt = target_data or {}
+        _ph = (_tgt.get("placeholder") or "").strip()
+        if _ph and _re.match(r'^\s*[DdMmAaYy][DdMmAaYyHhSs/\-\.:]{4,}', _ph):
+            _is_datepicker_target = True
+        _cls = _tgt.get("class_list") or []
+        if isinstance(_cls, list) and "mat-datepicker-input" in _cls:
+            _is_datepicker_target = True
+
+        if (action == "fill" and raw_mask_val is not None
+                and raw_mask_val != fill_value
+                and not _is_datepicker_target):
             fill_value = raw_mask_val
             context["masked_display_value"] = raw.get("value")
         return SemanticAction(
