@@ -74,6 +74,7 @@ class RecorderController:
         use_cdp: bool = True,
         diagnostic_mode: bool = False,
         replay_mode: str = "batched",   # H17: was "immediate"
+        overlay_prompt: bool = True,     # inline overlay UI for missing fields
     ) -> RecordingSession:
         session = self._session_manager.start(
             recording_id, application, base_url,
@@ -132,6 +133,8 @@ class RecorderController:
                          diag_dir, replay_mode)
 
         # Inject recording context so the overlay can display system/suite/test_case
+        # and control inline prompt behaviour.
+        overlay_flag = "true" if not overlay_prompt else "false"
         context_script = (
             "window.__tfRecordingInfo = {"
             f" rid: {json.dumps(recording_id)},"
@@ -139,6 +142,7 @@ class RecorderController:
             f" suite: {json.dumps(suite)},"
             f" testCase: {json.dumps(test_case or recording_id)}"
             " };"
+            f"window.__tfDisableOverlayPrompt = {overlay_flag};"
         )
         self._page.add_init_script(context_script)
         self._page.add_init_script(_OVERLAY_JS)

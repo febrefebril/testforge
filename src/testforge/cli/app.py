@@ -494,6 +494,7 @@ def cmd_record(args):
             use_cdp=getattr(args, "use_cdp_recorder", True),
             diagnostic_mode=_diag,
             replay_mode=_replay_mode,
+            overlay_prompt=getattr(args, "overlay_prompt", True),
         )
         _original_rid = rid
         rid = session.recording_id  # may be suffixed (_2, _3) if original name exists
@@ -2176,6 +2177,10 @@ def main():
                      help="Desliga completude (uso CI / batch).")
     rec.add_argument("--no-wizard", dest="no_wizard", action="store_true",
                      help="Pula wizard QA interativo (uso CI). Default: prompt em TTY.")
+    rec.add_argument("--overlay-prompt", dest="overlay_prompt", action="store_true", default=True,
+                     help="(default ON) Exibe campos pendentes no overlay durante gravacao.")
+    rec.add_argument("--no-overlay-prompt", dest="overlay_prompt", action="store_false",
+                     help="Desliga overlay prompt (uso CI). Valores pendentes via --complete apos gravacao.")
     rec.add_argument("--no-pipeline-and-diagnostic-mode",
                      dest="no_pipeline_and_diagnostic_mode", action="store_true",
                      help="Desliga modo pipeline+diagnostic (ON por padrao).")

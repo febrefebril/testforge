@@ -182,6 +182,11 @@
   // replay recorder. Format compatible with rrweb incremental snapshots (type=3).
   // Used as tiebreaker for ambiguous steps in normalizer.
   window.__tfRrwebQueue = window.__tfRrwebQueue || [];
+  // Inline overlay prompt: pending fields that the user was asked about
+  // during recording but hasn't answered yet. UI rendered in overlay panel.
+  window.__tfPendingFieldQueue = window.__tfPendingFieldQueue || [];
+  // Set to true to disable the inline overlay prompt entirely (CI mode).
+  var _tfInlinePromptDisabled = window.__tfDisableOverlayPrompt === true;
 
   // ---- Cross-page state restoration ----
   try {
@@ -585,9 +590,11 @@
   // ---- H21: inline value prompt on mask-intercepted typing ----
   // Tracks keystroke counts per <input>/<textarea>. On blur, if the
   // input is empty despite >= 2 keystrokes, the mask almost certainly
-  // intercepted the value — ask the user inline so they don't have to
-  // recall every masked field at the end via --complete. Source on the
-  // resulting field_value_map entry is `user_supplied_inline`.
+  // intercepted the value — instead of window.prompt() (which is
+  // disruptive and detached from context), push the field to
+  // __tfPendingFieldQueue so the overlay UI can collect the value
+  // inline where the user is already looking.
+  // Source on the resulting field_value_map entry is `user_supplied_inline`.
   (function _h21_install_inline_prompt() {
     var _keystrokeCount = new WeakMap();
     document.addEventListener('keydown', function(e) {
@@ -607,13 +614,15 @@
       if (!el) return;
       var tag = (el.tagName || '').toLowerCase();
       if (tag !== 'input' && tag !== 'textarea') return;
+      // If inline overlay prompt is disabled (CI mode), skip entirely.
+      if (_tfInlinePromptDisabled) return;
       var keys = _keystrokeCount.get(el) || 0;
       if (keys < 2) return;
       var raw_value = '';
       try { raw_value = (el.value || '').trim(); } catch (_e) { raw_value = ''; }
       if (raw_value) { _keystrokeCount.set(el, 0); return; }
-      // Empty value after >= 2 keystrokes → mask intercepted. Prompt
-      // the user inline.
+      // Empty value after >= 2 keystrokes → mask intercepted. Build
+      // pending field entry for the overlay UI instead of window.prompt().
       var labelEl = el.id ? document.querySelector('label[for="' + el.id + '"]') : null;
       var label = (labelEl && labelEl.textContent && labelEl.textContent.trim())
         || el.getAttribute('aria-label')
@@ -621,20 +630,19 @@
         || el.name
         || el.id
         || tag;
-      var typed = '';
-      try {
-        typed = window.prompt(
-          'Valor para "' + label.substring(0, 60) + '" (mascara interceptou):',
-          ''
-        );
-      } catch (_e) { typed = null; }
-      _keystrokeCount.set(el, 0);
-      if (!typed) return;
       var fingerprint = tag + '#' + (el.id || '') + '[name=' + (el.name || '') + ']';
-      if (window.__tfEventQueue) {
-        window.__tfEventQueue.push({
-          type: 'inline_field_value',
-          timestamp: new Date().toISOString(),
+      // Dedup: check if same fingerprint already pending
+      var alreadyPending = false;
+      if (window.__tfPendingFieldQueue) {
+        for (var _p = 0; _p < window.__tfPendingFieldQueue.length; _p++) {
+          if (window.__tfPendingFieldQueue[_p].fingerprint === fingerprint) {
+            alreadyPending = true;
+            break;
+          }
+        }
+      }
+      if (!alreadyPending) {
+        window.__tfPendingFieldQueue.push({
           fingerprint: fingerprint,
           label: label.substring(0, 200),
           placeholder: el.getAttribute('placeholder') || '',
@@ -642,10 +650,12 @@
           element_id: el.id || '',
           name: el.name || '',
           tag: tag,
-          value: String(typed).substring(0, 200),
-          source: 'user_supplied_inline',
+          timestamp: new Date().toISOString(),
+          resolved: false,
         });
       }
+      _keystrokeCount.set(el, 0);
+      _showPendingCount();
     }, true);
   })();
 
@@ -1383,6 +1393,16 @@
 
     var ov = document.createElement('div');
     ov.id = 'tf-overlay';
+    var pendingCount = (window.__tfPendingFieldQueue || []).filter(function(p) { return !p.resolved; }).length;
+    var pendingSection = pendingCount > 0
+      ? '<div id="tf-pending-fields" style="margin-top:6px;border-top:1px solid #334155;padding-top:6px;font-size:12px">'
+          + '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">'
+            + '<span style="color:#f59e0b;font-weight:bold">!</span>'
+            + '<span style="color:#94a3b8">Campos Pendentes (<strong id="tf-pending-count">' + pendingCount + '</strong>)</span>'
+          + '</div>'
+          + '<div id="tf-pending-list"></div>'
+        + '</div>'
+      : '<div id="tf-pending-fields" style="display:none"></div>';
     ov.innerHTML = [
       '<div id="tf-panel" style="position:fixed;top:8px;right:8px;background:#1a1a2e;color:#fff;padding:8px 14px;border-radius:8px;font:14px monospace;z-index:99999;display:flex;flex-direction:column;gap:4px;box-shadow:0 4px 16px rgba(0,0,0,0.3)">',
         '<div style="display:flex;gap:12px;align-items:center">',
@@ -1398,6 +1418,7 @@
           '<span>Asserts: <strong id="tf-assert-count">' + initAsserts + '</strong></span>',
         '</div>',
         ctxHtml,
+        pendingSection,
       '</div>',
       '<div id="tf-toast" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 24px;border-radius:8px;font:14px sans-serif;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,0.3)"></div>'
     ].join('\n');
@@ -1421,6 +1442,103 @@
     document.getElementById('tf-btn-stop').onclick = function() { _confirmStop(); };
     document.getElementById('tf-btn-assert').onclick = function() { window._tf_enterAssertMode(); };
   }
+
+  // ---- Inline pending field UI ----
+  // Renders pending fields (mask-intercepted values) as inline input
+  // rows in the overlay panel so the tester can fill them immediately
+  // while the context is fresh.
+
+  function _showPendingCount() {
+    var countEl = document.getElementById('tf-pending-count');
+    var sectionEl = document.getElementById('tf-pending-fields');
+    if (!countEl || !sectionEl) return;
+    var pending = (window.__tfPendingFieldQueue || []).filter(function(p) { return !p.resolved; });
+    countEl.textContent = pending.length;
+    if (pending.length > 0) {
+      sectionEl.style.display = 'block';
+      _renderPendingFields();
+    } else {
+      sectionEl.style.display = 'none';
+    }
+  }
+
+  function _renderPendingFields() {
+    var listEl = document.getElementById('tf-pending-list');
+    if (!listEl) return;
+    var pending = (window.__tfPendingFieldQueue || []).filter(function(p) { return !p.resolved; });
+    if (pending.length === 0) {
+      listEl.innerHTML = '';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < pending.length; i++) {
+      var pf = pending[i];
+      var displayLabel = (pf.label || pf.name || pf.element_id || pf.fingerprint || 'campo').substring(0, 50);
+      html += '<div style="display:flex;gap:4px;align-items:center;margin-bottom:4px" data-pending-idx="' + i + '">'
+        + '<span style="color:#f59e0b;font-size:10px;white-space:nowrap;min-width:60px;overflow:hidden;text-overflow:ellipsis" title="' + displayLabel + '">' + displayLabel + '</span>'
+        + '<input id="tf-pend-input-' + i + '" type="text" style="flex:1;background:#0f172a;color:#fff;border:1px solid #334155;border-radius:4px;padding:3px 6px;font:12px monospace;min-width:80px" placeholder="digite o valor..." />'
+        + '<button style="background:#10b981;color:#fff;border:none;border-radius:4px;padding:3px 8px;cursor:pointer;font:11px monospace" data-pending-fp="' + pf.fingerprint + '" data-pending-idx="' + i + '">OK</button>'
+      + '</div>';
+    }
+    listEl.innerHTML = html;
+    // Attach click handlers to OK buttons
+    var buttons = listEl.querySelectorAll('button[data-pending-fp]');
+    for (var b = 0; b < buttons.length; b++) {
+      (function(btn) {
+        btn.onclick = function(e) {
+          e.stopPropagation();
+          e.preventDefault();
+          var idx = parseInt(btn.getAttribute('data-pending-idx'), 10);
+          var fp = btn.getAttribute('data-pending-fp');
+          var inputEl = document.getElementById('tf-pend-input-' + idx);
+          if (!inputEl) return;
+          var val = inputEl.value.trim();
+          if (!val) {
+            _showToast('Digite um valor antes de salvar');
+            return;
+          }
+          _submitPendingField(fp, val, idx);
+        };
+      })(buttons[b]);
+    }
+  }
+
+  function _submitPendingField(fingerprint, value, idx) {
+    var queue = window.__tfPendingFieldQueue || [];
+    var fieldObj = null;
+    for (var i = 0; i < queue.length; i++) {
+      if (queue[i].fingerprint === fingerprint && !queue[i].resolved) {
+        fieldObj = queue[i];
+        break;
+      }
+    }
+    if (!fieldObj) return;
+    fieldObj.resolved = true;
+    // Push inline_field_value event
+    if (window.__tfEventQueue) {
+      window.__tfEventQueue.push({
+        type: 'inline_field_value',
+        timestamp: new Date().toISOString(),
+        fingerprint: fingerprint,
+        label: (fieldObj.label || '').substring(0, 200),
+        placeholder: fieldObj.placeholder || '',
+        aria_label: fieldObj.aria_label || '',
+        element_id: fieldObj.element_id || '',
+        name: fieldObj.name || '',
+        tag: fieldObj.tag || 'input',
+        value: String(value).substring(0, 200),
+        source: 'user_supplied_inline',
+      });
+    }
+    _showToast('Valor registrado: "' + value.substring(0, 40) + '"');
+    _showPendingCount();
+  }
+
+  // Periodic re-render of pending fields (every 1s) — catches new
+  // fields added via H21 blur detection after the overlay is visible.
+  setInterval(function() {
+    _showPendingCount();
+  }, 1000);
 
   function _showToast(msg) {
     var toast = document.getElementById('tf-toast');
