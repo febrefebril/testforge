@@ -313,10 +313,14 @@ class StepPostconditionValidator:
         # estado: no reordering, no has-text append — element identity is critical
 
         # Resolve first selector that actually finds an element in the DOM.
+        # Hotfix 22: usa timeout maior no primeiro seletor (assumido melhor
+        # candidato) para dar tempo a calculos assincronos renderizarem
+        # resultados. Selectors subsequentes usam timeout menor.
         resolved_selector = None
-        for selector in selectors:
+        for idx, selector in enumerate(selectors):
+            timeout_ms = 5000 if idx == 0 else 1500
             try:
-                self.page.locator(selector).first.wait_for(state="attached", timeout=2000)
+                self.page.locator(selector).first.wait_for(state="attached", timeout=timeout_ms)
                 resolved_selector = selector
                 break
             except Exception:

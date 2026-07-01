@@ -1415,9 +1415,19 @@ class RecordingNormalizer:
             target = event.get("target") or {}
 
             if event_type in FILL_TYPES:
+                # Hotfix 22: chave de dedup precisa distinguir campos que
+                # compartilham id/name vazios (comum em Angular Material
+                # currencymask onde varios inputs usam placeholder R$0,00).
+                # Antes: Prestação=1.000,00 anulava Renda=1.000,00 → fill de
+                # Renda perdia valor final. Agora inclui accessible_name +
+                # placeholder + element_id no key.
+                attrs = target.get("attributes") or {}
+                all_attrs = target.get("all_attributes") or {}
                 key = (
-                    target.get("id", ""),
-                    target.get("name", ""),
+                    target.get("id", "") or target.get("element_id", "") or attrs.get("id", "") or all_attrs.get("id", ""),
+                    target.get("name", "") or attrs.get("name", "") or all_attrs.get("name", ""),
+                    target.get("placeholder", "") or attrs.get("placeholder", ""),
+                    target.get("accessible_name", "") or target.get("aria_label", ""),
                     event.get("value", "") or "",
                 )
                 if key in seen:
