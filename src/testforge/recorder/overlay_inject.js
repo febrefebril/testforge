@@ -1018,6 +1018,18 @@
         step.assert_type = assertType;
         step.assert_state = assertType === 'estado' ? _detectState(el) : '';
         step.expected_value = _getExpectedValue(el, assertType);
+        // Also push to event queue so diagnostic session and Gherkin writer
+        // pick up the assert (they read from raw_events.jsonl, not steps.jsonl).
+        window.__tfEventQueue.push({
+          type: 'assert',
+          timestamp: new Date().toISOString(),
+          url: window.location.href,
+          page_title: document.title,
+          target: target,
+          value: step.expected_value || target.value || '',
+          assert_type: assertType,
+          assert_state: step.assert_state,
+        });
       }
       window.__tfStepQueue.push(step);
       return true;
