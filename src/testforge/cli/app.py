@@ -590,14 +590,21 @@ def cmd_record(args):
             print("[TestForge] [STOP] Navegador fechado — finalizando como Shift+S")
         recorder.stop(gherkin_funcionalidade=_gherkin_func, gherkin_cenario=_gherkin_cen)
         recorder.finalize()
-        # Conta eventos brutos e exibe detalhamento
-        raw_count = 0
+        # Hotfix 22: label antes era "Eventos brutos" mas contava steps.jsonl
+        # (asserts do Shift+A) → mostrava so um punhado quando raw_events tinha
+        # dezenas. Separa as duas contagens.
         rec_dir = str(_PROJECT_ROOT / "recordings" / rid)
+        raw_count = 0
+        raw_jsonl = os.path.join(rec_dir, "raw_events.jsonl")
+        if os.path.exists(raw_jsonl):
+            with open(raw_jsonl) as f:
+                raw_count = sum(1 for l in f if l.strip())
+        curated_count = 0
         steps_jsonl = os.path.join(rec_dir, "steps.jsonl")
         if os.path.exists(steps_jsonl):
             with open(steps_jsonl) as f:
-                raw_count = sum(1 for _ in f)
-        print(f"[TestForge] Eventos brutos: {raw_count}")
+                curated_count = sum(1 for l in f if l.strip())
+        print(f"[TestForge] Eventos brutos: {raw_count} | Asserts (Shift+A): {curated_count}")
         print(f"[TestForge] Sessao salva: recordings/{rid}/")
         if _diag:
             diag_dir = os.path.join(rec_dir, "diagnostic")

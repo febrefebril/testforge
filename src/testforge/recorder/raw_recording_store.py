@@ -14,6 +14,17 @@ class RawRecordingStore:
         with open(self._events_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(event.to_dict(), default=str) + "\n")
 
+    def event_count(self) -> int:
+        """Retorna numero de eventos crus persistidos.
+        Hotfix 22: log stop reportava sempre events=0."""
+        if not os.path.exists(self._events_path):
+            return 0
+        try:
+            with open(self._events_path, "r", encoding="utf-8") as f:
+                return sum(1 for line in f if line.strip())
+        except Exception:
+            return 0
+
     def save_metadata(self, key: str, data: dict):
         path = os.path.join(self._session_dir, f"{key}.json")
         with open(path, "w", encoding="utf-8") as f:
