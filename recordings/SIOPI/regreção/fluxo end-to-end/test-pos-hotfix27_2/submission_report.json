@@ -1,0 +1,18 @@
+{
+  "testforge_version": "0.1.0",
+  "submitted_at": "2026-07-01T20:13:58.524429+00:00",
+  "recording_id": "test-pos-hotfix27_2",
+  "system": "SIOPI",
+  "suite": "regre\u00e7\u00e3o",
+  "test_case": "fluxo end-to-end",
+  "application": "SIOPI",
+  "base_url": "https://simuladorhabitacao.caixa.gov.br/home",
+  "status": "incomplete_intent",
+  "verdict": "not_evaluated",
+  "criteria_passed": 0,
+  "criteria_total": 5,
+  "steps": {},
+  "failures": [],
+  "warnings": [],
+  "testforge_issue": false
+}
