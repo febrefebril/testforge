@@ -1,0 +1,80 @@
+{
+  "reason": "user_stop",
+  "timestamp": "2026-07-01T16:23:47.343Z",
+  "url": "https://simuladorhabitacao.caixa.gov.br/calculadora-egi",
+  "page_title": "Simulador",
+  "fields": [
+    {
+      "timestamp": "2026-07-01T16:23:47.343Z",
+      "fingerprint": "input#mat-input-5[name=]",
+      "identifiers": {
+        "id": "mat-input-5",
+        "name": null,
+        "label": null,
+        "placeholder": "DD/MM/AAAA",
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": null,
+      "value": "27/09/1992",
+      "raw_value": "27091992",
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-07-01T16:23:47.343Z",
+      "fingerprint": "input#mat-input-6[name=]",
+      "identifiers": {
+        "id": "mat-input-6",
+        "name": null,
+        "label": null,
+        "placeholder": null,
+        "aria-label": "Quanto vale seu im\u00f3vel hoje?*"
+      },
+      "tag": "input",
+      "type": "text",
+      "value": " 1.000.000,00 ",
+      "raw_value": "1000000.00",
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-07-01T16:23:47.343Z",
+      "fingerprint": "input#mat-input-8[name=]",
+      "identifiers": {
+        "id": "mat-input-8",
+        "name": null,
+        "label": null,
+        "placeholder": null,
+        "aria-label": "Quanto ainda falta pagar?*"
+      },
+      "tag": "input",
+      "type": "text",
+      "value": " 900.000,00 ",
+      "raw_value": "900000.00",
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-07-01T16:23:47.343Z",
+      "fingerprint": "input#mat-input-7[name=]",
+      "identifiers": {
+        "id": "mat-input-7",
+        "name": null,
+        "label": null,
+        "placeholder": null,
+        "aria-label": "Qual sua renda mensal bruta?*"
+      },
+      "tag": "input",
+      "type": "text",
+      "value": " 10.000,00 ",
+      "raw_value": "10000.00",
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    }
+  ]
+}
