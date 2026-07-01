@@ -97,6 +97,61 @@ class AngularMaterialHandler(ComponentHandler):
                 step.context = ctx
 
         self._dedup_datepicker_sequences(steps)
+        self._promote_calendar_cell_text_selectors(steps)
+
+    def _promote_calendar_cell_text_selectors(self, steps: list) -> None:
+        """Hotfix 22: em cliques em celulas do calendario Material, o CSS
+        posicional `tr:nth-of-type(N) > td:nth-of-type(M)` NAO eh estavel —
+        depende de qual ano/mes o calendario abriu ao replay (mudou entre
+        gravacao 2016-2039 e run 2020-2043, por exemplo). Text-based
+        `span:has-text("1968")` casa o valor real da celula independente da
+        posicao.
+
+        Para cada click em mat-calendar-body-cell, promove text candidato
+        acima de css_path posicional. So aplica quando target.text eh
+        conteudo distintivo (ano 4-digitos, mes 3-letras, dia 1-2 digitos).
+        """
+        import re as _re_local
+        for step in steps:
+            if step.action != "click" or step.skip_reason:
+                continue
+            tgt = step.target
+            if not tgt or not tgt.candidates:
+                continue
+            # Detecta celula de calendario nos candidatos
+            is_calendar_cell = any(
+                "mat-calendar-body-cell" in (getattr(c, "selector", "") or "")
+                for c in tgt.candidates
+            )
+            if not is_calendar_cell:
+                continue
+            text = (getattr(tgt, "text", "") or "").strip()
+            if not text:
+                continue
+            # Text distintivo: dia (1-2 digitos), mes (3 letras), ano (4 digitos)
+            is_year = bool(_re_local.fullmatch(r"\d{4}", text))
+            is_month = bool(_re_local.fullmatch(r"[A-Z]{3}", text))
+            is_day = bool(_re_local.fullmatch(r"\d{1,2}", text))
+            if not (is_year or is_month or is_day):
+                continue
+            # Boost text candidates acima do css_path posicional. Reordena:
+            # text-based primeiro, css_path/nth-of-type depois.
+            def _is_positional_css(sel: str) -> bool:
+                return "nth-of-type" in sel or "nth-child" in sel
+            text_cands = []
+            other_cands = []
+            for c in tgt.candidates:
+                sel = getattr(c, "selector", "") or ""
+                if ":has-text(" in sel and not _is_positional_css(sel):
+                    # Boost score para calendar cell text
+                    if c.score < 0.9:
+                        c.score = 0.9
+                        c.reason = (c.reason or "") + " [boosted: calendar cell text]"
+                    text_cands.append(c)
+                else:
+                    other_cands.append(c)
+            if text_cands:
+                tgt.candidates = text_cands + other_cands
 
     def _dedup_datepicker_sequences(self, steps: list) -> None:
         """Collapse Angular Material datepicker calendar navigation into the text fill.
