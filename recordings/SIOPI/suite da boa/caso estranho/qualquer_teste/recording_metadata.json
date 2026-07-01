@@ -1,0 +1,60 @@
+{
+  "recording_id": "qualquer_teste",
+  "application": "web",
+  "base_url": "https://simuladorhabitacao.caixa.gov.br/home",
+  "system": "SIOPI",
+  "suite": "suite da boa",
+  "test_case": "caso estranho",
+  "started_at": "2026-07-01T18:31:52.463674+00:00",
+  "finished_at": "2026-07-01T18:32:55.415905+00:00",
+  "status": "intent_complete",
+  "recording_status": "intent_complete",
+  "status_history": [
+    {
+      "status": "recording",
+      "timestamp": "2026-07-01T18:31:52.475245+00:00",
+      "reason": "Recording started",
+      "metadata": {
+        "application": "web",
+        "base_url": "https://simuladorhabitacao.caixa.gov.br/home",
+        "system": "SIOPI",
+        "suite": "suite da boa",
+        "test_case": "caso estranho"
+      }
+    },
+    {
+      "status": "recording",
+      "timestamp": "2026-07-01T18:31:52.475252+00:00",
+      "reason": "Recording started",
+      "metadata": {
+        "application": "web",
+        "base_url": "https://simuladorhabitacao.caixa.gov.br/home"
+      }
+    },
+    {
+      "status": "stopped",
+      "timestamp": "2026-07-01T18:32:55.415925+00:00",
+      "reason": "Recording stopped by user",
+      "metadata": {}
+    },
+    {
+      "status": "completed_raw",
+      "timestamp": "2026-07-01T18:32:55.419470+00:00",
+      "reason": "Recording finalized",
+      "metadata": {}
+    },
+    {
+      "status": "intent_complete",
+      "timestamp": "2026-07-01T18:32:55.442320+00:00",
+      "reason": "compile --check: intent_complete",
+      "metadata": {}
+    }
+  ],
+  "fingerprint": {
+    "capture_schema_version": 4,
+    "testforge_version": "0.1.0",
+    "overlay_inject_sha256": "61fca6477530a6ea957f20e2c09eeb071aef71a1aecd7e053f8fab0f233a2f8e",
+    "git_head_sha": "3417ec0e5109ba761dfd15ca874040c54742d662",
+    "recorded_at": "2026-07-01T18:31:52.475217+00:00"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "testforge_version": "0.1.0",
+  "submitted_at": "2026-07-01T18:32:55.448497+00:00",
+  "recording_id": "qualquer_teste",
+  "system": "SIOPI",
+  "suite": "suite da boa",
+  "test_case": "caso estranho",
+  "application": "web",
+  "base_url": "https://simuladorhabitacao.caixa.gov.br/home",
+  "status": "intent_complete",
+  "verdict": "not_evaluated",
+  "criteria_passed": 0,
+  "criteria_total": 5,
+  "steps": {},
+  "failures": [],
+  "warnings": [],
+  "testforge_issue": false
+}
