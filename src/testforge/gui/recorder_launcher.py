@@ -144,7 +144,7 @@ class RecorderLauncher(tk.Tk):
     def _build_form(self, parent):
         pad = {"padx": 12, "pady": (0, 6)}
 
-        # -- Identificação -----------------------------------------------------
+        # -- Modo Simples: Identificação ---------------------------------------
         card1 = tk.Frame(parent, bg=BG_CARD, padx=16, pady=12)
         card1.pack(fill="x", **pad)
         _section_title(card1, "Identificação da Gravação").pack(fill="x")
@@ -153,49 +153,81 @@ class RecorderLauncher(tk.Tk):
         grid1.pack(fill="x", pady=(4, 0))
         grid1.columnconfigure(1, weight=1)
 
-        self.var_url    = tk.StringVar()
-        self.var_name   = tk.StringVar()
-        self.var_app    = tk.StringVar()
-        self.var_system = tk.StringVar()
+        self.var_url  = tk.StringVar()
+        self.var_name = tk.StringVar()
         self.var_suite  = tk.StringVar()
         self.var_tc     = tk.StringVar()
 
-        _row(grid1, 0, "URL *",         _entry(grid1, self.var_url),    req=True)
+        _row(grid1, 0, "URL *",         _entry(grid1, self.var_url),  req=True)
         _row(grid1, 1, "Nome",          _entry(grid1, self.var_name))
-        _row(grid1, 2, "Aplicação",     _entry(grid1, self.var_app))
-        _row(grid1, 3, "Sistema",       _entry(grid1, self.var_system))
-        _row(grid1, 4, "Suite",         _entry(grid1, self.var_suite))
-        _row(grid1, 5, "Caso de Teste", _entry(grid1, self.var_tc))
+        _row(grid1, 2, "Suite",         _entry(grid1, self.var_suite))
+        _row(grid1, 3, "Caso de Teste", _entry(grid1, self.var_tc))
 
-        # -- Configurações -----------------------------------------------------
-        card2 = tk.Frame(parent, bg=BG_CARD, padx=16, pady=12)
-        card2.pack(fill="x", **pad)
-        _section_title(card2, "Configurações").pack(fill="x")
+        # -- Navegador (sempre visível) ----------------------------------------
+        card_browser = tk.Frame(parent, bg=BG_CARD, padx=16, pady=12)
+        card_browser.pack(fill="x", **pad)
+        _section_title(card_browser, "Navegador").pack(fill="x")
 
-        cfg = tk.Frame(card2, bg=BG_CARD)
-        cfg.pack(fill="x", pady=(4, 0))
+        brow_grid = tk.Frame(card_browser, bg=BG_CARD)
+        brow_grid.pack(fill="x", pady=(4, 0))
 
-        self.var_browser  = tk.StringVar(value="chromium")
-        self.var_evidence = tk.StringVar(value="light")
-
-        tk.Label(cfg, text="Browser", bg=BG_CARD, fg=FG_DIM,
-                 font=("Segoe UI", 9), anchor="e", width=16
+        self.var_browser = tk.StringVar(value="chromium")
+        tk.Label(brow_grid, text="Browser", bg=BG_CARD, fg=ACCENT,
+                 font=("Segoe UI", 9, "bold"), anchor="e", width=16
                  ).grid(row=0, column=0, sticky="e", padx=(0, 6), pady=2)
-        _combo(cfg, self.var_browser, ["chromium", "chrome", "edge"],
+        _combo(brow_grid, self.var_browser, ["chromium", "chrome", "edge"],
                width=14).grid(row=0, column=1, sticky="w", pady=2)
 
-        tk.Label(cfg, text="Evidência", bg=BG_CARD, fg=FG_DIM,
-                 font=("Segoe UI", 9), anchor="e", width=10
-                 ).grid(row=0, column=2, sticky="e", padx=(16, 6), pady=2)
-        _combo(cfg, self.var_evidence, ["light", "full"],
-               width=8).grid(row=0, column=3, sticky="w", pady=2)
+        # -- Toggle: Mais Opções -----------------------------------------------
+        toggle_frame = tk.Frame(parent, bg=BG)
+        toggle_frame.pack(fill="x", padx=12, pady=(0, 0))
 
-        # -- Opções ------------------------------------------------------------
-        card3 = tk.Frame(parent, bg=BG_CARD, padx=16, pady=12)
-        card3.pack(fill="x", **pad)
-        _section_title(card3, "Opções").pack(fill="x")
+        self._advanced_shown = False
+        self._advanced_frame = tk.Frame(parent, bg=BG)
 
-        opts = tk.Frame(card3, bg=BG_CARD)
+        arrow = "▼"
+        self._toggle_btn = tk.Button(
+            toggle_frame, text=f"{arrow}  Mais Opções",
+            bg=BG_CARD, fg=FG_DIM, font=("Segoe UI", 9),
+            relief="flat", padx=12, pady=4, cursor="hand2",
+            activebackground=BORDER, activeforeground=ACCENT,
+            command=self._toggle_advanced,
+        )
+        self._toggle_btn.pack(side="left")
+
+        # -- Conteúdo avançado (inicia oculto) ---------------------------------
+        # Tudo dentro de self._advanced_frame que é pack/forget conforme toggle
+
+        # -- Aplicação / Sistema / Evidência (avançado) ------------------------
+        card_adv = tk.Frame(self._advanced_frame, bg=BG_CARD, padx=16, pady=12)
+        card_adv.pack(fill="x", **pad)
+        _section_title(card_adv, "Configurações Avançadas").pack(fill="x")
+
+        adv_grid = tk.Frame(card_adv, bg=BG_CARD)
+        adv_grid.pack(fill="x", pady=(4, 0))
+        adv_grid.columnconfigure(1, weight=1)
+
+        self.var_app    = tk.StringVar()
+        self.var_system = tk.StringVar()
+        self.var_evidence = tk.StringVar(value="light")
+
+        _row(adv_grid, 0, "Aplicação",  _entry(adv_grid, self.var_app))
+        _row(adv_grid, 1, "Sistema",    _entry(adv_grid, self.var_system))
+
+        evid_row = tk.Frame(card_adv, bg=BG_CARD)
+        evid_row.pack(fill="x", pady=(2, 0))
+        tk.Label(evid_row, text="Evidência", bg=BG_CARD, fg=FG_DIM,
+                 font=("Segoe UI", 9), anchor="e", width=16
+                 ).grid(row=0, column=0, sticky="e", padx=(0, 6), pady=2)
+        _combo(evid_row, self.var_evidence, ["light", "full"],
+               width=8).grid(row=0, column=1, sticky="w", pady=2)
+
+        # -- Opções (avançado) -------------------------------------------------
+        card_opts = tk.Frame(self._advanced_frame, bg=BG_CARD, padx=16, pady=12)
+        card_opts.pack(fill="x", **pad)
+        _section_title(card_opts, "Opções").pack(fill="x")
+
+        opts = tk.Frame(card_opts, bg=BG_CARD)
         opts.pack(fill="x", pady=(4, 0))
 
         self.var_headless    = tk.BooleanVar()
@@ -209,31 +241,29 @@ class RecorderLauncher(tk.Tk):
         col1 = tk.Frame(opts, bg=BG_CARD)
         col1.pack(side="left")
 
-        checks_left = [
+        for text, var in [
             ("Headless (sem janela)",           self.var_headless),
             ("Verificar completude após gravar", self.var_complete),
             ("Sem interação (criar template)",   self.var_no_interact),
-        ]
-        checks_right = [
+        ]:
+            _check(col0, text, var).pack(anchor="w", pady=1)
+        for text, var in [
             ("Validar antes de marcar como pronto", self.var_validate),
             ("Modo piloto",                          self.var_pilot),
-        ]
-        for text, var in checks_left:
-            _check(col0, text, var).pack(anchor="w", pady=1)
-        for text, var in checks_right:
+        ]:
             _check(col1, text, var).pack(anchor="w", pady=1)
 
-        # -- Publicação Git ----------------------------------------------------
-        card4 = tk.Frame(parent, bg=BG_CARD, padx=16, pady=12)
-        card4.pack(fill="x", **pad)
-        _section_title(card4, "Publicação Git (opcional)").pack(fill="x")
+        # -- Publicação Git (avançado) -----------------------------------------
+        card_git = tk.Frame(self._advanced_frame, bg=BG_CARD, padx=16, pady=12)
+        card_git.pack(fill="x", **pad)
+        _section_title(card_git, "Publicação Git (opcional)").pack(fill="x")
 
-        tk.Label(card4,
+        tk.Label(card_git,
                  text="Preencha para enviar a gravação automaticamente ao repositório de testes.",
                  bg=BG_CARD, fg=FG_DIM, font=("Segoe UI", 8),
                  anchor="w").pack(fill="x", pady=(0, 4))
 
-        git_grid = tk.Frame(card4, bg=BG_CARD)
+        git_grid = tk.Frame(card_git, bg=BG_CARD)
         git_grid.pack(fill="x")
         git_grid.columnconfigure(1, weight=1)
 
@@ -414,6 +444,20 @@ class RecorderLauncher(tk.Tk):
             self._running = False
             self._proc = None
             self.after(0, lambda: self.btn_start.configure(state="normal"))
+
+    def _toggle_advanced(self):
+        """Show/hide advanced options section."""
+        self._advanced_shown = not self._advanced_shown
+        if self._advanced_shown:
+            self._advanced_frame.pack(fill="x", padx=0, pady=0)
+            self._toggle_btn.configure(text="▲  Menos Opções", fg=ACCENT)
+        else:
+            self._advanced_frame.pack_forget()
+            self._toggle_btn.configure(text="▼  Mais Opções", fg=FG_DIM)
+        # Recalculate scroll region after toggle
+        self._inner.update_idletasks()
+        canvas = self._inner.master
+        canvas.configure(scrollregion=canvas.bbox("all"))
 
     def _stop_recording(self):
         if self._proc and self._running:
