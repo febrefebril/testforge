@@ -162,7 +162,16 @@ class AngularMaterialHandler(ComponentHandler):
 
         def _is_date_value(val: str) -> bool:
             val = (val or "").strip()
-            return bool(re.match(r'\d{1,2}/\d{1,2}/\d{4}', val) or re.match(r'\d{4}-\d{2}-\d{2}', val))
+            # BR DD/MM/YYYY or ISO YYYY-MM-DD
+            if re.match(r'\d{1,2}/\d{1,2}/\d{4}', val) or re.match(r'\d{4}-\d{2}-\d{2}', val):
+                return True
+            # Hotfix 22 (legacy): recordings gravados antes do date-skip fix
+            # em overlay tinham raw_value com todos os digitos concatenados
+            # (`01011968`). Aceita 6-8 digitos consecutivos como candidato
+            # a data (DDMMYY/DDMMYYYY/YYYYMMDD).
+            if re.fullmatch(r'\d{6,8}', val):
+                return True
+            return False
 
         _DATE_PLACEHOLDER_RE = re.compile(
             r'^\s*[DdMmAaYy][DdMmAaYyHhSs/\-\.]{5,}\s*$'
