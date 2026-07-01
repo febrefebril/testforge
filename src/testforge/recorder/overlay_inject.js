@@ -730,11 +730,19 @@
       // Hotfix 22: Angular directive-only mask (ex.: SIOPI Caixa `currencymask=""`
       // sem lib JS). Detecta pela presenca do atributo diretiva e faz parse do
       // valor formatado. Cobre BR (R$ 1.000,00), US ($1,000.00), etc.
+      // NAO aplica a inputs DATE (placeholder DD/MM/AAAA, HH:MM etc) — mesmo
+      // que tenham atributo `mask`, o parse quebraria "01/01/1968" -> "01011968"
+      // e o downstream picker-echo detector nao reconheceria.
       var hasCurrencyDirective = el.getAttribute && (
         el.hasAttribute('currencymask') ||
-        el.hasAttribute('mask') ||
         el.hasAttribute('currencyMask')
       );
+      // `mask` generico apenas se placeholder NAO parecer data/hora
+      if (!hasCurrencyDirective && el.getAttribute && el.hasAttribute('mask')) {
+        var _ph = el.getAttribute('placeholder') || '';
+        var _isDateLike = /^\s*[dDmMaAyYhHsS][dDmMaAyYhHsS\/\-\.:]{4,}/.test(_ph);
+        if (!_isDateLike) hasCurrencyDirective = true;
+      }
       if (hasCurrencyDirective && typeof el.value === 'string' && el.value.length > 0) {
         var v = el.value.replace(/[^\d,.\-]/g, '');
         // BR format: 1.000,00 -> 1000.00 (dots as thousands, comma as decimal)
