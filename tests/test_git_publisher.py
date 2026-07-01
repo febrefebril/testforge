@@ -344,7 +344,7 @@ class TestPublish:
         with tempfile.TemporaryDirectory() as tmp:
             result = publisher.publish("REC-MISSING", tmp, tmp)
             assert result.success is False
-            assert "metadata not found" in result.error
+            assert "metadata nao encontrado" in result.error
 
     def test_publish_failure_when_nothing_staged(self):
         publisher = GitPublisher("https://example.com", "token")
@@ -537,7 +537,7 @@ class TestLocalPublish:
         )
         result = pub.publish("REC-missing", str(tmp_path / "recordings_src"), str(tmp_path))
         assert result.success is False
-        assert "metadata not found" in result.error
+        assert "metadata nao encontrado" in result.error
 
     def test_local_publish_without_git_root_returns_failure(self, tmp_path):
         """Se git_root estiver vazio, _local_publish deve retornar falha explicita."""
