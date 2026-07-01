@@ -892,9 +892,16 @@
   // __tfLastFillValue so we never double-emit something the input listener or
   // setter hook already captured.
   window.__tfPeriodicFillScanInterval = window.__tfPeriodicFillScanInterval || null;
+  // Hotfix 22: periodic scan sabotava o debounce dos listeners input/setter
+  // — cada digito digitado durante typing burst ficava visivel ao scan e
+  // gerava fill separado. Solucao: exige valor ESTAVEL por 2 scans (~1s)
+  // antes de emitir. Se usuario ainda esta digitando, valor muda no proximo
+  // tick e o candidato eh descartado.
+  window.__tfPeriodicScanPending = window.__tfPeriodicScanPending || {};
   function _periodicFillScan() {
     if (window.__tfAssertWaiting) return;
     var els = document.querySelectorAll('input, textarea');
+    var seen = {};
     for (var i = 0; i < els.length; i++) {
       var el = els[i];
       if (el.type === 'checkbox' || el.type === 'radio' || el.type === 'hidden') continue;
@@ -903,9 +910,30 @@
       var val = (el.value || '').trim();
       if (val === '') continue;
       var key = _fillKey(el);
-      if (window.__tfLastFillValue[key] === val) continue;
+      seen[key] = true;
+      if (window.__tfLastFillValue[key] === val) {
+        delete window.__tfPeriodicScanPending[key];
+        continue;
+      }
+      // Skip if the input is currently focused — user is actively typing.
+      if (document.activeElement === el) {
+        window.__tfPeriodicScanPending[key] = val;
+        continue;
+      }
+      var pending = window.__tfPeriodicScanPending[key];
+      if (pending !== val) {
+        // Value just changed on this scan — wait one more tick to confirm stability.
+        window.__tfPeriodicScanPending[key] = val;
+        continue;
+      }
+      // Stable for 2 scans (~1s) AND element not focused. Safe to emit.
       window.__tfLastFillValue[key] = val;
+      delete window.__tfPeriodicScanPending[key];
       _pushEvent('fill', el);
+    }
+    // Clean up pending entries for elements that vanished (SPA nav).
+    for (var pk in window.__tfPeriodicScanPending) {
+      if (!seen[pk]) delete window.__tfPeriodicScanPending[pk];
     }
   }
   try {

@@ -88,7 +88,16 @@ class TracingManager:
             logger.info("Tracing stopped; trace.zip at %s", out_path)
             return str(out_path)
         except Exception as exc:
-            logger.error("TracingManager.stop failed: %s", exc, exc_info=True)
+            # Hotfix 22: TargetClosedError comum quando usuario fecha browser
+            # antes do Shift+S. Rebaixado para warning — trace.zip nao vira
+            # nesse caso mas isso nao eh erro fatal (recording ja salvou tudo
+            # via overlay). Outros erros continuam como ERROR full traceback.
+            msg = str(exc) or exc.__class__.__name__
+            if "TargetClosedError" in exc.__class__.__name__ or "Target page" in msg or "browser has been closed" in msg:
+                logger.warning("Tracing.stop skipped: browser already closed — trace.zip not written")
+            else:
+                logger.error("TracingManager.stop failed: %s", exc, exc_info=True)
+            self._started = False
             return None
 
     @property

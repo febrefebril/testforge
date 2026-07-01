@@ -30,6 +30,18 @@ class TargetInfo:
     parent_chain: list = field(default_factory=list)
     frame_context: Optional[str] = None
     shadow_context: Optional[str] = None
+    # Hotfix 22: Angular reactive form control name (formControlName / ng-reflect-name).
+    form_control_name: Optional[str] = None
+    # Hotfix 22: True se element_id match padrao dinamico Material.
+    element_id_dynamic: bool = False
+    # Hotfix 22: score 0..1 do overlay refletindo qualidade dos sinais.
+    capture_confidence: Optional[float] = None
+    # Hotfix 22: pares ng-reflect-* extraidos pelo overlay.
+    ng_reflect: Optional[dict] = None
+    # Hotfix 22: descritor de host shadow-root aberto.
+    shadow_host: Optional[dict] = None
+    # Hotfix 22: label do mat-form-field ancestral (Sprint J).
+    material_field_label: Optional[str] = None
 
 
 @dataclass
@@ -47,6 +59,15 @@ class RawRecordedEvent:
     ax_snapshot_path: Optional[str] = None
     is_postback: bool = False  # True if this event is a form postback (ASP classic)
     submit_method: Optional[str] = None  # HTTP method used for form submission (GET/POST)
+    # Hotfix 22: valor raw sem formatacao de mask (Sprint Q). None quando
+    # nenhuma diretiva/lib de mask detectada.
+    raw_value: Optional[str] = None
+    # Hotfix 22: metadata de <input type=file> — [{name, size, type}, ...].
+    file_upload: Optional[list] = None
+    # Hotfix 22: True se fill veio de evento paste (Ctrl+V) — sem burst.
+    paste: bool = False
+    # Hotfix 22: form_values capturado no submit (dict field -> value).
+    form_values: Optional[dict] = None
 
     def to_dict(self) -> dict:
         result = {
@@ -72,4 +93,12 @@ class RawRecordedEvent:
             result["is_postback"] = True
         if self.submit_method:
             result["submit_method"] = self.submit_method
+        if self.raw_value is not None:
+            result["raw_value"] = self.raw_value
+        if self.file_upload:
+            result["file_upload"] = self.file_upload
+        if self.paste:
+            result["paste"] = True
+        if self.form_values:
+            result["form_values"] = self.form_values
         return result

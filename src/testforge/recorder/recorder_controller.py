@@ -346,7 +346,7 @@ class RecorderController:
                 text=target_data.get("text"),
                 role=target_data.get("role"),
                 accessible_name=target_data.get("accessible_name"),
-                element_id=target_data.get("id"),
+                element_id=target_data.get("element_id") or target_data.get("id"),
                 name=target_data.get("name"),
                 test_id=target_data.get("test_id"),
                 placeholder=target_data.get("placeholder"),
@@ -356,7 +356,7 @@ class RecorderController:
                     "type": target_data.get("type"),
                     "value": target_data.get("value"),
                 },
-                all_attributes=target_data.get("all_attributes") or {},
+                all_attributes=target_data.get("attributes") or target_data.get("all_attributes") or {},
                 class_list=target_data.get("class_list") or [],
                 aria_attrs=target_data.get("aria_attrs") or {},
                 data_attrs=target_data.get("data_attrs") or {},
@@ -367,6 +367,12 @@ class RecorderController:
                 sibling_summary=target_data.get("sibling_summary") or [],
                 inner_html=target_data.get("inner_html"),
                 bounding_box=target_data.get("bounding_box"),
+                form_control_name=target_data.get("form_control_name"),
+                element_id_dynamic=bool(target_data.get("element_id_dynamic")),
+                capture_confidence=target_data.get("capture_confidence"),
+                ng_reflect=target_data.get("ng_reflect"),
+                shadow_host=target_data.get("shadow_host"),
+                material_field_label=target_data.get("material_field_label"),
             )
         self._event_counter += 1
         event = RawRecordedEvent(
@@ -379,6 +385,10 @@ class RecorderController:
             value=data.get("value"),
             is_postback=data.get("is_postback", False),
             submit_method=data.get("submit_method"),
+            raw_value=data.get("raw_value"),
+            file_upload=data.get("file_upload"),
+            paste=bool(data.get("paste")),
+            form_values=data.get("form_values"),
         )
         self._capture_snapshots(event)
         self._store.append_event(event)
