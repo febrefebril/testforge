@@ -1,0 +1,478 @@
+[
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/home",
+    "resource_type": "document",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:53:39.706839+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/home",
+    "status": 404,
+    "timestamp": "2026-07-01T16:53:40.269889+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/runtime.01cc34cc9b9b38ee.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:53:40.291017+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/polyfills.19ea9515d96a6d63.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:53:40.291213+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/main.1213c1a51a145f95.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:53:40.291436+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/styles.4d74518de1db0bde.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:53:40.299997+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/CAIXAStd-Regular.38865969b166b9ed.woff2",
+    "resource_type": "font",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:53:40.315642+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/runtime.01cc34cc9b9b38ee.js",
+    "status": 200,
+    "timestamp": "2026-07-01T16:53:40.321548+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/polyfills.19ea9515d96a6d63.js",
+    "status": 200,
+    "timestamp": "2026-07-01T16:53:40.322462+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/styles.4d74518de1db0bde.css",
+    "status": 200,
+    "timestamp": "2026-07-01T16:53:40.373336+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/CAIXAStd-Regular.38865969b166b9ed.woff2",
+    "status": 200,
+    "timestamp": "2026-07-01T16:53:40.435531+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/main.1213c1a51a145f95.js",
+    "status": 200,
+    "timestamp": "2026-07-01T16:53:40.469266+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/433.3a51a2a76a9c9143.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:53:40.527775+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/980.7be735c2df29f785.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:53:40.528221+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/433.3a51a2a76a9c9143.js",
+    "status": 200,
+    "timestamp": "2026-07-01T16:53:40.582485+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/980.7be735c2df29f785.js",
+    "status": 200,
+    "timestamp": "2026-07-01T16:53:40.585491+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/assets/images/ca-caixa.png?v=1.16.0.1",
+    "resource_type": "image",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:53:40.610516+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/assets/images/background_home.png",
+    "resource_type": "image",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:53:40.650545+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/CAIXAStd-SemiBold.76913a7af502160a.woff2",
+    "resource_type": "font",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:53:40.650823+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/material-icons-outlined.f86cb7b0aa53f0fe.woff2",
+    "resource_type": "font",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:53:40.651010+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/CAIXAStd-Bold.44110ff62c0c5f25.woff2",
+    "resource_type": "font",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:53:40.651208+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/material-icons.59322316b3fd6063.woff2",
+    "resource_type": "font",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:53:40.651405+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/assets/images/ca-caixa.png?v=1.16.0.1",
+    "status": 200,
+    "timestamp": "2026-07-01T16:53:40.652468+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/assets/images/background_home.png",
+    "status": 200,
+    "timestamp": "2026-07-01T16:53:40.653414+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/CAIXAStd-SemiBold.76913a7af502160a.woff2",
+    "status": 200,
+    "timestamp": "2026-07-01T16:53:40.748956+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/CAIXAStd-Bold.44110ff62c0c5f25.woff2",
+    "status": 200,
+    "timestamp": "2026-07-01T16:53:40.754086+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/material-icons-outlined.f86cb7b0aa53f0fe.woff2",
+    "status": 200,
+    "timestamp": "2026-07-01T16:53:40.773527+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/material-icons.59322316b3fd6063.woff2",
+    "status": 200,
+    "timestamp": "2026-07-01T16:53:40.784615+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/188.879c6f8fb39dd2ee.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:53:46.172106+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/326.70f2fc88f44cc8f7.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:53:46.172512+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/common.e166c68167193d0c.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:53:46.172859+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/237.a68d02937ce3c97f.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:53:46.173194+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/188.879c6f8fb39dd2ee.js",
+    "status": 200,
+    "timestamp": "2026-07-01T16:53:46.175281+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/common.e166c68167193d0c.js",
+    "status": 200,
+    "timestamp": "2026-07-01T16:53:46.197292+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/326.70f2fc88f44cc8f7.js",
+    "status": 200,
+    "timestamp": "2026-07-01T16:53:46.198432+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/237.a68d02937ce3c97f.js",
+    "status": 200,
+    "timestamp": "2026-07-01T16:53:46.554113+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://app.novosimulador.caixa.gov.br/api/v1/simulacao-telemetria/calculadora-rapida-click/click",
+    "resource_type": "xhr",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:53:46.559630+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://app.novosimulador.caixa.gov.br/api/v1/simulacao-telemetria/calculadora-rapida-click/click",
+    "status": 200,
+    "timestamp": "2026-07-01T16:53:47.235822+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/assets/fonts/caixa/CAIXAStd-Bold.woff",
+    "resource_type": "font",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:53:49.282530+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/assets/fonts/caixa/CAIXAStd-Bold.woff",
+    "status": 200,
+    "timestamp": "2026-07-01T16:53:49.284645+00:00"
+  },
+  {
+    "type": "request",
+    "method": "POST",
+    "url": "https://app.novosimulador.caixa.gov.br/api/v1/simulacao-telemetria/simulacoes-calculadoras",
+    "resource_type": "xhr",
+    "post_data": "{\"dataNascimentoUsuario\":\"01/01/1968\",\"idadeUsuario\":58,\"tipoCalculadora\":\"Poder de compra\",\"tipoCalculo\":\"Pela Presta\u00e7\u00e3o\",\"tipoImovel\":\"\",\"valorRendaMensal\":0,\"valorPrestacao\":100000,\"valorImovel\":0,\"valorPendente\":0,\"tipoCalculoOpcaoSelecionada\":\"prestacao\"}",
+    "timestamp": "2026-07-01T16:53:58.927552+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://app.novosimulador.caixa.gov.br/api/v1/simulacao-telemetria/simulacoes-calculadoras",
+    "status": 200,
+    "timestamp": "2026-07-01T16:53:59.647446+00:00"
+  },
+  {
+    "type": "request",
+    "method": "POST",
+    "url": "https://app.novosimulador.caixa.gov.br/api/v1/simulacao-telemetria/simulacoes-calculadoras",
+    "resource_type": "xhr",
+    "post_data": "{\"dataNascimentoUsuario\":\"01/01/1968\",\"idadeUsuario\":58,\"tipoCalculadora\":\"Poder de compra\",\"tipoCalculo\":\"Pela Renda\",\"tipoImovel\":\"\",\"valorRendaMensal\":1500000,\"valorPrestacao\":0,\"valorImovel\":0,\"valorPendente\":0,\"tipoCalculoOpcaoSelecionada\":\"renda\"}",
+    "timestamp": "2026-07-01T16:54:15.530981+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://app.novosimulador.caixa.gov.br/api/v1/simulacao-telemetria/simulacoes-calculadoras",
+    "status": 200,
+    "timestamp": "2026-07-01T16:54:15.561789+00:00"
+  },
+  {
+    "type": "request",
+    "method": "POST",
+    "url": "https://app.novosimulador.caixa.gov.br/api/v1/simulacao-telemetria/simulacoes-calculadoras",
+    "resource_type": "xhr",
+    "post_data": "{\"dataNascimentoUsuario\":\"01/01/1968\",\"idadeUsuario\":58,\"tipoCalculadora\":\"Poder de compra\",\"tipoCalculo\":\"Im\u00f3vel + Renda\",\"tipoImovel\":\"\",\"valorRendaMensal\":1500000,\"valorPrestacao\":0,\"valorImovel\":100000000,\"valorPendente\":0,\"tipoCalculoOpcaoSelecionada\":\"imovel\"}",
+    "timestamp": "2026-07-01T16:54:41.923838+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://app.novosimulador.caixa.gov.br/api/v1/simulacao-telemetria/simulacoes-calculadoras",
+    "status": 200,
+    "timestamp": "2026-07-01T16:54:41.988202+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/assets/images/background_home.png",
+    "resource_type": "image",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:54:51.992531+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/assets/images/background_home.png",
+    "status": 200,
+    "timestamp": "2026-07-01T16:54:51.993580+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/526.69839ac67cc60bc5.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:54:54.659672+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/824.727c008bc25f9556.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:54:54.659815+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/824.727c008bc25f9556.js",
+    "status": 200,
+    "timestamp": "2026-07-01T16:54:54.660824+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/526.69839ac67cc60bc5.js",
+    "status": 200,
+    "timestamp": "2026-07-01T16:54:54.661354+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://app.novosimulador.caixa.gov.br/api/v1/simulacao-telemetria/calculadora-egi-click/click",
+    "resource_type": "xhr",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:54:54.663715+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://app.novosimulador.caixa.gov.br/api/v1/simulacao-telemetria/calculadora-egi-click/click",
+    "status": 200,
+    "timestamp": "2026-07-01T16:54:55.024043+00:00"
+  },
+  {
+    "type": "request",
+    "method": "POST",
+    "url": "https://app.novosimulador.caixa.gov.br/api/v1/simulacao-telemetria/simulacoes-calculadoras",
+    "resource_type": "xhr",
+    "post_data": "{\"dataNascimentoUsuario\":\"01/01/1996\",\"idadeUsuario\":30,\"tipoCalculadora\":\"EGI\",\"tipoCalculo\":\"\",\"tipoImovel\":\"Im\u00f3vel Quitado\",\"valorRendaMensal\":1500000,\"valorPrestacao\":0,\"valorImovel\":100000000,\"valorPendente\":0,\"tipoCalculoOpcaoSelecionada\":\"quitado\"}",
+    "timestamp": "2026-07-01T16:55:16.199225+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://app.novosimulador.caixa.gov.br/api/v1/simulacao-telemetria/simulacoes-calculadoras",
+    "status": 200,
+    "timestamp": "2026-07-01T16:55:16.558725+00:00"
+  },
+  {
+    "type": "request",
+    "method": "POST",
+    "url": "https://app.novosimulador.caixa.gov.br/api/v1/simulacao-telemetria/simulacoes-calculadoras",
+    "resource_type": "xhr",
+    "post_data": "{\"dataNascimentoUsuario\":\"05/11/1992\",\"idadeUsuario\":33,\"tipoCalculadora\":\"EGI\",\"tipoCalculo\":\"\",\"tipoImovel\":\"Im\u00f3vel Financiado\",\"valorRendaMensal\":1500000,\"valorPrestacao\":0,\"valorImovel\":100000000,\"valorPendente\":99999999,\"tipoCalculoOpcaoSelecionada\":\"financiado\"}",
+    "timestamp": "2026-07-01T16:55:55.877804+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://app.novosimulador.caixa.gov.br/api/v1/simulacao-telemetria/simulacoes-calculadoras",
+    "status": 200,
+    "timestamp": "2026-07-01T16:55:56.240025+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/assets/images/background_home.png",
+    "resource_type": "image",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:56:06.317041+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/assets/images/background_home.png",
+    "status": 200,
+    "timestamp": "2026-07-01T16:56:06.320115+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/660.d75feef999b53711.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:56:07.667901+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/454.e6bdccda331eb7e1.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:56:07.668267+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/466.e1168d0ccf4e11c8.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:56:07.668613+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/454.e6bdccda331eb7e1.js",
+    "status": 200,
+    "timestamp": "2026-07-01T16:56:07.692037+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/660.d75feef999b53711.js",
+    "status": 200,
+    "timestamp": "2026-07-01T16:56:08.026942+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/466.e1168d0ccf4e11c8.js",
+    "status": 200,
+    "timestamp": "2026-07-01T16:56:08.030036+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simuladorhabitacao.caixa.gov.br/assets/fonts/caixa/CAIXAStd-SemiBold.woff",
+    "resource_type": "font",
+    "post_data": null,
+    "timestamp": "2026-07-01T16:57:00.118196+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simuladorhabitacao.caixa.gov.br/assets/fonts/caixa/CAIXAStd-SemiBold.woff",
+    "status": 200,
+    "timestamp": "2026-07-01T16:57:00.120273+00:00"
+  }
+]
