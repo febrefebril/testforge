@@ -384,6 +384,27 @@ class RecordingNormalizer:
         if len(stc.scenario_segments) > 1:
             logger.info("H20: %d scenario segments captured", len(stc.scenario_segments))
 
+        # Hotfix 22: carrega sugestoes de assert do DOM diff auto-capture
+        # (suggested_assertions.jsonl, emitido pelo recorder). Nao vira
+        # step automatico — apenas exposto em stc.suggested_asserts para o
+        # compiler mostrar ao QA como "considere adicionar assert em X".
+        suggestions_path = os.path.join(recording_dir, "suggested_assertions.jsonl")
+        if os.path.exists(suggestions_path):
+            try:
+                with open(suggestions_path) as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            stc.suggested_asserts.append(json.loads(line))
+                        except json.JSONDecodeError:
+                            continue
+                logger.info("Loaded %d suggested asserts from DOM diff",
+                            len(stc.suggested_asserts))
+            except Exception as exc:
+                logger.debug("Failed to load suggested_assertions: %s", exc)
+
         # Carrega steps (asserts) se existirem
         steps_path = os.path.join(recording_dir, "steps.jsonl")
         if os.path.exists(steps_path):
@@ -422,6 +443,11 @@ class RecordingNormalizer:
         for handler in HANDLERS:
             handler.normalize(stc.steps)
         self._eliminate_prefill_clicks(stc.steps, recording_dir)
+        # Hotfix 22: marca asserts obsoletos por refill posterior. Um assert
+        # sobre resultado de calc que foi seguido por fill do MESMO campo (ou
+        # de qualquer field-de-entrada) verifica estado da UI que o proprio
+        # usuario mudou depois — nao reproduz determinsiticamente no run.
+        self._detect_stale_asserts(stc.steps)
         self._audit_blind_spots(stc)
 
         # Log final step breakdown
@@ -1423,11 +1449,18 @@ class RecordingNormalizer:
                 # placeholder + element_id no key.
                 attrs = target.get("attributes") or {}
                 all_attrs = target.get("all_attributes") or {}
+                # Hotfix 22: formControlName eh a chave mais estavel entre runs
+                # em apps Angular (SIOPI Caixa). Se presente, evita colisao mesmo
+                # quando id/name/placeholder repetem.
+                fcn = (target.get("form_control_name", "")
+                       or attrs.get("formcontrolname", "")
+                       or all_attrs.get("formcontrolname", ""))
                 key = (
                     target.get("id", "") or target.get("element_id", "") or attrs.get("id", "") or all_attrs.get("id", ""),
                     target.get("name", "") or attrs.get("name", "") or all_attrs.get("name", ""),
                     target.get("placeholder", "") or attrs.get("placeholder", ""),
                     target.get("accessible_name", "") or target.get("aria_label", ""),
+                    fcn,
                     event.get("value", "") or "",
                 )
                 if key in seen:
@@ -1681,10 +1714,33 @@ class RecordingNormalizer:
             candidates.append(LocatorCandidate("placeholder", sel, 0.85, f"placeholder={ph}"))
             candidates.extend(_attr_css_variants("placeholder", ph, ptag, 0.85, "placeholder"))
 
-        if target_data.get("id") and target_data["id"] not in ("mat-input-0", "mat-input-1"):
+        # Hotfix 22: Angular reactive form control name — ancora estavel
+        # entre runs. Emitido pelo overlay como form_control_name; tambem
+        # pode aparecer como formcontrolname em attributes.
+        fcn = (target_data.get("form_control_name")
+               or (target_data.get("attributes") or {}).get("formcontrolname")
+               or (target_data.get("all_attributes") or {}).get("formcontrolname")
+               or "")
+        if fcn:
+            candidates.append(LocatorCandidate(
+                "form_control_name", f'[formcontrolname="{fcn}"]', 0.92,
+                f"Angular formcontrolname={fcn}",
+            ))
+
+        if target_data.get("id"):
             el_id = target_data["id"]
-            candidates.append(LocatorCandidate("id", f"#{el_id}", 0.75, f"id={el_id}"))
-            candidates.extend(_attr_css_variants("id", el_id, tag, 0.75, "id"))
+            # Hotfix 22: id dinamico Material (mat-input-N, mat-mdc-error-N,
+            # mat-option-N, cdk-overlay-N) muda entre runs. Score baixo
+            # (0.30) para que outras estrategias vencam.
+            is_dynamic = bool(target_data.get("element_id_dynamic")) or bool(_re.match(
+                r"^(mat-(input|mdc-error|option|select|dialog|autocomplete|slider|expansion|checkbox|radio|tab|menu)|cdk-overlay|cdk-drop)-\d+$",
+                el_id
+            ))
+            id_score = 0.30 if is_dynamic else 0.75
+            reason = f"id={el_id}" + (" (dynamic, low confidence)" if is_dynamic else "")
+            candidates.append(LocatorCandidate("id", f"#{el_id}", id_score, reason))
+            if not is_dynamic:
+                candidates.extend(_attr_css_variants("id", el_id, tag, 0.75, "id"))
 
         if target_data.get("name"):
             name_val = target_data["name"]
@@ -1888,6 +1944,12 @@ class RecordingNormalizer:
             intent_text=intent_text,
             shadow_host=shadow_host if isinstance(shadow_host, dict) else None,
             material_field_label=material_label,
+            form_control_name=(target_data.get("form_control_name")
+                               or (target_data.get("attributes") or {}).get("formcontrolname")
+                               or (target_data.get("all_attributes") or {}).get("formcontrolname")
+                               or None),
+            element_id_dynamic=bool(target_data.get("element_id_dynamic")),
+            capture_confidence=target_data.get("capture_confidence"),
         )
 
     def _steps_identical(self, a: SemanticAction, b: SemanticAction) -> bool:
@@ -1905,6 +1967,74 @@ class RecordingNormalizer:
             if ac.selector != bc.selector or ac.score != bc.score:
                 return False
         return True
+
+    def _detect_stale_asserts(self, steps: list) -> None:
+        """Anota asserts potencialmente obsoletos por refill posterior.
+
+        Hotfix 22 (revisado): em apps calculadora, o padrao valido eh
+        `fill A → submit → assert R1 → fill B → submit → assert R2`. Nao
+        podemos marcar R1 como stale — o proprio teste E verificar delta
+        de entrada→saida. Portanto: NAO seta skip_reason. So adiciona
+        `context.may_be_stale=True` como pista para o QA/relatorio.
+
+        Regra: candidato a stale se um fill posterior mudar o mesmo target
+        (mesma accessible_name) SEM que haja submit intermediario. Casos
+        onde submit ocorre entre assert e refill NAO sao marcados.
+        """
+        _SUBMIT_TEXTS = ("calcular", "enviar", "confirmar", "submit", "salvar",
+                         "buscar", "pesquisar", "consultar", "aplicar")
+        _SUBMIT_CLASSES = ("mat-mdc-unelevated-button", "mat-mdc-raised-button",
+                           "mdc-button--raised", "btn-primary")
+
+        def _is_submit_click(step) -> bool:
+            if step.action != "click" or step.skip_reason:
+                return False
+            tgt = step.target
+            if tgt is None:
+                return False
+            text = ((getattr(tgt, "text", "") or "")
+                    + " " + (getattr(tgt, "accessible_name", "") or "")).lower()
+            if any(s in text for s in _SUBMIT_TEXTS):
+                return True
+            # Fallback: primary button class em qualquer candidato.
+            cands = getattr(tgt, "candidates", None) or []
+            for c in cands:
+                sel = (getattr(c, "selector", "") or "").lower()
+                if any(cls in sel for cls in _SUBMIT_CLASSES):
+                    return True
+            return False
+
+        def _is_meaningful_fill(step) -> bool:
+            if step.action != "fill":
+                return False
+            if step.skip_reason in ("datepicker_picker_echo_fill",):
+                return False
+            if step.skip_reason and "prefill" in step.skip_reason:
+                return False
+            return True
+
+        for i, step in enumerate(steps):
+            if step.action != "assert" or step.skip_reason:
+                continue
+
+            saw_submit = False
+            has_later_refill = False
+            for j in range(i + 1, len(steps)):
+                nxt = steps[j]
+                if nxt.action == "navigation":
+                    break
+                if _is_submit_click(nxt):
+                    saw_submit = True
+                    continue
+                if _is_meaningful_fill(nxt):
+                    if not saw_submit:
+                        has_later_refill = True
+                    break
+
+            if has_later_refill:
+                ctx = getattr(step, "context", {}) or {}
+                ctx["may_be_stale"] = True
+                step.context = ctx
 
     def _merge_asserts_by_timestamp(self, steps: list, asserts: list) -> None:
         """Intercala asserts no lugar cronologico correto entre os steps.

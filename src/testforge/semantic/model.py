@@ -57,6 +57,19 @@ class SemanticTarget:
     # `mat-form-field:has(mat-label:has-text("X")) input`, imune a
     # renumeracao de mat-input-N + aria-label volatil dos forms SIOPI.
     material_field_label: Optional[str] = None
+    # Hotfix 22: Angular reactive-form control name (`formControlName="foo"`).
+    # Estavel entre runs — usado como ancora prioritaria pelo compiler quando
+    # o elemento e um Material input sem id determinstico.
+    form_control_name: Optional[str] = None
+    # Hotfix 22: sinaliza que o element_id capturado eh um contador dinamico
+    # Material (`mat-input-N`, `mat-mdc-error-N`, etc). O compiler despriorizatorio
+    # ids assim.
+    element_id_dynamic: bool = False
+    # Hotfix 22: score 0..1 de "quao ancoravel" o target eh, calculado pelo
+    # overlay a partir dos sinais disponiveis (id explicito, formControlName,
+    # test_id, accessible_name, etc). Consumido pelo compiler para escolher
+    # estrategia de locator.
+    capture_confidence: Optional[float] = None
 
 
 @dataclass
@@ -103,6 +116,11 @@ class SemanticTestCase:
     # Quando Shift+N nao foi pressionado, ha exatamente um segmento que
     # abrange todos os passos.
     scenario_segments: list = field(default_factory=list)
+    # Hotfix 22: sugestoes de assert extraidas do DOM diff durante gravacao
+    # (Cypress Studio AI-style). Cada entrada: {event_id, timestamp,
+    # changes[], confidence, before_url, after_url}. Nao vira assert
+    # automatico — apenas relatado para o QA revisar no compile.
+    suggested_asserts: list = field(default_factory=list)
 
     def to_dict(self) -> dict:
         result = {

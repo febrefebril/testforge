@@ -167,7 +167,11 @@
   window.__tfLastFillValue = {};
   window.__tfLastSnapshotKey = {};
   window.__tfFillDebounceTimers = window.__tfFillDebounceTimers || new WeakMap();
-  window.__tfFillDebounceMs = 400;
+  // Hotfix 22: era 400ms; digitacao humana em campo currencymask (SIOPI) pausa
+  // ~500-700ms entre digitos enquanto Angular formatta -> a cada pausa disparava
+  // fill separado (0,01 -> 10 -> 100 -> 1000 = 4 fills). Sobe pra 800ms so o
+  // burst final fica. Blur/change tambem forcam flush (change listener em 1133).
+  window.__tfFillDebounceMs = 800;
   // Sprint L (2026-06-30): keystroke buffer por target. Captura keydown
   // raw como ground-truth do digitado, bypassa setter hook + mask. Diferente
   // do value_mutations (que so vê o resultado pos-mask), aqui temos a
@@ -359,8 +363,25 @@
       classList = el.className.trim().split(/\s+/).filter(function(c) { return c && !c.startsWith('tf-'); });
     }
     var labelEl = el.id ? document.querySelector('label[for="' + el.id + '"]') : null;
-    var elText = (el.textContent||'').trim().substring(0,200) || null;
+    // Hotfix 22: normaliza whitespace (nbsp, tab, multi-space) antes de serializar.
+    // DOM contem `R$&nbsp;1.000.000,00` mas expected_value armazena `R$ 1.000.000,00`
+    // com espaco regular; runners downstream nao devem se preocupar com essa
+    // divergencia — o overlay ja entrega texto canonico.
+    var elText = ((el.textContent||'')
+      .replace(/ /g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .substring(0, 200)) || null;
     var materialLabel = _extractMaterialFieldLabel(el);
+    // Hotfix 22: Angular reactive forms — formControlName eh chave estavel
+    // entre runs (diferente de id dinamico como `mat-input-2`). Se presente,
+    // vira ancora principal.
+    var formControlName = (el.getAttribute && (
+      el.getAttribute('formcontrolname') ||
+      el.getAttribute('ng-reflect-name') ||
+      allAttrs['formcontrolname'] ||
+      allAttrs['ng-reflect-name']
+    )) || null;
     // Sprint P: finder generates minimum unique CSS selector; fallback to naive walk
     var cssPath = '';
     try {
@@ -381,16 +402,40 @@
       cssPath = cssParts.join(' > ');
     }
     var shadow = _findShadowHost(el);
+    var elementId = el.id || null;
+    var accessibleName = el.getAttribute('aria-label') || el.getAttribute('title') || (allAttrs['aria-label'] || null);
+    var testId = el.getAttribute('data-testid') || el.getAttribute('data-test-id') || null;
+    // Hotfix 22: detecta id dinamico Material (mat-input-N, mat-mdc-error-N,
+    // mat-select-N, cdk-overlay-N) — o contador N muda entre runs. Marca
+    // como low-signal para o compiler nao ancorar nele.
+    var idIsDynamic = elementId && /^(mat-(input|mdc-error|option|select|dialog|autocomplete|slider|expansion|checkbox|radio|tab|menu)|cdk-overlay|cdk-drop)-\d+$/.test(elementId);
+
+    // Hotfix 22: capture confidence — score de 0.0..1.0 que reflete quao
+    // ancoravel eh o target. Consumido pelo compiler pra priorizar locators.
+    // Sinais fortes (id explicito, formControlName, test-id, accessible_name)
+    // -> alta; so css_path posicional -> baixa.
+    var confidence = 0.3;  // baseline
+    if (testId) confidence = Math.max(confidence, 0.95);
+    if (formControlName) confidence = Math.max(confidence, 0.9);
+    if (elementId && !idIsDynamic) confidence = Math.max(confidence, 0.85);
+    if (accessibleName) confidence = Math.max(confidence, 0.8);
+    if (el.getAttribute('name')) confidence = Math.max(confidence, 0.7);
+    if (labelEl) confidence = Math.max(confidence, 0.7);
+    if (el.getAttribute('placeholder')) confidence = Math.max(confidence, 0.55);
+    if (materialLabel) confidence = Math.max(confidence, 0.65);
+
     return {
       tag: (el.tagName||'').toLowerCase(),
       text: elText,
       role: el.getAttribute('role') || null,
-      accessible_name: el.getAttribute('aria-label') || el.getAttribute('title') || (allAttrs['aria-label'] || null),
-      element_id: el.id || null,
+      accessible_name: accessibleName,
+      element_id: elementId,
+      element_id_dynamic: idIsDynamic || false,
       name: el.getAttribute('name') || null,
-      test_id: el.getAttribute('data-testid') || el.getAttribute('data-test-id') || null,
+      form_control_name: formControlName,
+      test_id: testId,
       placeholder: el.getAttribute('placeholder') || null,
-      label: labelEl ? labelEl.textContent.trim() : null,
+      label: labelEl ? labelEl.textContent.replace(/ /g, ' ').replace(/\s+/g, ' ').trim() : null,
       class_list: classList,
       attributes: allAttrs,
       type: el.getAttribute('type') || null,
@@ -398,6 +443,7 @@
       href: el.getAttribute('href') || null,
       onclick: el.getAttribute('onclick') || null,
       css_path: cssPath || '',
+      capture_confidence: Math.round(confidence * 100) / 100,
       // Shadow DOM context (B14/B17). Mabl-style "shadow_parent" so the
       // runner can do page.locator(host).locator(child) when the element
       // lives inside an OPEN shadow root. Closed roots can't be walked
@@ -667,6 +713,27 @@
       // data-raw-value attribute (some custom masks)
       var dRaw = el.getAttribute && (el.getAttribute('data-raw-value') || el.getAttribute('data-unmasked'));
       if (dRaw !== null && dRaw !== undefined && dRaw !== '') return dRaw;
+
+      // Hotfix 22: Angular directive-only mask (ex.: SIOPI Caixa `currencymask=""`
+      // sem lib JS). Detecta pela presenca do atributo diretiva e faz parse do
+      // valor formatado. Cobre BR (R$ 1.000,00), US ($1,000.00), etc.
+      var hasCurrencyDirective = el.getAttribute && (
+        el.hasAttribute('currencymask') ||
+        el.hasAttribute('mask') ||
+        el.hasAttribute('currencyMask')
+      );
+      if (hasCurrencyDirective && typeof el.value === 'string' && el.value.length > 0) {
+        var v = el.value.replace(/[^\d,.\-]/g, '');
+        // BR format: 1.000,00 -> 1000.00 (dots as thousands, comma as decimal)
+        if (v.indexOf(',') !== -1) {
+          v = v.replace(/\./g, '').replace(',', '.');
+        }
+        // Strip trailing/leading noise
+        v = v.replace(/^\.+|\.+$/g, '');
+        if (v && !isNaN(parseFloat(v))) {
+          return v;
+        }
+      }
     } catch (_e) {}
     return null;
   }

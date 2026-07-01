@@ -491,7 +491,7 @@ def cmd_record(args):
             system=_system,
             suite=_suite,
             test_case=_test_case_arg,
-            use_cdp=getattr(args, "use_cdp_recorder", False),
+            use_cdp=getattr(args, "use_cdp_recorder", True),
             diagnostic_mode=_diag,
             replay_mode=_replay_mode,
         )
@@ -924,7 +924,27 @@ def cmd_compile(args):
     # Detalhamento
     interactions = sum(1 for s in stc.steps if s.action in ("fill", "click", "select_option"))
     asserts = sum(1 for s in stc.steps if s.action == "assert")
-    print(f"[TestForge]   Interacoes: {interactions} | Asserts: {asserts}")
+    may_be_stale = sum(
+        1 for s in stc.steps
+        if s.action == "assert" and (s.context or {}).get("may_be_stale")
+    )
+    print(f"[TestForge]   Interacoes: {interactions} | Asserts: {asserts}"
+          + (f" (may be stale: {may_be_stale})" if may_be_stale else ""))
+    # Hotfix 22: sugestoes de assert via DOM diff auto-capture. Nao viram
+    # asserts automaticos — QA decide se ancora manualmente com Shift+A na
+    # proxima gravacao ou edita o script.
+    if getattr(stc, "suggested_asserts", None):
+        n = len(stc.suggested_asserts)
+        print(f"[TestForge] [SUGESTAO] {n} mudanca(s) de DOM captada(s) — considere adicionar assert nos seguintes pontos:")
+        for i, sug in enumerate(stc.suggested_asserts[:5], start=1):
+            changes = sug.get("changes", [])[:2]
+            snippet = "; ".join(
+                f"{c.get('type','?')}[{c.get('key','?')[:40]}]"
+                for c in changes
+            )
+            print(f"[TestForge]   {i}. ts={sug.get('timestamp','')[:19]} conf={sug.get('confidence',0):.2f} — {snippet}")
+        if n > 5:
+            print(f"[TestForge]   (... e mais {n - 5} — veja suggested_assertions.jsonl)")
     print(f"[TestForge] [OK] Script gerado: {path}")
     if semantic_path:
         print(f"[TestForge] [OK] Semantic steps: {semantic_path}")
@@ -2160,8 +2180,10 @@ def main():
                      help="Modo piloto: habilita validacao automatica antes de READY (--validate-before-ready)")
     rec.add_argument("--evidence-level", choices=["light", "full"], default="light",
                      help="Nivel de evidencia: light (padrao, sem screenshot por evento) ou full (screenshot + DOM por evento)")
-    rec.add_argument("--use-cdp-recorder", action="store_true",
-                     help="(Fase 1) Captura paralela via Playwright tracing + CDP AX tree. Gera trace.zip e ax_snapshots/. Feature flag — nao remove caminho legado.")
+    rec.add_argument("--use-cdp-recorder", dest="use_cdp_recorder", action="store_true", default=True,
+                     help="Captura paralela via Playwright tracing + CDP AX tree. Gera trace.zip e ax_snapshots/. Default: ON (hotfix 22).")
+    rec.add_argument("--no-cdp-recorder", dest="use_cdp_recorder", action="store_false",
+                     help="Desliga captura CDP (fallback modo overlay-only). Para depuracao.")
     rec.add_argument("--diagnostic-mode", action="store_true",
                      help="(Sprint 0) Diagnostic recorder: framework detection + capture quality + replay check + Gherkin live. NAO roda compile/run.")
     rec.add_argument("--pipeline-and-diagnostic-mode", action="store_true",
