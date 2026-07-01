@@ -1927,10 +1927,17 @@ class RecordingNormalizer:
             mat_sel = (
                 f'mat-form-field:has(mat-label:has-text("{esc}")) {inner_tag}'
             )
-            candidates.insert(0, LocatorCandidate(
+            # Hotfix 22: era 0.99 (topo), mas o seletor estrutural
+            # `mat-form-field:has(mat-label:has-text("X")) input` falha em
+            # SIOPI Caixa quando o mat-label contem mat-icon (hint) que
+            # quebra o has-text match. Rebaixado para 0.87 — logo abaixo
+            # de aria-label (0.9) e compound (0.9), acima de placeholder
+            # (0.85). Vira fallback confiavel quando aria-label esta
+            # ausente. Nao insere no topo; append normal.
+            candidates.append(LocatorCandidate(
                 "material_form_field",
                 mat_sel,
-                0.99,
+                0.87,
                 f"mat-form-field anchor mat-label='{material_label}'",
             ))
 
