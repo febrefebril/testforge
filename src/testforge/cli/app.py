@@ -341,10 +341,10 @@ def _auto_publish_recording(rid: str, rec_dir: str):
 
 
 def _record_qa_wizard(args):
-    """Wizard QA-focused para gravacao (2026-06-30): pergunta SO o que o
-    testador precisa saber — nome do teste, sistema, suite, caso de teste.
-    Tudo que eh tecnico (modo diagnostico, --complete, captura cdp) eh ON
-    por padrao e fica invisivel. Para CI use --no-wizard.
+    """Wizard modo simples (alinhado com GUI): pergunta so nome, suite,
+    caso de teste. Sistema perguntado apenas se nao estiver no config
+    (config.yml faz papel do "Mais Opções"). Flags tecnicas sao ON por
+    padrao e invisiveis. Para CI use --no-wizard.
 
     Prompts so disparam quando stdin eh TTY e --no-wizard nao foi passado.
     Valores ja informados via flag NUNCA sao re-perguntados.
@@ -374,6 +374,14 @@ def _record_qa_wizard(args):
         default_name = f"REC-{ts}"
         args.name = _ask("Nome do teste", default_name)
 
+    if not getattr(args, "suite", ""):
+        default_suite = cfg_defaults.get("suite", "") or ""
+        args.suite = _ask("Suite de testes", default_suite)
+
+    if not getattr(args, "test_case", ""):
+        args.test_case = _ask("Caso de teste", args.name or "")
+
+    # Sistema = modo avancado — so pergunta se nao tiver default no config
     if not getattr(args, "system", "") and not getattr(args, "app", ""):
         default_sys = cfg_defaults.get("system", "") or ""
         sys_val = _ask("Sistema/aplicacao", default_sys)
@@ -381,13 +389,6 @@ def _record_qa_wizard(args):
             args.system = sys_val
             if not getattr(args, "app", ""):
                 args.app = sys_val
-
-    if not getattr(args, "suite", ""):
-        default_suite = cfg_defaults.get("suite", "") or ""
-        args.suite = _ask("Suite de testes", default_suite)
-
-    if not getattr(args, "test_case", ""):
-        args.test_case = _ask("Caso de teste", args.name or "")
 
     print()
     return args
