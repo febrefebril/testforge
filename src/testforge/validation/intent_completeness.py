@@ -266,6 +266,14 @@ class IntentCompletenessChecker:
             covered_el_ids: set = set()
             covered_label_keys: set = set()
             covered_canonical_keys: set = set(fields.keys())
+            # B30: Angular form_control_name e material_field_label sao
+            # identificadores ESTAVEIS entre renders — ao contrario de
+            # mat-input-N que Angular renumera ao re-renderizar a pagina.
+            # Indexamos em conjuntos separados para que o dedup do Step 2
+            # consiga corresponder clicks e fill_events do mesmo campo
+            # mesmo quando element_id difere entre foco e final_state.
+            covered_form_control_names: set = set()
+            covered_material_field_labels: set = set()
 
             def _norm(s: str) -> str:
                 import re as _re
@@ -289,6 +297,15 @@ class IntentCompletenessChecker:
                     nv = _norm(direct or "")
                     if nv:
                         covered_label_keys.add(nv)
+                # B30: indexa form_control_name e material_field_label —
+                # identificadores estaveis entre renders Angular, ao contrario
+                # de mat-input-N que muda.
+                fcn = (ids.get("form_control_name", "") or "").strip()
+                if fcn:
+                    covered_form_control_names.add(fcn)
+                mfl = (ids.get("material_field_label", "") or "").strip()
+                if mfl:
+                    covered_material_field_labels.add(mfl)
 
             from testforge.semantic.model import SemanticAction
             for i, step in enumerate(steps):
@@ -327,6 +344,20 @@ class IntentCompletenessChecker:
                     ):
                         continue
                     if field_key and _norm(field_key) in covered_canonical_keys:
+                        continue
+                    # B30: Angular form_control_name e material_field_label
+                    # sao estaveis entre renders — ao contrario de mat-input-N.
+                    # Se o step e um fill_event compartilham o mesmo
+                    # formControlName, sao o mesmo campo.
+                    step_fcn = (
+                        getattr(step.target, "form_control_name", "") or ""
+                    ).strip()
+                    if step_fcn and step_fcn in covered_form_control_names:
+                        continue
+                    step_mfl = (
+                        getattr(step.target, "material_field_label", "") or ""
+                    ).strip()
+                    if step_mfl and step_mfl in covered_material_field_labels:
                         continue
 
                     # Detecta missing fill via flag de contexto
@@ -464,6 +495,8 @@ class IntentCompletenessChecker:
             "placeholder": t.placeholder or "",
             "role": t.role or "",
             "test_id": t.test_id or "",
+            "form_control_name": t.form_control_name or "",
+            "material_field_label": t.material_field_label or "",
         }
 
 

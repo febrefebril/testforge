@@ -864,6 +864,8 @@ class RecordingNormalizer:
                             if step.target.placeholder: ids["placeholder"] = step.target.placeholder
                             if step.target.element_id: ids["id"] = step.target.element_id
                             if step.target.label: ids["label"] = step.target.label
+                            if step.target.form_control_name: ids["form_control_name"] = step.target.form_control_name
+                            if step.target.material_field_label: ids["material_field_label"] = step.target.material_field_label
                         # Include the form_values key itself
                         ids.setdefault("form_name", fname)
                         intention = self._build_fill_intention(step, fname, fval, i)
@@ -898,6 +900,8 @@ class RecordingNormalizer:
                             if step.target.placeholder: ids["placeholder"] = step.target.placeholder
                             if step.target.element_id: ids["id"] = step.target.element_id
                             if step.target.label: ids["label"] = step.target.label
+                            if step.target.form_control_name: ids["form_control_name"] = step.target.form_control_name
+                            if step.target.material_field_label: ids["material_field_label"] = step.target.material_field_label
                         fill_registry[canonical] = {
                             "value": "",
                             "intention": self._build_fill_intention(step, fill_label, "", i),
@@ -920,6 +924,8 @@ class RecordingNormalizer:
                 if step.target.element_id: ids["id"] = step.target.element_id
                 if step.target.label: ids["label"] = step.target.label
                 if step.target.text: ids["text"] = step.target.text
+                if step.target.form_control_name: ids["form_control_name"] = step.target.form_control_name
+                if step.target.material_field_label: ids["material_field_label"] = step.target.material_field_label
 
                 # Determine canonical key from best identifier
                 canonical = (
