@@ -298,6 +298,52 @@ def _load_config_defaults() -> dict:
     return {}
 
 
+# B30: persistencia de ultimos valores fornecidos pelo testador
+# (system, suite, test_case), usados como preenchimento padrao na
+# proxima execucao — tanto CLI wizard quanto GUI.
+_LAST_VALUES_FILE = ".testforge/last_values.json"
+
+
+def _load_last_values() -> dict:
+    """Carrega ultimos valores fornecidos. Retorna {} em caso de erro."""
+    try:
+        from testforge.publisher import GitPublisher
+        git_root = GitPublisher._find_git_root(os.getcwd())
+        for base in filter(None, [os.getcwd(), git_root]):
+            path = os.path.join(base, _LAST_VALUES_FILE)
+            if os.path.exists(path):
+                with open(path) as f:
+                    return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+
+def _save_last_values(system: str = "", suite: str = "",
+                       test_case: str = "") -> None:
+    """Salva ultimos valores para preenchimento futuro."""
+    try:
+        from testforge.publisher import GitPublisher
+        git_root = GitPublisher._find_git_root(os.getcwd())
+        target_dir = None
+        for base in filter(None, [os.getcwd(), git_root]):
+            candidate = os.path.join(base, ".testforge")
+            if os.path.isdir(candidate):
+                target_dir = candidate
+                break
+        if not target_dir:
+            return
+        path = os.path.join(target_dir, "last_values.json")
+        with open(path, "w") as f:
+            json.dump({
+                "system": system or "",
+                "suite": suite or "",
+                "test_case": test_case or "",
+            }, f, indent=2)
+    except Exception:
+        pass
+
+
 def _auto_publish_recording(rid: str, rec_dir: str):
     """Auto-publica artefatos de gravacao no Git se env vars configuradas.
 
@@ -341,10 +387,10 @@ def _auto_publish_recording(rid: str, rec_dir: str):
 
 
 def _record_qa_wizard(args):
-    """Wizard modo simples (alinhado com GUI): pergunta so nome, suite,
-    caso de teste. Sistema perguntado apenas se nao estiver no config
-    (config.yml faz papel do "Mais Opções"). Flags tecnicas sao ON por
-    padrao e invisiveis. Para CI use --no-wizard.
+    """Wizard modo simples (alinhado com GUI): pergunta dados do teste
+    do mais geral para o mais especifico: Sistema > Suite > Caso > Teste.
+    Preenche padroes com ultimos valores fornecidos (last_values.json)
+    e defaults do config.yml. Para CI use --no-wizard.
 
     Prompts so disparam quando stdin eh TTY e --no-wizard nao foi passado.
     Valores ja informados via flag NUNCA sao re-perguntados.
@@ -355,6 +401,7 @@ def _record_qa_wizard(args):
         return args
 
     cfg_defaults = _load_config_defaults()
+    last_vals = _load_last_values()
 
     def _ask(prompt: str, default: str = "") -> str:
         suffix = f" [{default}]" if default else ""
@@ -366,29 +413,43 @@ def _record_qa_wizard(args):
         return val or default
 
     print()
-    print("[TestForge] Nova gravacao — informe so o que importa para QA:")
+    print("[TestForge] Informe dados do teste:")
+    print("  (do mais geral ao mais especifico:")
+    print("   Sistema > Suite de testes > Caso de teste > Teste)")
     print()
 
-    if not args.name:
-        ts = time.strftime("%Y%m%d-%H%M%S")
-        default_name = f"REC-{ts}"
-        args.name = _ask("Nome do teste", default_name)
-
-    if not getattr(args, "suite", ""):
-        default_suite = cfg_defaults.get("suite", "") or ""
-        args.suite = _ask("Suite de testes", default_suite)
-
-    if not getattr(args, "test_case", ""):
-        args.test_case = _ask("Caso de teste", args.name or "")
-
-    # Sistema = modo avancado — so pergunta se nao tiver default no config
-    if not getattr(args, "system", "") and not getattr(args, "app", ""):
-        default_sys = cfg_defaults.get("system", "") or ""
+    # Sistema (mais geral) — so pergunta se nao tiver via flag
+    if not getattr(args, "system", ""):
+        default_sys = (last_vals.get("system") or
+                       getattr(args, "app", "") or
+                       cfg_defaults.get("system", "") or "")
         sys_val = _ask("Sistema/aplicacao", default_sys)
         if sys_val:
             args.system = sys_val
             if not getattr(args, "app", ""):
                 args.app = sys_val
+
+    if not getattr(args, "suite", ""):
+        default_suite = (last_vals.get("suite") or
+                         cfg_defaults.get("suite", "") or "")
+        args.suite = _ask("Suite de testes", default_suite)
+
+    if not getattr(args, "test_case", ""):
+        default_tc = (last_vals.get("test_case") or
+                      getattr(args, "name", "") or "")
+        args.test_case = _ask("Caso de teste", default_tc)
+
+    if not args.name:
+        ts = time.strftime("%Y%m%d-%H%M%S")
+        default_name = args.test_case or f"REC-{ts}"
+        args.name = _ask("Nome do teste", default_name)
+
+    # Persiste ultimos valores para preenchimento futuro
+    _save_last_values(
+        system=getattr(args, "system", "") or "",
+        suite=getattr(args, "suite", "") or "",
+        test_case=getattr(args, "test_case", "") or "",
+    )
 
     print()
     return args

@@ -101,7 +101,11 @@ class RecorderLauncher(tk.Tk):
         self._proc = None
         self._running = False
 
+        # B30: carrega ultimos valores fornecidos para pre-preencher campos
+        self._last_values = self._load_last_values()
+
         self._build_ui()
+        self._prefill_from_last_values()
         self._center()
 
     # -- layout ----------------------------------------------------------------
@@ -335,6 +339,63 @@ class RecorderLauncher(tk.Tk):
         )
         self.log.pack(fill="both", expand=True)
 
+    # -- Persistencia de ultimos valores -------------------------------------
+
+    @staticmethod
+    def _last_values_path() -> str:
+        """Retorna caminho para .testforge/last_values.json."""
+        import os
+        from testforge.publisher import GitPublisher
+        cwd = os.getcwd()
+        git_root = GitPublisher._find_git_root(cwd)
+        for base in filter(None, [cwd, git_root]):
+            candidate = os.path.join(base, ".testforge", "last_values.json")
+            if os.path.exists(candidate):
+                return candidate
+        # fallback: .testforge no git root
+        target = os.path.join(git_root or cwd, ".testforge")
+        return os.path.join(target, "last_values.json")
+
+    def _load_last_values(self) -> dict:
+        """Carrega ultimos valores fornecidos. Retorna {} em caso de erro."""
+        import os
+        try:
+            path = self._last_values_path()
+            if not os.path.exists(path):
+                return {}
+            import json
+            with open(path) as f:
+                return json.load(f)
+        except Exception:
+            return {}
+
+    def _save_last_values(self) -> None:
+        """Salva valores atuais dos campos para preenchimento futuro."""
+        try:
+            import json
+            import os
+            data = {
+                "system": self.var_system.get().strip(),
+                "suite": self.var_suite.get().strip(),
+                "test_case": self.var_tc.get().strip(),
+            }
+            path = self._last_values_path()
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w") as f:
+                json.dump(data, f, indent=2)
+        except Exception:
+            pass
+
+    def _prefill_from_last_values(self) -> None:
+        """Preenche campos com ultimos valores fornecidos."""
+        lv = self._last_values
+        if lv.get("system"):
+            self.var_system.set(lv["system"])
+        if lv.get("suite"):
+            self.var_suite.set(lv["suite"])
+        if lv.get("test_case"):
+            self.var_tc.set(lv["test_case"])
+
     # -- Logic -----------------------------------------------------------------
 
     def _build_cmd(self):
@@ -428,6 +489,9 @@ class RecorderLauncher(tk.Tk):
         self._cmd_var.set("$ " + " ".join(cmd))
         self._log_clear()
         self._log(f"Iniciando: {' '.join(cmd)}\n{'-'*60}\n")
+
+        # B30: persiste ultimos valores para preenchimento futuro
+        self._save_last_values()
 
         self._running = True
         self.btn_start.configure(state="disabled")
