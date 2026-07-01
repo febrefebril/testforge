@@ -82,12 +82,53 @@ class StepPostconditionValidator:
         en = self._normalize(expected)
         an = self._normalize(actual)
         matched = bool(en) and (en == an or en in an or an in en)
+        # Hotfix 22: valores com currency mask (SIOPI Caixa) chegam formatados
+        # em `actual` ("R$ 1.000.000,00") vs raw em `expected` ("1000000.00").
+        # Compara tambem numericamente stripando simbolo e mask BR/US.
+        if not matched:
+            en_num = self._strip_currency(expected)
+            an_num = self._strip_currency(actual)
+            if en_num and an_num and en_num == an_num:
+                matched = True
         return PostconditionResult(
             passed=matched,
             checks={"input_value_matches": matched, "actual_value_present": bool(actual)},
             failures=[] if matched else ["value_mismatch"],
             message="" if matched else f"esperado='{expected}' obtido='{actual}'",
         )
+
+    @staticmethod
+    def _strip_currency(v: str) -> str:
+        """Converte valor formatado BR/US para numero canonico (float como string).
+        Ex.: 'R$ 1.000.000,00' -> '1000000.00'; '1000000.00' -> '1000000.00';
+             '1.500,00' -> '1500.00'; '1,500.00' -> '1500.00'.
+        Retorna '' se nao parseavel.
+        """
+        if not v:
+            return ""
+        s = str(v).strip()
+        # Remove currency symbol + whitespace
+        s = re.sub(r"[^\d,.\-]", "", s)
+        if not s:
+            return ""
+        has_comma = "," in s
+        has_dot = "." in s
+        try:
+            if has_comma and has_dot:
+                # BR: 1.000,00 (dot thousands, comma decimal)
+                if s.rfind(",") > s.rfind("."):
+                    n = float(s.replace(".", "").replace(",", "."))
+                else:
+                    # US: 1,000.00
+                    n = float(s.replace(",", ""))
+            elif has_comma:
+                # 1000,00 BR decimal only
+                n = float(s.replace(",", "."))
+            else:
+                n = float(s)
+            return f"{n:.2f}"
+        except (ValueError, TypeError):
+            return ""
 
     def _validate_select(self, step):
         selector = self._primary_selector(step)

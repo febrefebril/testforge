@@ -288,6 +288,21 @@ class RecordingNormalizer:
             with open(events_path) as f:
                 raw_events = [json.loads(line) for line in f if line.strip()]
 
+            # Hotfix 22: raw_events.jsonl pode ter navigation ANTES do click
+            # que a disparou — Python drains overlay queue async, framework
+            # detector emite sync. File order = ordem de processamento, nao
+            # timestamp real. Ordena por (timestamp, event_id) para que a
+            # cadeia causal fique correta (click DISPARA navigation).
+            def _sort_key(e):
+                ts = e.get("timestamp", "") or ""
+                eid = e.get("event_id", "") or ""
+                # Normaliza timestamps (JS ISOString "Z" vs Python isoformat
+                # "+00:00") para comparar corretamente. Ambos convergem se
+                # substituirmos "Z" por "+00:00" antes de comparar.
+                ts_norm = ts.replace("Z", "+00:00") if ts.endswith("Z") else ts
+                return (ts_norm, eid)
+            raw_events.sort(key=_sort_key)
+
             logger.info("Normalizing recording_dir=%s raw_events=%d",
                          os.path.basename(recording_dir), len(raw_events))
             # Log da quebra por tipo antes do dedup
