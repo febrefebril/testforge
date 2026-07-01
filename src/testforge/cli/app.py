@@ -646,7 +646,8 @@ def cmd_record(args):
         # escreve o .feature via diagnostic.finalize usando esses overrides.
         _gherkin_func = ""
         _gherkin_cen = ""
-        if _diag and recorder._diagnostic is not None and recorder._diagnostic.gherkin is not None and not _browser_closed:
+        # B30: --no-wizard tbm silencia confirmacao do Gherkin (CI/terminal travado)
+        if not getattr(args, "no_wizard", False) and _diag and recorder._diagnostic is not None and recorder._diagnostic.gherkin is not None and not _browser_closed:
             _gherkin_func, _gherkin_cen = _prompt_gherkin_confirm(recorder._diagnostic.gherkin)
         if _browser_closed:
             print("[TestForge] [STOP] Navegador fechado — finalizando como Shift+S")

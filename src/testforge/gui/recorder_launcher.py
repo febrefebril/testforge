@@ -19,10 +19,21 @@ except ModuleNotFoundError:
 # B30: bind Ctrl+V pa Linux — tkinter nao trata por padrao (X11).
 def _bind_ctrl_v(entry):
     """Bind Ctrl+V to paste from clipboard (Linux fix)."""
+    def _paste(event):
+        try:
+            text = entry.clipboard_get()
+            if not text:
+                return "break"
+            try:
+                entry.delete("sel.first", "sel.last")
+            except Exception:
+                pass  # no selection
+            entry.insert("insert", text)
+            return "break"
+        except Exception:
+            return "break"
     try:
-        entry.bind("<Control-v>", lambda e: (
-            entry.insert("insert", entry.clipboard_get()), "break"
-        ) if entry.clipboard_get() else None)
+        entry.bind("<Control-v>", _paste)
     except Exception:
         pass
 
