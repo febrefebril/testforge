@@ -1,0 +1,170 @@
+{
+  "reason": "user_stop",
+  "timestamp": "2026-07-01T19:15:36.510Z",
+  "url": "https://simuladorhabitacao.caixa.gov.br/simulacao",
+  "page_title": "Simulador",
+  "fields": [
+    {
+      "timestamp": "2026-07-01T19:15:36.510Z",
+      "fingerprint": "input#mat-input-11[name=]",
+      "identifiers": {
+        "id": "mat-input-11",
+        "name": null,
+        "label": null,
+        "placeholder": "000.000.000-00",
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "text",
+      "value": "021.626.581-94",
+      "raw_value": null,
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-07-01T19:15:36.510Z",
+      "fingerprint": "input#mat-input-9[name=]",
+      "identifiers": {
+        "id": "mat-input-9",
+        "name": null,
+        "label": null,
+        "placeholder": "DD/MM/AAAA",
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": null,
+      "value": "02/01/1996",
+      "raw_value": "02011996",
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-07-01T19:15:36.510Z",
+      "fingerprint": "input#mat-input-12[name=]",
+      "identifiers": {
+        "id": "mat-input-12",
+        "name": null,
+        "label": null,
+        "placeholder": "(00) 00000-0000",
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "text",
+      "value": "(61) 99987-654",
+      "raw_value": null,
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-07-01T19:15:36.510Z",
+      "fingerprint": "input#mat-input-10[name=]",
+      "identifiers": {
+        "id": "mat-input-10",
+        "name": null,
+        "label": null,
+        "placeholder": "R$ 0,00",
+        "aria-label": "Renda bruta  mensal * "
+      },
+      "tag": "input",
+      "type": "text",
+      "value": " 15.000,00 ",
+      "raw_value": "15000.00",
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-07-01T19:15:36.510Z",
+      "fingerprint": "input#mat-radio-0-input[name=possui3AnosCLT]",
+      "identifiers": {
+        "id": "mat-radio-0-input",
+        "name": "possui3AnosCLT",
+        "label": "Sim, tenho 3 anos ou mais",
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "radio",
+      "value": "S",
+      "raw_value": null,
+      "checked": true,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-07-01T19:15:36.510Z",
+      "fingerprint": "input#mat-radio-1-input[name=possui3AnosCLT]",
+      "identifiers": {
+        "id": "mat-radio-1-input",
+        "name": "possui3AnosCLT",
+        "label": "N\u00e3o, tenho menos de 3 anos",
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "radio",
+      "value": "N",
+      "raw_value": null,
+      "checked": false,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-07-01T19:15:36.510Z",
+      "fingerprint": "input#mat-radio-2-input[name=existeOutroComprador]",
+      "identifiers": {
+        "id": "mat-radio-2-input",
+        "name": "existeOutroComprador",
+        "label": "Sim, tenho!",
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "radio",
+      "value": "S",
+      "raw_value": null,
+      "checked": true,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-07-01T19:15:36.510Z",
+      "fingerprint": "input#mat-radio-3-input[name=existeOutroComprador]",
+      "identifiers": {
+        "id": "mat-radio-3-input",
+        "name": "existeOutroComprador",
+        "label": "N\u00e3o, s\u00f3 eu",
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "radio",
+      "value": "N",
+      "raw_value": null,
+      "checked": false,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-07-01T19:15:36.510Z",
+      "fingerprint": "input#mat-mdc-checkbox-0-input[name=]",
+      "identifiers": {
+        "id": "mat-mdc-checkbox-0-input",
+        "name": null,
+        "label": "",
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "checkbox",
+      "value": "on",
+      "raw_value": null,
+      "checked": false,
+      "visibility": "visible",
+      "enabled": true
+    }
+  ]
+}
