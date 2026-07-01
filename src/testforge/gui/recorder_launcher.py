@@ -341,6 +341,14 @@ class RecorderLauncher(tk.Tk):
             command=self._clear_fields,
         ).pack(side="left")
 
+        tk.Button(
+            btn_frame, text="Fechar janela",
+            bg="#991b1b", fg="#fff", font=("Segoe UI", 9, "bold"),
+            relief="flat", padx=12, pady=6, cursor="hand2",
+            activebackground="#7f1414", activeforeground="#fff",
+            command=self.destroy,
+        ).pack(side="right")
+
         # command preview
         self._cmd_var = tk.StringVar()
         tk.Label(parent, textvariable=self._cmd_var, bg=BG, fg=FG_DIM,

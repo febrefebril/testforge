@@ -1417,20 +1417,24 @@
       : '<div id="tf-pending-fields" style="display:none"></div>';
     ov.innerHTML = [
       '<div id="tf-panel" style="position:fixed;top:8px;right:8px;background:#1a1a2e;color:#fff;padding:8px 14px;border-radius:8px;font:14px monospace;z-index:99999;display:flex;flex-direction:column;gap:4px;box-shadow:0 4px 16px rgba(0,0,0,0.3)">',
-        '<div style="display:flex;gap:12px;align-items:center">',
-          '<span id="tf-rec-dot" style="color:#e94560;font-size:18px">R</span>',
-          '<span id="tf-status">Gravando...</span>',
-          '<span style="color:#aaa">|</span>',
-          '<button id="tf-btn-pause" style="background:#334155;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font:12px monospace" title="Shift+P">||</button>',
-          '<button id="tf-btn-stop" style="background:#991b1b;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font:12px monospace" title="Shift+S">[]</button>',
-          '<button id="tf-btn-assert" style="background:#6366f1;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font:12px monospace" title="Shift+A">Assert</button>',
-          '<span style="color:#aaa">|</span>',
-          '<span>Passos: <strong id="tf-step-count">' + initSteps + '</strong></span>',
-          '<span>|</span>',
-          '<span>Asserts: <strong id="tf-assert-count">' + initAsserts + '</strong></span>',
+        '<div id="tf-panel-body" style="display:flex;flex-direction:column;gap:4px">',
+          '<div style="display:flex;gap:12px;align-items:center">',
+            '<span id="tf-rec-dot" style="color:#e94560;font-size:18px">R</span>',
+            '<span id="tf-status">Gravando...</span>',
+            '<span style="color:#aaa">|</span>',
+            '<button id="tf-btn-pause" style="background:#334155;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font:12px monospace" title="Shift+P">||</button>',
+            '<button id="tf-btn-stop" style="background:#991b1b;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font:12px monospace" title="Shift+S">[]</button>',
+            '<button id="tf-btn-assert" style="background:#6366f1;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font:12px monospace" title="Shift+A">Assert</button>',
+            '<span style="color:#aaa">|</span>',
+            '<span>Passos: <strong id="tf-step-count">' + initSteps + '</strong></span>',
+            '<span>|</span>',
+            '<span>Asserts: <strong id="tf-assert-count">' + initAsserts + '</strong></span>',
+            '<span style="color:#aaa">|</span>',
+            '<button id="tf-btn-minimize" style="background:#334155;color:#94a3b8;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;font:12px monospace" title="Minimizar overlay (Shift+M)">_</button>',
+          '</div>',
+          ctxHtml,
+          pendingSection,
         '</div>',
-        ctxHtml,
-        pendingSection,
       '</div>',
       '<div id="tf-toast" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 24px;border-radius:8px;font:14px sans-serif;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,0.3)"></div>'
     ].join('\n');
@@ -1453,6 +1457,32 @@
     document.getElementById('tf-btn-pause').onclick = function() { window.__tfCommandQueue.push('TOGGLE_PAUSE'); };
     document.getElementById('tf-btn-stop').onclick = function() { _confirmStop(); };
     document.getElementById('tf-btn-assert').onclick = function() { window._tf_enterAssertMode(); };
+    document.getElementById('tf-btn-minimize').onclick = function() { _toggleMinimizeOverlay(); };
+  }
+
+  // ---- Overlay minimize (Linux-friendly: nao precisa tecla, soh clicar _ ) ---
+  function _toggleMinimizeOverlay() {
+    var panel = document.getElementById('tf-panel');
+    var body = document.getElementById('tf-panel-body');
+    var existingBadge = document.getElementById('tf-restore-badge');
+    if (!panel || !body) return;
+    if (body.style.display === 'none') {
+      // restore
+      body.style.display = 'flex';
+      if (existingBadge) existingBadge.remove();
+    } else {
+      // minimize — deixa so um badge "TF" no canto
+      body.style.display = 'none';
+      if (!existingBadge) {
+        var badge = document.createElement('div');
+        badge.id = 'tf-restore-badge';
+        badge.textContent = 'TF';
+        badge.style.cssText = 'position:fixed;top:8px;right:8px;z-index:99999;background:#1a1a2e;color:#89b4fa;padding:3px 8px;border-radius:6px;font:12px monospace;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3)';
+        badge.title = 'Clique para restaurar overlay';
+        badge.onclick = function() { _toggleMinimizeOverlay(); };
+        document.body.appendChild(badge);
+      }
+    }
   }
 
   // ---- Inline pending field UI ----
