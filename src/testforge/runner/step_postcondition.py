@@ -79,17 +79,49 @@ class StepPostconditionValidator:
                 failures=["cannot_read_input_value"],
                 message=str(exc),
             )
+
+        # Hotfix 22: quando input tem mask (currency/date/mask directive), a
+        # interface JS reformata o valor digitado — nao ha como validar por
+        # string match sem duplicar logica de mask por lib/framework. Confiar
+        # no press_sequentially do Playwright: se teclas foram emitidas e o
+        # campo ficou nao-vazio, aceita. Usuario pediu explicitamente:
+        # "nao iremos conseguir validar todos os campos, campo a campo".
+        try:
+            is_masked = False
+            el = self.page.locator(selector).first
+            for attr in ("currencymask", "mask", "data-mask", "imask"):
+                try:
+                    v = el.get_attribute(attr, timeout=200)
+                    if v is not None:
+                        is_masked = True
+                        break
+                except Exception:
+                    continue
+            if not is_masked:
+                try:
+                    ph = (el.get_attribute("placeholder", timeout=200) or "").strip()
+                    if ph and re.match(r'^\s*[DdMmAaYy][DdMmAaYyHhSs/\-\.:]{4,}', ph):
+                        is_masked = True
+                    elif ph and ("R$" in ph or "$" in ph or "0,00" in ph or "0.00" in ph):
+                        is_masked = True
+                except Exception:
+                    pass
+        except Exception:
+            is_masked = False
+
+        if is_masked:
+            non_empty = bool((actual or "").strip())
+            return PostconditionResult(
+                passed=non_empty,
+                checks={"mask_input_non_empty": non_empty, "actual_value_present": bool(actual)},
+                failures=[] if non_empty else ["mask_input_empty"],
+                message=f"[mask] esperado='{expected}' obtido='{actual}' (mask reformata — valida apenas non-empty)",
+            )
+
+        # Sem mask — comparacao textual normal
         en = self._normalize(expected)
         an = self._normalize(actual)
         matched = bool(en) and (en == an or en in an or an in en)
-        # Hotfix 22: valores com currency mask (SIOPI Caixa) chegam formatados
-        # em `actual` ("R$ 1.000.000,00") vs raw em `expected` ("1000000.00").
-        # Compara tambem numericamente stripando simbolo e mask BR/US.
-        if not matched:
-            en_num = self._strip_currency(expected)
-            an_num = self._strip_currency(actual)
-            if en_num and an_num and en_num == an_num:
-                matched = True
         return PostconditionResult(
             passed=matched,
             checks={"input_value_matches": matched, "actual_value_present": bool(actual)},
