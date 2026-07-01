@@ -235,6 +235,10 @@ class RecorderLauncher(tk.Tk):
         self.var_no_interact = tk.BooleanVar()
         self.var_validate    = tk.BooleanVar()
         self.var_pilot       = tk.BooleanVar()
+        # Hotfix 22: CDP + diagnostic mode exposed no GUI. CDP eh default ON.
+        self.var_cdp         = tk.BooleanVar(value=True)
+        self.var_diagnostic  = tk.BooleanVar()
+        self.var_pipeline_diag = tk.BooleanVar()
 
         col0 = tk.Frame(opts, bg=BG_CARD)
         col0.pack(side="left", padx=(0, 24))
@@ -245,11 +249,14 @@ class RecorderLauncher(tk.Tk):
             ("Headless (sem janela)",           self.var_headless),
             ("Verificar completude após gravar", self.var_complete),
             ("Sem interação (criar template)",   self.var_no_interact),
+            ("Captura CDP (trace + AX tree)",    self.var_cdp),
         ]:
             _check(col0, text, var).pack(anchor="w", pady=1)
         for text, var in [
             ("Validar antes de marcar como pronto", self.var_validate),
             ("Modo piloto",                          self.var_pilot),
+            ("Modo diagnóstico (só telemetria)",     self.var_diagnostic),
+            ("Diagnóstico + pipeline (ambos)",       self.var_pipeline_diag),
         ]:
             _check(col1, text, var).pack(anchor="w", pady=1)
 
@@ -375,6 +382,14 @@ class RecorderLauncher(tk.Tk):
             cmd.append("--validate-before-ready")
         if self.var_pilot.get():
             cmd.append("--pilot-mode")
+        # Hotfix 22: CDP default ON; user pode desabilitar. Diagnostic e
+        # pipeline-and-diagnostic sao mutuamente exclusivos (o mais recente vence).
+        if not self.var_cdp.get():
+            cmd.append("--no-cdp-recorder")
+        if self.var_pipeline_diag.get():
+            cmd.append("--pipeline-and-diagnostic-mode")
+        elif self.var_diagnostic.get():
+            cmd.append("--diagnostic-mode")
 
         return cmd
 
@@ -475,8 +490,10 @@ class RecorderLauncher(tk.Tk):
         self.var_evidence.set("light")
         self.var_git_branch.set("main")
         for var in (self.var_headless, self.var_complete, self.var_no_interact,
-                    self.var_validate, self.var_pilot):
+                    self.var_validate, self.var_pilot,
+                    self.var_diagnostic, self.var_pipeline_diag):
             var.set(False)
+        self.var_cdp.set(True)  # CDP default ON
         self._cmd_var.set("")
         self._log_clear()
 

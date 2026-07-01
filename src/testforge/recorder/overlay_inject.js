@@ -382,6 +382,18 @@
       allAttrs['formcontrolname'] ||
       allAttrs['ng-reflect-name']
     )) || null;
+    // Hotfix 22: Angular expoe estado do modelo via `ng-reflect-*`. Extrai
+    // pares para o normalizer usar como sinais adicionais (ex.: ng-reflect-model,
+    // ng-reflect-required, ng-reflect-disabled, ng-reflect-form).
+    var ngReflect = {};
+    for (var attrKey in allAttrs) {
+      if (attrKey && attrKey.indexOf('ng-reflect-') === 0) {
+        var short = attrKey.substring('ng-reflect-'.length);
+        if (short && short.length < 40 && allAttrs[attrKey].length < 200) {
+          ngReflect[short] = allAttrs[attrKey];
+        }
+      }
+    }
     // Sprint P: finder generates minimum unique CSS selector; fallback to naive walk
     var cssPath = '';
     try {
@@ -444,6 +456,7 @@
       onclick: el.getAttribute('onclick') || null,
       css_path: cssPath || '',
       capture_confidence: Math.round(confidence * 100) / 100,
+      ng_reflect: Object.keys(ngReflect).length ? ngReflect : null,
       // Shadow DOM context (B14/B17). Mabl-style "shadow_parent" so the
       // runner can do page.locator(host).locator(child) when the element
       // lives inside an OPEN shadow root. Closed roots can't be walked
@@ -1143,8 +1156,46 @@
       if (window.__tfLastFillValue[key] === val) return;
       window.__tfLastFillValue[key] = val;
       var evtType = (el.tagName === 'SELECT') ? 'select_option' : 'fill';
+      // Hotfix 22: <input type=file> — dispara change com el.files. Marca
+      // com file_names para o runner reproduzir via setInputFiles.
+      if (el.tagName === 'INPUT' && el.type === 'file' && el.files && el.files.length) {
+        try {
+          var fnames = Array.prototype.map.call(el.files, function(f) {
+            return { name: f.name, size: f.size, type: f.type };
+          });
+          if (!window.__tfEventQueue.length) {
+            _pushEvent('fill', el);
+          } else {
+            _pushEvent('fill', el);
+          }
+          var last = window.__tfEventQueue[window.__tfEventQueue.length - 1];
+          if (last) last.file_upload = fnames;
+        } catch(_ignore) {}
+        return;
+      }
       _pushEvent(evtType, el);
     }
+  }, true);
+
+  // Hotfix 22: paste event — cobre usuarios que colam valor no campo (Ctrl+V)
+  // sem keystrokes. `input` event dispara mas sem historico intermediario;
+  // marcamos o fill com paste=true para o normalizer nao esperar burst.
+  window.addEventListener('paste', function(e) {
+    if (window.__tfAssertWaiting) return;
+    var el = e.target;
+    if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return;
+    setTimeout(function() {
+      try {
+        var key = _fillKey(el);
+        var val = (el.value || '').trim();
+        if (val && window.__tfLastFillValue[key] !== val) {
+          window.__tfLastFillValue[key] = val;
+          _pushEvent('fill', el);
+          var last = window.__tfEventQueue[window.__tfEventQueue.length - 1];
+          if (last) last.paste = true;
+        }
+      } catch(_e) {}
+    }, 50);
   }, true);
 
   // ---- Beforeunload: clear intervals, save final state ----
