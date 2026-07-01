@@ -923,26 +923,36 @@ class PlaywrightCompiler:
         expected = action.value or ""
         lines = [f"    # Passo {idx}: assert ({assert_type})"]
 
-        # Tenta localizador Playwright primeiro, fallback para CSS
-        pw_expr = self._playwright_locator_expr(action.target)
-        if pw_expr:
-            locator_expr = pw_expr
+        # Hotfix 22: para asserts textuais, o VALOR esperado e o sinal — texto
+        # visivel na tela. Preferimos localizador text-based (get_by_text) que
+        # busca o elemento PELO TEXTO diretamente, mesmo quando o overlay
+        # gerou um css_path posicional nao-unico (ex.: 5 asserts diferentes
+        # todos apontando para `div:nth-of-type(1) > .text-size-smaller`).
+        text_first = (assert_type in ("textual", "automatico")) and bool(expected)
+
+        if text_first:
+            locator_expr = f"page.get_by_text({self._esc(expected)}, exact=False).first"
         else:
-            # L0.5: get_by_role fuzzy com regex antes de CSS
-            l0_5_expr = self._l0_5_role_expr(action.target)
-            if l0_5_expr:
-                locator_expr = l0_5_expr
+            # Tenta localizador Playwright primeiro, fallback para CSS
+            pw_expr = self._playwright_locator_expr(action.target)
+            if pw_expr:
+                locator_expr = pw_expr
             else:
-                css_sels = self._top_css_selectors(action.target)
-                if css_sels:
-                    locator_expr = f"page.locator({self._esc(css_sels[0])})"
-                elif action.target and action.target.element_id:
-                    locator_expr = f"page.locator({self._esc('#' + action.target.element_id)})"
-                elif action.target and action.target.text:
-                    locator_expr = f"page.get_by_text({self._esc(action.target.text[:60])})"
+                # L0.5: get_by_role fuzzy com regex antes de CSS
+                l0_5_expr = self._l0_5_role_expr(action.target)
+                if l0_5_expr:
+                    locator_expr = l0_5_expr
                 else:
-                    lines.append(f"    # SKIP: assert em elemento desconhecido — regrave com Shift+A")
-                    return lines
+                    css_sels = self._top_css_selectors(action.target)
+                    if css_sels:
+                        locator_expr = f"page.locator({self._esc(css_sels[0])})"
+                    elif action.target and action.target.element_id:
+                        locator_expr = f"page.locator({self._esc('#' + action.target.element_id)})"
+                    elif action.target and action.target.text:
+                        locator_expr = f"page.get_by_text({self._esc(action.target.text[:60])})"
+                    else:
+                        lines.append(f"    # SKIP: assert em elemento desconhecido — regrave com Shift+A")
+                        return lines
 
         # Extrai string crua do localizador de pw_expr para verificacao
         raw = locator_expr.lower()

@@ -282,6 +282,10 @@ class StepPostconditionValidator:
         #   has-text finds any container with that text, not the control itself.
         #   id → aria-label → role-based → CSS path. No has-text fallback.
         selectors = list(selectors)
+        target = getattr(step, "target", None)
+        target_text = (getattr(target, "text", "") or "").strip() if target else ""
+        target_aname = (getattr(target, "accessible_name", "") or "").strip() if target else ""
+        target_tag = (getattr(target, "tag", "") or "").lower() if target else ""
         if assert_type in ("textual", "automatico"):
             if expected and not any(":has-text(" in s for s in selectors):
                 selectors.append(f':has-text("{expected}")')
@@ -289,8 +293,20 @@ class StepPostconditionValidator:
             other_sels = [s for s in selectors if ":has-text(" not in s]
             selectors = text_sels + other_sels
         elif assert_type == "visivel":
-            if expected and not any(":has-text(" in s for s in selectors):
-                selectors.append(f':has-text("{expected}")')
+            # Hotfix 22: `expected` para visivel e "visible"/"hidden" (flag), NAO
+            # o texto visivel na tela. Usa target.text (texto real do elemento)
+            # ou accessible_name como fallback has-text. Isso torna asserts
+            # visivel resilientes a ids Angular Material dinamicos como
+            # `#mat-mdc-error-4` que mudam entre runs.
+            has_text_source = ""
+            for candidate_text in (target_text, target_aname):
+                if candidate_text and candidate_text not in ("visible", "hidden"):
+                    has_text_source = candidate_text
+                    break
+            if has_text_source and not any(":has-text(" in s for s in selectors):
+                tag_prefix = target_tag if target_tag else "*"
+                snippet = has_text_source[:60].replace('"', '\\"')
+                selectors.append(f'{tag_prefix}:has-text("{snippet}")')
             # Structural selectors first (id/aria/role ranked highest by normalizer),
             # has-text appended last — any element containing the text is sufficient
             # to confirm visibility.
@@ -314,6 +330,27 @@ class StepPostconditionValidator:
             )
 
         if not self._oracle:
+            # Hotfix 22: para assert_type visivel, expected e um flag
+            # ("visible"/"hidden") — nao um texto de conteudo. Valida pela
+            # visibility real do elemento no DOM, nao por text_contains.
+            if assert_type == "visivel":
+                try:
+                    is_visible = self.page.locator(resolved_selector).first.is_visible(timeout=2000)
+                    want_visible = (expected or "visible").lower() != "hidden"
+                    passed = is_visible if want_visible else (not is_visible)
+                    return PostconditionResult(
+                        passed=passed,
+                        checks={"is_visible": is_visible, "want_visible": want_visible,
+                                "selector_used": resolved_selector},
+                        failures=[] if passed else ["assert_visibility_mismatch"],
+                        message=f"[{resolved_selector}] esperado={'visible' if want_visible else 'hidden'} obtido={'visible' if is_visible else 'hidden'}",
+                    )
+                except Exception as exc:
+                    return PostconditionResult(
+                        passed=False,
+                        failures=["assert_element_not_found"],
+                        message=str(exc),
+                    )
             try:
                 text = self.page.locator(resolved_selector).first.text_content(timeout=2000)
                 matched = expected.lower() in (text or "").lower()

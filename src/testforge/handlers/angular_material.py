@@ -164,6 +164,33 @@ class AngularMaterialHandler(ComponentHandler):
             val = (val or "").strip()
             return bool(re.match(r'\d{1,2}/\d{1,2}/\d{4}', val) or re.match(r'\d{4}-\d{2}-\d{2}', val))
 
+        _DATE_PLACEHOLDER_RE = re.compile(
+            r'^\s*[DdMmAaYy][DdMmAaYyHhSs/\-\.]{5,}\s*$'
+        )
+
+        def _fill_target_is_material_datepicker(step) -> bool:
+            """Detect if a fill target is a Material datepicker input (readonly-ish).
+
+            When the user picks a date via calendar clicks, Angular Material writes
+            the value back to the bound input which fires an input event — the
+            recorder captures this as a `fill`, but at runtime the input often
+            rejects direct writes (mask + validators + sometimes readonly). In
+            those cases the click sequence IS the canonical intent, not the fill.
+            """
+            tgt = getattr(step, "target", None)
+            if tgt is None:
+                return False
+            ph = (getattr(tgt, "placeholder", "") or "").strip()
+            if ph and _DATE_PLACEHOLDER_RE.match(ph):
+                return True
+            eid = (getattr(tgt, "element_id", "") or "").strip()
+            if eid.startswith("mat-input-"):
+                return True
+            for sel in _step_sels(step):
+                if "matDatepicker" in sel or "mat-datepicker-input" in sel:
+                    return True
+            return False
+
         i = 0
         while i < len(steps):
             step = steps[i]
@@ -201,7 +228,21 @@ class AngularMaterialHandler(ComponentHandler):
 
                 j += 1
 
-            if found_fill > seq_start:
+            picker_echo_fill = (
+                found_fill > seq_start
+                and last_calendar_click > seq_start
+                and _is_day_cell_click(steps[last_calendar_click])
+                and _fill_target_is_material_datepicker(steps[found_fill])
+            )
+
+            if picker_echo_fill:
+                # Hotfix 22: Material datepicker input received a fill because
+                # the picker wrote to it — the click sequence is the canonical
+                # intent. Keep clicks; skip the picker-echo fill (input is
+                # effectively readonly at runtime).
+                steps[found_fill].skip_reason = "datepicker_picker_echo_fill"
+                i = found_fill + 1
+            elif found_fill > seq_start:
                 # Completed via fill: suppress toggle + nav, keep date fill.
                 for k in range(seq_start, found_fill):
                     if not steps[k].skip_reason:

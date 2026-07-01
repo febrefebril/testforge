@@ -389,11 +389,23 @@ class RecordingNormalizer:
         if os.path.exists(steps_path):
             with open(steps_path) as f:
                 steps_count = 0
+                loaded_asserts: list = []
                 for line in f:
                     step = json.loads(line)
-                    stc.steps.append(self._convert_step(step))
+                    converted = self._convert_step(step)
+                    if converted is not None:
+                        loaded_asserts.append(converted)
                     steps_count += 1
                 logger.debug("Loaded %d steps (asserts) from steps.jsonl", steps_count)
+
+            # Hotfix 22: intercalar asserts com actions por timestamp.
+            # Bug anterior: `stc.steps.append(assert)` empilhava todos os asserts
+            # no final. Ao rodar, o runner verificava R$ 3.333,33 (resultado do
+            # 1o Calcular) APOS o 3o Calcular do fluxo empréstimo — tela ja
+            # nao mostrava esse valor. Merge por timestamp restaura ordem
+            # temporal (assert reflete estado no momento da gravacao).
+            if loaded_asserts:
+                self._merge_asserts_by_timestamp(stc.steps, loaded_asserts)
 
         # Pos-processamento: detecta e marca passos pulados
         # Detecta overlays PRIMEIRO — dedup exclui passos de overlay
@@ -1436,10 +1448,14 @@ class RecordingNormalizer:
                         target_data[flat_key] = val
 
         if event_type == "navigation":
+            nav_ctx = {}
+            if raw.get("timestamp"):
+                nav_ctx["timestamp"] = raw["timestamp"]
             return SemanticAction(
                 action="navigation",
                 url=raw.get("url"),
                 page_title=raw.get("page_title"),
+                context=nav_ctx,
             )
 
         # Eventos postback sao recarregamentos de pagina do lado servidor apos submit.
@@ -1510,23 +1526,35 @@ class RecordingNormalizer:
         if step_action == "assert":
             attrs = step.get("attrs", {})
             expected = _clean_text(step.get("expected_value", ""), max_len=200)
+            assert_type = step.get("assert_type", "textual")
+            # Hotfix 22: para asserts textual/automatico, expected_value E o texto
+            # esperado — usa como target.text para gerar has-text candidato limpo.
+            # Para visivel/estado, expected_value e um flag ("visible" / "checked"),
+            # NAO um texto de tela; preserva o texto real do elemento p/ locator.
+            if assert_type in ("textual", "automatico"):
+                text_for_target = expected or step.get("accessible_name", "") or step.get("text", "")
+            else:
+                # visivel/estado: mantem texto real (accessible label ou visible text)
+                text_for_target = step.get("accessible_name", "") or step.get("text", "") or expected
             target_data = {
                 "tag": step.get("tag_name", "") or step.get("tagName", ""),
-                # Usa expected_value limpo como texto para candidato has-text ficar limpo
-                "text": expected or step.get("accessible_name", "") or step.get("text", ""),
+                "text": text_for_target,
                 "id": step.get("element_id", ""),
                 "accessible_name": step.get("aria_label", "") or step.get("accessible_name", "") or attrs.get("aria-label", ""),
                 "role": step.get("role", "") or attrs.get("role", ""),
                 "css_path": step.get("css_path", "") or step.get("selector", ""),
             }
             target = self._build_target(target_data)
-            assert_type = step.get("assert_type", "textual")
             assert_state = step.get("assert_state", "")
+            ctx = {"assert_type": assert_type, "assert_state": assert_state}
+            ts = step.get("timestamp", "")
+            if ts:
+                ctx["timestamp"] = ts
             return SemanticAction(
                 action="assert",
                 target=target,
                 value=expected,
-                context={"assert_type": assert_type, "assert_state": assert_state},
+                context=ctx,
             )
         # Passos curados nao-assert (fill, click, select_option, etc.)
         if step_action in ("fill", "click", "select_option", "navigation"):
@@ -1867,6 +1895,53 @@ class RecordingNormalizer:
             if ac.selector != bc.selector or ac.score != bc.score:
                 return False
         return True
+
+    def _merge_asserts_by_timestamp(self, steps: list, asserts: list) -> None:
+        """Intercala asserts no lugar cronologico correto entre os steps.
+
+        Hotfix 22: pre-fix `stc.steps.append(assert)` empilhava todos os
+        asserts no fim do script. Ao rodar, cada assert verificava o estado
+        FINAL da UI (apos o ultimo Calcular), mas foram gravados apos
+        Calculars intermediarios com valores/telas diferentes. Merge por
+        timestamp garante que cada assert executa no estado que existia
+        durante a gravacao.
+
+        Steps sem timestamp ou asserts sem timestamp caem no final (mantem
+        o comportamento antigo como fallback).
+        """
+        def _ts(step) -> str:
+            ctx = getattr(step, "context", {}) or {}
+            return ctx.get("timestamp", "") or ""
+
+        assert_bucket = [(_ts(a), a) for a in asserts]
+        # Ordena asserts por timestamp (asserts sem ts vao pro final)
+        assert_bucket.sort(key=lambda p: (not p[0], p[0]))
+
+        merged: list = []
+        assert_idx = 0
+        n_asserts = len(assert_bucket)
+
+        for step in steps:
+            step_ts = _ts(step)
+            # Insere todos asserts com ts < step_ts antes do step atual
+            while (
+                assert_idx < n_asserts
+                and assert_bucket[assert_idx][0]
+                and step_ts
+                and assert_bucket[assert_idx][0] <= step_ts
+            ):
+                merged.append(assert_bucket[assert_idx][1])
+                assert_idx += 1
+            merged.append(step)
+
+        # Resto (asserts com ts > ultimo step, ou sem ts) vao pro fim
+        while assert_idx < n_asserts:
+            merged.append(assert_bucket[assert_idx][1])
+            assert_idx += 1
+
+        # Reescreve lista in-place para preservar referencia
+        steps.clear()
+        steps.extend(merged)
 
     def _deduplicate_steps(self, steps: list) -> None:
         """Marca passos duplicados consecutivos com skip_reason.
