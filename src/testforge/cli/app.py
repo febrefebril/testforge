@@ -509,19 +509,6 @@ def cmd_record(args):
                 f"  Use: testforge compile --check recordings/{rid}"
             )
             print()
-        _test_case = _test_case_arg or args.name or rid
-
-        # Escreve metadados de classificacao system/suite/test_case
-        _meta_path = str(_PROJECT_ROOT / "recordings" / rid / "recording_metadata.json")
-        if os.path.exists(_meta_path):
-            with open(_meta_path) as _f:
-                _meta = json.load(_f)
-            _meta["system"] = _system
-            _meta["suite"] = _suite
-            _meta["test_case"] = _test_case
-            with open(_meta_path, "w", encoding="utf-8") as _f:
-                json.dump(_meta, _f, indent=2, default=str)
-
         page.goto(args.url)
 
         step_count = 0

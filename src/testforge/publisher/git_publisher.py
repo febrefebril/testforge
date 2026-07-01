@@ -426,21 +426,28 @@ class GitPublisher:
             self._git("checkout", "-b", self._branch, cwd=repo_dir)
 
     def _build_remote_path(self, recording_id: str, metadata: dict) -> str:
-        """Constroi caminho remoto hierarquico a partir dos metadados system/suite/test_case.
+        """Constroi caminho hierarquico a partir de system/suite/test_case.
 
-        Retorna: {prefix}/{system}/{suite}/{test_case}/{recording_id}
-        Fallback para {prefix}/uncategorized/{recording_id} se campos ausentes.
+        Regras:
+          1. Sem system+suite -> {prefix}/uncategorized/{recording_id}
+          2. test_case vazio ou igual recording_id -> {prefix}/{system}/{suite}/{recording_id}
+          3. test_case diferente (ex: sufijo _2) -> {prefix}/{system}/{suite}/{test_case}/{recording_id}
+
+        Isso elimina pastas duplicadas quando test_case e recording_id
+        derivam ambos do mesmo --name.
         """
         system = (metadata.get("system") or "").strip()
         suite = (metadata.get("suite") or "").strip()
         test_case = (metadata.get("test_case") or "").strip()
-        if system and suite:
-            parts = [self._path_prefix, system, suite]
-            if test_case and test_case != recording_id:
-                parts.append(test_case)
-            parts.append(recording_id)
-            return os.path.join(*parts)
-        return os.path.join(self._path_prefix, "uncategorized", recording_id)
+
+        if not system or not suite:
+            return os.path.join(self._path_prefix, "uncategorized", recording_id)
+
+        parts = [self._path_prefix, system, suite]
+        if test_case and test_case != recording_id:
+            parts.append(test_case)
+        parts.append(recording_id)
+        return os.path.join(*parts)
 
     def _generate_submission_report(
         self,
