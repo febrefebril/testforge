@@ -75,7 +75,10 @@ class RecorderController:
         diagnostic_mode: bool = False,
         replay_mode: str = "batched",   # H17: was "immediate"
     ) -> RecordingSession:
-        session = self._session_manager.start(recording_id, application, base_url)
+        session = self._session_manager.start(
+            recording_id, application, base_url,
+            system=system, suite=suite, test_case=test_case,
+        )
         self._store = RawRecordingStore(session.session_dir)
         self._network_entries = []
         self._sensitive_alerts = []

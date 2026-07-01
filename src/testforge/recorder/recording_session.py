@@ -29,6 +29,11 @@ class RecordingSession:
     # so the normalizer can later tell whether this recording was
     # produced by a compatible recorder. Captured at session start.
     fingerprint: dict = field(default_factory=dict)
+    # Hierarchical classification: system/suite/test_case.
+    # Used by Git publisher to build recordings/{system}/{suite}/{test_case}/{id} paths.
+    system: str = ""
+    suite: str = ""
+    test_case: str = ""
 
     @property
     def recording_status(self) -> Optional[RecordingStatus]:
@@ -46,6 +51,9 @@ class RecordingSession:
             "recording_id": self.recording_id,
             "application": self.application,
             "base_url": self.base_url,
+            "system": self.system,
+            "suite": self.suite,
+            "test_case": self.test_case,
             "started_at": self.started_at,
             "finished_at": self.finished_at,
             "status": self.status,
@@ -79,7 +87,8 @@ class RecordingSessionManager:
             i += 1
 
     def start(self, recording_id: str, application: str = "",
-              base_url: str = "") -> RecordingSession:
+              base_url: str = "", system: str = "", suite: str = "",
+              test_case: str = "") -> RecordingSession:
         if self._active_session and self._active_session.status in ("recording", "paused"):
             raise RuntimeError(f"Sessao ativa: {self._active_session.recording_id}")
 
@@ -94,10 +103,20 @@ class RecordingSessionManager:
             recording_id=recording_id,
             application=application,
             base_url=base_url,
+            system=system,
+            suite=suite,
+            test_case=test_case,
             started_at=datetime.now(timezone.utc).isoformat(),
             status="recording",
             session_dir=session_dir,
             fingerprint=compute_fingerprint(),
+        )
+
+        session.status_history.record(
+            RecordingStatus.recording,
+            reason="Recording started",
+            metadata={"application": application, "base_url": base_url,
+                      "system": system, "suite": suite, "test_case": test_case},
         )
 
         session.status_history.record(
