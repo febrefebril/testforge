@@ -16,6 +16,17 @@ except ModuleNotFoundError:
     )
 
 
+# B30: bind Ctrl+V pa Linux — tkinter nao trata por padrao (X11).
+def _bind_ctrl_v(entry):
+    """Bind Ctrl+V to paste from clipboard (Linux fix)."""
+    try:
+        entry.bind("<Control-v>", lambda e: (
+            entry.insert("insert", entry.clipboard_get()), "break"
+        ) if entry.clipboard_get() else None)
+    except Exception:
+        pass
+
+
 # -- Palette ------------------------------------------------------------------
 BG        = "#1e1e2e"
 BG_CARD   = "#2a2a3e"
@@ -157,15 +168,19 @@ class RecorderLauncher(tk.Tk):
         grid1.pack(fill="x", pady=(4, 0))
         grid1.columnconfigure(1, weight=1)
 
-        self.var_url  = tk.StringVar()
-        self.var_name = tk.StringVar()
+        self.var_url    = tk.StringVar()
+        self.var_system = tk.StringVar()
         self.var_suite  = tk.StringVar()
         self.var_tc     = tk.StringVar()
+        self.var_name   = tk.StringVar()
 
-        _row(grid1, 0, "URL *",         _entry(grid1, self.var_url),  req=True)
-        _row(grid1, 1, "Nome",          _entry(grid1, self.var_name))
-        _row(grid1, 2, "Suite",         _entry(grid1, self.var_suite))
-        _row(grid1, 3, "Caso de Teste", _entry(grid1, self.var_tc))
+        url_entry = _entry(grid1, self.var_url)
+        _bind_ctrl_v(url_entry)
+        _row(grid1, 0, "URL *",            url_entry, req=True)
+        _row(grid1, 1, "Sistema",          _entry(grid1, self.var_system))
+        _row(grid1, 2, "Suite",            _entry(grid1, self.var_suite))
+        _row(grid1, 3, "Caso de Teste",    _entry(grid1, self.var_tc))
+        _row(grid1, 4, "Nome do Teste",    _entry(grid1, self.var_name))
 
         # -- Navegador (sempre visível) ----------------------------------------
         card_browser = tk.Frame(parent, bg=BG_CARD, padx=16, pady=12)
@@ -189,9 +204,8 @@ class RecorderLauncher(tk.Tk):
         self._advanced_shown = False
         self._advanced_frame = tk.Frame(parent, bg=BG)
 
-        arrow = "▼"
         self._toggle_btn = tk.Button(
-            toggle_frame, text=f"{arrow}  Mais Opções",
+            toggle_frame, text="[+]  Mais Opcoes",
             bg=BG_CARD, fg=FG_DIM, font=("Segoe UI", 9),
             relief="flat", padx=12, pady=4, cursor="hand2",
             activebackground=BORDER, activeforeground=ACCENT,
@@ -211,12 +225,10 @@ class RecorderLauncher(tk.Tk):
         adv_grid.pack(fill="x", pady=(4, 0))
         adv_grid.columnconfigure(1, weight=1)
 
-        self.var_app    = tk.StringVar()
-        self.var_system = tk.StringVar()
-        self.var_evidence = tk.StringVar(value="light")
+        self.var_app      = tk.StringVar()
+        self.var_evidence  = tk.StringVar(value="light")
 
-        _row(adv_grid, 0, "Aplicação",  _entry(adv_grid, self.var_app))
-        _row(adv_grid, 1, "Sistema",    _entry(adv_grid, self.var_system))
+        _row(adv_grid, 0, "Aplicacao",  _entry(adv_grid, self.var_app))
 
         evid_row = tk.Frame(card_adv, bg=BG_CARD)
         evid_row.pack(fill="x", pady=(2, 0))
@@ -433,6 +445,9 @@ class RecorderLauncher(tk.Tk):
         if evidence and evidence != "light":
             cmd += ["--evidence-level", evidence]
 
+        # B30: GUI ja coleta dados do wizard, nao reprompt no terminal
+        cmd.append("--no-wizard")
+
         if self.var_headless.get():
             cmd.append("--headless")
         if self.var_complete.get():
@@ -529,10 +544,10 @@ class RecorderLauncher(tk.Tk):
         self._advanced_shown = not self._advanced_shown
         if self._advanced_shown:
             self._advanced_frame.pack(fill="x", padx=0, pady=0)
-            self._toggle_btn.configure(text="▲  Menos Opções", fg=ACCENT)
+            self._toggle_btn.configure(text="[-]  Menos Opcoes", fg=ACCENT)
         else:
             self._advanced_frame.pack_forget()
-            self._toggle_btn.configure(text="▼  Mais Opções", fg=FG_DIM)
+            self._toggle_btn.configure(text="[+]  Mais Opcoes", fg=FG_DIM)
         # Recalculate scroll region after toggle
         self._inner.update_idletasks()
         canvas = self._inner.master
