@@ -205,6 +205,36 @@ Environment variable `TESTFORGE_TRACING=0` disables span emission globally.
 
 ---
 
+## Bug Detection During Recording
+
+Phase 7 adds recorder-time anomaly detection so QA can label application bugs while recording, before compile/run.
+
+### Runtime flow
+
+1. `AnomalyDetector` subscribes to `page.on("console"|"pageerror"|"crash"|"response")`.
+2. Signals are buffered in recorder memory (`_pending_bug_signals`).
+3. High-impact signals (`network_5xx`, `page_error`, `page_crash`) trigger the overlay modal API `window.__tfShowBugDetectionModal(...)`.
+4. User verdicts are collected from `window.__tfBugResponses` on `flush_events()`.
+5. `application_bug` responses are persisted to `recordings/<id>/bug_report.jsonl`.
+6. During compile, bug refs are propagated to semantic steps and emitted as:
+   - `@pytest.mark.known_bug(...)` in generated tests
+   - human-readable docs in `docs/bugs/BUG-*.md`
+
+### Data model
+
+- `models/bug_report.py`
+  - `BugSignal(type, timestamp, payload)`
+  - `BugReport(bug_id, recording_id, step_idx, signals, observed_behavior, user_expected_behavior, source, severity)`
+  - enums `BugSource` and `BugSeverity`
+
+### Important contracts
+
+- Known bugs are strict xfail via global pytest hook (`tests/conftest.py`).
+- Bug refs are attached by normalizer based on `step_idx` and highest severity wins on conflicts.
+- Compile stage remains non-fatal if bug doc generation fails.
+
+---
+
 ## Storage layout (post-migration)
 
 ```

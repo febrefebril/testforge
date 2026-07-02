@@ -258,6 +258,8 @@ class PlaywrightCompiler:
             record["page_title"] = step.page_title
         if step.context:
             record["context"] = step.context
+            if isinstance(step.context.get("has_bug_ref"), dict):
+                record["has_bug_ref"] = step.context["has_bug_ref"]
         if step.skip_reason:
             record["skip_reason"] = step.skip_reason
         if step.blocking:
@@ -308,6 +310,7 @@ class PlaywrightCompiler:
     ) -> str:
         lines = []
         lines.append('"""Teste gerado pelo TestForge — fonte da verdade: SemanticTestCase."""')
+        lines.append("import pytest")
         lines.append("from playwright.sync_api import Page, expect")
         lines.append("import json, os, re")
         lines.append("from testforge.runtime.healer import resolve_selector")
@@ -359,10 +362,32 @@ class PlaywrightCompiler:
             start = max(0, int(seg.get("start_step", 0)))
             end = max(start, int(seg.get("end_step_exclusive", len(tc.steps))))
             seg_name = seg.get("name") or f"cenario_{seg_idx + 1}"
+
+            bug_ref = None
+            for candidate_step in tc.steps[start:end]:
+                ctx = getattr(candidate_step, "context", {}) or {}
+                if isinstance(ctx.get("has_bug_ref"), dict):
+                    bug_ref = ctx["has_bug_ref"]
+                    break
+
             if len(segments) == 1:
                 fn_name = f"test_{base_safe}"
             else:
                 fn_name = f"test_{base_safe}__{_seg_safe(seg_name, seg_idx)}"
+
+            if bug_ref:
+                bug_id = _json.dumps(str(bug_ref.get("bug_id", "unknown")), ensure_ascii=False)
+                observed = _json.dumps(str(bug_ref.get("observed_behavior", "")), ensure_ascii=False)
+                expected = _json.dumps(str(bug_ref.get("user_expected_behavior", "")), ensure_ascii=False)
+                lines.append(
+                    "@pytest.mark.known_bug("
+                    f"bug_id={bug_id}, "
+                    "detected_during_recording=True, "
+                    f"user_expected={expected}, "
+                    f"observed={observed}"
+                    ")"
+                )
+
             lines.append(f"def {fn_name}(page: Page):")
             doc_app = tc.application or "Fluxo gravado"
             scenario_doc = (

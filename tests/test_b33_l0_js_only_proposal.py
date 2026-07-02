@@ -66,7 +66,8 @@ class TestB33EmptySelectorFallsBack:
             error_message="Element not clickable",
         )
         assert outcome is not None
-        assert outcome.status == ProgressResult.PASSED_STEP
+        assert outcome.status == ProgressResult.DEGRADED
+        assert outcome.reason == "no_step_runner"
         assert outcome.proposal is not None
         # Empty solution_selector → use the step's original selector.
         assert outcome.proposal.new_locator == original
@@ -86,6 +87,7 @@ class TestB33EmptySelectorFallsBack:
             error_message="Locator not found",
         )
         assert outcome is not None
+        assert outcome.status == ProgressResult.DEGRADED
         assert outcome.proposal.new_locator == 'button[data-testid="continue"]'
         # No "js-only" tag when solution_selector is present.
         assert "js-only" not in outcome.proposal.rationale
@@ -101,6 +103,7 @@ class TestNoStepSelectorYieldsEmpty:
             error_message="Element not clickable",
         )
         assert outcome is not None
+        assert outcome.status == ProgressResult.DEGRADED
         assert outcome.proposal.new_locator == ""
         # Filter will reject this downstream, which is correct: there's
         # genuinely no locator to display.

@@ -1,4 +1,5 @@
 """TestForge — Repositório de Métricas."""
+from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -99,10 +100,40 @@ class MetricsSnapshot:
 class MetricsRepository:
     """Coleta e agrega metricas de execucao e healing."""
 
+    _global_silent_skip_counters: dict[str, int] = defaultdict(int)
+
     def __init__(self):
         self._snapshot = MetricsSnapshot()
         self._history: list[dict] = []
         self._step_history: list[dict] = []
+
+    @classmethod
+    def record_silent_skip_global(cls, category: str) -> None:
+        """Registra skip/continue silencioso em escopo de processo.
+
+        Usado por normalizer/recorder/CLI para observabilidade transversal.
+        """
+        if not category:
+            category = "unknown"
+        cls._global_silent_skip_counters[category] += 1
+
+    @classmethod
+    def get_silent_skip_summary_global(cls) -> dict[str, int]:
+        """Retorna snapshot dos contadores globais de silent skips."""
+        return dict(cls._global_silent_skip_counters)
+
+    @classmethod
+    def reset_silent_skip_summary_global(cls) -> None:
+        """Reseta contadores globais para nova execucao de comando."""
+        cls._global_silent_skip_counters.clear()
+
+    def record_silent_skip(self, category: str) -> None:
+        """Wrapper de instancia para compatibilidade futura."""
+        self.record_silent_skip_global(category)
+
+    def get_silent_skip_summary(self) -> dict[str, int]:
+        """Wrapper de instancia para compatibilidade futura."""
+        return self.get_silent_skip_summary_global()
 
     def record_run(self, healed: bool = False, false_heal: bool = False,
                    llm_used: bool = False, oracle_passed: int = 0, oracle_failed: int = 0):

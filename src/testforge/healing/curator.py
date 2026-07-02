@@ -28,6 +28,8 @@ logger = logging.getLogger("testforge.healing.curator")
 
 STALE_DAYS = 90
 REVIEW_THRESHOLD = int(os.environ.get("TF_REVIEW_THRESHOLD", "5"))
+AGENT_MIN_CONFIDENCE_NO_RUNNER = 0.70
+AGENT_MIN_CONFIDENCE_WITH_EXEC = 0.50
 
 
 # -- ProgressResult ----------------------------------------------------------
@@ -35,6 +37,7 @@ REVIEW_THRESHOLD = int(os.environ.get("TF_REVIEW_THRESHOLD", "5"))
 class ProgressResult:
     """Resultado da execução de um passo curado."""
     PASSED_STEP = "PASSED_STEP"
+    DEGRADED = "DEGRADED"
     ERROR_CHANGED = "ERROR_CHANGED"
     REGRESSED = "REGRESSED"
     STAGNATED = "STAGNATED"
@@ -66,6 +69,7 @@ class CurationOutcome:
     layer_used: str = ""            # "L0", "L1", "L2", "L3"
     family: str = ""
     taxonomy_id: str = ""
+    reason: str = ""
 
 
 # -- Failure Count Tracker ---------------------------------------------------
@@ -233,14 +237,15 @@ class CuradorAutomatico:
             )
 
         if not self._step_runner:
-            # No runner — return as passed (catalog entry is trusted)
+            # No runner — degrade result (proposal exists but not execution-validated)
             self._catalog.record_usage(best.recipe_id)
             return CurationOutcome(
-                status=ProgressResult.PASSED_STEP,
+                status=ProgressResult.DEGRADED,
                 entry_id=best.recipe_id,
                 layer_used="L0",
                 family=family,
                 proposal=_proposal_from_recipe(),
+                reason="no_step_runner",
             )
 
         # Execute with catalog fix
@@ -322,7 +327,14 @@ class CuradorAutomatico:
             return None
 
         proposal = agent.heal(evidence, error_message)
-        if not proposal or proposal.confidence < 0.5:
+        if not proposal:
+            return None
+
+        confidence_floor = (
+            AGENT_MIN_CONFIDENCE_WITH_EXEC if self._step_runner
+            else AGENT_MIN_CONFIDENCE_NO_RUNNER
+        )
+        if proposal.confidence < confidence_floor:
             return None
 
         # Validate taxonomy
@@ -331,14 +343,15 @@ class CuradorAutomatico:
             return None
 
         if not self._step_runner:
-            # No runner — return proposal as passed (L2 suggestion is trusted)
+            # No runner — proposal exists but not execution-validated.
             return CurationOutcome(
-                status=ProgressResult.PASSED_STEP,
+                status=ProgressResult.DEGRADED,
                 proposal=proposal,
                 evidence=evidence,
                 layer_used="L2",
                 family=family,
                 taxonomy_id=proposal.taxonomy_id,
+                reason="no_step_runner",
             )
 
         # Execute patched step
@@ -407,7 +420,7 @@ class CuradorAutomatico:
         outcome = CurationOutcome(proposal=proposal, evidence=evidence, layer_used="L3")
 
         # Confidence gate
-        if proposal.confidence < 0.5:
+        if proposal.confidence < AGENT_MIN_CONFIDENCE_WITH_EXEC:
             outcome.status = ProgressResult.UNRESOLVED
             outcome.error_message = f"Low confidence ({proposal.confidence:.2f})"
             return outcome

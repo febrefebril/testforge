@@ -36,6 +36,16 @@ class StepPostconditionValidator:
             return ""
         return re.sub(r"\s+", "", str(s)).strip().lower()
 
+    @staticmethod
+    def _is_attr_enabled(v) -> bool:
+        """True when an element attribute value indicates an active mask."""
+        if isinstance(v, bool):
+            return v
+        if isinstance(v, str):
+            s = v.strip().lower()
+            return s not in ("", "0", "false", "none", "null")
+        return False
+
     def validate(self, step, page=None, next_step=None, url_before=""):
         page = page or self.page
         action = step.action
@@ -92,7 +102,7 @@ class StepPostconditionValidator:
             for attr in ("currencymask", "mask", "data-mask", "imask"):
                 try:
                     v = el.get_attribute(attr, timeout=200)
-                    if v is not None:
+                    if self._is_attr_enabled(v):
                         is_masked = True
                         break
                 except Exception:
@@ -110,6 +120,42 @@ class StepPostconditionValidator:
             is_masked = False
 
         if is_masked:
+            expected_amount = self._strip_currency(expected)
+            actual_amount = self._strip_currency(actual)
+            if expected_amount and actual_amount:
+                matched_amount = expected_amount == actual_amount
+                return PostconditionResult(
+                    passed=matched_amount,
+                    checks={
+                        "mask_amount_matches": matched_amount,
+                        "mask_amount_expected": expected_amount,
+                        "mask_amount_actual": actual_amount,
+                    },
+                    failures=[] if matched_amount else ["mask_amount_mismatch"],
+                    message=(
+                        "" if matched_amount
+                        else f"[mask-amount] esperado='{expected}' ({expected_amount}) obtido='{actual}' ({actual_amount})"
+                    ),
+                )
+
+            expected_date = self._normalize_date(expected)
+            actual_date = self._normalize_date(actual)
+            if expected_date and actual_date:
+                matched_date = expected_date == actual_date
+                return PostconditionResult(
+                    passed=matched_date,
+                    checks={
+                        "mask_date_matches": matched_date,
+                        "mask_date_expected": expected_date,
+                        "mask_date_actual": actual_date,
+                    },
+                    failures=[] if matched_date else ["mask_date_mismatch"],
+                    message=(
+                        "" if matched_date
+                        else f"[mask-date] esperado='{expected}' ({expected_date}) obtido='{actual}' ({actual_date})"
+                    ),
+                )
+
             non_empty = bool((actual or "").strip())
             return PostconditionResult(
                 passed=non_empty,
@@ -161,6 +207,21 @@ class StepPostconditionValidator:
             return f"{n:.2f}"
         except (ValueError, TypeError):
             return ""
+
+    @staticmethod
+    def _normalize_date(v: str) -> str:
+        """Normaliza datas BR/ISO para AAAA-MM-DD; retorna "" se nao parseavel."""
+        if not v:
+            return ""
+        s = str(v).strip()
+        m_br = re.match(r"^(\d{2})/(\d{2})/(\d{4})$", s)
+        if m_br:
+            d, m, y = m_br.groups()
+            return f"{y}-{m}-{d}"
+        m_iso = re.match(r"^(\d{4})-(\d{2})-(\d{2})$", s)
+        if m_iso:
+            return s
+        return ""
 
     def _validate_select(self, step):
         selector = self._primary_selector(step)
@@ -235,6 +296,7 @@ class StepPostconditionValidator:
 
         if next_step and getattr(next_step, "target", None):
             cands = next_step.target.candidates
+
             if cands:
                 # Tenta seletores exatos primeiro, depois fallbacks genericos
                 selectors_to_try = [c.selector for c in cands[:3]]

@@ -91,8 +91,7 @@ def _make_mutation_line(fingerprint="input#valor[name=valor]", name="valor",
         "tag": "input",
         "id": name,
         "name": name,
-        "new_value": new_value,
-        "old_value": old_value,
+        "value": new_value,
     })
 
 

@@ -5,10 +5,15 @@ Estratégias: press_sequentially, masked_input_detection, label_click, file_fixt
 """
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from ..evidence_payload import EvidencePayload
 from ..llm_healer import LLMHealer, LLMHealingProposal, MockLLMHealer
+from .dom_introspection import dom_has_mask_attrs
+
+
+logger = logging.getLogger(__name__)
 
 
 class InputAgent:
@@ -30,11 +35,18 @@ class InputAgent:
 
         # 1. Masked input / fill failure
         if "fill" in error_lower or "masked" in error_lower or "not editable" in error_lower:
+            confidence = 0.82
+            if not dom_has_mask_attrs(payload):
+                logger.info(
+                    "input_agent mask proposal downgraded — no mask attrs in dom",
+                    extra={"error": error_message[:200]},
+                )
+                confidence = 0.35
             return LLMHealingProposal(
                 taxonomy_id="INP-007", family="FAM-06",
                 strategy="press_sequentially",
                 new_locator=sel,
-                confidence=0.82,
+                confidence=confidence,
                 rationale="Campo com mascara JS — use press_sequentially em vez de fill",
             )
 

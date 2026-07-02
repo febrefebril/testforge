@@ -69,7 +69,7 @@ class TestSetterHookReconstruction:
                 "type": "value_mutation",
                 "timestamp": "2026-06-18T10:00:01Z",
                 "tag": "input", "name": "renda", "id": "renda",
-                "old_value": "", "new_value": "10.000,00",
+                "value": "10.000,00",
                 "fingerprint": "input#renda[name=renda]",
             }) + "\n")
 
@@ -90,7 +90,7 @@ class TestSetterHookReconstruction:
                     "type": "value_mutation",
                     "timestamp": "2026-06-18T10:00:01Z",
                     "tag": "input", "name": "valor", "id": "valor",
-                    "old_value": "", "new_value": val,
+                    "value": val,
                     "fingerprint": "input#valor[name=valor]",
                 }) + "\n")
 
@@ -213,7 +213,7 @@ class TestNormalizerPhaseB:
                 "type": "value_mutation",
                 "timestamp": "2026-06-18T10:00:05Z",
                 "tag": "input", "name": "renda", "id": "renda",
-                "old_value": "", "new_value": "10.000,00",
+                "value": "10.000,00",
                 "fingerprint": "input#renda[name=renda]",
             }) + "\n")
 

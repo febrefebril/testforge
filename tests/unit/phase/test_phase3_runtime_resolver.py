@@ -153,6 +153,40 @@ class TestLocatorResolver:
         resolver.resolve("c", [cand])
         page.locator.assert_called_once_with("#foo")
 
+    def test_exclude_indices_skips_cached_winner(self):
+        page = MagicMock()
+        bad = MagicMock(); bad.count.return_value = 1
+        good = MagicMock(); good.count.return_value = 1
+        page.get_by_role.return_value = bad
+        page.get_by_test_id.return_value = good
+        resolver = LocatorResolver(page)
+        cands = [
+            self._candidate(strategy="role", call_str='get_by_role("button", name="X")'),
+            {"strategy": "test_id", "playwright_call": 'get_by_test_id("save")',
+             "selector": 'page.get_by_test_id("save")', "score": 0.8},
+        ]
+        first = resolver.resolve("click", cands)
+        assert first.candidate_index == 0
+
+        second = resolver.resolve("click", cands, exclude_indices={0})
+        assert second.candidate_index == 1
+
+    def test_promote_winning_candidate_prefers_cached_index(self):
+        page = MagicMock()
+        a = MagicMock(); a.count.return_value = 1
+        b = MagicMock(); b.count.return_value = 1
+        page.get_by_role.return_value = a
+        page.get_by_test_id.return_value = b
+        resolver = LocatorResolver(page)
+        cands = [
+            self._candidate(strategy="role", call_str='get_by_role("button", name="X")'),
+            {"strategy": "test_id", "playwright_call": 'get_by_test_id("save")',
+             "selector": 'page.get_by_test_id("save")', "score": 0.8},
+        ]
+        resolver.promote_winning_candidate("click", 1)
+        result = resolver.resolve("click", cands)
+        assert result.candidate_index == 1
+
 
 class TestStepHelpers:
     def test_click_dispatches_to_resolver(self):
@@ -208,6 +242,42 @@ class TestStepHelpers:
             {"strategy": "role", "playwright_call": 'get_by_role("heading")',
              "selector": 'page.get_by_role("heading")', "score": 0.9}
         ])
+
+    def test_fill_retries_with_next_candidate_when_first_raises(self):
+        page = MagicMock()
+        bad = MagicMock(); bad.count.return_value = 1
+        good = MagicMock(); good.count.return_value = 1
+        bad.fill.side_effect = RuntimeError("fill timeout")
+        page.get_by_role.return_value = bad
+        page.get_by_label.return_value = good
+
+        step.fill(page, intent="fill renda", value="1000", candidates=[
+            {"strategy": "role", "playwright_call": 'get_by_role("textbox", name="Renda")',
+             "selector": 'page.get_by_role("textbox", name="Renda")', "score": 0.9},
+            {"strategy": "label", "playwright_call": 'get_by_label("Renda")',
+             "selector": 'page.get_by_label("Renda")', "score": 0.8},
+        ])
+
+        assert bad.fill.call_count == 1
+        assert good.fill.call_count == 1
+
+    def test_click_retries_with_next_candidate_when_first_raises(self):
+        page = MagicMock()
+        bad = MagicMock(); bad.count.return_value = 1
+        good = MagicMock(); good.count.return_value = 1
+        bad.click.side_effect = RuntimeError("not clickable")
+        page.get_by_role.return_value = bad
+        page.get_by_test_id.return_value = good
+
+        step.click(page, intent="click salvar", candidates=[
+            {"strategy": "role", "playwright_call": 'get_by_role("button", name="Salvar")',
+             "selector": 'page.get_by_role("button", name="Salvar")', "score": 0.9},
+            {"strategy": "test_id", "playwright_call": 'get_by_test_id("save")',
+             "selector": 'page.get_by_test_id("save")', "score": 0.8},
+        ])
+
+        assert bad.click.call_count == 1
+        assert good.click.call_count == 1
 
 
 class TestCompileV2:

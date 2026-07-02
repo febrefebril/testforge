@@ -7,12 +7,14 @@ import json
 import logging
 import os
 import re as _re
+from collections import Counter
 from datetime import datetime
 from typing import Optional
 from urllib.parse import urlparse, urlunparse
 
 from .model import LocatorCandidate, SemanticAction, SemanticTarget, SemanticTestCase
 from testforge.handlers import HANDLERS
+from testforge.metrics.metrics_repository import MetricsRepository
 
 logger = logging.getLogger(__name__)
 
@@ -443,6 +445,13 @@ class RecordingNormalizer:
             if loaded_asserts:
                 self._merge_asserts_by_timestamp(stc.steps, loaded_asserts)
 
+        # Phase 7: attach known bug references from recording-time bug reports.
+        # A bug report step_idx is recorded in user-step space; map it to the
+        # semantic steps timeline excluding pure navigation events.
+        bug_reports = self._load_bug_reports(recording_dir)
+        if bug_reports:
+            self._attach_bug_refs(stc, bug_reports)
+
         # Pos-processamento: detecta e marca passos pulados
         # Detecta overlays PRIMEIRO — dedup exclui passos de overlay
         self._detect_overlay_steps(stc.steps)
@@ -475,6 +484,77 @@ class RecordingNormalizer:
         logger.info("Normalization complete: %d steps actions=%s skipped=%d",
                      len(stc.steps), action_types, skipped)
         return stc
+
+    @staticmethod
+    def _severity_rank(severity: str) -> int:
+        sev = (severity or "").lower()
+        if sev == "critical":
+            return 4
+        if sev == "high":
+            return 3
+        if sev == "medium":
+            return 2
+        if sev == "low":
+            return 1
+        return 0
+
+    def _load_bug_reports(self, recording_dir: str) -> list[dict]:
+        path = os.path.join(recording_dir, "bug_report.jsonl")
+        if not os.path.exists(path):
+            return []
+        reports: list[dict] = []
+        try:
+            with open(path, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        item = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if not isinstance(item, dict):
+                        continue
+                    reports.append(item)
+        except Exception as exc:
+            logger.warning("Failed to read bug_report.jsonl: %s", exc)
+            return []
+        return reports
+
+    def _attach_bug_refs(self, stc: SemanticTestCase, bug_reports: list[dict]) -> None:
+        semantic_steps = [s for s in stc.steps if s.action != "navigation"]
+        if not semantic_steps:
+            return
+
+        grouped: dict[int, list[dict]] = {}
+        for report in bug_reports:
+            step_idx = report.get("step_idx")
+            if isinstance(step_idx, int) and step_idx > 0:
+                grouped.setdefault(step_idx, []).append(report)
+
+        for step_idx, reports in grouped.items():
+            if not reports:
+                continue
+            selected = sorted(
+                reports,
+                key=lambda r: (
+                    self._severity_rank(str(r.get("severity", ""))),
+                    str(r.get("timestamp", "")),
+                ),
+                reverse=True,
+            )[0]
+            target_pos = min(step_idx, len(semantic_steps)) - 1
+            target_step = semantic_steps[target_pos]
+            if target_step.context is None:
+                target_step.context = {}
+            target_step.context["has_bug_ref"] = {
+                "bug_id": selected.get("bug_id", "BUG-UNKNOWN"),
+                "user_expected_behavior": selected.get("user_expected_behavior", ""),
+                "observed_behavior": selected.get("observed_behavior", ""),
+                "severity": selected.get("severity", "unknown"),
+                "source": selected.get("source", "unknown"),
+                "timestamp": selected.get("timestamp", ""),
+            }
 
     @staticmethod
     def _input_visible_at_click(recording_dir: str, click_step, target_id: str) -> bool:
@@ -802,6 +882,13 @@ class RecordingNormalizer:
             target_indices = {step_idx}
             # Tambem corresponde clicks em label/radio por similaridade de texto
             entry_label = (identifiers.get("label") or value or "").strip().lower()
+            if not entry_label:
+                logger.info(
+                    "entry_label vazio, marcando unanchored",
+                    extra={"entry_source": source, "step_idx": step_idx},
+                )
+                MetricsRepository.record_silent_skip_global("entry_label_empty")
+                entry["unanchored"] = True
             for i, step in enumerate(stc.steps):
                 if step.action != "click" or not step.target:
                     continue
@@ -1532,7 +1619,15 @@ class RecordingNormalizer:
 
         # Pula eventos click sem candidatos de alvo — artefatos de gravacao
         # (clicks fora de elemento reconhecivel, ex.: fundo/espaco em branco).
-        if event_type == "click" and not target.candidates:
+        if event_type == "click" and (not target or not target.candidates):
+            logger.info(
+                "click event dropped, no candidates identified",
+                extra={
+                    "raw_event_ts": raw.get("timestamp"),
+                    "event_url": raw.get("url"),
+                },
+            )
+            MetricsRepository.record_silent_skip_global("click_no_candidates")
             return None
 
         # Inputs radio e checkbox: Playwright fill() nao suporta
@@ -1662,7 +1757,50 @@ class RecordingNormalizer:
             )
         return None
 
-    def _build_target(self, target_data: dict) -> SemanticTarget:
+    def _finalize_target_with_candidates(
+        self,
+        target: SemanticTarget,
+        candidates: list[LocatorCandidate],
+        context: dict,
+    ) -> Optional[SemanticTarget]:
+        """Ensures target exits with candidates, synthesizing a CSS fallback when possible."""
+        if not candidates:
+            raw_css = (
+                context.get("raw_css_selector")
+                or context.get("css_path")
+                or context.get("selector")
+                or ""
+            )
+            if raw_css:
+                candidates.append(
+                    LocatorCandidate(
+                        "css_fallback_synth",
+                        raw_css,
+                        0.20,
+                        "synthesized from raw css selector",
+                    )
+                )
+                logger.info(
+                    "target sem candidates — synthesized CSS fallback",
+                    extra={"raw_css": raw_css},
+                )
+                MetricsRepository.record_silent_skip_global("normalizer.empty_candidates_synth")
+            else:
+                logger.info(
+                    "target sem candidates e sem raw_css — retornando None",
+                    extra={
+                        "tag": context.get("tag"),
+                        "role": context.get("role"),
+                        "accessible_name": context.get("accessible_name"),
+                    },
+                )
+                MetricsRepository.record_silent_skip_global("normalizer.target_dropped")
+                return None
+
+        target.candidates = candidates
+        return target
+
+    def _build_target(self, target_data: dict) -> Optional[SemanticTarget]:
         candidates = []
         text = target_data.get("text") or ""
         tag = (target_data.get("tag") or "").lower()
@@ -1972,7 +2110,7 @@ class RecordingNormalizer:
                 f"mat-form-field anchor mat-label='{material_label}'",
             ))
 
-        return SemanticTarget(
+        target = SemanticTarget(
             role=target_data.get("role"),
             accessible_name=target_data.get("accessible_name"),
             label=target_data.get("label"),
@@ -1983,7 +2121,7 @@ class RecordingNormalizer:
             element_id=(target_data.get("element_id")
                         or target_data.get("id") or ""),
             name=target_data.get("name"),
-            candidates=candidates,
+            candidates=[],
             fingerprint=fingerprint,
             intent_text=intent_text,
             shadow_host=shadow_host if isinstance(shadow_host, dict) else None,
@@ -1995,6 +2133,7 @@ class RecordingNormalizer:
             element_id_dynamic=bool(target_data.get("element_id_dynamic")),
             capture_confidence=target_data.get("capture_confidence"),
         )
+        return self._finalize_target_with_candidates(target, candidates, target_data)
 
     def _steps_identical(self, a: SemanticAction, b: SemanticAction) -> bool:
         """Verifica se dois passos sao identicos (mesma action, value, target candidates)."""
@@ -2241,6 +2380,11 @@ class RecordingNormalizer:
 
         for i, step in enumerate(steps):
             if not step.target or not step.target.candidates:
+                logger.info(
+                    "overlay detect skip",
+                    extra={"step_idx": i, "action": step.action},
+                )
+                MetricsRepository.record_silent_skip_global("overlay_detect")
                 continue
             # Verifica se algum seletor candidato tem como alvo elemento overlay
             is_overlay = any(
@@ -2933,12 +3077,19 @@ class RecordingNormalizer:
             element_id = ids.get("id") or ""
             fp = field.get("fingerprint", "")
             checked = field.get("checked")
-            value = (field.get("value") or "").strip()
+            raw_value = field.get("value")
+            value = (raw_value or "").strip() if isinstance(raw_value, str) else ""
             if checked is True and field.get("type") in ("radio", "checkbox"):
                 value = label or name or "true"
             elif checked is False:
                 continue
             if not value:
+                if raw_value is None:
+                    MetricsRepository.record_silent_skip_global("ir_final_state_field_missing")
+                    logger.debug("final_state field missing: %s", fp)
+                else:
+                    MetricsRepository.record_silent_skip_global("ir_final_state_field_empty_at_end")
+                    logger.info("final_state field empty at end: %s", fp)
                 continue
             canonical = self._canonical_field_key(name or label or placeholder or fp)
             display = label or name or placeholder or fp
@@ -3088,12 +3239,20 @@ class RecordingNormalizer:
         primario. Estatisticas informam decisao H22c (deletar _hookValue completamente).
         """
         best: dict[str, dict] = {}
+        dropped = []
         # Conta entradas incontestes (fontes que chegaram primeiro sem
         # competidor) antes do dedup colapsa-las.
         seen_sources_per_key: dict[str, set] = {}
         for entry in entries:
             key = entry.get("field_key", "")
-            if not key or not entry.get("value"):
+            value = entry.get("value")
+            if not key:
+                dropped.append({"reason": "empty_key", "entry": entry})
+                MetricsRepository.record_silent_skip_global("ir_dedupe_empty_key")
+                continue
+            if not value:
+                dropped.append({"reason": "empty_value", "entry": entry})
+                MetricsRepository.record_silent_skip_global("ir_dedupe_empty_value")
                 continue
             src = entry.get("source", "")
             seen_sources_per_key.setdefault(key, set()).add(src)
@@ -3132,6 +3291,12 @@ class RecordingNormalizer:
                 self.ir_dedupe_stats["final_state_uncontested"] += 1
             elif srcs == {"setter_hook"}:
                 self.ir_dedupe_stats["setter_hook_uncontested"] += 1
+        if dropped:
+            logger.info(
+                "IR dedupe dropped %d entries",
+                len(dropped),
+                extra={"dropped_summary": dict(Counter(d["reason"] for d in dropped))},
+            )
         return list(best.values())
 
     @staticmethod

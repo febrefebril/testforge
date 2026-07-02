@@ -125,6 +125,7 @@ class SmartStepRunner:
         """Register handler for native dialogs."""
         try:
             self._page.on("dialog", lambda dialog: dialog.accept())
+            setattr(self._page, "_tf_has_dialog_handler", True)
         except Exception:
             pass
 

@@ -57,6 +57,7 @@ class LocatorResolver:
         self._probe_timeout_ms = probe_timeout_ms
         # intent -> winning candidate dict (in-memory; per-test-process)
         self._cache: dict[str, dict] = {}
+        self._winning_idx_cache: dict[str, int] = {}
         # Optional persistent SQLite intent catalog (Phase 4).
         # Duck-typed: anything with lookup/record_success methods works.
         self._sqlite = sqlite_catalog
@@ -75,16 +76,19 @@ class LocatorResolver:
         return self.resolve(intent, candidates)
 
     def resolve(self, intent: str, candidates: list[dict],
-                action: str = "click") -> ResolveResult:
+                action: str = "click",
+                exclude_indices: set[int] | None = None) -> ResolveResult:
         """Tenta cache L0 (memoria depois SQLite), depois candidatos em ordem."""
         from ..metrics.telemetry import get_tracer
         tracer = get_tracer()
+        exclude_indices = exclude_indices or set()
         with tracer.start_span("resolve") as span:
             span.set_attribute("intent_text", intent)
             span.set_attribute("action", action)
             span.set_attribute("candidate_count", len(candidates))
+            span.set_attribute("exclude_count", len(exclude_indices))
             try:
-                result = self._resolve_impl(intent, candidates, action)
+                result = self._resolve_impl(intent, candidates, action, exclude_indices)
                 span.set_attribute("level", result.level)
                 span.set_attribute("strategy", result.strategy)
                 span.set_attribute("score", result.score)
@@ -97,36 +101,78 @@ class LocatorResolver:
                 raise
 
     def _resolve_impl(self, intent: str, candidates: list[dict],
-                      action: str) -> ResolveResult:
+                      action: str, exclude_indices: set[int]) -> ResolveResult:
         t0 = time.perf_counter()
         attempted: list[str] = []
         last_error = ""
         url = self._current_url()
 
         # L0a: cache hit em memoria (por processo de teste)
-        cached = self._cache.get(intent)
+        cached_entry = self._cache.get(intent)
+        cached = None
+        cached_idx = self._winning_idx_cache.get(intent, -1)
+        if cached_entry is not None:
+            if "candidate" in cached_entry:
+                cached = cached_entry.get("candidate")
+                cached_idx = cached_entry.get("index", cached_idx)
+            else:
+                cached = cached_entry
         if cached:
-            try:
-                locator = self._build(cached)
-                if self._exists(locator):
-                    elapsed = (time.perf_counter() - t0) * 1000
-                    logger.info("L0 cache memoria hit intent=%s strategy=%s elapsed=%.1fms",
-                                 intent, cached.get("strategy"), elapsed)
-                    return ResolveResult(
-                        locator=locator,
-                        strategy=cached.get("strategy", "cached"),
-                        score=cached.get("score", 0.0),
-                        intent=intent,
-                        level="L0_cache",
-                        elapsed_ms=elapsed,
-                        attempted=["L0_mem_hit"],
-                    )
-            except Exception as exc:
-                last_error = str(exc)
-                attempted.append("L0_mem_miss")
+            if cached_idx in exclude_indices:
+                attempted.append("L0_mem_excluded")
                 self._cache.pop(intent, None)
+                self._winning_idx_cache.pop(intent, None)
+            else:
+                try:
+                    locator = self._build(cached)
+                    if self._exists(locator):
+                        elapsed = (time.perf_counter() - t0) * 1000
+                        logger.info("L0 cache memoria hit intent=%s strategy=%s elapsed=%.1fms",
+                                     intent, cached.get("strategy"), elapsed)
+                        return ResolveResult(
+                            locator=locator,
+                            strategy=cached.get("strategy", "cached"),
+                            score=cached.get("score", 0.0),
+                            intent=intent,
+                            level="L0_cache",
+                            elapsed_ms=elapsed,
+                            candidate_index=cached_idx,
+                            attempted=["L0_mem_hit"],
+                        )
+                except Exception as exc:
+                    last_error = str(exc)
+                    attempted.append("L0_mem_miss")
+                    self._cache.pop(intent, None)
+                    self._winning_idx_cache.pop(intent, None)
 
-        # L0b: cache persistente SQLite (entre execucoes)
+        # L0b: winning index cache (same process, current candidate list)
+        if intent in self._winning_idx_cache:
+            idx = self._winning_idx_cache[intent]
+            if idx in exclude_indices:
+                attempted.append("L0_idx_excluded")
+                self._winning_idx_cache.pop(intent, None)
+            elif 0 <= idx < len(candidates):
+                cand = candidates[idx]
+                try:
+                    locator = self._build(cand)
+                    if self._exists(locator):
+                        self._cache[intent] = {"candidate": cand, "index": idx}
+                        elapsed = (time.perf_counter() - t0) * 1000
+                        return ResolveResult(
+                            locator=locator,
+                            strategy=cand.get("strategy", "cached_idx"),
+                            score=cand.get("score", 0.0),
+                            intent=intent,
+                            level="L0_cache",
+                            elapsed_ms=elapsed,
+                            candidate_index=idx,
+                            attempted=["L0_idx_hit"],
+                        )
+                except Exception as exc:
+                    last_error = str(exc)
+                    attempted.append("L0_idx_miss")
+
+        # L0c: cache persistente SQLite (entre execucoes)
         if self._sqlite is not None:
             try:
                 row = self._sqlite.lookup(intent, url, action)
@@ -151,6 +197,7 @@ class LocatorResolver:
                                 intent=intent,
                                 level="L0_cache",
                                 elapsed_ms=elapsed,
+                                candidate_index=-1,
                                 attempted=["L0_sqlite_hit"],
                             )
                     except Exception as exc:
@@ -165,12 +212,16 @@ class LocatorResolver:
 
         # L1: percorre candidatos por score, retorna primeiro hit
         for idx, c in enumerate(candidates):
+            if idx in exclude_indices:
+                attempted.append(f"L1_skip_excluded_{idx}")
+                continue
             strategy = c.get("strategy", "?")
             attempted.append(f"L1_{strategy}")
             try:
                 locator = self._build(c)
                 if self._exists(locator):
-                    self._cache[intent] = c
+                    self._cache[intent] = {"candidate": c, "index": idx}
+                    self._winning_idx_cache[intent] = idx
                     if self._sqlite is not None:
                         try:
                             self._sqlite.record_success(
@@ -243,6 +294,11 @@ class LocatorResolver:
         """Retorna tamanho do cache em memoria."""
         return len(self._cache)
 
+    def promote_winning_candidate(self, intent: str, idx: int) -> None:
+        """Promove indice vencedor para tentativas futuras do mesmo intent."""
+        self._winning_idx_cache[intent] = idx
+
     def clear_cache(self) -> None:
         """Limpa o cache em memoria."""
         self._cache.clear()
+        self._winning_idx_cache.clear()

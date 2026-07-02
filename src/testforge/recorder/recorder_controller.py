@@ -10,11 +10,15 @@ import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
 from playwright.sync_api import Page, Request, Response
 
 from testforge.diagnostic.framework_detector import FrameworkDetector
+from testforge.metrics.metrics_repository import MetricsRepository
+from testforge.models.bug_report import BugReport, BugSeverity, BugSignal, BugSource
 
+from .anomaly_detector import AnomalyDetector
 from .cdp_snapshot import CDPSnapshotter
 from .raw_event import RawRecordedEvent, TargetInfo
 from .raw_recording_store import RawRecordingStore
@@ -58,6 +62,13 @@ class RecorderController:
         # Sprint 0: diagnostic mode (feature-flagged)
         self._diagnostic_mode = False
         self._diagnostic = None  # DiagnosticSession instance
+        # Phase 7: bug detection during recording
+        self._bug_detection_enabled = False
+        self._anomaly_detector: Optional[AnomalyDetector] = None
+        self._pending_bug_signals: list[BugSignal] = []
+        self._bug_reports: list[BugReport] = []
+        self._current_step_idx = 0
+        self._recording_id = ""
         # Hotfix H1: browser/page-closed flag (treat user close as graceful stop)
         self._closed = False
 
@@ -75,6 +86,7 @@ class RecorderController:
         diagnostic_mode: bool = False,
         replay_mode: str = "batched",   # H17: was "immediate"
         overlay_prompt: bool = True,     # inline overlay UI for missing fields
+        bug_detection_enabled: bool = False,
     ) -> RecordingSession:
         session = self._session_manager.start(
             recording_id, application, base_url,
@@ -85,9 +97,14 @@ class RecorderController:
         self._sensitive_alerts = []
         self._command_queue = []
         self._paused = False
+        self._recording_id = recording_id
         self._headless = headless
         self._evidence_level = evidence_level
         self._use_cdp = bool(use_cdp)
+        self._bug_detection_enabled = bool(bug_detection_enabled)
+        self._pending_bug_signals = []
+        self._bug_reports = []
+        self._current_step_idx = 0
 
         self._page.on("request", self._on_request)
         self._page.on("response", self._on_response)
@@ -132,6 +149,9 @@ class RecorderController:
             logger.info("Sprint 0 diagnostic mode enabled dir=%s replay=%s",
                          diag_dir, replay_mode)
 
+        if self._bug_detection_enabled:
+            self._anomaly_detector = AnomalyDetector(self._page, on_signal=self._on_bug_signal)
+
         # Inject recording context so the overlay can display system/suite/test_case
         # and control inline prompt behaviour.
         overlay_flag = "true" if not overlay_prompt else "false"
@@ -171,18 +191,29 @@ class RecorderController:
                 const steps = window.__tfStepQueue          || []; window.__tfStepQueue          = [];
                 const cmds  = window.__tfCommandQueue       || []; window.__tfCommandQueue       = [];
                 const fsnap = window.__tfFieldSnapshotQueue || []; window.__tfFieldSnapshotQueue = [];
+                const serrs = window.__tfPendingSnapshotErrors || []; window.__tfPendingSnapshotErrors = [];
                 const vmuts = window.__tfValueMutationQueue || []; window.__tfValueMutationQueue = [];
                 const ksts  = window.__tfKeystrokeQueue     || []; window.__tfKeystrokeQueue     = [];
                 const rrweb = window.__tfRrwebQueue         || []; window.__tfRrwebQueue         = [];
-                return {events: evts, steps: steps, commands: cmds, fieldSnapshots: fsnap, valueMutations: vmuts, keystrokes: ksts, rrwebEvents: rrweb};
+                return {events: evts, steps: steps, commands: cmds, fieldSnapshots: fsnap, snapshotErrors: serrs, valueMutations: vmuts, keystrokes: ksts, rrwebEvents: rrweb};
             }""")
             raw_events   = payload.get("events", [])
             raw_steps    = payload.get("steps", [])
             raw_commands = payload.get("commands", [])
             raw_fsnaps   = payload.get("fieldSnapshots", [])
+            raw_serrs    = payload.get("snapshotErrors", [])
             raw_vmuts    = payload.get("valueMutations", [])
             raw_ksts     = payload.get("keystrokes", [])
             raw_rrweb    = payload.get("rrwebEvents", [])
+
+            # Phase 7: consume bug-detection UI responses captured in overlay.
+            bug_responses = []
+            try:
+                bug_responses = self._page.evaluate(
+                    "() => (window.__tfBugResponses || []).splice(0)"
+                ) or []
+            except Exception:
+                bug_responses = []
 
             if raw_commands:
                 self._command_queue.extend(raw_commands)
@@ -214,15 +245,20 @@ class RecorderController:
 
             for batch in raw_fsnaps:
                 self._save_field_snapshot(batch)
+            for serr in raw_serrs:
+                MetricsRepository.record_silent_skip_global("snapshot_exception")
+                logger.info("overlay snapshot exception captured: %s", serr.get("error", "unknown"))
             for mut in raw_vmuts:
                 self._save_value_mutation(mut)
             for kst in raw_ksts:
                 self._save_keystroke(kst)
             for rrev in raw_rrweb:
                 self._save_rrweb_event(rrev)
-            if raw_fsnaps or raw_vmuts or raw_ksts or raw_rrweb:
-                logger.debug("Flushed %d field snapshots, %d value mutations, %d keystrokes, %d rrweb",
-                             len(raw_fsnaps), len(raw_vmuts), len(raw_ksts), len(raw_rrweb))
+            for response in bug_responses:
+                self._process_bug_response(response)
+            if raw_fsnaps or raw_serrs or raw_vmuts or raw_ksts or raw_rrweb:
+                logger.debug("Flushed %d field snapshots, %d snapshot errors, %d value mutations, %d keystrokes, %d rrweb",
+                             len(raw_fsnaps), len(raw_serrs), len(raw_vmuts), len(raw_ksts), len(raw_rrweb))
         except Exception as exc:
             # Hotfix BUG 2: closed-target errors during the recorder's
             # natural shutdown are not real failures — log at debug only.
@@ -396,6 +432,11 @@ class RecorderController:
         )
         self._capture_snapshots(event)
         self._store.append_event(event)
+        if self._anomaly_detector is not None:
+            target_desc = ""
+            if target is not None:
+                target_desc = target.label or target.accessible_name or target.element_id or target.tag or ""
+            self._anomaly_detector.notify_action(target_desc)
         # Sprint 0: diagnostic per-event assessment
         if self._diagnostic is not None:
             try:
@@ -416,11 +457,13 @@ class RecorderController:
                     candidates=quick_candidates,
                 )
             except Exception as exc:
-                logger.debug("Diagnostic assess failed: %s", exc)
+                logger.info("Diagnostic assess failed, emitting synthetic entry", exc_info=exc)
+                MetricsRepository.record_silent_skip_global("diagnostic_assess_error")
 
     def _persist_step(self, data: dict):
         """Persist a user-intended step (click, fill, or assert)."""
         self._step_counter += 1
+        self._current_step_idx = self._step_counter
         path = os.path.join(self._store._session_dir, "steps.jsonl")
         try:
             try:
@@ -458,6 +501,98 @@ class RecorderController:
             logger.error("[TestForge] Falha ao salvar step: %s", exc)
             import sys
             print(f"[TestForge] AVISO: step nao salvo — {exc}", file=sys.stderr)
+
+    def _on_bug_signal(self, signal: BugSignal):
+        self._pending_bug_signals.append(signal)
+        if signal.type in ("network_5xx", "page_error", "page_crash"):
+            try:
+                payload = [
+                    {"type": s.type, "timestamp": s.timestamp, "payload": s.payload}
+                    for s in self._pending_bug_signals
+                ]
+                self._page.evaluate(
+                    "signals => window.__tfShowBugDetectionModal && window.__tfShowBugDetectionModal(signals)",
+                    payload,
+                )
+            except Exception:
+                pass
+
+    def _process_bug_response(self, resp: dict):
+        verdict = resp.get("verdict", "")
+        if verdict == "expected":
+            self._pending_bug_signals.clear()
+            return
+        if verdict == "testforge_bug":
+            self._pending_bug_signals.clear()
+            logger.info("bug response classified as testforge_bug")
+            return
+        if verdict != "application_bug":
+            return
+
+        bug_id = self._generate_bug_id(resp)
+        raw_signals = resp.get("signals", []) or []
+        signals = [
+            BugSignal(
+                type=s.get("type", "unknown"),
+                timestamp=s.get("timestamp") or s.get("ts") or datetime.now(timezone.utc).isoformat(),
+                payload=s.get("payload") or {},
+            )
+            for s in raw_signals
+        ]
+        report = BugReport(
+            bug_id=bug_id,
+            timestamp=resp.get("timestamp") or datetime.now(timezone.utc).isoformat(),
+            recording_id=self._recording_id,
+            step_idx=self._current_step_idx,
+            signals=signals,
+            observed_behavior=self._summarize_signals(raw_signals),
+            user_expected_behavior=resp.get("user_expected_behavior", ""),
+            source=BugSource.APPLICATION,
+            severity=self._infer_severity(raw_signals),
+        )
+        self._bug_reports.append(report)
+        self._append_to_bug_report_jsonl(report)
+        self._pending_bug_signals.clear()
+
+    def _append_to_bug_report_jsonl(self, report: BugReport):
+        path = os.path.join(self._store._session_dir, "bug_report.jsonl")
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(report.to_jsonl_line() + "\n")
+
+    @staticmethod
+    def _summarize_signals(signals: list[dict]) -> str:
+        if not signals:
+            return "No anomaly details captured"
+        parts = []
+        for s in signals[:4]:
+            typ = s.get("type", "unknown")
+            payload = s.get("payload") or {}
+            status = payload.get("status")
+            url = payload.get("url")
+            if status and url:
+                parts.append(f"{typ}: {status} @ {url}")
+            else:
+                parts.append(str(typ))
+        return "; ".join(parts)
+
+    @staticmethod
+    def _infer_severity(signals: list[dict]) -> BugSeverity:
+        signal_types = {s.get("type") for s in signals}
+        if "page_crash" in signal_types or "network_5xx" in signal_types:
+            return BugSeverity.CRITICAL
+        if "page_error" in signal_types or "network_4xx" in signal_types:
+            return BugSeverity.HIGH
+        if "console_error" in signal_types:
+            return BugSeverity.MEDIUM
+        return BugSeverity.LOW
+
+    @staticmethod
+    def _generate_bug_id(resp: dict) -> str:
+        ts = (resp.get("timestamp") or "").replace(":", "").replace("-", "")
+        base = f"{resp.get('verdict', 'bug')}-{ts}".encode("utf-8", errors="ignore")
+        digest = abs(hash(base)) % 100000
+        day = datetime.now(timezone.utc).strftime("%Y%m%d")
+        return f"BUG-{day}-{digest:05d}"
 
     def _capture_snapshots(self, event: RawRecordedEvent):
         eid = event.event_id

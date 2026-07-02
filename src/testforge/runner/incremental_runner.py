@@ -159,15 +159,46 @@ class IncrementalRunner:
         except Exception:
             project_root = None
         candidates = [
-            Path.cwd() / "recordings" / rec_id,
-            Path(self.script_path).parent.parent / "recordings" / rec_id,
-            Path(self.script_path).parent.parent.parent / "recordings" / rec_id,
+            Path.cwd() / "recordings",
+            Path(self.script_path).parent.parent / "recordings",
+            Path(self.script_path).parent.parent.parent / "recordings",
         ]
         if project_root is not None:
-            candidates.append(project_root / "recordings" / rec_id)
-        for c in candidates:
+            candidates.append(project_root / "recordings")
+
+        rec_norm = str(rec_id or "").replace("\\", "/").strip("/")
+        direct_candidates = [root / rec_norm for root in candidates]
+        for c in direct_candidates:
             if c.is_dir():
                 return str(c)
+
+        # Fallback: recordings podem estar em subpastas por categoria
+        # (ex.: recordings/uncategorized/<rec_id>). Busca por basename com
+        # marcador minimo de artefato valido (raw_events.jsonl).
+        rec_basename = Path(rec_norm).name
+        seen = set()
+        for root in candidates:
+            if not root.is_dir():
+                continue
+            root_key = str(root.resolve())
+            if root_key in seen:
+                continue
+            seen.add(root_key)
+            nested_matches = []
+            try:
+                for p in root.rglob(rec_basename):
+                    if not p.is_dir():
+                        continue
+                    if not (p / "raw_events.jsonl").exists():
+                        continue
+                    nested_matches.append(p)
+            except Exception:
+                continue
+
+            if nested_matches:
+                nested_matches.sort(key=lambda p: (len(p.parts), str(p).lower()))
+                return str(nested_matches[0])
+
         return None
 
     def _load_data_file(self):

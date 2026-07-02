@@ -78,12 +78,16 @@ def click(page, intent: str, candidates_file: str = "",
     from ..metrics.telemetry import get_tracer
     with get_tracer().start_span("step.click") as span:
         span.set_attribute("intent_text", intent)
-        locator, _ = _do_resolve(page, intent, candidates_file, candidates)
-        try:
-            locator.click(timeout=timeout_ms)
-            page.wait_for_timeout(200)
-        except Exception as exc:
-            raise StepExecutionError(intent, "click", str(exc)) from exc
+        _execute_with_retry(
+            page=page,
+            intent=intent,
+            action="click",
+            candidates_file=candidates_file,
+            candidates=candidates,
+            timeout_ms=timeout_ms,
+            action_fn=lambda locator: locator.click(timeout=timeout_ms),
+        )
+        page.wait_for_timeout(200)
 
 
 def fill(page, intent: str, value: str, candidates_file: str = "",
@@ -93,19 +97,23 @@ def fill(page, intent: str, value: str, candidates_file: str = "",
     from ..metrics.telemetry import get_tracer
     with get_tracer().start_span("step.fill") as span:
         span.set_attribute("intent_text", intent)
-        locator, result = _do_resolve(page, intent, candidates_file, candidates)
+        locator = _execute_with_retry(
+            page=page,
+            intent=intent,
+            action="fill",
+            candidates_file=candidates_file,
+            candidates=candidates,
+            timeout_ms=timeout_ms,
+            action_fn=lambda candidate_locator: candidate_locator.fill(value, timeout=timeout_ms),
+        )
         try:
-            locator.fill(value, timeout=timeout_ms)
+            locator.first.press("Tab")
+        except Exception:
             try:
-                locator.first.press("Tab")
+                page.keyboard.press("Tab")
             except Exception:
-                try:
-                    page.keyboard.press("Tab")
-                except Exception:
-                    pass
-            page.wait_for_timeout(200)
-        except Exception as exc:
-            raise StepExecutionError(intent, "fill", str(exc)) from exc
+                pass
+        page.wait_for_timeout(200)
 
 
 def select(page, intent: str, value: str, candidates_file: str = "",
@@ -115,12 +123,16 @@ def select(page, intent: str, value: str, candidates_file: str = "",
     from ..metrics.telemetry import get_tracer
     with get_tracer().start_span("step.select") as span:
         span.set_attribute("intent_text", intent)
-        locator, _ = _do_resolve(page, intent, candidates_file, candidates)
-        try:
-            locator.select_option(value, timeout=timeout_ms)
-            page.wait_for_timeout(200)
-        except Exception as exc:
-            raise StepExecutionError(intent, "select_option", str(exc)) from exc
+        _execute_with_retry(
+            page=page,
+            intent=intent,
+            action="select_option",
+            candidates_file=candidates_file,
+            candidates=candidates,
+            timeout_ms=timeout_ms,
+            action_fn=lambda locator: locator.select_option(value, timeout=timeout_ms),
+        )
+        page.wait_for_timeout(200)
 
 
 def assert_text(page, intent: str, expected: str, candidates_file: str = "",
@@ -145,12 +157,67 @@ def assert_visible(page, intent: str, candidates_file: str = "",
 
 
 def _do_resolve(page, intent: str, candidates_file: str,
-                inline_candidates: Optional[list[dict]]):
+                inline_candidates: Optional[list[dict]],
+                action: str = "click",
+                exclude_indices: Optional[set[int]] = None):
     """Interno: roteia para LocatorResolver, retorna (locator, result)."""
     resolver = _resolver_for(page)
     if inline_candidates is not None:
-        result = resolver.resolve(intent, inline_candidates)
+        result = resolver.resolve(intent, inline_candidates, action=action,
+                                  exclude_indices=exclude_indices)
     else:
         path = _resolve_path(candidates_file)
-        result = resolver.resolve_from_file(path, intent)
+        candidates = resolver._load(path)
+        result = resolver.resolve(intent, candidates, action=action,
+                                  exclude_indices=exclude_indices)
     return result.locator, result
+
+
+def _execute_with_retry(page, intent: str, action: str,
+                        candidates_file: str,
+                        candidates: Optional[list[dict]],
+                        timeout_ms: int,
+                        action_fn,
+                        max_retries: int = 5):
+    """Resolve + execute action, retrying with next candidate on action failure."""
+    exclude_indices: set[int] = set()
+    attempted_indices: list[int] = []
+    last_error = ""
+    resolver = _resolver_for(page)
+
+    for _ in range(max_retries):
+        try:
+            locator, result = _do_resolve(
+                page,
+                intent,
+                candidates_file,
+                candidates,
+                action=action,
+                exclude_indices=exclude_indices,
+            )
+        except Exception as exc:
+            raise StepExecutionError(intent, action, str(exc)) from exc
+
+        idx = result.candidate_index
+        if idx >= 0:
+            attempted_indices.append(idx)
+        try:
+            action_fn(locator)
+            if idx >= 0:
+                resolver.promote_winning_candidate(intent, idx)
+            return locator
+        except Exception as exc:
+            last_error = str(exc)
+            if idx >= 0:
+                exclude_indices.add(idx)
+            logger.info(
+                "action failed on candidate idx=%s, retrying next",
+                idx,
+                extra={"intent": intent, "action": action, "error": last_error[:200]},
+            )
+
+    raise StepExecutionError(
+        intent,
+        action,
+        f"all candidates failed after retries; attempted_indices={attempted_indices}; last_error={last_error[:240]}",
+    )

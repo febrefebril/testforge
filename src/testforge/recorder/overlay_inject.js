@@ -571,6 +571,14 @@
         enabled: !el.disabled && el.getAttribute('aria-disabled') !== 'true'
       });
     });
+    if (snapshots.length === 0) {
+      snapshots.push({
+        timestamp: new Date().toISOString(),
+        dom_state: 'no_editable_elements',
+        visibility_unknown: true,
+        url: window.location.href
+      });
+    }
     return snapshots;
   }
 
@@ -1849,6 +1857,46 @@
   // ---- Public aliases ----
   window._tf_snapshotFields = _snapshotFields;
   window._tf_captureFinalState = _captureFinalState;
+  window.__tfBugResponses = window.__tfBugResponses || [];
+  window.__tfShowBugDetectionModal = window.__tfShowBugDetectionModal || function(signals) {
+    try {
+      var modal = document.createElement('div');
+      modal.className = '__tf-bug-modal';
+      modal.style.cssText = 'position: fixed; top: 20%; left: 25%; width: 50%; '
+        + 'background: white; border: 3px solid #dc2626; z-index: 999999; padding: 20px; '
+        + 'font-family: system-ui; box-shadow: 0 4px 12px rgba(0,0,0,0.3);';
+      modal.innerHTML = '<h2 style="color: #dc2626">Possivel bug detectado</h2>'
+        + '<pre style="max-height: 180px; overflow: auto; background: #f9f9f9; padding: 8px;">'
+        + JSON.stringify(signals || [], null, 2) + '</pre>'
+        + '<p><strong>Este comportamento e esperado?</strong></p>'
+        + '<button id="__tf-bug-expected">Sim, esperado</button> '
+        + '<button id="__tf-bug-app">Nao, bug da aplicacao</button> '
+        + '<button id="__tf-bug-testforge">Bug do TestForge</button>';
+      document.body.appendChild(modal);
+
+      document.getElementById('__tf-bug-expected').onclick = function() {
+        window.__tfBugResponses.push({ verdict: 'expected', signals: signals || [], timestamp: new Date().toISOString() });
+        modal.remove();
+      };
+      document.getElementById('__tf-bug-app').onclick = function() {
+        var expected = window.prompt('Qual seria o comportamento correto?') || '';
+        window.__tfBugResponses.push({
+          verdict: 'application_bug',
+          user_expected_behavior: expected,
+          signals: signals || [],
+          timestamp: new Date().toISOString()
+        });
+        modal.remove();
+      };
+      document.getElementById('__tf-bug-testforge').onclick = function() {
+        window.__tfBugResponses.push({ verdict: 'testforge_bug', signals: signals || [], timestamp: new Date().toISOString() });
+        modal.remove();
+      };
+    } catch (_e) {
+      if (console && console.debug) console.debug('tf bug modal error', _e);
+    }
+  };
+
   // Bug fix (2026-06-30): periodic field snapshot bug — _snapshotFields
   // retorna array mas nunca era enviado ao __tfFieldSnapshotQueue. Resultado:
   // field_snapshots.jsonl nunca era escrito mesmo com infra completa nos dois
@@ -1866,7 +1914,15 @@
           snapshots: snaps,
         });
       }
-    } catch(_e) {}
+    } catch(_e) {
+      window.__tfPendingSnapshotErrors = window.__tfPendingSnapshotErrors || [];
+      window.__tfPendingSnapshotErrors.push({
+        timestamp: new Date().toISOString(),
+        error: _e && _e.message ? _e.message : String(_e),
+        stack: _e && _e.stack ? String(_e.stack).substring(0, 500) : ''
+      });
+      if (console.debug) console.debug('tf snapshot error:', _e);
+    }
   }, 2000);
 
   // ---- Sprint event delegation (2026-06-30) ----

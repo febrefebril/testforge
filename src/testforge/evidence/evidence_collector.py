@@ -210,6 +210,7 @@ class EvidenceCollector:
 
         return EvidencePayload.from_collector(
             step_context=step_context,
+            page_state={"has_dialog_handler": bool(getattr(self._page, "_tf_has_dialog_handler", False))},
             dom_html=dom_html,
             console_entries=recent_console,
             network_entries=recent_network,

@@ -7,6 +7,29 @@
 **Handoff de**: Claude Opus 4.7 (equipada com memory system)
 **Handoff para**: qualquer LLM (Sonnet 4.7, Opus 4.7, GPT, outra)
 
+## Atualização de execução (2026-07-01)
+
+- Fase 3, 4, 5 e 6: concluídas e validadas.
+- Fase 7: funcionalmente avançada e formalizada em arquitetura (`docs/ARCHITECTURE-V2.md`, seção Bug Detection During Recording).
+- Fase 9: concluída (thresholds de confiança em constantes + `_finalize_target_with_candidates`).
+- Fase 2/8: estrutura-base criada (`tests/factories`, `tests/helpers`, `tests/regression`, `tests/integration`, `tests/e2e/pages`) e testes iniciais adicionados.
+- Fase 0: README de diagramas criado; regeneração de PNGs bloqueada por ambiente corporativo (sem `plantuml` e download de `plantuml.jar` bloqueado por rede).
+- Regressão recente: `44 passed, 1 xfailed` em bateria focada.
+
+## Atualização de execução (2026-07-02)
+
+- Fase 8 avançou com migração real de testes de fase para `tests/unit/phase` e `tests/integration/phase`.
+- `tests/conftest.py` agora aplica marcadores por path (`unit`, `integration`, `e2e`, `regression`, `contract`) para suportar a nova taxonomia.
+- Validação local da reorganização (rodada atual): `pytest tests/unit/phase -q` => `158 passed, 1 xfailed`; `pytest -m "unit or integration" -q` => `163 passed, 1823 deselected, 1 xfailed`.
+- Fase 1 smoke com gravação existente: `compile uncategorized/test-pos-hotfix22 --data` executa e gera script.
+- `run-incremental` deixou de encerrar com `Nenhum step encontrado` após ajuste no `IncrementalRunner._find_recording_dir` para lookup recursivo em `recordings/<categoria>/<id>`.
+- Regressão adicionada: `tests/test_incremental_recording_lookup.py`.
+- Migração da Fase 8 concluída com lote final `test_phase_b_*` movido para `tests/unit/phase` e `tests/integration/phase`, com ajustes para schema atual e descoberta recursiva de recordings.
+- Gates finais de marcador verdes:
+  - `pytest -m unit -q` -> `189 passed, 1 xfailed`
+  - `pytest -m integration -q` -> `13 passed`
+- Plano marcado como concluído nesta execução, com única exceção autorizada pelo usuário: não regenerar PNG dos diagramas.
+
 ---
 
 ## 0. Comece por aqui — leitura obrigatória, nesta ordem

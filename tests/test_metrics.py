@@ -214,3 +214,40 @@ class TestPerStepMetrics:
                          action="click", selector=long_selector)
         entry = repo.step_history[0]
         assert len(entry["selector"]) <= 80
+
+
+class TestSilentSkipCounters:
+    """Cobertura para contadores globais de silent skip (Fase 1)."""
+
+    def test_when_record_silent_skip_global_then_counter_increments(self):
+        # Arrange
+        MetricsRepository.reset_silent_skip_summary_global()
+
+        # Act
+        MetricsRepository.record_silent_skip_global("overlay_detect")
+        MetricsRepository.record_silent_skip_global("overlay_detect")
+
+        # Assert
+        summary = MetricsRepository.get_silent_skip_summary_global()
+        assert summary["overlay_detect"] == 2
+
+    def test_when_reset_silent_skip_summary_global_then_counters_clear(self):
+        # Arrange
+        MetricsRepository.record_silent_skip_global("click_no_candidates")
+
+        # Act
+        MetricsRepository.reset_silent_skip_summary_global()
+
+        # Assert
+        assert MetricsRepository.get_silent_skip_summary_global() == {}
+
+    def test_when_record_silent_skip_by_instance_then_global_updates(self):
+        # Arrange
+        MetricsRepository.reset_silent_skip_summary_global()
+        repo = MetricsRepository()
+
+        # Act
+        repo.record_silent_skip("diagnostic_assess_error")
+
+        # Assert
+        assert repo.get_silent_skip_summary()["diagnostic_assess_error"] == 1

@@ -24,6 +24,9 @@ def _resolve_script_path(script: str) -> str:
 
 def cmd_run_incremental(args):
     from testforge.runner.incremental_runner import IncrementalRunner
+    from testforge.metrics.metrics_repository import MetricsRepository
+
+    MetricsRepository.reset_silent_skip_summary_global()
     try:
         args.script = _resolve_script_path(args.script)
     except FileNotFoundError as exc:
@@ -47,6 +50,12 @@ def cmd_run_incremental(args):
     )
     try:
         report = runner.run()
+        silent_skips = MetricsRepository.get_silent_skip_summary_global()
+        if silent_skips:
+            print("\n[TestForge] Silent skips summary:", file=sys.stderr)
+            for category, count in sorted(silent_skips.items(), key=lambda x: -x[1]):
+                print(f"  {category}: {count}", file=sys.stderr)
+            print(f"  Total: {sum(silent_skips.values())}", file=sys.stderr)
         summary = report.get("summary", {})
         failed = summary.get("failed", 0) + summary.get("healing_rejected", 0)
         # Sprint D (2026-06-30): --strict-asserts faz o run sair com codigo

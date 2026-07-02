@@ -66,3 +66,75 @@ def test_click_navigation_fails_when_url_unchanged():
     r = val.validate(step, url_before="http://localhost/same")
     assert r.passed is False
     assert "url_not_changed" in r.failures
+
+
+def test_fill_mask_currency_matches_by_numeric_magnitude():
+    page = _mock_page()
+    el = page.locator.return_value.first
+    el.input_value = MagicMock(return_value="R$ 1.000.000,00")
+
+    def _attr(name, timeout=200):
+        return "currency" if name == "currencymask" else None
+
+    el.get_attribute = MagicMock(side_effect=_attr)
+
+    val = StepPostconditionValidator(page, oracle_runner=None)
+    step = make_fake_step("fill", "#valor", value="1000000.00")
+    r = val.validate(step)
+    assert r.passed is True
+    assert r.checks.get("mask_amount_matches") is True
+
+
+def test_fill_mask_currency_detects_mismatch():
+    page = _mock_page()
+    el = page.locator.return_value.first
+    el.input_value = MagicMock(return_value="R$ 900,00")
+
+    def _attr(name, timeout=200):
+        return "currency" if name == "currencymask" else None
+
+    el.get_attribute = MagicMock(side_effect=_attr)
+
+    val = StepPostconditionValidator(page, oracle_runner=None)
+    step = make_fake_step("fill", "#valor", value="1000,00")
+    r = val.validate(step)
+    assert r.passed is False
+    assert "mask_amount_mismatch" in r.failures
+
+
+def test_fill_mask_date_matches_after_normalization():
+    page = _mock_page()
+    el = page.locator.return_value.first
+    el.input_value = MagicMock(return_value="31/12/2026")
+
+    def _attr(name, timeout=200):
+        if name == "currencymask":
+            return None
+        if name == "mask":
+            return "99/99/9999"
+        return None
+
+    el.get_attribute = MagicMock(side_effect=_attr)
+
+    val = StepPostconditionValidator(page, oracle_runner=None)
+    step = make_fake_step("fill", "#data", value="2026-12-31")
+    r = val.validate(step)
+    assert r.passed is True
+    assert r.checks.get("mask_date_matches") is True
+
+
+def test_fill_mask_falls_back_to_non_empty_when_not_parseable():
+    page = _mock_page()
+    el = page.locator.return_value.first
+    el.input_value = MagicMock(return_value="abc")
+
+    def _attr(name, timeout=200):
+        return "custom-mask" if name == "mask" else None
+
+    el.get_attribute = MagicMock(side_effect=_attr)
+
+    val = StepPostconditionValidator(page, oracle_runner=None)
+    step = make_fake_step("fill", "#campo", value="zzz")
+    r = val.validate(step)
+    assert r.passed is True
+    assert r.checks.get("mask_input_non_empty") is True

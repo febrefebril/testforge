@@ -18,6 +18,7 @@ class EvidencePayload:
     """
 
     step_context: dict = field(default_factory=dict)
+    page_state: dict = field(default_factory=dict)
     dom_snapshot: str = ""
     console_errors: list[dict] = field(default_factory=list)
     network_state: list[dict] = field(default_factory=list)
@@ -97,6 +98,7 @@ class EvidencePayload:
     def from_collector(
         cls,
         step_context: dict,
+        page_state: Optional[dict] = None,
         dom_html: str = "",
         console_entries: Optional[list[dict]] = None,
         network_entries: Optional[list[dict]] = None,
@@ -105,6 +107,7 @@ class EvidencePayload:
         """Factory: build EvidencePayload from collector artifacts."""
         payload = cls(
             step_context=step_context,
+            page_state=page_state or {},
             dom_snapshot=cls.sanitize_dom(dom_html),
             console_errors=console_entries or [],
             network_state=network_entries or [],

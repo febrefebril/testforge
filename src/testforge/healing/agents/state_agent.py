@@ -5,10 +5,15 @@ Estratégias: overlay_dismiss, dialog_handler, re_auth_hook.
 """
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from ..evidence_payload import EvidencePayload
 from ..llm_healer import LLMHealer, LLMHealingProposal, MockLLMHealer
+from .dom_introspection import dom_has_dialog_handler, dom_has_role
+
+
+logger = logging.getLogger(__name__)
 
 
 class StateAgent:
@@ -28,11 +33,18 @@ class StateAgent:
 
         # 1. Alert/Confirm/Dialog
         if "dialog" in error_lower or "alert" in error_lower or "confirm" in error_lower:
+            confidence = 0.85
+            if not (dom_has_dialog_handler(payload) or dom_has_role(payload, "dialog")):
+                logger.info(
+                    "state_agent dialog proposal downgraded — no dom evidence",
+                    extra={"error": error_message[:200]},
+                )
+                confidence = 0.4
             return LLMHealingProposal(
                 taxonomy_id="STA-004", family="FAM-04",
                 strategy="dialog_handler",
                 new_locator=sel,
-                confidence=0.85,
+                confidence=confidence,
                 rationale="Dialog detectado — registre page.on('dialog') antes de interagir",
             )
 

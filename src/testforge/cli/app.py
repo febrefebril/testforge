@@ -386,6 +386,31 @@ def _auto_publish_recording(rid: str, rec_dir: str):
         print(f"[TestForge] [WARN] Erro de publicacao (nao-bloqueante): {exc}", file=sys.stderr)
 
 
+def _find_recording_leaf_dirs(base_dir: str) -> list[str]:
+    """Retorna diretorios de gravacao "folha" abaixo de base_dir.
+
+    Um diretorio folha valido contem simultaneamente:
+      - raw_events.jsonl
+      - recording_metadata.json
+
+    Isso evita confundir pastas agregadoras (ex.: recordings/SIOPI) com
+    gravacoes executaveis.
+    """
+    leaves: list[str] = []
+    if not os.path.isdir(base_dir):
+        return leaves
+
+    for root, _dirs, files in os.walk(base_dir):
+        # Evita ruido de capturas de replay incremental
+        if "capture_runs" in root.replace("\\", "/"):
+            continue
+        if "raw_events.jsonl" in files and "recording_metadata.json" in files:
+            leaves.append(os.path.abspath(root))
+
+    leaves.sort()
+    return leaves
+
+
 def _record_qa_wizard(args):
     """Wizard modo simples (alinhado com GUI): pergunta dados do teste
     do mais geral para o mais especifico: Sistema > Suite > Caso > Teste.
@@ -833,6 +858,9 @@ def _auto_learn(error_msg: str, solution: str, framework: str = "generic"):
 
 
 def cmd_compile(args):
+    from testforge.metrics.metrics_repository import MetricsRepository
+
+    MetricsRepository.reset_silent_skip_summary_global()
     rec_id = args.recording
     # Remove prefixo recordings/ se usuario passar caminho completo
     if rec_id.startswith("recordings/"):
@@ -847,11 +875,34 @@ def cmd_compile(args):
         print(f"[TestForge] [X] Gravacao nao encontrada: {rec_dir}")
         return
 
+    # Se o usuario apontou para pasta agregadora (ex.: recordings/SIOPI),
+    # tenta resolver automaticamente para a gravacao folha.
+    raw_events_path = os.path.join(rec_dir, "raw_events.jsonl")
+    if not os.path.isfile(raw_events_path):
+        leaves = _find_recording_leaf_dirs(rec_dir)
+        if len(leaves) == 1:
+            resolved = leaves[0]
+            print(
+                f"[TestForge] [INFO] Pasta agregadora detectada; usando gravacao folha: {resolved}"
+            )
+            rec_dir = resolved
+            rec_id = os.path.basename(rec_dir)
+            raw_events_path = os.path.join(rec_dir, "raw_events.jsonl")
+        elif len(leaves) > 1:
+            print(
+                "[TestForge] [X] Caminho informado e uma pasta agregadora com multiplas gravacoes."
+            )
+            print("  Selecione uma gravacao folha (diretorio com raw_events.jsonl):")
+            for leaf in leaves[:10]:
+                print(f"    - {leaf}")
+            if len(leaves) > 10:
+                print(f"    ... e mais {len(leaves) - 10}")
+            return
+
     # B32: if the directory exists but is empty (no raw_events.jsonl —
     # the recorder bumped the name to <rec_id>_<n> on the last run and
     # the user typed the original), look for the most recent sibling
     # <rec_id>_<n> that actually has artefacts and switch to it.
-    raw_events_path = os.path.join(rec_dir, "raw_events.jsonl")
     if not os.path.isfile(raw_events_path):
         import glob as _glob
         siblings = sorted(
@@ -1018,6 +1069,74 @@ def cmd_compile(args):
     print(f"[TestForge] [OK] Script gerado: {path}")
     if semantic_path:
         print(f"[TestForge] [OK] Semantic steps: {semantic_path}")
+
+    # Phase 7: generate human-readable bug docs from recording bug_report.jsonl
+    try:
+        bug_jsonl = os.path.join(rec_dir, "bug_report.jsonl")
+        generated_bug_docs = []
+        if os.path.exists(bug_jsonl):
+            docs_root = _PROJECT_ROOT / "docs" / "bugs"
+            docs_root.mkdir(parents=True, exist_ok=True)
+            with open(bug_jsonl, encoding="utf-8") as bf:
+                for line in bf:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        bug = _json.loads(line)
+                    except Exception:
+                        continue
+                    bug_id = str(bug.get("bug_id") or "BUG-UNKNOWN")
+                    doc_path = docs_root / f"{bug_id}.md"
+                    signals = bug.get("signals") or []
+                    observed = bug.get("observed_behavior") or "(nao informado)"
+                    expected = bug.get("user_expected_behavior") or "(nao informado)"
+                    severity = bug.get("severity") or "unknown"
+                    ts = bug.get("timestamp") or ""
+                    step_idx = bug.get("step_idx")
+                    lines_md = [
+                        f"# {bug_id}",
+                        "",
+                        f"**Detectado durante gravacao**: {ts}",
+                        f"**Recording**: {rec_dir}",
+                        f"**Step**: {step_idx}",
+                        "",
+                        "## Comportamento observado",
+                        f"{observed}",
+                        "",
+                        "## Comportamento esperado (segundo QA)",
+                        f"{expected}",
+                        "",
+                        "## Severidade",
+                        str(severity).upper(),
+                        "",
+                        "## Sinais capturados",
+                    ]
+                    if signals:
+                        for sig in signals:
+                            st = sig.get("type", "unknown")
+                            sts = sig.get("ts") or sig.get("timestamp") or ""
+                            payload = sig.get("payload") or {}
+                            lines_md.append(f"- {st} @ {sts}: {payload}")
+                    else:
+                        lines_md.append("- (sem sinais)")
+
+                    lines_md.extend([
+                        "",
+                        "## Referencia no teste gerado",
+                        f"{path}",
+                        "",
+                    ])
+
+                    with open(doc_path, "w", encoding="utf-8") as out:
+                        out.write("\n".join(lines_md))
+                    generated_bug_docs.append(str(doc_path))
+
+        for bdoc in generated_bug_docs:
+            print(f"[TestForge] [OK] Bug doc: {bdoc}")
+    except Exception as exc:
+        logger.warning("Geracao de docs de bug falhou (nao-fatal): %s", exc)
+
     if data_file:
         print(f"[TestForge] [OK] Script data-driven (le {os.path.basename(data_file)})")
 
@@ -1029,6 +1148,13 @@ def cmd_compile(args):
     except SyntaxError as e:
         logger.error("Erro de sintaxe no script compilado: %s", e)
         print(f"[TestForge] [X] Erro de sintaxe: {e}")
+
+    silent_skips = MetricsRepository.get_silent_skip_summary_global()
+    if silent_skips:
+        print("\n[TestForge] Silent skips summary:")
+        for category, count in sorted(silent_skips.items(), key=lambda x: -x[1]):
+            print(f"  {category}: {count}")
+        print(f"  Total: {sum(silent_skips.values())}")
 
 
 def cmd_audit(args):

@@ -51,12 +51,23 @@ def _descobrir_gravacoes() -> list:
     gravacoes = []
     if not _RECORDINGS_DIR or not os.path.isdir(_RECORDINGS_DIR):
         return gravacoes
-    for nome in sorted(os.listdir(_RECORDINGS_DIR)):
-        caminho = os.path.join(_RECORDINGS_DIR, nome)
-        if os.path.isdir(caminho) and os.path.exists(
-            os.path.join(caminho, "raw_events.jsonl")
-        ):
-            gravacoes.append(caminho)
+
+    seen = set()
+    for root, _dirs, files in os.walk(_RECORDINGS_DIR):
+        if "raw_events.jsonl" not in files:
+            continue
+        if "capture_runs" in root:
+            continue
+        raw_path = os.path.join(root, "raw_events.jsonl")
+        if os.path.getsize(raw_path) <= 0:
+            continue
+        path = os.path.abspath(root)
+        if path in seen:
+            continue
+        seen.add(path)
+        gravacoes.append(path)
+
+    gravacoes.sort()
     return gravacoes
 
 

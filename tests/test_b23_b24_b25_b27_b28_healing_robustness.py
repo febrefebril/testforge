@@ -77,8 +77,9 @@ class TestL0CatalogAttachesProposal:
             error_message="Locator not found",
         )
         assert outcome is not None
-        assert outcome.status == ProgressResult.PASSED_STEP
+        assert outcome.status == ProgressResult.DEGRADED
         assert outcome.layer_used == "L0"
+        assert outcome.reason == "no_step_runner"
         assert outcome.proposal is not None, (
             "Acerto L0 deve anexar uma proposta — proposta vazia aciona "
             "o filtro de localizador perigoso downstream (B19/B20). Veja B23."
