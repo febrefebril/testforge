@@ -1,0 +1,95 @@
+@startuml sequencia-curator-runner-ALVO
+title Curator — estado ALVO (Fase 4 fix)\nQuando step_runner=None, TODAS as camadas retornam None (fall-through).\nCurator sem runner é degradado, não falso-verde.
+
+skinparam BackgroundColor #F0FDF4
+skinparam SequenceGroupBackgroundColor #DCFCE7
+
+actor "test / shadow" as TEST
+participant "Curator\ncurator.py" as CUR
+participant "HealingCatalog\nL0" as CAT
+participant "SpecialistAgent\nL2 (Family)" as AGENT
+participant "LLMHealer\nL3" as LLM
+participant "step_runner" as RUN
+
+TEST -> CUR: cure(step, error, evidence)
+activate CUR
+
+alt self._step_runner is None
+  note over CUR #DCFCE7
+    ✅ Fix Fase 4:
+    Sem runner, curator degrada com transparência.
+    Emite log WARNING com metric counter.
+    Retorna None → caller sabe que cura não foi validada.
+  end note
+  CUR -> CUR: logger.warning("curator no_runner degrade")
+  CUR -> CUR: metrics.record("curator.no_runner_skip")
+  CUR --> TEST: **CurationOutcome(status=DEGRADED, reason="no_runner")**\n  ou None (fall-through explícito)
+  return
+end
+
+CUR -> CAT: lookup(step, family)
+alt L0 hit
+  CAT --> CUR: recipe
+  CUR -> RUN: try_execute(patched_step_L0)
+  RUN --> CUR: passed?
+  alt passed
+    CUR -> CAT: record_success(recipe_id)
+    CUR --> TEST: CurationOutcome(status=PASSED_STEP, layer=L0)
+  else falhou
+    CUR -> CAT: record_failure(recipe_id)
+    note right: continua para L1/L2/L3
+  end
+else L0 miss
+  note right: continua para L1
+end
+
+CUR -> CUR: try_layer1_candidates(step)
+alt L1 candidate resolve+execute OK
+  CUR --> TEST: CurationOutcome(status=PASSED_STEP, layer=L1)
+end
+
+CUR -> AGENT: heal(evidence, error)
+AGENT --> CUR: proposal(confidence)
+alt proposal.confidence >= AGENT_MIN_CONFIDENCE\nAND dom_snapshot valida contexto\n(Fase 6 fix, ver GAP-06/07)
+  CUR -> RUN: try_execute(patched_step_L2)
+  RUN --> CUR: passed?
+  alt passed
+    CUR -> AGENT: record_success()
+    CUR --> TEST: CurationOutcome(status=PASSED_STEP, layer=L2)
+  else falhou
+    note right: continua para L3
+  end
+else proposal rejeitada
+  note right: L2 skipped
+end
+
+CUR -> LLM: heal(evidence, error)
+LLM --> CUR: proposal
+CUR -> RUN: try_execute(patched_step_L3)
+RUN --> CUR: passed?
+alt passed
+  CUR --> TEST: CurationOutcome(status=PASSED_STEP, layer=L3)
+else
+  CUR --> TEST: CurationOutcome(status=UNRESOLVED)
+end
+deactivate CUR
+
+legend right #D1FAE5
+  <b>Contrato Fase 4</b>:
+  1. Se runner ausente, curator retorna DEGRADED (não PASSED_STEP fake).
+  2. Se runner presente, TODA camada executa `try_execute` antes de PASSED_STEP.
+  3. `record_success` no catalog SOMENTE após execução OK real.
+  4. `record_failure` em L0 miss ou execution error.
+  5. Novo status `DEGRADED` sinaliza "cura não validada, decisão delegada".
+
+  <b>Regressões testáveis</b>:
+  - tests/unit/healing/test_curator_l0_when_runner_missing_then_falls_through.py
+  - tests/unit/healing/test_curator_l2_when_runner_missing_then_falls_through.py
+  - tests/integration/test_curator_shadow_mode_returns_degraded.py
+
+  <b>Breaking</b>: shadow mode / offline pode retornar DEGRADED onde
+  antes retornava PASSED_STEP falso. Isso é a correção, não regressão.
+  Update dashboards + métricas para tratar DEGRADED como sinal separado.
+end legend
+
+@enduml

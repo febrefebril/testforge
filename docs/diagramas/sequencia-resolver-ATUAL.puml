@@ -1,0 +1,84 @@
+@startuml sequencia-resolver-ATUAL
+title Resolver — estado ATUAL (buggy) — GAP-01\nExistência ≠ execução: primeiro candidate que EXISTE é retornado,\naction failure escala direto para healing sem tentar próximo candidate.
+
+skinparam BackgroundColor #FFF5F5
+skinparam SequenceGroupBackgroundColor #FEE2E2
+
+actor "test_*.py" as TEST
+participant "step.fill()\nruntime/step.py" as STEP
+participant "LocatorResolver\nresolver.py:77" as RES
+participant "Page (Playwright)" as PAGE
+participant "Locator" as LOC
+participant "SQLite Catalog\n(intent hit)" as SQL
+participant "Healing\nL2/L3" as HEAL
+
+TEST -> STEP: step.fill(page, intent="Renda mensal",\n  value="1000", candidates_file=...)
+activate STEP
+
+STEP -> RES: resolve(intent, candidates, action="click")
+activate RES
+note right of RES #FEE2E2
+  ⚠ action parâmetro existe (default "click")
+  mas é usado APENAS como cache key para SQLite.
+  NÃO drive de execução real.
+end note
+
+alt L0a cache memória hit
+  RES -> RES: cache[intent]
+  RES -> LOC: **_exists(locator)** = count() > 0
+  LOC --> RES: True
+  RES --> STEP: ResolveResult(locator, level=L0_cache)
+else L0b SQLite hit
+  RES -> SQL: lookup(intent, url, action)
+  SQL --> RES: IntentResolution(resolved_call)
+  RES -> LOC: _exists(locator)  ' apenas count > 0
+  LOC --> RES: True
+  RES --> STEP: ResolveResult
+else L1 candidates
+  loop for idx, c in enumerate(candidates)  # resolver.py:167
+    RES -> PAGE: build(c) via dispatch
+    PAGE --> RES: locator
+    RES -> LOC: **_exists(locator)** = count() > 0
+    alt count > 0
+      LOC --> RES: True
+      RES -> RES: cache[intent] = c  ' cacheia SEM validar ação
+      RES -> SQL: record_success(c)  ' persiste SEM validar ação
+      RES --> STEP: ResolveResult(idx=X)
+      note right of RES #FEE2E2
+        ⚠ Retorna primeiro EXISTENTE.
+        Não testa se fill/click executa.
+      end note
+    else count = 0
+      LOC --> RES: False
+      note right: continue para próximo idx
+    end
+  end
+end
+deactivate RES
+
+STEP -> PAGE: locator.fill(value)
+alt fill EXECUTA
+  PAGE --> STEP: OK
+  STEP --> TEST: passed
+else fill REJEITA\n(material intercept,\nhidden, readonly)
+  PAGE --> STEP: TimeoutError / ElementInterceptedError
+  note over STEP #FEE2E2
+    ⚠ GAP-01: NÃO volta para candidate[idx+1].
+    Executor escala direto para healing.
+    Candidates [idx+1..N] nunca tentados.
+  end note
+  STEP -> HEAL: escalate(step, error)
+  HEAL --> STEP: healed OR unresolved
+  STEP --> TEST: passed / rejected
+end
+deactivate STEP
+
+legend right #FFDDDD
+  <b>Sintoma observado</b>: rec SIOPI 15b-e, hotfix22
+  assert_hit_rate 14-64% em ambiente estático.
+  Deveria ser 100%. Candidate #0 é role-based
+  ("Renda mensal") — existe mas Material intercepta
+  fill. Runner nunca tenta label-based (#1) ou XPath (#2).
+end legend
+
+@enduml

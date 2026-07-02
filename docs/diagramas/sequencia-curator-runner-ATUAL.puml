@@ -1,0 +1,75 @@
+@startuml sequencia-curator-runner-ATUAL
+title Curator — estado ATUAL (buggy) — GAP-02 / GAP-03\nQuando step_runner=None, L0 e L2 retornam PASSED_STEP sem executar.\nRecipes catalog aprendem fixes que nunca foram validados.
+
+skinparam BackgroundColor #FFF5F5
+skinparam SequenceGroupBackgroundColor #FEE2E2
+
+actor "test / shadow" as TEST
+participant "Curator\ncurator.py" as CUR
+participant "HealingCatalog\nL0" as CAT
+participant "SpecialistAgent\nL2 (Family)" as AGENT
+participant "step_runner\n(None em shadow / offline)" as RUN
+
+TEST -> CUR: cure(step, error, evidence)
+activate CUR
+
+CUR -> CAT: lookup(step, family)
+alt L0 hit
+  CAT --> CUR: recipe (solution_selector=?, solution_strategy=?)
+  alt self._step_runner is None (curator.py:235)
+    note over CUR #FEE2E2
+      ⚠ GAP-02 CRITICAL:
+      código branch: `if not self._step_runner: return PASSED_STEP`
+      NÃO executa recipe.
+      Marca `record_usage` no catalog (usage counter++)
+      mas cure() reporta sucesso para o teste.
+    end note
+    CUR -> CAT: record_usage(recipe_id)
+    CUR --> TEST: **CurationOutcome(status=PASSED_STEP, layer=L0)**\n  ⚠ FAKE — cura NUNCA executou
+  else runner disponível
+    CUR -> RUN: try_execute(patched_step)
+    RUN --> CUR: passed?
+    alt passed
+      CUR -> CAT: record_success(recipe_id)
+      CUR --> TEST: PASSED_STEP (real)
+    else falhou
+      CUR --> TEST: None (fall through L1/L2)
+    end
+  end
+end
+
+CUR -> AGENT: heal(evidence, error)
+AGENT --> CUR: proposal (confidence=0.85, strategy=?)
+alt proposal.confidence >= 0.5
+  alt self._step_runner is None (curator.py:333)
+    note over CUR #FEE2E2
+      ⚠ GAP-03 CRITICAL:
+      idêntico ao GAP-02 no L2.
+      Agent retornou proposal baseado em KEYWORD MATCH
+      no error message (ver GAP-06/07). Sem runner,
+      cure() marca PASSED_STEP sem verificar que
+      overlay_dismiss / press_sequentially fez efeito.
+    end note
+    CUR --> TEST: **CurationOutcome(status=PASSED_STEP, layer=L2)**\n  ⚠ FAKE
+  else runner disponível
+    CUR -> RUN: try_execute(patched_step)
+    RUN --> CUR: passed?
+    CUR --> TEST: PASSED_STEP ou None
+  end
+end
+deactivate CUR
+
+legend right #FFDDDD
+  <b>Impact combinado</b>:
+  - Shadow mode + offline validation SEMPRE step_runner=None.
+  - Métrica: 100% PASSED em shadow, mas em prod real muitos falham.
+  - Catalog aprende "fixes" que nunca foram testados; polui aprendizado L0.
+  - Combinado com GAP-06/07 (agents keyword-match), sistema tem
+    ilusão de robustez completa.
+
+  <b>Descoberta</b>: sessão 2026-07-01/02. Não havia teste que
+  construísse Curator sem runner e verificasse fall-through vs
+  PASSED_STEP.
+end legend
+
+@enduml
