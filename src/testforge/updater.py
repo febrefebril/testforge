@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import os
-import subprocess
 import sys
 from pathlib import Path
+
+from testforge.subprocess_utils import run_hidden
 
 
 def check_and_apply_update(project_root: Path) -> None:
@@ -15,7 +16,7 @@ def check_and_apply_update(project_root: Path) -> None:
             return
 
         # Requer repo git
-        r = subprocess.run(
+        r = run_hidden(
             ["git", "rev-parse", "--is-inside-work-tree"],
             cwd=str(project_root),
             capture_output=True,
@@ -25,7 +26,7 @@ def check_and_apply_update(project_root: Path) -> None:
             return
 
         # Fetch silencioso (timeout curto — nao punir usuarios offline)
-        subprocess.run(
+        run_hidden(
             ["git", "fetch", "origin", "main", "--quiet"],
             cwd=str(project_root),
             capture_output=True,
@@ -33,7 +34,7 @@ def check_and_apply_update(project_root: Path) -> None:
         )
 
         # Conta commits que estamos atras
-        r = subprocess.run(
+        r = run_hidden(
             ["git", "rev-list", "HEAD..origin/main", "--count"],
             cwd=str(project_root),
             capture_output=True,
@@ -47,7 +48,7 @@ def check_and_apply_update(project_root: Path) -> None:
             return
 
         # Pull com rebase (mantem commits locais no topo, evita merge commits)
-        subprocess.run(
+        run_hidden(
             ["git", "pull", "--rebase", "--quiet", "origin", "main"],
             cwd=str(project_root),
             capture_output=True,

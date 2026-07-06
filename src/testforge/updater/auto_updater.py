@@ -1,9 +1,9 @@
 """TestForge auto-updater — git pull na inicializacao quando configurado em testforge_update.yml."""
 import logging
-import subprocess
 from pathlib import Path
 
 import yaml
+from testforge.subprocess_utils import run_hidden
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ def check_and_apply_update(project_root: Path) -> bool:
     quiet = config.get("quiet", False)
 
     try:
-        result = subprocess.run(
+        result = run_hidden(
             ["git", "pull", remote, branch],
             cwd=str(project_root),
             capture_output=True,

@@ -1,0 +1,66 @@
+{
+  "recording_id": "nova_massagem",
+  "application": "web",
+  "base_url": "https://simax.caixa/simax/",
+  "system": "simax",
+  "suite": "suite exploratoria",
+  "test_case": "todas as massagens",
+  "started_at": "2026-07-03T20:59:52.741682+00:00",
+  "finished_at": "2026-07-03T21:00:21.366701+00:00",
+  "status": "incomplete_intent",
+  "recording_status": "incomplete_intent",
+  "status_history": [
+    {
+      "status": "recording",
+      "timestamp": "2026-07-03T20:59:53.694344+00:00",
+      "reason": "Recording started",
+      "metadata": {
+        "application": "web",
+        "base_url": "https://simax.caixa/simax/",
+        "system": "simax",
+        "suite": "suite exploratoria",
+        "test_case": "todas as massagens"
+      }
+    },
+    {
+      "status": "recording",
+      "timestamp": "2026-07-03T20:59:53.694359+00:00",
+      "reason": "Recording started",
+      "metadata": {
+        "application": "web",
+        "base_url": "https://simax.caixa/simax/"
+      }
+    },
+    {
+      "status": "stopped",
+      "timestamp": "2026-07-03T21:00:21.366737+00:00",
+      "reason": "Recording stopped by user",
+      "metadata": {}
+    },
+    {
+      "status": "completed_raw",
+      "timestamp": "2026-07-03T21:00:21.388066+00:00",
+      "reason": "Recording finalized",
+      "metadata": {}
+    },
+    {
+      "status": "intent_complete",
+      "timestamp": "2026-07-03T21:00:21.603402+00:00",
+      "reason": "compile --check: intent_complete",
+      "metadata": {}
+    },
+    {
+      "status": "incomplete_intent",
+      "timestamp": "2026-07-03T21:00:34.215939+00:00",
+      "reason": "compile --check: incomplete_intent",
+      "metadata": {}
+    }
+  ],
+  "fingerprint": {
+    "capture_schema_version": 4,
+    "testforge_version": "0.4.2",
+    "overlay_inject_sha256": "92379794bc5176b8ab26e59a5b914d07d2caae0deaa48fbeb46dcae5b6e5082c",
+    "git_head_sha": "1596423262d24fafb6abea1c293f47b3de5fb59d",
+    "recorded_at": "2026-07-03T20:59:53.694291+00:00"
+  }
+}

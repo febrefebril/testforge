@@ -50,7 +50,7 @@ publisher:
   #
   # Com URL = MODO REMOTO: clona, copia artefatos e faz push.
   # Util para separar recordings do codigo de producao.
-  url: ""
+  url: "https://alm.ceaus.df.caixa/CEGTI/AUTOMATA-PRIMUS/_git/gravacoes"
 
   # Token de acesso (OPCIONAL).
   # Nao preencher se o ambiente usa autenticacao nativa:
@@ -59,7 +59,7 @@ publisher:
   # token: ""
 
   # Branch alvo para os commits de gravacao.
-  branch: main
+  branch: master
 
   # Prefixo do caminho no repositorio.
   path_prefix: recordings

@@ -1,0 +1,33 @@
+{
+  "readiness_report": {
+    "metadata": {
+      "recording_id": "nova_massagem",
+      "application": "web",
+      "base_url": "https://simax.caixa/simax/",
+      "generated_at": "2026-07-03T21:00:34.209834+00:00"
+    },
+    "status": "incomplete_intent",
+    "verdict": "fail",
+    "criteria": {
+      "completeness_passed": true,
+      "all_steps_passed": false,
+      "blocking_steps_resolved": true,
+      "user_supplied_values_validated": true,
+      "healing_oracles_passed": true
+    },
+    "steps": {
+      "total": 8,
+      "passed": 7,
+      "healed": 0,
+      "failed": 1,
+      "blocked": 0,
+      "skipped": 0
+    },
+    "missing_fields": [],
+    "review_required_fields": [],
+    "failures": [
+      "Step 2 (click): failed \u2014 Healing desativado. Erro: Elemento 'input' nao encontrado no DOM"
+    ],
+    "warnings": []
+  }
+}

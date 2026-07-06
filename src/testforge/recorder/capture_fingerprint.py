@@ -32,10 +32,11 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
-import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+
+from testforge.subprocess_utils import run_hidden
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ def _git_head_sha(repo_root: Optional[Path] = None) -> str:
         # src/testforge/recorder/capture_fingerprint.py → repo root is parents[3]
         repo_root = Path(__file__).resolve().parents[3]
     try:
-        result = subprocess.run(
+        result = run_hidden(
             ["git", "-C", str(repo_root), "rev-parse", "HEAD"],
             capture_output=True, text=True, timeout=2, check=False,
         )

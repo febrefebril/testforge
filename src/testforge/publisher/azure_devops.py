@@ -28,6 +28,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+from testforge.subprocess_utils import run_hidden
+
 logger = logging.getLogger(__name__)
 
 
@@ -117,7 +119,7 @@ def resolve_credentials(
                 "host=dev.azure.com\n"
                 f"path={org}/{project}/_git/{repo}\n"
             )
-            proc = subprocess.run(
+            proc = run_hidden(
                 ["git", "credential", "fill"],
                 input=req, capture_output=True, text=True, timeout=4,
             )
@@ -241,7 +243,7 @@ class AzureDevOpsPublisher:
             logger.debug("git %s (url=%s...)", " ".join(log_args), log_url[:40])
         else:
             logger.debug("git %s", " ".join(log_args))
-        proc = subprocess.run(
+        proc = run_hidden(
             ["git"] + args, cwd=cwd, capture_output=True, text=True,
             check=True, timeout=60,
         )

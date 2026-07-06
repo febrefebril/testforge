@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import filecmp
 import glob
 import json
 import logging
@@ -9,9 +10,13 @@ import pathlib
 import shutil
 import subprocess
 import tempfile
+import re
+from pathlib import PurePosixPath
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
+
+from testforge.subprocess_utils import run_hidden
 
 
 @dataclass
@@ -122,10 +127,16 @@ class GitPublisher:
         recording_id: str,
         recordings_dir: str | pathlib.Path,
         semantic_tests_dir: str | pathlib.Path,
+        failed_recordings_dir: str | pathlib.Path | None = None,
     ) -> PublishResult:
         """Publica artefatos de gravacao no repositorio Git configurado."""
         if self._local_mode:
-            return self._local_publish(recording_id, recordings_dir, semantic_tests_dir)
+            return self._local_publish(
+                recording_id,
+                recordings_dir,
+                semantic_tests_dir,
+                failed_recordings_dir=failed_recordings_dir,
+            )
         self._log.info("publish: iniciando modo remoto — recording=%s url=%s", recording_id, self._url)
         try:
             recordings_dir = str(recordings_dir)
@@ -156,13 +167,14 @@ class GitPublisher:
                 self._log.info("publish: caminho remoto = %s", remote_path)
 
                 # Create destination directory
-                dest_dir = os.path.join(repo_dir, remote_path)
+                dest_dir = os.path.join(repo_dir, *remote_path.split("/"))
                 os.makedirs(dest_dir, exist_ok=True)
 
                 # Copia artefatos
                 copied = self._copy_artifacts(
                     repo_dir, recording_id, recordings_dir, semantic_tests_dir,
                     remote_path=remote_path,
+                    failed_recordings_dir=failed_recordings_dir,
                 )
                 self._log.info("publish: %d artefato(s) copiado(s): %s", len(copied), copied)
 
@@ -251,6 +263,7 @@ class GitPublisher:
         recording_id: str,
         recordings_dir: str | pathlib.Path,
         semantic_tests_dir: str | pathlib.Path,
+        failed_recordings_dir: str | pathlib.Path | None = None,
     ) -> PublishResult:
         """Publica commitando diretamente no repo git local. Nenhum token necessario."""
         self._log.info(
@@ -281,12 +294,13 @@ class GitPublisher:
 
             remote_path = self._build_remote_path(recording_id, metadata)
             self._log.info("_local_publish: caminho no repo = %s", remote_path)
-            dest_dir = os.path.join(self._git_root, remote_path)
+            dest_dir = os.path.join(self._git_root, *remote_path.split("/"))
             os.makedirs(dest_dir, exist_ok=True)
 
             copied = self._copy_artifacts(
                 self._git_root, recording_id, recordings_dir, semantic_tests_dir,
                 remote_path=remote_path,
+                failed_recordings_dir=failed_recordings_dir,
             )
             self._log.info("_local_publish: %d artefato(s) copiado(s): %s", len(copied), copied)
 
@@ -304,7 +318,7 @@ class GitPublisher:
             with open(os.path.join(dest_dir, "SUMMARY.md"), "w") as f:
                 f.write(summary_md)
 
-            rel_dest = os.path.relpath(dest_dir, self._git_root)
+            rel_dest = os.path.relpath(dest_dir, self._git_root).replace("\\", "/")
             # Hotfix BUG 11: force-add because `recordings/` is normally in
             # .gitignore. The publisher's whole job is to lift selected
             # recording dirs into a git-tracked snapshot — `git add -f` is
@@ -361,7 +375,7 @@ class GitPublisher:
             env = os.environ.copy()
         safe_args = [self._scrub_token(a) for a in args]
         self._log.debug("git %s (cwd=%s)", " ".join(safe_args), cwd)
-        result = subprocess.run(
+        result = run_hidden(
             ["git", *args],
             cwd=cwd,
             capture_output=True,
@@ -429,25 +443,38 @@ class GitPublisher:
         """Constroi caminho hierarquico a partir de system/suite/test_case.
 
         Regras:
-          1. Sem system+suite -> {prefix}/uncategorized/{recording_id}
-          2. test_case vazio ou igual recording_id -> {prefix}/{system}/{suite}/{recording_id}
-          3. test_case diferente (ex: sufijo _2) -> {prefix}/{system}/{suite}/{test_case}/{recording_id}
-
-        Isso elimina pastas duplicadas quando test_case e recording_id
-        derivam ambos do mesmo --name.
+          1. Sem qualquer classificacao -> {prefix}/uncategorized/{recording_id}
+          2. Aceita segmentos em qualquer campo (system/suite/test_case),
+             inclusive quando vierem no formato "a/b/c" ou "a\\b\\c".
+          3. Evita duplicar o ultimo segmento quando ele ja eh o recording_id.
         """
-        system = (metadata.get("system") or "").strip()
-        suite = (metadata.get("suite") or "").strip()
-        test_case = (metadata.get("test_case") or "").strip()
 
-        if not system or not suite:
-            return os.path.join(self._path_prefix, "uncategorized", recording_id)
+        def _split_segments(value: str) -> list[str]:
+            raw = (value or "").strip()
+            if not raw:
+                return []
+            # Accept values pasted as paths (e.g. "/simax/pesquisa de vagas/")
+            # and ignore wrapper quotes often introduced by copy/paste.
+            raw = raw.strip("\"'")
+            return [
+                seg.strip("\"'").strip()
+                for seg in re.split(r"[\\/]+", raw)
+                if seg and seg.strip("\"'").strip()
+            ]
 
-        parts = [self._path_prefix, system, suite]
-        if test_case and test_case != recording_id:
-            parts.append(test_case)
-        parts.append(recording_id)
-        return os.path.join(*parts)
+        prefix_parts = _split_segments(self._path_prefix) or ["recordings"]
+        classification_parts: list[str] = []
+        classification_parts.extend(_split_segments(str(metadata.get("system") or "")))
+        classification_parts.extend(_split_segments(str(metadata.get("suite") or "")))
+        classification_parts.extend(_split_segments(str(metadata.get("test_case") or "")))
+
+        if not classification_parts:
+            return str(PurePosixPath(*prefix_parts, "uncategorized", recording_id))
+
+        if classification_parts[-1] == recording_id:
+            return str(PurePosixPath(*prefix_parts, *classification_parts))
+
+        return str(PurePosixPath(*prefix_parts, *classification_parts, recording_id))
 
     def _generate_submission_report(
         self,
@@ -523,47 +550,46 @@ class GitPublisher:
         recordings_dir: str,
         semantic_tests_dir: str,
         remote_path: str = "",
+        failed_recordings_dir: str | pathlib.Path | None = None,
     ) -> list[str]:
         """Copia artefatos de gravacao e teste semantico. Retorna lista de arquivos copiados."""
         copied = []
-        dest_dir = os.path.join(repo_dir, remote_path) if remote_path else os.path.join(repo_dir, self._path_prefix, recording_id)
+        copied_files_rel: set[str] = set()
+        dest_dir = (
+            os.path.join(repo_dir, *remote_path.split("/"))
+            if remote_path
+            else os.path.join(repo_dir, self._path_prefix, recording_id)
+        )
+        os.makedirs(dest_dir, exist_ok=True)
 
-        # Arquivos simples de recordings/
+        # Copia recursivamente tudo que existir no diretorio da gravacao.
+        # Isso garante envio de novas pastas/arquivos (ex.: completeness)
+        # sem precisar atualizar lista fixa no publisher.
         rec_dir = os.path.join(recordings_dir, recording_id)
-        flat_files = [
-            "recording_metadata.json",
-            "raw_events.jsonl",
-            "steps.jsonl",
-            "field_snapshots.jsonl",
-            "value_mutations.jsonl",
-            "final_state_snapshot.json",
-            "network_log.json",
-            "recording_config.json",
-            "submission_report.json",
-        ]
-        for fname in flat_files:
-            src = os.path.join(rec_dir, fname)
-            if os.path.exists(src):
-                shutil.copy2(src, os.path.join(dest_dir, fname))
-                copied.append(fname)
+        if os.path.isdir(rec_dir):
+            for root, dirs, files in os.walk(rec_dir):
+                rel_root = os.path.relpath(root, rec_dir)
 
-        # Diretorio dom_snapshots (sempre presente)
-        dom_src = os.path.join(rec_dir, "dom_snapshots")
-        if os.path.isdir(dom_src):
-            dom_dest = os.path.join(dest_dir, "dom_snapshots")
-            if os.path.exists(dom_dest):
-                shutil.rmtree(dom_dest)
-            shutil.copytree(dom_src, dom_dest)
-            copied.append("dom_snapshots/")
+                # Evita copiar diretorios vazios para manter compatibilidade
+                # com comportamento anterior (ex.: screenshots vazio).
+                for dname in list(dirs):
+                    src_d = os.path.join(root, dname)
+                    rel_d = dname if rel_root == "." else os.path.join(rel_root, dname)
+                    if not any(pathlib.Path(src_d).rglob("*")):
+                        dirs.remove(dname)
+                        continue
+                    dest_d = os.path.join(dest_dir, rel_d)
+                    os.makedirs(dest_d, exist_ok=True)
+                    copied.append(rel_d.replace("\\", "/") + "/")
 
-        # Diretorio screenshots (apenas se nao vazio)
-        screenshots_src = os.path.join(rec_dir, "screenshots")
-        if os.path.isdir(screenshots_src) and os.listdir(screenshots_src):
-            screenshots_dest = os.path.join(dest_dir, "screenshots")
-            if os.path.exists(screenshots_dest):
-                shutil.rmtree(screenshots_dest)
-            shutil.copytree(screenshots_src, screenshots_dest)
-            copied.append("screenshots/")
+                for fname in files:
+                    src_f = os.path.join(root, fname)
+                    rel_f = fname if rel_root == "." else os.path.join(rel_root, fname)
+                    dest_f = os.path.join(dest_dir, rel_f)
+                    os.makedirs(os.path.dirname(dest_f), exist_ok=True)
+                    shutil.copy2(src_f, dest_f)
+                    copied.append(rel_f.replace("\\", "/"))
+                    copied_files_rel.add(os.path.normpath(rel_f).lower())
 
         # Arquivos de teste semantico (se existirem)
         st_base = os.path.join(semantic_tests_dir, f"ST-{recording_id}")
@@ -573,14 +599,55 @@ class GitPublisher:
             for test_file in test_files:
                 shutil.copy2(test_file, dest_dir)
                 copied.append(os.path.basename(test_file))
+                copied_files_rel.add(os.path.normpath(os.path.basename(test_file)).lower())
 
             # semantic_steps.jsonl
             steps_file = os.path.join(st_base, "semantic_steps.jsonl")
             if os.path.exists(steps_file):
                 shutil.copy2(steps_file, dest_dir)
                 copied.append("semantic_steps.jsonl")
+                copied_files_rel.add(os.path.normpath("semantic_steps.jsonl").lower())
 
-        return copied
+        # Copia snapshots de falha relacionados ao recording_id (se existirem).
+        # Estrutura destino: <remote_path>/recordings_failed/<folder>/...
+        if failed_recordings_dir:
+            failed_root = str(failed_recordings_dir)
+            if os.path.isdir(failed_root):
+                prefix = f"{recording_id}_"
+                for name in sorted(os.listdir(failed_root)):
+                    if not (name == recording_id or name.startswith(prefix)):
+                        continue
+                    src_failed = os.path.join(failed_root, name)
+                    if not os.path.isdir(src_failed):
+                        continue
+                    rel_failed_root = os.path.join("recordings_failed", name)
+                    dst_failed = os.path.join(dest_dir, rel_failed_root)
+                    os.makedirs(dst_failed, exist_ok=True)
+
+                    for root, _dirs, files in os.walk(src_failed):
+                        rel_root = os.path.relpath(root, src_failed)
+                        for fname in files:
+                            src_f = os.path.join(root, fname)
+                            rel_f = fname if rel_root == "." else os.path.join(rel_root, fname)
+
+                            # Dedup: nao copia se o mesmo arquivo relativo ja foi enviado
+                            # no pacote principal e tiver exatamente o mesmo conteudo.
+                            main_key = os.path.normpath(rel_f).lower()
+                            if main_key in copied_files_rel:
+                                main_dest = os.path.join(dest_dir, rel_f)
+                                try:
+                                    if os.path.exists(main_dest) and filecmp.cmp(src_f, main_dest, shallow=False):
+                                        continue
+                                except Exception:
+                                    pass
+
+                            dst_f = os.path.join(dst_failed, rel_f)
+                            os.makedirs(os.path.dirname(dst_f), exist_ok=True)
+                            shutil.copy2(src_f, dst_f)
+                    copied.append(rel_failed_root.replace("\\", "/") + "/")
+
+        # Remove duplicados preservando ordem.
+        return list(dict.fromkeys(copied))
 
     def _generate_summary(self, recording_id: str, metadata: dict) -> str:
         """Gera conteudo de SUMMARY.md."""

@@ -1,0 +1,106 @@
+{
+  "recording_id": "massageria",
+  "application": "",
+  "base_url": "",
+  "generated_at": "2026-07-03T20:49:08.551543+00:00",
+  "summary": {
+    "total_fields": 4,
+    "resolved": 1,
+    "resolved_with_warning": 3,
+    "review_required": 0,
+    "missing": 0,
+    "is_complete": true,
+    "pending": 0
+  },
+  "fields": [
+    {
+      "field_key": "lstuf",
+      "label": "UF",
+      "placeholder": "",
+      "element_id": "",
+      "name": "lstUf",
+      "selector": "",
+      "step_index": 7,
+      "value": "DF",
+      "source": "final_state",
+      "completeness": "resolved_with_warning",
+      "reason": "reconstructed_from_final_state",
+      "identifiers": {
+        "name": "lstUf",
+        "id": "lstUf",
+        "label": "UF",
+        "placeholder": "",
+        "aria_label": "",
+        "fingerprint": "select#lstUf[name=lstUf]",
+        "tag": "select"
+      }
+    },
+    {
+      "field_key": "lstedificio",
+      "label": "Edif\u00edcio",
+      "placeholder": "",
+      "element_id": "",
+      "name": "lstEdificio",
+      "selector": "",
+      "step_index": 7,
+      "value": "2",
+      "source": "final_state",
+      "completeness": "resolved_with_warning",
+      "reason": "reconstructed_from_final_state",
+      "identifiers": {
+        "name": "lstEdificio",
+        "id": "lstEdificio",
+        "label": "Edif\u00edcio",
+        "placeholder": "",
+        "aria_label": "",
+        "fingerprint": "select#lstEdificio[name=lstEdificio]",
+        "tag": "select"
+      }
+    },
+    {
+      "field_key": "lstdata",
+      "label": "Data",
+      "placeholder": "",
+      "element_id": "",
+      "name": "lstData",
+      "selector": "",
+      "step_index": 7,
+      "value": "2026-07-09",
+      "source": "final_state",
+      "completeness": "resolved_with_warning",
+      "reason": "reconstructed_from_final_state",
+      "identifiers": {
+        "name": "lstData",
+        "id": "lstData",
+        "label": "Data",
+        "placeholder": "",
+        "aria_label": "",
+        "fingerprint": "select#lstData[name=lstData]",
+        "tag": "select"
+      }
+    },
+    {
+      "field_key": "field_step_1",
+      "label": "",
+      "placeholder": "",
+      "element_id": "",
+      "name": "",
+      "selector": "input",
+      "step_index": 1,
+      "value": "t",
+      "source": "step_capture",
+      "completeness": "resolved",
+      "reason": "direct_capture",
+      "identifiers": {
+        "name": "",
+        "id": "",
+        "label": "",
+        "placeholder": "",
+        "role": "",
+        "test_id": "",
+        "form_control_name": "",
+        "material_field_label": ""
+      }
+    }
+  ]
+}

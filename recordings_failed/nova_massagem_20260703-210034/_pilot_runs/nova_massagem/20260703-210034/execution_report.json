@@ -1,0 +1,809 @@
+{
+  "run_id": "nova_massagem_20260703-210034",
+  "recording_id": "nova_massagem",
+  "script_path": "C:\\Desenvolvimento\\AUTOMATA-PRIMUS\\recordings\\nova_massagem\\_pilot_tmp\\test_st-nova_massagem.py",
+  "base_url": "https://simax.caixa/simax/",
+  "mode": "no-healing",
+  "summary": {
+    "total": 8,
+    "passed": 7,
+    "healed_validated": 0,
+    "healing_rejected": 0,
+    "failed": 1,
+    "blocked": 0,
+    "skipped": 0,
+    "shadow_healed": 0,
+    "asserts_total": 1,
+    "asserts_hit": 1
+  },
+  "steps": [
+    {
+      "step_num": 1,
+      "action": "navigation",
+      "status": "passed",
+      "original_locator": "",
+      "selected_locator": "",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "navigation_ok": true
+        },
+        "failures": [],
+        "message": ""
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url atual: https://simax.caixa/simax/"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence\\nova_massagem_20260703-210025\\screenshots\\before_step_0001.png",
+        "dom": "evidence\\nova_massagem_20260703-210025\\dom\\before_step_0001.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence\\nova_massagem_20260703-210025\\screenshots\\after_step_0001.png",
+        "dom": "evidence\\nova_massagem_20260703-210025\\dom\\after_step_0001.html"
+      },
+      "duration_ms": 549,
+      "skip_reason": "",
+      "screen_state_before": {
+        "url": "https://simax.caixa/simax/",
+        "title": "SIMAX - Massagem Expressa",
+        "top_roles": [
+          {
+            "role": "heading",
+            "name": "SIMAX"
+          },
+          {
+            "role": "link",
+            "name": "Home"
+          },
+          {
+            "role": "heading",
+            "name": "Bem vindo(a), ANDRE"
+          },
+          {
+            "role": "button",
+            "name": "Novo agendamento"
+          },
+          {
+            "role": "link",
+            "name": "Últimas massagens"
+          },
+          {
+            "role": "link",
+            "name": "Próximas massagens"
+          }
+        ],
+        "timestamp": "2026-07-03T21:00:25.277969+00:00",
+        "top_heading": "SIMAX"
+      },
+      "screen_state_after": {
+        "url": "https://simax.caixa/simax/",
+        "title": "SIMAX - Massagem Expressa",
+        "top_roles": [
+          {
+            "role": "heading",
+            "name": "SIMAX"
+          },
+          {
+            "role": "link",
+            "name": "Home"
+          },
+          {
+            "role": "heading",
+            "name": "Bem vindo(a), ANDRE"
+          },
+          {
+            "role": "button",
+            "name": "Novo agendamento"
+          },
+          {
+            "role": "link",
+            "name": "Últimas massagens"
+          },
+          {
+            "role": "link",
+            "name": "Próximas massagens"
+          }
+        ],
+        "timestamp": "2026-07-03T21:00:25.856272+00:00",
+        "top_heading": "SIMAX"
+      },
+      "screen_state_drift": false,
+      "screen_state_drift_reason": "no_baseline"
+    },
+    {
+      "step_num": 2,
+      "action": "click",
+      "status": "failed",
+      "original_locator": "input",
+      "selected_locator": "",
+      "value": "t",
+      "precondition": {
+        "passed": false,
+        "checks": {
+          "selector_present": true,
+          "actionable": false,
+          "visible": false,
+          "enabled": false,
+          "area_positive": false
+        },
+        "failures": [
+          "not_attached"
+        ],
+        "message": "Elemento 'input' nao encontrado no DOM"
+      },
+      "postcondition": null,
+      "healing": null,
+      "error_message": "Healing desativado. Erro: Elemento 'input' nao encontrado no DOM",
+      "evidence_before": {
+        "screenshot": "evidence\\nova_massagem_20260703-210025\\screenshots\\before_step_0002.png",
+        "dom": "evidence\\nova_massagem_20260703-210025\\dom\\before_step_0002.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence\\nova_massagem_20260703-210025\\screenshots\\after_step_0002.png",
+        "dom": "evidence\\nova_massagem_20260703-210025\\dom\\after_step_0002.html"
+      },
+      "duration_ms": 3473,
+      "skip_reason": "",
+      "screen_state_before": {
+        "url": "https://simax.caixa/simax/",
+        "title": "SIMAX - Massagem Expressa",
+        "top_roles": [
+          {
+            "role": "heading",
+            "name": "SIMAX"
+          },
+          {
+            "role": "link",
+            "name": "Home"
+          },
+          {
+            "role": "heading",
+            "name": "Bem vindo(a), ANDRE"
+          },
+          {
+            "role": "button",
+            "name": "Novo agendamento"
+          },
+          {
+            "role": "link",
+            "name": "Últimas massagens"
+          },
+          {
+            "role": "link",
+            "name": "Próximas massagens"
+          }
+        ],
+        "timestamp": "2026-07-03T21:00:25.868281+00:00",
+        "top_heading": "SIMAX"
+      },
+      "screen_state_after": {
+        "url": "https://simax.caixa/simax/",
+        "title": "SIMAX - Massagem Expressa",
+        "top_roles": [
+          {
+            "role": "heading",
+            "name": "SIMAX"
+          },
+          {
+            "role": "link",
+            "name": "Home"
+          },
+          {
+            "role": "heading",
+            "name": "Bem vindo(a), ANDRE"
+          },
+          {
+            "role": "button",
+            "name": "Novo agendamento"
+          },
+          {
+            "role": "link",
+            "name": "Últimas massagens"
+          },
+          {
+            "role": "link",
+            "name": "Próximas massagens"
+          }
+        ],
+        "timestamp": "2026-07-03T21:00:29.352289+00:00",
+        "top_heading": "SIMAX"
+      },
+      "screen_state_drift": false,
+      "screen_state_drift_reason": "match"
+    },
+    {
+      "step_num": 3,
+      "action": "click",
+      "status": "passed",
+      "original_locator": "#btnNovoAgendamento",
+      "selected_locator": "#btnNovoAgendamento",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "actionable": true,
+          "visible": true,
+          "enabled": true,
+          "area_positive": true
+        },
+        "failures": [],
+        "message": "click precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_changed": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url mudou: 'https://simax.caixa/simax/' → 'https://simax.caixa/simax/novo_agendamento.asp'"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence\\nova_massagem_20260703-210025\\screenshots\\before_step_0003.png",
+        "dom": "evidence\\nova_massagem_20260703-210025\\dom\\before_step_0003.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence\\nova_massagem_20260703-210025\\screenshots\\after_step_0003.png",
+        "dom": "evidence\\nova_massagem_20260703-210025\\dom\\after_step_0003.html"
+      },
+      "duration_ms": 888,
+      "skip_reason": "",
+      "screen_state_before": {
+        "url": "https://simax.caixa/simax/",
+        "title": "SIMAX - Massagem Expressa",
+        "top_roles": [
+          {
+            "role": "heading",
+            "name": "SIMAX"
+          },
+          {
+            "role": "link",
+            "name": "Home"
+          },
+          {
+            "role": "heading",
+            "name": "Bem vindo(a), ANDRE"
+          },
+          {
+            "role": "button",
+            "name": "Novo agendamento"
+          },
+          {
+            "role": "link",
+            "name": "Últimas massagens"
+          },
+          {
+            "role": "link",
+            "name": "Próximas massagens"
+          }
+        ],
+        "timestamp": "2026-07-03T21:00:29.362595+00:00",
+        "top_heading": "SIMAX"
+      },
+      "screen_state_after": {
+        "url": "https://simax.caixa/simax/novo_agendamento.asp",
+        "title": "SIMAX - Massagem Expressa",
+        "top_roles": [
+          {
+            "role": "heading",
+            "name": "SIMAX"
+          },
+          {
+            "role": "link",
+            "name": "Home"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\tAL\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tAM\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tCE\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tDF\n\t\t\t"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione"
+          }
+        ],
+        "timestamp": "2026-07-03T21:00:30.263631+00:00",
+        "top_heading": "SIMAX"
+      },
+      "screen_state_drift": false,
+      "screen_state_drift_reason": "match"
+    },
+    {
+      "step_num": 4,
+      "action": "navigation",
+      "status": "passed",
+      "original_locator": "",
+      "selected_locator": "",
+      "value": "",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "navigation_ok": true
+        },
+        "failures": [],
+        "message": ""
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "url_present": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": "url atual: https://simax.caixa/simax/novo_agendamento.asp"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence\\nova_massagem_20260703-210025\\screenshots\\before_step_0004.png",
+        "dom": "evidence\\nova_massagem_20260703-210025\\dom\\before_step_0004.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence\\nova_massagem_20260703-210025\\screenshots\\after_step_0004.png",
+        "dom": "evidence\\nova_massagem_20260703-210025\\dom\\after_step_0004.html"
+      },
+      "duration_ms": 515,
+      "skip_reason": "",
+      "screen_state_before": {
+        "url": "https://simax.caixa/simax/novo_agendamento.asp",
+        "title": "SIMAX - Massagem Expressa",
+        "top_roles": [
+          {
+            "role": "heading",
+            "name": "SIMAX"
+          },
+          {
+            "role": "link",
+            "name": "Home"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\tAL\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tAM\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tCE\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tDF\n\t\t\t"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione"
+          }
+        ],
+        "timestamp": "2026-07-03T21:00:30.278293+00:00",
+        "top_heading": "SIMAX"
+      },
+      "screen_state_after": {
+        "url": "https://simax.caixa/simax/novo_agendamento.asp",
+        "title": "SIMAX - Massagem Expressa",
+        "top_roles": [
+          {
+            "role": "heading",
+            "name": "SIMAX"
+          },
+          {
+            "role": "link",
+            "name": "Home"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\tAL\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tAM\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tCE\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tDF\n\t\t\t"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione"
+          }
+        ],
+        "timestamp": "2026-07-03T21:00:30.803528+00:00",
+        "top_heading": "SIMAX"
+      },
+      "screen_state_drift": false,
+      "screen_state_drift_reason": "match"
+    },
+    {
+      "step_num": 5,
+      "action": "select_option",
+      "status": "passed",
+      "original_locator": "select[name='lstUf']",
+      "selected_locator": "select[name='lstUf']",
+      "value": "GO",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "target_is_select": true,
+          "option_exists": true
+        },
+        "failures": [],
+        "message": "select precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "selected_option_matches": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": ""
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence\\nova_massagem_20260703-210025\\screenshots\\before_step_0005.png",
+        "dom": "evidence\\nova_massagem_20260703-210025\\dom\\before_step_0005.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence\\nova_massagem_20260703-210025\\screenshots\\after_step_0005.png",
+        "dom": "evidence\\nova_massagem_20260703-210025\\dom\\after_step_0005.html"
+      },
+      "duration_ms": 949,
+      "skip_reason": "",
+      "screen_state_before": {
+        "url": "https://simax.caixa/simax/novo_agendamento.asp",
+        "title": "SIMAX - Massagem Expressa",
+        "top_roles": [
+          {
+            "role": "heading",
+            "name": "SIMAX"
+          },
+          {
+            "role": "link",
+            "name": "Home"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\tAL\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tAM\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tCE\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tDF\n\t\t\t"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione"
+          }
+        ],
+        "timestamp": "2026-07-03T21:00:30.813293+00:00",
+        "top_heading": "SIMAX"
+      },
+      "screen_state_after": {
+        "url": "https://simax.caixa/simax/novo_agendamento.asp",
+        "title": "SIMAX - Massagem Expressa",
+        "top_roles": [
+          {
+            "role": "heading",
+            "name": "SIMAX"
+          },
+          {
+            "role": "link",
+            "name": "Home"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\tAL\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tAM\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tCE\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tDF\n\t\t\t"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\tED. SEDE - GOIANIA/GO (Rua 11, 250 - Setor Central)"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione"
+          }
+        ],
+        "timestamp": "2026-07-03T21:00:31.771237+00:00",
+        "top_heading": "SIMAX"
+      },
+      "screen_state_drift": false,
+      "screen_state_drift_reason": "match"
+    },
+    {
+      "step_num": 6,
+      "action": "select_option",
+      "status": "passed",
+      "original_locator": "select[name='lstEdificio']",
+      "selected_locator": "select[name='lstEdificio']",
+      "value": "21",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "target_is_select": true,
+          "option_exists": true
+        },
+        "failures": [],
+        "message": "select precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "selected_option_matches": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": ""
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence\\nova_massagem_20260703-210025\\screenshots\\before_step_0006.png",
+        "dom": "evidence\\nova_massagem_20260703-210025\\dom\\before_step_0006.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence\\nova_massagem_20260703-210025\\screenshots\\after_step_0006.png",
+        "dom": "evidence\\nova_massagem_20260703-210025\\dom\\after_step_0006.html"
+      },
+      "duration_ms": 806,
+      "skip_reason": "",
+      "screen_state_before": {
+        "url": "https://simax.caixa/simax/novo_agendamento.asp",
+        "title": "SIMAX - Massagem Expressa",
+        "top_roles": [
+          {
+            "role": "heading",
+            "name": "SIMAX"
+          },
+          {
+            "role": "link",
+            "name": "Home"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\tAL\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tAM\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tCE\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tDF\n\t\t\t"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\tED. SEDE - GOIANIA/GO (Rua 11, 250 - Setor Central)"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione"
+          }
+        ],
+        "timestamp": "2026-07-03T21:00:31.782817+00:00",
+        "top_heading": "SIMAX"
+      },
+      "screen_state_after": {
+        "url": "https://simax.caixa/simax/novo_agendamento.asp",
+        "title": "SIMAX - Massagem Expressa",
+        "top_roles": [
+          {
+            "role": "heading",
+            "name": "SIMAX"
+          },
+          {
+            "role": "link",
+            "name": "Home"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\tAL\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tAM\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tCE\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tDF\n\t\t\t"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\tED. SEDE - GOIANIA/GO (Rua 11, 250 - Setor Central)"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t06/07/2026 (segunda-feira)\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t\n\t\t\t"
+          }
+        ],
+        "timestamp": "2026-07-03T21:00:32.596359+00:00",
+        "top_heading": "SIMAX"
+      },
+      "screen_state_drift": false,
+      "screen_state_drift_reason": "match"
+    },
+    {
+      "step_num": 7,
+      "action": "select_option",
+      "status": "passed",
+      "original_locator": "select[name='lstData']",
+      "selected_locator": "select[name='lstData']",
+      "value": "2026-07-09",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "target_is_select": true,
+          "option_exists": true
+        },
+        "failures": [],
+        "message": "select precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "selected_option_matches": true
+        },
+        "oracle_results": [],
+        "failures": [],
+        "message": ""
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence\\nova_massagem_20260703-210025\\screenshots\\before_step_0007.png",
+        "dom": "evidence\\nova_massagem_20260703-210025\\dom\\before_step_0007.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence\\nova_massagem_20260703-210025\\screenshots\\after_step_0007.png",
+        "dom": "evidence\\nova_massagem_20260703-210025\\dom\\after_step_0007.html"
+      },
+      "duration_ms": 745,
+      "skip_reason": "",
+      "screen_state_before": {
+        "url": "https://simax.caixa/simax/novo_agendamento.asp",
+        "title": "SIMAX - Massagem Expressa",
+        "top_roles": [
+          {
+            "role": "heading",
+            "name": "SIMAX"
+          },
+          {
+            "role": "link",
+            "name": "Home"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\tAL\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tAM\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tCE\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tDF\n\t\t\t"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\tED. SEDE - GOIANIA/GO (Rua 11, 250 - Setor Central)"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t06/07/2026 (segunda-feira)\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t\n\t\t\t"
+          }
+        ],
+        "timestamp": "2026-07-03T21:00:32.608216+00:00",
+        "top_heading": "SIMAX"
+      },
+      "screen_state_after": {
+        "url": "https://simax.caixa/simax/novo_agendamento.asp",
+        "title": "SIMAX - Massagem Expressa",
+        "top_roles": [
+          {
+            "role": "heading",
+            "name": "SIMAX"
+          },
+          {
+            "role": "link",
+            "name": "Home"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\tAL\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tAM\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tCE\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tDF\n\t\t\t"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\tED. SEDE - GOIANIA/GO (Rua 11, 250 - Setor Central)"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t06/07/2026 (segunda-feira)\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t\n\t\t\t"
+          },
+          {
+            "role": "button",
+            "name": "Reservar"
+          }
+        ],
+        "timestamp": "2026-07-03T21:00:33.368988+00:00",
+        "top_heading": "SIMAX"
+      },
+      "screen_state_drift": false,
+      "screen_state_drift_reason": "match"
+    },
+    {
+      "step_num": 8,
+      "action": "assert",
+      "status": "passed",
+      "original_locator": "tr:nth-of-type(20) > td:nth-of-type(3)",
+      "selected_locator": "tr:nth-of-type(20) > td:nth-of-type(3)",
+      "value": "Reservado",
+      "precondition": {
+        "passed": true,
+        "checks": {
+          "selector_present": true,
+          "expected_present": true
+        },
+        "failures": [],
+        "message": "assert precondition ok"
+      },
+      "postcondition": {
+        "passed": true,
+        "checks": {
+          "oracle_status": true,
+          "selector_used": "td:has-text(\"Reservado\")"
+        },
+        "oracle_results": [
+          "OracleResult(oracle_type='visual_dom', status='passed', expected='Reservado', actual='', message='Elemento visivel e texto OK')"
+        ],
+        "failures": [],
+        "message": "Elemento visivel e texto OK"
+      },
+      "healing": null,
+      "error_message": "",
+      "evidence_before": {
+        "screenshot": "evidence\\nova_massagem_20260703-210025\\screenshots\\before_step_0008.png",
+        "dom": "evidence\\nova_massagem_20260703-210025\\dom\\before_step_0008.html"
+      },
+      "evidence_after": {
+        "screenshot": "evidence\\nova_massagem_20260703-210025\\screenshots\\after_step_0008.png",
+        "dom": "evidence\\nova_massagem_20260703-210025\\dom\\after_step_0008.html"
+      },
+      "duration_ms": 387,
+      "skip_reason": "",
+      "screen_state_before": {
+        "url": "https://simax.caixa/simax/novo_agendamento.asp",
+        "title": "SIMAX - Massagem Expressa",
+        "top_roles": [
+          {
+            "role": "heading",
+            "name": "SIMAX"
+          },
+          {
+            "role": "link",
+            "name": "Home"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\tAL\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tAM\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tCE\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tDF\n\t\t\t"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\tED. SEDE - GOIANIA/GO (Rua 11, 250 - Setor Central)"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t06/07/2026 (segunda-feira)\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t\n\t\t\t"
+          },
+          {
+            "role": "button",
+            "name": "Reservar"
+          }
+        ],
+        "timestamp": "2026-07-03T21:00:33.378965+00:00",
+        "top_heading": "SIMAX"
+      },
+      "screen_state_after": {
+        "url": "https://simax.caixa/simax/novo_agendamento.asp",
+        "title": "SIMAX - Massagem Expressa",
+        "top_roles": [
+          {
+            "role": "heading",
+            "name": "SIMAX"
+          },
+          {
+            "role": "link",
+            "name": "Home"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\tAL\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tAM\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tCE\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tDF\n\t\t\t"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\tED. SEDE - GOIANIA/GO (Rua 11, 250 - Setor Central)"
+          },
+          {
+            "role": "combobox",
+            "name": "Selecione\n\t\t\t\t\t\t\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t06/07/2026 (segunda-feira)\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t\n\t\t\t"
+          },
+          {
+            "role": "button",
+            "name": "Reservar"
+          }
+        ],
+        "timestamp": "2026-07-03T21:00:33.776178+00:00",
+        "top_heading": "SIMAX"
+      },
+      "screen_state_drift": false,
+      "screen_state_drift_reason": "match"
+    }
+  ]
+}

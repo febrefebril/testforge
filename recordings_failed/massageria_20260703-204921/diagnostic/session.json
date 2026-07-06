@@ -1,0 +1,40 @@
+{
+  "session_id": "7723a7ee-07db-410c-a91b-2f2ccbefe899",
+  "tester_hash": "33ca1efd570e25f0",
+  "started_at": "2026-07-03T20:48:37.404886+00:00",
+  "stopped_at": "2026-07-03T20:49:07.935575+00:00",
+  "app_url_signature": "host=simax.caixa path=/simax/novo_agendamento.asp",
+  "framework_detection": {
+    "angular_version": null,
+    "angular_material": false,
+    "primefaces": false,
+    "mui": false,
+    "vue": null,
+    "react": null,
+    "jsf": false,
+    "zone_js": false,
+    "angular": false,
+    "custom_components": [],
+    "shadow_dom_count": 0,
+    "iframe_count": 0,
+    "dom_size": 267,
+    "max_depth": 9,
+    "interactive_elements": 18,
+    "form_count": 1,
+    "primary": "unknown",
+    "evidence": []
+  },
+  "replay_mode": "batched",
+  "gherkin_lang": "pt",
+  "totals": {
+    "steps": 16,
+    "asserts": 1,
+    "value_captured": 15,
+    "value_missing": 1,
+    "selectors_generated": 10,
+    "selectors_immediate_ok": 0,
+    "selectors_immediate_fail": 10,
+    "blind_spots": 6
+  },
+  "feature_path": "C:\\Desenvolvimento\\AUTOMATA-PRIMUS\\recordings\\massageria\\diagnostic\\scenario.feature"
+}

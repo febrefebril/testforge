@@ -1,0 +1,385 @@
+<!DOCTYPE html><html lang="en" class="h-100"><head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<title>SIMAX - Massagem Expressa</title>
+
+	<link rel="stylesheet" type="text/css" href="plugins/bootstrap-5.2.0/css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" href="plugins/bootstrap-5.2.0/css/bootstrap-grid.min.css">
+	<link rel="stylesheet" type="text/css" href="plugins/bootstrap-5.2.0/css/bootstrap-reboot.min.css">
+	<link rel="stylesheet" type="text/css" href="plugins/bootstrap-5.2.0/css/bootstrap-utilities.min.css">
+	<link rel="stylesheet" type="text/css" href="plugins/bootstrap-5.2.0/icons/font/bootstrap-icons.css">
+	<link rel="stylesheet" type="text/css" href="plugins/dataTables-1.12.0/css/jquery.dataTables.min.css">
+	<link rel="stylesheet" type="text/css" href="css/simax.css">
+	<link rel="stylesheet" type="text/css" href="css/tabela_padrao.css">
+</head>
+
+<body>
+	<header>
+		<div class="float-md-start">
+			<h1>SIMAX</h1>
+			<h5>Massagem Expressa</h5>
+		</div>
+		<div align="right" style="margin-bottom:20px;"><h5>#INTERNO.CAIXA</h5></div>
+		<nav class="nav nav-masthead justify-content-center float-md-end">
+			<a class="fw-bold py-1 px-0" href="index.asp">Home</a>
+			
+		</nav>
+	</header>
+
+	
+
+	<main>
+		<!--
+		<div id="divAviso">
+			<p>Informamos que, visando à melhoria do ambiente e ao maior conforto dos usuários, serão realizados reparos na sala de massagem do <b>Edifício Filial II</b> (tratamento de infiltração, mofo, teto e ar-condicionado). Por esse motivo, o serviço será temporariamente suspenso no período de <b>18/05</b> a <b>22/05</b>, com retorno previsto para o dia <b>25/05</b>.</p>
+			<p>Contamos com a compreensão de todos, reforçando que a medida é necessária para garantir um espaço mais adequado, seguro e agradável aos atendimentos.</p>
+		</div>
+		-->
+
+		<form name="frmFiltro" id="frmFiltro" method="POST" action="novo_agendamento.asp">
+			<div id="divFiltro" class="form-group row">
+				<div class="col-lg-2">
+					<label for="lstUf">UF</label>
+					<select name="lstUf" id="lstUf" class="form-select form-select-sm">
+						<option value="0" selected="">Selecione</option>
+						
+						<option value="AL">AL</option>
+							
+						<option value="AM">AM</option>
+							
+						<option value="CE">CE</option>
+							
+						<option value="DF" selected="">DF</option>
+							
+						<option value="ES">ES</option>
+							
+						<option value="GO">GO</option>
+							
+						<option value="MA">MA</option>
+							
+						<option value="MG">MG</option>
+							
+						<option value="MS">MS</option>
+							
+						<option value="MT">MT</option>
+							
+						<option value="PA">PA</option>
+							
+						<option value="PB">PB</option>
+							
+						<option value="PE">PE</option>
+							
+						<option value="PI">PI</option>
+							
+						<option value="PR">PR</option>
+							
+						<option value="RJ">RJ</option>
+							
+						<option value="RN">RN</option>
+							
+						<option value="RO">RO</option>
+							
+						<option value="RR">RR</option>
+							
+						<option value="RS">RS</option>
+							
+						<option value="SC">SC</option>
+							
+						<option value="SE">SE</option>
+							
+						<option value="SP">SP</option>
+							
+					</select>
+				</div>
+				<div class="col-lg-7">
+					<label for="lstEdificio">Edifício</label>
+					<select name="lstEdificio" id="lstEdificio" class="form-select form-select-sm">
+						<option value="0" selected="">Selecione</option>
+						
+						<option value="106">CNP BRASIL - BRASILIA/DF (17º andar - Ala Oeste)</option>
+							
+						<option value="3">ED. FILIAL I - BRASILIA/DF (SBS Quadra 1)</option>
+							
+						<option value="4">ED. FILIAL II - BRASILIA/DF (SEPN 512)</option>
+							
+						<option value="1">ED. MATRIZ 1 - BRASILIA/DF (SBS Quadra 4)</option>
+							
+						<option value="2" selected="">ED. MATRIZ 2 - BRASILIA/DF (SAUS Quadra 3)</option>
+							
+					</select>
+				</div>
+				<div class="col-lg-3">
+					<label for="lstData">Data</label>
+					<select name="lstData" id="lstData" class="form-select form-select-sm">
+						<option value="0" selected="">Selecione</option>
+						
+							<option value="2026-07-06">
+								06/07/2026 (segunda-feira)
+							</option>
+								
+							<option value="2026-07-07">
+								07/07/2026 (terça-feira)
+							</option>
+								
+							<option value="2026-07-08">
+								08/07/2026 (quarta-feira)
+							</option>
+								
+							<option value="2026-07-09" selected="">
+								09/07/2026 (quinta-feira)
+							</option>
+								
+					</select>
+				</div>
+			</div>
+		</form>
+
+		<hr noshade="">
+
+		<h4 align="center">ED. MATRIZ 2 - 09/07/2026</h4>
+		<div id="divLista" style="width: 1228.8px; margin-left: -294.4px;">
+			
+			<table id="tblLista" class="table table-striped table-hover">
+				<thead>
+					<tr style="position:sticky;top: 0">
+						<th style="position:sticky;top: 0">Horário</th><th style="position:sticky;top: 0">Cadeira 1</th><th style="position:sticky;top: 0">Maca 1</th><th style="position:sticky;top: 0">Maca 2</th><th style="position:sticky;top: 0">Maca 3</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr><td>09:00</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr><tr><td>09:20</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr><tr><td>09:40</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr><tr><td>10:00</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr><tr><td>10:20</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr><tr><td>10:40</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr><tr><td>11:00</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr><tr><td>11:20</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr><tr><td>11:40</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr><tr><td>13:00</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr><tr><td>13:20</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr><tr><td>13:40</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr><tr><td>14:00</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr><tr><td>14:20</td><td><button type="button" id="btnReservar_14_CADEIRA1" class="btn btn-sm btn-success">Reservar</button></td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr><tr><td>14:40</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr><tr><td>15:00</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr><tr><td>15:20</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr><tr><td>15:40</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr><tr><td>16:00</td><td><button type="button" id="btnReservar_19_CADEIRA1" class="btn btn-sm btn-success">Reservar</button></td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr><tr><td>16:20</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr><tr><td>16:40</td><td><button type="button" id="btnReservar_21_CADEIRA1" class="btn btn-sm btn-success">Reservar</button></td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td><td class="text-danger">Reservado</td></tr>
+				</tbody>
+			</table>
+			
+		</div>
+			
+	</main>
+
+	
+	<div class="modal fade" id="mdlCaptcha">
+		<div class="modal-dialog">
+			<div class="modal-content" style="background-color: #ffffff; border: 2px solid #455fa1;">
+				<div class="modal-header" style="background-color: #455fa1; color: #ffffff;">
+					<h5 class="modal-title">Confirmação de Agendamento</h5>
+				</div>
+				<div class="modal-body" style="color: #455fa1;">
+					<p>Para confirmar seu agendamento, digite a palavra exibida na imagem abaixo:</p>
+					<div class="text-center mb-3">
+						<input type="hidden" id="hdnIdCaptcha">
+						<input type="hidden" id="hdnIdAgendamento">
+						<img id="imgCaptcha" width="200px" alt="Captcha">
+					</div>
+					<div class="text-center mb-3">
+						<button type="button" id="btnPlay" class="btn btn-sm btn-default" alt="Ouvir a palavra">
+							<i class="bi bi-play-fill" style="font-size:18px;"></i> Ouvir a palavra
+						</button>
+					</div>
+					<div class="input-group">
+						<input type="text" id="txtCaptcha" class="form-control" placeholder="Digite aqui..." aria-label="Digite o captcha" aria-describedby="btnValidaCaptcha">
+						<span class="input-group-btn">
+							<button class="btn btn-primary btn-group" type="button" id="btnValidaCaptcha"><i class="bi bi-chevron-right"></i></button>
+						</span>
+					</div>
+					<div id="spnMensagem" class="captcha">&nbsp;</div>
+				</div>
+				<div class="modal-footer" style="justify-content: space-between;">
+					<button type="button" id="btnGravarAgendamento" class="btn btn-primary disabled">Confirmar</button>
+					<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	
+	    <footer class="mt-auto text-white-50">
+		<p>DEPES - DI Pessoas</p>
+	</footer>
+
+
+<script type="text/javascript" language="javascript" src="plugins/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" language="javascript" src="plugins/bootstrap-5.2.0/js/bootstrap.min.js"></script>
+<script type="text/javascript" language="javascript" src="plugins/bootstrap-5.2.0/js/bootstrap.bundle.min.js"></script>
+<script type="text/javascript" language="javascript" src="plugins/dataTables-1.12.0/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" language="javascript" src="plugins/jquery.redirect/jquery.redirect.js"></script>
+
+<script type="text/javascript" language="javascript">
+$(function(){
+	$("#divLista").width(screen.width * 0.8);
+	var varMargin = ((screen.width - $("main").width()) / 2) - ((screen.width - $("#divLista").width()) / 2);
+	$("#divLista").css("margin-left", (varMargin * -1));
+
+	$("#lstUf").change(function(){
+		$("#lstEdificio").val(0);
+		$("#lstData").val(0);
+	});
+
+	$("#lstEdificio").change(function(){
+		$("#lstData").val(0);
+	});
+
+	$("#frmFiltro").change(function(){
+		$(this).submit();
+	});
+
+	$(".btn-success").click(function(){
+		$(".btn-success").removeClass("btn-success").addClass("btn-warning disabled").html("<div class='spinner-border spinner-border-sm' role='status'><span class='visually-hidden'>Loading...</span></div>");
+		$("#hdnIdAgendamento").val(this.id);
+
+		$("#mdlCaptcha").modal("show");
+
+		$.ajax({
+			type: "POST",
+			url: "captcha_gerador.asp",
+			dataType: "json",
+			success: function(resposta){
+				console.log("Resposta recebida:", resposta);
+
+				if (resposta && resposta.src && resposta.nuIdCaptcha) {
+					$("#hdnIdCaptcha").val(resposta.nuIdCaptcha);
+					$("#imgCaptcha").attr("src", resposta.src);
+				} else {
+					console.error("Resposta incompleta ou malformada:", resposta);
+				}
+			},
+			error: function(xhr, status, error) {
+				console.error("Erro na requisição AJAX:", status, error);
+			}
+		});
+	});
+
+	$("#btnPlay").click(function(){
+		var varIdCaptcha = $("#hdnIdCaptcha").val();
+
+		$.ajax({
+			url: "captcha_audio.asp",
+			data: {id_captcha: varIdCaptcha}
+		}).done(function(palavra){
+			var utterance = new SpeechSynthesisUtterance(palavra);
+			utterance.lang = "pt-BR";
+			speechSynthesis.speak(utterance);
+		});
+	});
+
+	$("#btnValidaCaptcha").click(function(){
+		var varIdCaptcha = $("#hdnIdCaptcha").val();
+		var varPalavraCaptcha = $("#txtCaptcha").val();
+
+		$("#spnMensagem").html("");
+
+		$.ajax({
+			type: "POST",
+			url: "captcha_validador.asp",
+			data: {
+				id_captcha: varIdCaptcha,
+				palavra: varPalavraCaptcha
+			}
+		}).done(function(resposta){
+			varResposta = resposta.split(";");
+			if (varResposta[0] == "0") {
+				$("#spnMensagem").html("Erro ao validar o captcha.<br />" + varResposta[1]).removeClass("captcha-sucesso").addClass("captcha-erro");
+				$("#btnGravarAgendamento").addClass("disabled");
+			} else {
+				$("#spnMensagem").html("Captcha validado.").removeClass("captcha-erro").addClass("captcha-sucesso");
+				$("#btnGravarAgendamento").removeClass("disabled");
+			}
+		});
+	});
+
+	$("#btnGravarAgendamento").click(function(){
+		if (!$(this).hasClass("disabled")) {
+			var varMatricula = "160698";
+			var varData = "2026-07-09";
+			var varUf = "DF";
+			var varEdificio = 2;
+			var varId = $("#hdnIdAgendamento").val().split("_");
+			var varHorario = varId[1];
+			var varTipoMassagem = varId[2];
+
+			$.ajax({
+				url: "checa_disponibilidade.asp",
+				data: {
+					dt_atendimento: varData,
+					edificio: varEdificio,
+					horario: varHorario,
+					tipo_massagem: varTipoMassagem
+				}
+			}).done(function(retorno){
+				if (retorno == 1) {
+					alert("Infelizmente, o aparelho selecionado já foi reservado neste horário.\nTenta novamente em um horário ou aparelho diferente.")
+					$.redirect("novo_agendamento.asp", {"lstData": varData, "lstEdificio": varEdificio, "lstUf": varUf})
+				} else {
+					$.ajax({
+						url: "registra_agendamento.asp",
+						data: {
+							matricula: varMatricula,
+							dt_atendimento: varData,
+							edificio: varEdificio,
+							horario: varHorario,
+							tipo_massagem: varTipoMassagem
+						}
+					}).done(function(msg){
+						alert(msg);
+						$("#mdlCaptcha").modal("hide");
+					});
+				}
+			});
+		}
+	});
+
+	$("#mdlCaptcha").on("hidden.bs.modal", function(e){
+		location.reload();
+	});
+
+	$(".btn-danger").click(function(){
+		var confirma = confirm("Confirma a exclusão do agendamento?");
+
+		if (confirma) {
+			$(this).removeClass("btn-danger").addClass("btn-warning disabled").html("<div class='spinner-border spinner-border-sm' role='status'><span class='visually-hidden'>Loading...</span></div>");
+			$(".btn-success").removeClass("btn-danger").addClass("btn-warning disabled").html("<div class='spinner-border spinner-border-sm' role='status'><span class='visually-hidden'>Loading...</span></div>");
+
+			var varMatricula = "160698";
+			var varData = "2026-07-09";
+			var varEdificio = 2;
+			var varId = this.id.split("_");
+			var varHorario = varId[1];
+			var varTipoMassagem = varId[2];
+			
+			$.ajax({
+				url: "exclui_agendamento.asp",
+				data: {
+					matricula: varMatricula,
+					dt_atendimento: varData,
+					edificio: varEdificio,
+					horario: varHorario,
+					tipo_massagem: varTipoMassagem
+				}
+			}).done(function(msg){
+				alert(msg);
+				location.reload();
+			});
+		}
+	});
+});
+</script>
+
+<div id="tf-overlay"><div id="tf-panel" style="position:fixed;top:8px;right:8px;background:#1a1a2e;color:#fff;padding:8px 14px;border-radius:8px;font:14px monospace;z-index:99999;display:flex;flex-direction:column;gap:4px;box-shadow:0 4px 16px rgba(0,0,0,0.3)">
+<div id="tf-panel-body" style="display:flex;flex-direction:column;gap:4px">
+<div style="display:flex;gap:12px;align-items:center">
+<span id="tf-rec-dot" style="color:#e94560;font-size:18px">R</span>
+<span id="tf-status">Gravando...</span>
+<span style="color:#aaa">|</span>
+<button id="tf-btn-pause" style="background:#334155;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font:12px monospace" title="Shift+P">||</button>
+<button id="tf-btn-stop" style="background:#991b1b;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font:12px monospace" title="Shift+S">[]</button>
+<button id="tf-btn-assert" style="background:#6366f1;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font:12px monospace" title="Shift+A">Assert</button>
+<span style="color:#aaa">|</span>
+<span>Passos: <strong id="tf-step-count">1</strong></span>
+<span>|</span>
+<span>Asserts: <strong id="tf-assert-count">0</strong></span>
+<span style="color:#aaa">|</span>
+<button id="tf-btn-minimize" style="background:#334155;color:#94a3b8;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;font:12px monospace" title="Minimizar overlay (Shift+M)">_</button>
+</div>
+<div style="font-size:10px;color:#94a3b8;margin-top:3px;letter-spacing:0.03em">simax / suite exploratoria / todas as massagens</div>
+<div id="tf-pending-fields" style="display:none"></div>
+</div>
+</div>
+<div id="tf-toast" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 24px;border-radius:8px;font:14px sans-serif;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,0.3)"></div></div></body></html>

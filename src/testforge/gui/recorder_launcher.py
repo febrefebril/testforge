@@ -1,7 +1,9 @@
 """TestForge Recorder GUI — tkinter launcher, zero external deps."""
+from pathlib import Path
 import subprocess
 import sys
 import threading
+from testforge.subprocess_utils import popen_hidden
 
 try:
     import tkinter as tk
@@ -110,6 +112,19 @@ def _row(grid, row, label, widget, req=False):
     widget.grid(row=row, column=1, sticky="ew", pady=2)
 
 
+def _bootstrap_auto_update() -> None:
+    """Runs updater before opening GUI, without blocking startup on failures."""
+    try:
+        from testforge.updater import check_and_apply_update
+
+        # project_root = .../AUTOMATA-PRIMUS from .../src/testforge/gui/recorder_launcher.py
+        project_root = Path(__file__).resolve().parents[3]
+        check_and_apply_update(project_root)
+    except Exception:
+        # GUI startup must never fail due to update checks.
+        pass
+
+
 # -- Main window ---------------------------------------------------------------
 
 class RecorderLauncher(tk.Tk):
@@ -122,6 +137,8 @@ class RecorderLauncher(tk.Tk):
 
         self._proc = None
         self._running = False
+        self._progress_tick = 0
+        self._progress_job = None
 
         # B30: carrega ultimos valores fornecidos para pre-preencher campos
         self._last_values = self._load_last_values()
@@ -187,7 +204,7 @@ class RecorderLauncher(tk.Tk):
 
         url_entry = _entry(grid1, self.var_url)
         _bind_ctrl_v(url_entry)
-        _row(grid1, 0, "URL *",            url_entry, req=True)
+        _row(grid1, 0, "http/https + URL *",            url_entry, req=True)
         _row(grid1, 1, "Sistema",          _entry(grid1, self.var_system))
         _row(grid1, 2, "Suite",            _entry(grid1, self.var_suite))
         _row(grid1, 3, "Caso de Teste",    _entry(grid1, self.var_tc))
@@ -258,10 +275,10 @@ class RecorderLauncher(tk.Tk):
         opts.pack(fill="x", pady=(4, 0))
 
         self.var_headless    = tk.BooleanVar()
-        self.var_complete    = tk.BooleanVar()
+        self.var_complete    = tk.BooleanVar(value=True)
         self.var_no_interact = tk.BooleanVar()
-        self.var_validate    = tk.BooleanVar()
-        self.var_pilot       = tk.BooleanVar()
+        self.var_validate    = tk.BooleanVar(value=True)
+        self.var_pilot       = tk.BooleanVar(value=True)
         # Hotfix 22: CDP + diagnostic mode exposed no GUI. CDP eh default ON.
         self.var_cdp         = tk.BooleanVar(value=True)
         self.var_diagnostic  = tk.BooleanVar()
@@ -317,7 +334,7 @@ class RecorderLauncher(tk.Tk):
         btn_frame.pack(fill="x", padx=12)
 
         self.btn_start = tk.Button(
-            btn_frame, text="[PLAY]  Iniciar Gravação",
+            btn_frame, text="Iniciar Gravação",
             bg=BTN_START, fg=BG, font=("Segoe UI", 10, "bold"),
             relief="flat", padx=16, pady=6, cursor="hand2",
             activebackground=ACCENT2, activeforeground=BG,
@@ -341,13 +358,21 @@ class RecorderLauncher(tk.Tk):
             command=self._clear_fields,
         ).pack(side="left")
 
-        tk.Button(
-            btn_frame, text="Fechar janela",
-            bg="#991b1b", fg="#fff", font=("Segoe UI", 9, "bold"),
-            relief="flat", padx=12, pady=6, cursor="hand2",
-            activebackground="#7f1414", activeforeground="#fff",
-            command=self.destroy,
-        ).pack(side="right")
+        self._progress_var = tk.StringVar(value="Pronto")
+        self._progress_bar = ttk.Progressbar(
+            btn_frame,
+            mode="indeterminate",
+            length=220,
+        )
+        self._progress_bar.pack(side="right", padx=(8, 0))
+        self._progress_label = tk.Label(
+            btn_frame,
+            textvariable=self._progress_var,
+            bg=BG,
+            fg=ACCENT2,
+            font=("Segoe UI", 8, "bold"),
+        )
+        self._progress_label.pack(side="right")
 
         # command preview
         self._cmd_var = tk.StringVar()
@@ -529,13 +554,14 @@ class RecorderLauncher(tk.Tk):
 
         self._running = True
         self.btn_start.configure(state="disabled")
+        self._set_progress_running(True)
         thread = threading.Thread(target=self._run_proc,
                                   args=(cmd, env), daemon=True)
         thread.start()
 
     def _run_proc(self, cmd, env):
         try:
-            self._proc = subprocess.Popen(
+            self._proc = popen_hidden(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -556,7 +582,7 @@ class RecorderLauncher(tk.Tk):
         finally:
             self._running = False
             self._proc = None
-            self.after(0, lambda: self.btn_start.configure(state="normal"))
+            self.after(0, self._on_process_finished)
 
     def _toggle_advanced(self):
         """Show/hide advanced options section."""
@@ -576,6 +602,7 @@ class RecorderLauncher(tk.Tk):
         if self._proc and self._running:
             self._proc.terminate()
             self._log("\n[GUI] Sinal de parada enviado ao processo.\n")
+            self._set_progress_text("Parando...")
         else:
             self._log("[GUI] Nenhuma gravação ativa.\n")
 
@@ -603,6 +630,14 @@ class RecorderLauncher(tk.Tk):
             self.log.insert("end", text)
             self.log.see("end")
             self.log.configure(state="disabled")
+
+            lowered = text.lower()
+            if "publicando" in lowered:
+                self._set_progress_text("Publicando no repositório...")
+            elif "validando" in lowered:
+                self._set_progress_text("Validando gravação...")
+            elif "normaliza" in lowered or "normalizacao" in lowered:
+                self._set_progress_text("Processando gravação...")
         self.after(0, _do)
 
     def _log_clear(self):
@@ -621,8 +656,40 @@ class RecorderLauncher(tk.Tk):
         y = (sh - h) // 2
         self.geometry(f"+{x}+{y}")
 
+    def _set_progress_text(self, base: str):
+        if not self._running:
+            return
+        dots = "." * ((self._progress_tick % 3) + 1)
+        self._progress_var.set(f"{base}{dots}")
+
+    def _animate_progress(self):
+        if not self._running:
+            return
+        self._progress_tick += 1
+        self._set_progress_text("Processando")
+        self._progress_job = self.after(450, self._animate_progress)
+
+    def _set_progress_running(self, running: bool):
+        if running:
+            self._progress_tick = 0
+            self._progress_bar.start(10)
+            self._progress_var.set("Processando.")
+            if self._progress_job is None:
+                self._progress_job = self.after(450, self._animate_progress)
+        else:
+            self._progress_bar.stop()
+            if self._progress_job is not None:
+                self.after_cancel(self._progress_job)
+                self._progress_job = None
+            self._progress_var.set("Pronto")
+
+    def _on_process_finished(self):
+        self.btn_start.configure(state="normal")
+        self._set_progress_running(False)
+
 
 def main():
+    _bootstrap_auto_update()
     app = RecorderLauncher()
     app.mainloop()
 

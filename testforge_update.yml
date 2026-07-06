@@ -3,7 +3,7 @@
 # Em emergência: altere 'branch' para um hotfix branch e faça push.
 # O gravador se atualiza automaticamente na próxima execução.
 
-enabled: false
+enabled: true
 remote: origin
-branch: main
+branch: update-gravador
 quiet: false

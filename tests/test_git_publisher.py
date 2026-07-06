@@ -302,6 +302,95 @@ class TestCopyArtifacts:
             assert len(copied) > 0
             assert "dom_snapshots/" in copied
 
+    def test_copies_completeness_directory_recursively(self):
+        publisher = GitPublisher("https://example.com", "token")
+        with tempfile.TemporaryDirectory() as tmp:
+            recordings_dir = os.path.join(tmp, "recordings")
+            os.makedirs(recordings_dir)
+            rid = self._make_recording(recordings_dir, "REC-001")
+
+            completeness_dir = os.path.join(recordings_dir, rid, "completeness")
+            os.makedirs(completeness_dir, exist_ok=True)
+            with open(os.path.join(completeness_dir, "completeness-REC-001.json"), "w") as f:
+                f.write('{"ok": true}')
+            with open(os.path.join(completeness_dir, "completeness-REC-001.md"), "w") as f:
+                f.write("# Relatorio")
+
+            nested_dir = os.path.join(recordings_dir, rid, "extras", "trace")
+            os.makedirs(nested_dir, exist_ok=True)
+            with open(os.path.join(nested_dir, "trace.txt"), "w") as f:
+                f.write("trace")
+
+            repo_dir = os.path.join(tmp, "repo")
+            dest_dir = os.path.join(repo_dir, "recordings", rid)
+            os.makedirs(dest_dir, exist_ok=True)
+
+            copied = publisher._copy_artifacts(repo_dir, rid, recordings_dir, "")
+
+            assert "completeness/" in copied
+            assert "completeness/completeness-REC-001.json" in copied
+            assert "completeness/completeness-REC-001.md" in copied
+            assert "extras/" in copied
+            assert "extras/trace/" in copied
+            assert "extras/trace/trace.txt" in copied
+            assert os.path.exists(os.path.join(dest_dir, "completeness", "completeness-REC-001.json"))
+            assert os.path.exists(os.path.join(dest_dir, "extras", "trace", "trace.txt"))
+
+
+class TestBuildRemotePath:
+    def test_uncategorized_when_no_classification(self):
+        publisher = GitPublisher("https://example.com", "token")
+        metadata = {"system": "", "suite": "", "test_case": ""}
+        path = publisher._build_remote_path("REC-001", metadata)
+        assert path == "recordings/uncategorized/REC-001"
+
+    def test_expands_windows_and_unix_separators_into_hierarchy(self):
+        publisher = GitPublisher("https://example.com", "token")
+        metadata = {
+            "system": "simax",
+            "suite": "pesquisa de vagas",
+            "test_case": "busca de massagem deve encontrar vaga\\busca_de_vaga_na_matriz_2",
+        }
+        path = publisher._build_remote_path("busca_de_vaga_na_matriz_2", metadata)
+        assert path == (
+            "recordings/simax/pesquisa de vagas/"
+            "busca de massagem deve encontrar vaga/busca_de_vaga_na_matriz_2"
+        )
+
+    def test_appends_recording_id_when_last_segment_differs(self):
+        publisher = GitPublisher("https://example.com", "token")
+        metadata = {
+            "system": "simax",
+            "suite": "pesquisa de vagas",
+            "test_case": "busca de massagem deve encontrar vaga",
+        }
+        path = publisher._build_remote_path("busca_de_vaga_na_matriz_3", metadata)
+        assert path == (
+            "recordings/simax/pesquisa de vagas/"
+            "busca de massagem deve encontrar vaga/busca_de_vaga_na_matriz_3"
+        )
+
+    def test_remote_path_is_posix_even_on_windows(self):
+        publisher = GitPublisher("https://example.com", "token")
+        metadata = {
+            "system": "simax",
+            "suite": "pesquisa de vagas",
+            "test_case": "busca_de_vaga_na_matriz_3",
+        }
+        path = publisher._build_remote_path("busca_de_vaga_na_matriz_3", metadata)
+        assert "\\" not in path
+        assert path == "recordings/simax/pesquisa de vagas/busca_de_vaga_na_matriz_3"
+
+    def test_system_can_arrive_as_slash_wrapped_path_and_still_split(self):
+        publisher = GitPublisher("https://example.com", "token")
+        metadata = {
+            "system": "/simax/pesquisa de vagas/",
+            "suite": "",
+            "test_case": "busca_de_vaga_na_matriz_3",
+        }
+        path = publisher._build_remote_path("busca_de_vaga_na_matriz_3", metadata)
+        assert path == "recordings/simax/pesquisa de vagas/busca_de_vaga_na_matriz_3"
+
 
 class TestPublish:
     def _make_recording(self, base_dir: str, rid: str, with_semantic: bool = False) -> str:

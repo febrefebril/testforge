@@ -1,0 +1,116 @@
+{
+  "reason": "user_stop",
+  "timestamp": "2026-07-03T20:49:07.049Z",
+  "url": "https://simax.caixa/simax/novo_agendamento.asp",
+  "page_title": "SIMAX - Massagem Expressa",
+  "fields": [
+    {
+      "timestamp": "2026-07-03T20:49:07.049Z",
+      "fingerprint": "select#lstUf[name=lstUf]",
+      "identifiers": {
+        "id": "lstUf",
+        "name": "lstUf",
+        "label": "UF",
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "select",
+      "type": null,
+      "value": "DF",
+      "raw_value": null,
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-07-03T20:49:07.049Z",
+      "fingerprint": "select#lstEdificio[name=lstEdificio]",
+      "identifiers": {
+        "id": "lstEdificio",
+        "name": "lstEdificio",
+        "label": "Edif\u00edcio",
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "select",
+      "type": null,
+      "value": "2",
+      "raw_value": null,
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-07-03T20:49:07.049Z",
+      "fingerprint": "select#lstData[name=lstData]",
+      "identifiers": {
+        "id": "lstData",
+        "name": "lstData",
+        "label": "Data",
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "select",
+      "type": null,
+      "value": "2026-07-09",
+      "raw_value": null,
+      "checked": null,
+      "visibility": "visible",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-07-03T20:49:07.049Z",
+      "fingerprint": "input#hdnIdCaptcha[name=]",
+      "identifiers": {
+        "id": "hdnIdCaptcha",
+        "name": null,
+        "label": null,
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "hidden",
+      "value": "",
+      "raw_value": null,
+      "checked": null,
+      "visibility": "hidden",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-07-03T20:49:07.049Z",
+      "fingerprint": "input#hdnIdAgendamento[name=]",
+      "identifiers": {
+        "id": "hdnIdAgendamento",
+        "name": null,
+        "label": null,
+        "placeholder": null,
+        "aria-label": null
+      },
+      "tag": "input",
+      "type": "hidden",
+      "value": "",
+      "raw_value": null,
+      "checked": null,
+      "visibility": "hidden",
+      "enabled": true
+    },
+    {
+      "timestamp": "2026-07-03T20:49:07.049Z",
+      "fingerprint": "input#txtCaptcha[name=]",
+      "identifiers": {
+        "id": "txtCaptcha",
+        "name": null,
+        "label": null,
+        "placeholder": "Digite aqui...",
+        "aria-label": "Digite o captcha"
+      },
+      "tag": "input",
+      "type": "text",
+      "value": "",
+      "raw_value": null,
+      "checked": null,
+      "visibility": "hidden",
+      "enabled": true
+    }
+  ]
+}

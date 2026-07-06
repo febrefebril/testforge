@@ -1,8 +1,10 @@
 """TestForge CLI — Comandos: record, compile, run, pipeline, demo-heal."""
 import argparse
+import datetime
 import json
 import logging
 import os
+import shutil
 import sys
 import time
 
@@ -268,6 +270,30 @@ def _run_post_recording_validation(rec_dir: str, rid: str, args,
     print(f"\n  Relatorio completo: {md_path}")
 
 
+def _mark_failed_recording(rec_dir: str, rid: str, reason: str = "validation_failed") -> None:
+    """Marca gravacao como falha em um diretorio dedicado sem mover artefatos originais."""
+    try:
+        failed_root = _PROJECT_ROOT / "recordings_failed"
+        failed_root.mkdir(parents=True, exist_ok=True)
+
+        stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d-%H%M%S")
+        target = failed_root / f"{rid}_{stamp}"
+        shutil.copytree(rec_dir, target, dirs_exist_ok=True)
+
+        marker = {
+            "recording_id": rid,
+            "reason": reason,
+            "source_dir": rec_dir,
+            "failed_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        }
+        with open(target / "FAILED_MARKER.json", "w", encoding="utf-8") as f:
+            json.dump(marker, f, indent=2)
+
+        print(f"[TestForge] [FAIL] Gravacao marcada como falha: recordings_failed/{target.name}/")
+    except Exception as exc:
+        print(f"[TestForge] [WARN] Nao foi possivel marcar gravacao falha: {exc}")
+
+
 def _check_python_keyboard(page, recorder):
     """Monitora estado do assert e ativa via Python se necessario."""
     try:
@@ -367,16 +393,18 @@ def _auto_publish_recording(rid: str, rec_dir: str):
         if _os.path.exists(meta_path):
             with open(meta_path) as _f:
                 _meta = json.load(_f)
-            if not _meta.get("system") and (_os.getenv("TESTFORGE_GIT_URL") or publisher._local_mode):
+            has_classification = bool(_meta.get("system") or _meta.get("suite") or _meta.get("test_case"))
+            if not has_classification and (_os.getenv("TESTFORGE_GIT_URL") or publisher._local_mode):
                 print(
-                    "[TestForge] [WARN] Aviso: --system e --suite nao informados. "
+                    "[TestForge] [WARN] Aviso: classificacao (system/suite/test_case) nao informada. "
                     "Gravacao publicada em 'uncategorized'.",
                     file=sys.stderr,
                 )
         recordings_root = str(_PROJECT_ROOT / "recordings")
         semantic_root = str(_PROJECT_ROOT / "semantic_tests")
+        failed_root = str(_PROJECT_ROOT / "recordings_failed")
         print(f"[TestForge] Publicando {rid} no Git ({mode})...")
-        result = publisher.publish(rid, recordings_root, semantic_root)
+        result = publisher.publish(rid, recordings_root, semantic_root, failed_root)
         if result.success:
             sha_short = result.commit_sha[:8] if result.commit_sha else "sem-commit"
             print(f"[TestForge] [OK] Publicado: {result.remote_path} ({sha_short})")
@@ -517,6 +545,10 @@ def cmd_record(args):
             and not getattr(args, "pipeline_and_diagnostic_mode", False)
             and not getattr(args, "diagnostic_mode", False)):
         args.pipeline_and_diagnostic_mode = True
+    if not getattr(args, "validate_before_ready", False):
+        args.validate_before_ready = True
+    if not getattr(args, "pilot_mode", False):
+        args.pilot_mode = True
 
     no_interactive = getattr(args, 'no_interactive', False)
     auto_complete = getattr(args, 'complete', False) and not no_interactive
@@ -724,6 +756,17 @@ def cmd_record(args):
 
     if run_validation and completeness_report is not None:
         _run_post_recording_validation(rec_dir, rid, args, stc, completeness_report)
+
+    meta_status = ""
+    try:
+        meta_path = os.path.join(rec_dir, "recording_metadata.json")
+        if os.path.exists(meta_path):
+            with open(meta_path, encoding="utf-8") as f:
+                meta_status = str((json.load(f) or {}).get("recording_status") or "")
+    except Exception:
+        meta_status = ""
+    if meta_status in (RecordingStatus.incomplete_intent.value, RecordingStatus.needs_review.value):
+        _mark_failed_recording(rec_dir, rid, reason=meta_status)
 
     # Auto-publish after validation so git snapshot includes validated artifacts
     _auto_publish_recording(rid, rec_dir)

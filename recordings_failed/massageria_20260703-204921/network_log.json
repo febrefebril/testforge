@@ -1,0 +1,1108 @@
+[
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/",
+    "resource_type": "document",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:37.494967+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:37.656668+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:37.705925+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-grid.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:37.706122+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-reboot.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:37.706253+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-utilities.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:37.706454+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/icons/font/bootstrap-icons.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:37.706680+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/dataTables-1.12.0/css/jquery.dataTables.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:37.706912+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/css/simax.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:37.707114+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/css/tabela_padrao.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:37.707323+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/jquery-3.6.0/jquery-3.6.0.min.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:37.707533+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/js/bootstrap.min.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:37.707739+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/js/bootstrap.bundle.min.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:37.707895+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/dataTables-1.12.0/js/jquery.dataTables.min.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:37.708012+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:37.709596+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-reboot.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:37.915248+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-grid.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:37.918370+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/dataTables-1.12.0/css/jquery.dataTables.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:37.922527+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-utilities.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:37.923719+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/icons/font/bootstrap-icons.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:37.926159+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/css/simax.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:37.927420+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/css/tabela_padrao.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:37.938539+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/imagens/background-2.jpg",
+    "resource_type": "image",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:38.008165+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/icons/font/fonts/bootstrap-icons.woff2?08efbba7c53d8c5413793eecb19b20bb",
+    "resource_type": "font",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:38.008958+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/jquery-3.6.0/jquery-3.6.0.min.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:38.027474+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/imagens/background-2.jpg",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:38.029895+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/js/bootstrap.min.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:38.043955+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/js/bootstrap.bundle.min.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:38.062348+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/dataTables-1.12.0/js/jquery.dataTables.min.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:38.115017+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/icons/font/fonts/bootstrap-icons.woff2?08efbba7c53d8c5413793eecb19b20bb",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:38.144642+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/novo_agendamento.asp",
+    "resource_type": "document",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:41.387156+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/novo_agendamento.asp",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:41.388520+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:41.394111+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:41.394740+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-grid.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:41.395744+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-grid.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:41.397262+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-reboot.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:41.398229+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-reboot.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:41.399042+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-utilities.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:41.400051+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-utilities.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:41.400603+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/icons/font/bootstrap-icons.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:41.401193+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/icons/font/bootstrap-icons.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:41.401668+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/dataTables-1.12.0/css/jquery.dataTables.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:41.402345+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/dataTables-1.12.0/css/jquery.dataTables.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:41.403020+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/css/simax.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:41.403942+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/css/simax.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:41.404768+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/css/tabela_padrao.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:41.405204+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/css/tabela_padrao.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:41.405419+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/jquery-3.6.0/jquery-3.6.0.min.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:41.405676+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/jquery-3.6.0/jquery-3.6.0.min.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:41.406199+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/js/bootstrap.min.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:41.406745+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/js/bootstrap.min.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:41.407014+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/js/bootstrap.bundle.min.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:41.407371+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/js/bootstrap.bundle.min.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:41.407770+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/dataTables-1.12.0/js/jquery.dataTables.min.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:41.408548+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/dataTables-1.12.0/js/jquery.dataTables.min.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:41.409005+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/jquery.redirect/jquery.redirect.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:41.409776+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/icons/font/fonts/bootstrap-icons.woff2?08efbba7c53d8c5413793eecb19b20bb",
+    "resource_type": "font",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:41.420713+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/icons/font/fonts/bootstrap-icons.woff2?08efbba7c53d8c5413793eecb19b20bb",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:41.420894+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/imagens/background-2.jpg",
+    "resource_type": "image",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:41.421050+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/imagens/background-2.jpg",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:41.421240+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/jquery.redirect/jquery.redirect.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:41.426912+00:00"
+  },
+  {
+    "type": "request",
+    "method": "POST",
+    "url": "https://simax.caixa/simax/novo_agendamento.asp",
+    "resource_type": "document",
+    "post_data": "lstUf=DF&lstEdificio=0&lstData=0",
+    "timestamp": "2026-07-03T20:48:45.918631+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/novo_agendamento.asp",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:45.920294+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:45.929526+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:45.930224+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-grid.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:45.931012+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-grid.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:45.931550+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-reboot.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:45.932186+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-reboot.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:45.932735+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-utilities.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:45.933379+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-utilities.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:45.933840+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/icons/font/bootstrap-icons.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:45.934442+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/icons/font/bootstrap-icons.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:45.934933+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/dataTables-1.12.0/css/jquery.dataTables.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:45.935381+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/dataTables-1.12.0/css/jquery.dataTables.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:45.935869+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/css/simax.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:45.936770+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/css/simax.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:45.937519+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/css/tabela_padrao.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:45.939307+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/css/tabela_padrao.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:45.940382+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/jquery-3.6.0/jquery-3.6.0.min.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:45.942167+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/jquery-3.6.0/jquery-3.6.0.min.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:45.943575+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/js/bootstrap.min.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:45.945304+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/js/bootstrap.min.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:45.946926+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/js/bootstrap.bundle.min.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:45.948687+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/js/bootstrap.bundle.min.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:45.950987+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/dataTables-1.12.0/js/jquery.dataTables.min.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:45.954283+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/dataTables-1.12.0/js/jquery.dataTables.min.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:45.956859+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/jquery.redirect/jquery.redirect.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:45.959222+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/jquery.redirect/jquery.redirect.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:45.960614+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/icons/font/fonts/bootstrap-icons.woff2?08efbba7c53d8c5413793eecb19b20bb",
+    "resource_type": "font",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:45.984749+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/icons/font/fonts/bootstrap-icons.woff2?08efbba7c53d8c5413793eecb19b20bb",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:45.986023+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/imagens/background-2.jpg",
+    "resource_type": "image",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:45.986795+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/imagens/background-2.jpg",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:45.987258+00:00"
+  },
+  {
+    "type": "request",
+    "method": "POST",
+    "url": "https://simax.caixa/simax/novo_agendamento.asp",
+    "resource_type": "document",
+    "post_data": "lstUf=DF&lstEdificio=2&lstData=0",
+    "timestamp": "2026-07-03T20:48:49.158197+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/novo_agendamento.asp",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:49.159243+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:49.166113+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:49.166369+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-grid.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:49.166719+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-grid.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:49.167025+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-reboot.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:49.167376+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-reboot.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:49.167595+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-utilities.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:49.167874+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-utilities.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:49.168139+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/icons/font/bootstrap-icons.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:49.168478+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/icons/font/bootstrap-icons.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:49.168736+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/dataTables-1.12.0/css/jquery.dataTables.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:49.169287+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/dataTables-1.12.0/css/jquery.dataTables.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:49.171702+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/css/simax.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:49.172954+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/css/simax.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:49.173805+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/css/tabela_padrao.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:49.174833+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/css/tabela_padrao.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:49.175568+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/jquery-3.6.0/jquery-3.6.0.min.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:49.176516+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/jquery-3.6.0/jquery-3.6.0.min.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:49.177150+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/js/bootstrap.min.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:49.177795+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/js/bootstrap.min.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:49.178403+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/js/bootstrap.bundle.min.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:49.179181+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/js/bootstrap.bundle.min.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:49.179727+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/dataTables-1.12.0/js/jquery.dataTables.min.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:49.180452+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/dataTables-1.12.0/js/jquery.dataTables.min.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:49.180987+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/jquery.redirect/jquery.redirect.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:49.181798+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/jquery.redirect/jquery.redirect.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:49.182573+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/icons/font/fonts/bootstrap-icons.woff2?08efbba7c53d8c5413793eecb19b20bb",
+    "resource_type": "font",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:49.198032+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/icons/font/fonts/bootstrap-icons.woff2?08efbba7c53d8c5413793eecb19b20bb",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:49.198394+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/imagens/background-2.jpg",
+    "resource_type": "image",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:49.198834+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/imagens/background-2.jpg",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:49.199077+00:00"
+  },
+  {
+    "type": "request",
+    "method": "POST",
+    "url": "https://simax.caixa/simax/novo_agendamento.asp",
+    "resource_type": "document",
+    "post_data": "lstUf=DF&lstEdificio=2&lstData=2026-07-09",
+    "timestamp": "2026-07-03T20:48:53.683371+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/novo_agendamento.asp",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:53.684869+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:53.693855+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:53.695187+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-grid.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:53.696319+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-grid.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:53.697275+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-reboot.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:53.698659+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-reboot.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:53.699672+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-utilities.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:53.700964+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/css/bootstrap-utilities.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:53.701839+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/icons/font/bootstrap-icons.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:53.703084+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/icons/font/bootstrap-icons.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:53.704105+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/dataTables-1.12.0/css/jquery.dataTables.min.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:53.705576+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/dataTables-1.12.0/css/jquery.dataTables.min.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:53.706874+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/css/simax.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:53.708836+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/css/simax.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:53.710036+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/css/tabela_padrao.css",
+    "resource_type": "stylesheet",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:53.710797+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/css/tabela_padrao.css",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:53.711450+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/jquery-3.6.0/jquery-3.6.0.min.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:53.712047+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/jquery-3.6.0/jquery-3.6.0.min.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:53.712570+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/js/bootstrap.min.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:53.713755+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/js/bootstrap.min.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:53.714745+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/js/bootstrap.bundle.min.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:53.716076+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/js/bootstrap.bundle.min.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:53.717145+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/dataTables-1.12.0/js/jquery.dataTables.min.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:53.718220+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/dataTables-1.12.0/js/jquery.dataTables.min.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:53.718966+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/jquery.redirect/jquery.redirect.js",
+    "resource_type": "script",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:53.720504+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/jquery.redirect/jquery.redirect.js",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:53.721417+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/icons/font/fonts/bootstrap-icons.woff2?08efbba7c53d8c5413793eecb19b20bb",
+    "resource_type": "font",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:53.739490+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/plugins/bootstrap-5.2.0/icons/font/fonts/bootstrap-icons.woff2?08efbba7c53d8c5413793eecb19b20bb",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:53.739778+00:00"
+  },
+  {
+    "type": "request",
+    "method": "GET",
+    "url": "https://simax.caixa/simax/imagens/background-2.jpg",
+    "resource_type": "image",
+    "post_data": null,
+    "timestamp": "2026-07-03T20:48:53.740138+00:00"
+  },
+  {
+    "type": "response",
+    "url": "https://simax.caixa/simax/imagens/background-2.jpg",
+    "status": 200,
+    "timestamp": "2026-07-03T20:48:53.740443+00:00"
+  }
+]
