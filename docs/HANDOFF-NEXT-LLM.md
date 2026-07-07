@@ -16,6 +16,27 @@
 - Fase 0: README de diagramas criado; regeneração de PNGs bloqueada por ambiente corporativo (sem `plantuml` e download de `plantuml.jar` bloqueado por rede).
 - Regressão recente: `44 passed, 1 xfailed` em bateria focada.
 
+## Atualização de execução (2026-07-07)
+
+- Análise 49 recordings CAIXA → 92 bugs REC catalogados + 30 root causes.
+  Documento: `.planning/bugs-recording-analysis.md`.
+- **Fase 1 RECORDING-BUGS-FIX-PLAN concluída** (5 commits: 24f88f6, 2ce6c78, 97a63cd, ca390be, +fixtures):
+  - PII detector observability-only (`src/testforge/security/pii_detector.py`) — patterns CPF/CNPJ/email/phone/matrícula/corp filename/password/PIN/Keycloak/production.
+  - Recording scanner (`recording_scanner.py`) percorre todos artifacts.
+  - CLI `testforge audit-pii` com --json, --fail-on-critical, --out.
+  - `<select>` textContent extraction (placeholder + selected only) — fix BUG-REC-30/69.
+  - `FAILED_MARKER.source_dir` path relativo — fix BUG-REC-89.
+  - Production domain prompt em `cmd_record` — BUG-REC-59/86.
+  - Post-recording auto-scan → `<rec>/sensitive_alerts.json`.
+  - 2 recordings âncora fixtures (`r5a_sifap_credentials`, `r7a_siopi_producao`) + goldens.
+  - Contract test cross-source: detector NUNCA modifica values ([[feedback-pii-alert-only]]).
+  - 44 tests novos (unit + contract + regression).
+- **Sanity total**: `pytest -m "unit or contract or regression"` = **234 passed, 1 xfailed**.
+- Docs criados: `RECORDING-BUGS-FIX-PLAN.md`, `ANTI-REGRESSION-PLAN.md`.
+- Memory criada: `[[project-recording-bugs-2026-07-07]]`, `[[feedback-pii-alert-only]]`, `[[feedback-no-regression]]`, `[[project-fase-1-recording-progress]]`.
+- **Contrato hard estabelecido**: dados sensíveis NÃO são mascarados — são massa de teste. Detector é observability-layer apenas.
+- Próximas fases (2-9) documentadas em `docs/RECORDING-BUGS-FIX-PLAN.md`. Tasks 29-36 criadas.
+
 ## Atualização de execução (2026-07-02)
 
 - Fase 8 avançou com migração real de testes de fase para `tests/unit/phase` e `tests/integration/phase`.
