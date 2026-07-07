@@ -280,10 +280,16 @@ def _mark_failed_recording(rec_dir: str, rid: str, reason: str = "validation_fai
         target = failed_root / f"{rid}_{stamp}"
         shutil.copytree(rec_dir, target, dirs_exist_ok=True)
 
+        # source_dir: relative path only. Absolute Windows paths leaked
+        # user directories (C:\Users\F745879\AP\AUTOMATA-PRIMUS\...) — BUG-REC-89.
+        try:
+            rel_source = str(pathlib.Path(rec_dir).resolve().relative_to(_PROJECT_ROOT.resolve()))
+        except (ValueError, OSError):
+            rel_source = pathlib.Path(rec_dir).name
         marker = {
             "recording_id": rid,
             "reason": reason,
-            "source_dir": rec_dir,
+            "source_dir": rel_source,
             "failed_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }
         with open(target / "FAILED_MARKER.json", "w", encoding="utf-8") as f:

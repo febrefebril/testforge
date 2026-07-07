@@ -372,11 +372,36 @@
     // DOM contem `R$&nbsp;1.000.000,00` mas expected_value armazena `R$ 1.000.000,00`
     // com espaco regular; runners downstream nao devem se preocupar com essa
     // divergencia — o overlay ja entrega texto canonico.
-    var elText = ((el.textContent||'')
-      .replace(/ /g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .substring(0, 200)) || null;
+    var elTag = (el.tagName || '').toLowerCase();
+    var elText;
+    if (elTag === 'select') {
+      // BUG-REC-30/69: <select>.textContent concatena TODAS options.
+      // Vaza dados corporativos (CNPJs, edificios, datas) e polui selectors.
+      // Extrair apenas placeholder + option selecionada.
+      try {
+        var _parts = [];
+        var _opts = el.options;
+        var _selOpt = (_opts && el.selectedIndex >= 0) ? _opts[el.selectedIndex] : null;
+        var _phOpt = (_opts && _opts.length > 0) ? _opts[0] : null;
+        if (_phOpt && (_phOpt.value === '' || _phOpt.disabled)) {
+          var _phText = (_phOpt.textContent || '').trim();
+          if (_phText) _parts.push(_phText);
+        }
+        if (_selOpt && _selOpt !== _phOpt) {
+          var _selText = (_selOpt.textContent || '').trim();
+          if (_selText) _parts.push(_selText);
+        }
+        elText = _parts.join(' ').replace(/\s+/g, ' ').substring(0, 200) || null;
+      } catch (_e) {
+        elText = null;
+      }
+    } else {
+      elText = ((el.textContent||'')
+        .replace(/ /g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .substring(0, 200)) || null;
+    }
     var materialLabel = _extractMaterialFieldLabel(el);
     // Hotfix 22: Angular reactive forms — formControlName eh chave estavel
     // entre runs (diferente de id dinamico como `mat-input-2`). Se presente,
