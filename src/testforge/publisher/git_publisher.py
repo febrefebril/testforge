@@ -523,6 +523,17 @@ class GitPublisher:
 
         status = metadata.get("recording_status") or metadata.get("status", "unknown")
 
+        # Fase 2 (BUG-REC-01/16): expose per-artifact counts so consumers can
+        # distinguish "asserts curated via Shift+A" (steps.jsonl) from "steps
+        # executed post-compile" (steps.total). Prior confusion: consumers
+        # assumed steps.jsonl.length == test size.
+        artifact_counts = {
+            "raw_events": self._count_lines(rec_dir, "raw_events.jsonl"),
+            "asserts_curated": self._count_lines(rec_dir, "steps.jsonl"),
+            "value_mutations": self._count_lines(rec_dir, "value_mutations.jsonl"),
+            "field_snapshots": self._count_lines(rec_dir, "field_snapshots.jsonl"),
+        }
+
         report = {
             "testforge_version": version,
             "submitted_at": datetime.now(timezone.utc).isoformat(),
@@ -537,11 +548,23 @@ class GitPublisher:
             "criteria_passed": criteria_passed,
             "criteria_total": criteria_total,
             "steps": steps,
+            "artifact_counts": artifact_counts,
             "failures": failures,
             "warnings": warnings,
             "testforge_issue": verdict not in ("pass", "not_evaluated"),
         }
         return report
+
+    @staticmethod
+    def _count_lines(rec_dir: str, filename: str) -> int:
+        p = os.path.join(rec_dir, filename)
+        if not os.path.exists(p):
+            return 0
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                return sum(1 for line in f if line.strip())
+        except Exception:
+            return 0
 
     def _copy_artifacts(
         self,

@@ -219,7 +219,7 @@ BUG-REC-NN — <sev: crit|high|med|low>: <título curto>
 
 ## Bugs encontrados
 
-### BUG-REC-01 — crit: `steps.jsonl` publica apenas asserts, não clicks/fills
+### BUG-REC-01 — **RECLASSIFICADO 2026-07-07 (Fase 2)**: não é bug, é design mal documentado
 - **Encontrado em**: R1 e R2 (ambos)
 - **Sintoma**: R1 tem 26 raw_events mas `steps.jsonl` tem 1 linha. R2 tem 27 raw_events mas `steps.jsonl` tem 2 linhas. Em ambos, todas as linhas são `action=assert`.
 - **Evidência**:
@@ -232,6 +232,14 @@ BUG-REC-NN — <sev: crit|high|med|low>: <título curto>
 - **Causa provável**: publisher/normalizer/overlay grava apenas eventos marcados manualmente via Shift+A (assert) em `steps.jsonl`. Clicks/fills automáticos ficam só em raw_events e diagnostic. Compile principal lê `steps.jsonl` → recebe só asserts isolados sem contexto.
 - **Impact**: compile gera teste vazio (só assert final). Todo trabalho de captura vira 1 linha executável. Impossível ter run-incremental útil.
 - **Prioridade**: **P0** — blocker pra compile funcionar em qualquer recording real que não seja assert-only.
+
+**INVESTIGAÇÃO FASE 2 (2026-07-07)**: `RecordingNormalizer` LÊ `raw_events.jsonl` para actions (click/fill/nav) E `steps.jsonl` apenas como fonte de asserts curados manualmente via Shift+A. Design intencional. Compile funciona corretamente. Anchor R5a (raw_events=17, steps.jsonl=1) → normalizer produz **15 semantic steps** (6 nav + 6 click + 2 fill + 1 assert). Verificado via `tests/contract/test_normalizer_multi_source.py`.
+
+**Ação Fase 2 (não é bug de código)**:
+- Documentado em `docs/ARCHITECTURE-V2.md` seção "Source of truth per artifact"
+- Contract test locks invariant multi-source
+- `submission_report.json` agora expõe `artifact_counts.raw_events` + `artifact_counts.asserts_curated` separados (evita confusão futura)
+- Console output em `cmd_record` clarificado com nota sobre origem das actions
 
 ### BUG-REC-02 — crit: overlay do próprio TestForge sendo gravado como step do usuário
 - **Encontrado em**: R2
@@ -424,13 +432,17 @@ BUG-REC-NN — <sev: crit|high|med|low>: <título curto>
 - **Impact**: user sem contexto pra entender "por que 11 falhas mas 0 healings tentados". Deveria mostrar "Healing desativado (flag `--enable-healing` ausente)" no report.
 - **Prioridade**: **P3** — output verboso quando healing off. Mostrar razão + comando pra ativar.
 
-### BUG-REC-16 — med: submission_report.steps.total=22, mas raw_events só tem 27 e steps.jsonl só 2
+### BUG-REC-16 — **RECLASSIFICADO 2026-07-07 (Fase 2)**: não é bug, é design mal documentado; submission_report agora expõe artifact_counts
 - **Encontrado em**: R2
 - **Sintoma**: `submission_report.steps: {total: 22, passed: 6, healed: 0, failed: 11, blocked: 0, skipped: 5}`. Number "22" veio do compile — não bate com o que `steps.jsonl` mostra (2).
 - **Evidência**: consistência entre report e steps.jsonl não existe.
 - **Causa provável**: compile lê de `diagnostic/steps.jsonl` (22) ou reconstrói de raw_events. Report reflete compile output. `steps.jsonl` principal é dead artifact ou usado por compile diferente. Confuso qual fonte de verdade.
 - **Impact**: dev não sabe qual arquivo confiar. Bug hunting fica cego pela ambiguidade.
 - **Prioridade**: **P3** — clarificar pipeline: doc oficial de "quem escreve steps.jsonl principal" + garantir compile alinha com ele.
+
+**INVESTIGAÇÃO FASE 2 (2026-07-07)**: `submission_report.steps.total=22` vem de `readiness_report.json` (pós-execução). `steps.jsonl=2` é asserts curados. `raw_events=27` é source de actions. **3 arquivos, 3 propósitos**. Cada valor está correto para seu escopo — só faltava expor claramente ao consumidor.
+
+**Ação Fase 2**: `submission_report` agora tem `artifact_counts` dict com contagem explícita de cada fonte. Fim da ambiguidade.
 
 ### BUG-REC-17 — low: `Portal de Massa.zip` no repo sem análise
 - **Encontrado em**: raiz `src/testforge/`

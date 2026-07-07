@@ -42,6 +42,26 @@ All phases are **additive with feature flags** — legacy paths still work uncha
 
 ---
 
+## Source of truth per artifact (BUG-REC-01/16 clarification, Fase 2)
+
+Recording produces multiple artifacts; each has a **specific role** and only one is *source of truth* per data type. Confusion here caused misdiagnosis (see `.planning/bugs-recording-analysis.md`).
+
+| Artifact | Role | Populated by |
+|---|---|---|
+| `raw_events.jsonl` | **Source of truth for user actions** (click/fill/navigation/submit/select_option/postback) | `overlay_inject.js` event listeners → `RecorderController._store` |
+| `steps.jsonl` | **Only asserts** curated manually via Shift+A | `_addStep('assert', ...)` → `_persist_step()` |
+| `value_mutations.jsonl` | Field value changes over time (dedup source for IR) | MutationObserver in overlay |
+| `field_snapshots.jsonl` | Periodic field state polling | `setInterval(_snapshotFields, 2s)` |
+| `keystroke_buffer.jsonl` | Raw keystroke ground truth | keydown listener |
+| `diagnostic/steps.jsonl` | Diagnostic-mode augmented steps (auto-assert derivations) | `DiagnosticSession.replay_check` |
+| `submission_report.json.steps.total` | Count of steps EXECUTED post-compile (via `readiness_report`) | `RunReport` |
+
+**Invariant**: `RecordingNormalizer` consumes `raw_events.jsonl` for actions AND merges asserts from `steps.jsonl` by timestamp. Neither alone is complete. The `SemanticTestCase` output has `stc.steps` that may be N × larger than `steps.jsonl` and roughly ≈ raw_events after dedup.
+
+Do NOT assume `steps.jsonl.length` == number of test steps. It only counts asserts. See `tests/contract/test_normalizer_multi_source.py`.
+
+---
+
 ## How asserts work
 
 ### Capture

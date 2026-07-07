@@ -772,6 +772,16 @@ def cmd_record(args):
             with open(steps_jsonl) as f:
                 curated_count = sum(1 for l in f if l.strip())
         print(f"[TestForge] Eventos brutos: {raw_count} | Asserts (Shift+A): {curated_count}")
+        # Fase 2: clarifica que raw_events é source-of-truth para actions.
+        # BUG-REC-01/16 esclarecido: steps.jsonl armazena APENAS asserts
+        # curados via Shift+A. Actions (click/fill/nav) vêm de raw_events.jsonl.
+        # Compile via RecordingNormalizer consome AMBOS. Ver docs/ARCHITECTURE-V2.md.
+        if raw_count > curated_count:
+            print(
+                f"[TestForge] Nota: steps.jsonl grava apenas asserts curados. "
+                f"Actions (click/fill/navigation) sao lidas de raw_events.jsonl "
+                f"pelo compile."
+            )
         print(f"[TestForge] Sessao salva: recordings/{rid}/")
         if _diag:
             diag_dir = os.path.join(rec_dir, "diagnostic")
