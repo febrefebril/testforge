@@ -75,6 +75,45 @@ def _validate_and_warn_url(url: str) -> bool:
     return has_critical
 
 
+def _prompt_production_domain(url: str, no_interactive: bool = False) -> bool:
+    """BUG-REC-59/86: detecta domínio de PRODUÇÃO CAIXA e alerta QA.
+
+    Recording em prod pode vazar dados reais (cliente, cotação, taxa) e
+    triggerar auditoria interna. Ambientes internos (DES/TQS/HOM) são OK.
+
+    Retorna True se OK para prosseguir, False se cancelado.
+    """
+    if not url:
+        return True
+    try:
+        from testforge.security import is_production_domain
+        hit = is_production_domain(url)
+    except Exception:
+        return True
+    if not hit:
+        return True
+    print(f"[TestForge] [WARN] PRODUCAO DETECTADA: {hit.value}", file=sys.stderr)
+    print(
+        f"[TestForge] Gravar em producao pode:\n"
+        f"  - Vazar dados reais de cliente (CPF, nome, valor)\n"
+        f"  - Gerar carga real em infra\n"
+        f"  - Triggerar auditoria interna\n"
+        f"[TestForge] Recomendado: usar ambiente DES/TQS/HOM (URLs *-des.apps.nprd.caixa, *-tqs.caixa).",
+        file=sys.stderr,
+    )
+    if no_interactive or not sys.stdin.isatty():
+        print("[TestForge] [WARN] Modo nao-interativo — prosseguindo com AVISO registrado.", file=sys.stderr)
+        return True
+    try:
+        resp = input("[TestForge] Continuar mesmo assim? [y/N]: ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        resp = ""
+    if resp not in ("y", "yes", "s", "sim"):
+        print("[TestForge] Gravacao cancelada.", file=sys.stderr)
+        return False
+    return True
+
+
 def _update_recording_status(rec_dir: str, rec_id: str,
                               status: RecordingStatus) -> bool:
     """Atualiza recording_metadata.json com novo status de gravação."""
@@ -561,6 +600,8 @@ def cmd_record(args):
 
     if args.url:
         _validate_and_warn_url(args.url)
+        if not _prompt_production_domain(args.url, no_interactive=no_interactive):
+            return
     _verify_ssl = getattr(args, 'verify_ssl', False)
     with sync_playwright() as pw:
         browser = launch_browser(pw, getattr(args, 'browser', 'chromium'), headless=args.headless, verify_ssl=_verify_ssl)
@@ -737,6 +778,23 @@ def cmd_record(args):
             print(f"[TestForge] Diagnostic: {diag_dir}/")
             if os.path.exists(os.path.join(diag_dir, "scenario.feature")):
                 print(f"[TestForge] Gherkin:    {diag_dir}/scenario.feature")
+        # Fase 1: PII scan pos-recording (observability, alert-only).
+        # Sensitive data preservada. Ver [[feedback-pii-alert-only]].
+        try:
+            from testforge.security import scan_recording, write_report
+            _pii_report = scan_recording(rec_dir)
+            _pii_out = os.path.join(rec_dir, "sensitive_alerts.json")
+            write_report(_pii_report, _pii_out)
+            if _pii_report.total_hits or _pii_report.production_hit:
+                print(f"[TestForge] Sensitive data detectado (alert_only):")
+                if _pii_report.production_hit:
+                    print(f"  [CRITICAL] Producao: {_pii_report.production_hit.value}")
+                for sev, cnt in sorted(_pii_report.by_severity().items()):
+                    print(f"  {sev}: {cnt}")
+                print(f"  Detalhes: {_pii_out}")
+                print(f"  AVISO: revisar antes de export publico.")
+        except Exception as _pii_exc:
+            print(f"[TestForge] [WARN] PII scan falhou (nao-fatal): {_pii_exc}", file=sys.stderr)
 
     # Q4 — `--diagnostic-mode` pula compile/run. `--pipeline-and-diagnostic-mode`
     # roda ambos. Apenas --diagnostic-mode (sem flag pipeline) retorna cedo.
