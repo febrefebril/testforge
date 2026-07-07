@@ -1144,6 +1144,34 @@
 
   // ======== EVENT LISTENERS ========
 
+  // BUG-REC-02 fix: TestForge overlay elements (id `tf-*`, class `__tf-*`)
+  // were being captured as user clicks (#tf-btn-assert, #tf-btn-stop, etc)
+  // → corrupted recording with tf-btn-* selectors that don't exist at replay.
+  // Predicate walks ancestors to catch clicks INSIDE overlay container too.
+  function _isOverlayElement(el) {
+    if (!el || !el.closest) return false;
+    // Direct id/class prefix check
+    try {
+      if (el.id && String(el.id).indexOf('tf-') === 0) return true;
+      if (el.classList) {
+        for (var i = 0; i < el.classList.length; i++) {
+          var c = el.classList[i];
+          if (c && (c.indexOf('tf-') === 0 || c.indexOf('__tf-') === 0)) return true;
+        }
+      }
+    } catch (_e) {}
+    // Ancestor check — click inside overlay container
+    try {
+      var container = el.closest(
+        '#tf-overlay, #tf-assert-menu, #tf-assert-confirm, #tf-stop-confirm,' +
+        ' #tf-bug-modal, #tf-toast, [id^="tf-"], [class*="__tf-"]'
+      );
+      if (container) return true;
+    } catch (_e) {}
+    return false;
+  }
+  window.__tfIsOverlayElement = _isOverlayElement;
+
   // ---- Pointer guard for assert mode ----
   window.addEventListener('pointerdown', function(e) {
     if (window.__tfAssertWaiting) {
@@ -1166,6 +1194,8 @@
   // ---- Click capture (primary) ----
   window.addEventListener('click', function(e) {
     var el = e.target;
+    // BUG-REC-02: skip clicks on overlay itself (tf-btn-assert, tf-btn-stop, etc)
+    if (_isOverlayElement(el)) return;
     if (window.__tfAssertWaiting) {
       if (e.target && e.target.closest && e.target.closest('#tf-assert-menu, #tf-assert-confirm, #tf-overlay, #tf-stop-confirm')) return;
       e.preventDefault();
@@ -1249,12 +1279,16 @@
     if (window.__tfAssertWaiting) return;
     var el = e.target;
     if (!el) return;
+    // BUG-REC-02: skip overlay inputs (search/prompt inputs in overlay UI)
+    if (_isOverlayElement(el)) return;
     _scheduleFillFromMutation(el);
   }, true);
 
   window.addEventListener('change', function(e) {
     if (window.__tfAssertWaiting) return;
     var el = e.target;
+    // BUG-REC-02: skip overlay
+    if (_isOverlayElement(el)) return;
     if (el && (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA')) {
       var key = _fillKey(el);
       var val = (el.value || '').trim();
@@ -1289,6 +1323,8 @@
     if (window.__tfAssertWaiting) return;
     var el = e.target;
     if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return;
+    // BUG-REC-02: skip overlay paste
+    if (_isOverlayElement(el)) return;
     setTimeout(function() {
       try {
         var key = _fillKey(el);

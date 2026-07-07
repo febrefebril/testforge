@@ -255,7 +255,7 @@ BUG-REC-NN — <sev: crit|high|med|low>: <título curto>
 - **Impact**: (a) recording contamina com steps inutilizáveis; (b) run reporta falso-positivo — 3 failures que não são bugs da aplicação; (c) confunde QA que vê "erro" quando na verdade foi ação sobre próprio TestForge.
 - **Prioridade**: **P0** — corrompe recording independente do sistema testado.
 
-### BUG-REC-03 — crit: healing desabilitado por default em run-incremental
+### BUG-REC-03 — **PARCIALMENTE RECLASSIFICADO 2026-07-07 (Fase 3)**
 - **Encontrado em**: R2
 - **Sintoma**: 11 failures reportam "Healing desativado". `total_healings: 0`. `healings_tentados: 0`.
 - **Evidência**:
@@ -266,7 +266,9 @@ BUG-REC-NN — <sev: crit|high|med|low>: <título curto>
     (11 ocorrências)
   metrics.json: total_healings: 0, healings_tentados: 0
   ```
-- **Causa provável**: run-incremental exige flag `--enable-healing`. Default OFF. Fere propósito do produto — self-healing é o diferencial.
+- **Causa provável** (revisada Fase 3): `run-incremental` standalone JÁ tem healing default ON (`--no-healing` é opt-out). MAS `pilot_mode` em `cmd_record` (linha 262) tinha `no_healing=True` **hardcoded** — daí "Healing desativado" em CADA failure dos recordings R2/R3/R6* que foram pilot runs pós-gravação, não user-triggered.
+
+**Fix Fase 3**: pilot mode default agora `healing=ON`. Nova flag opt-in `--pilot-strict-selectors` mantém stress test antigo.
 - **Impact**: user rodou vezes achando que healing tá quebrado, mas nem foi tentado. Métricas de assert_hit_rate ficam artificialmente baixas — não reflete capacidade real.
 - **Prioridade**: **P0** — default deve ser healing ON. Flag para desativar (`--no-healing`), não pra ativar.
 

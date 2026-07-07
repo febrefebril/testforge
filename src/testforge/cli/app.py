@@ -254,12 +254,18 @@ def _run_post_recording_validation(rec_dir: str, rid: str, args,
             out_dir = os.path.join(rec_dir, "_pilot_tmp")
             script_path = PlaywrightCompiler().compile(stc, out_dir)
             from testforge.runner.incremental_runner import IncrementalRunner
+            # BUG-REC-03 (Fase 3): pilot mode previously hardcoded
+            # no_healing=True which produced "Healing desativado" cascade
+            # failures em recordings CAIXA (R2/R3/R6*) — QA achou que healing
+            # não funcionava. Default agora healing=ON (comportamento produção).
+            # Flag opt-in --pilot-strict-selectors mantém stress test antigo.
+            _pilot_no_healing = getattr(args, "pilot_strict_selectors", False)
             runner = IncrementalRunner(
                 script_path=script_path,
                 headless=True,
                 timeout=90,
                 stop_on_failure=False,
-                no_healing=True,
+                no_healing=_pilot_no_healing,
                 capture=False,
                 output_root=os.path.join(rec_dir, "_pilot_runs"),
             )
@@ -2548,6 +2554,10 @@ def main():
                      help="Validar gravacao (completude + readiness gate) antes de marcar como pronta")
     rec.add_argument("--pilot-mode", action="store_true",
                      help="Modo piloto: habilita validacao automatica antes de READY (--validate-before-ready)")
+    rec.add_argument("--pilot-strict-selectors", dest="pilot_strict_selectors",
+                     action="store_true",
+                     help="(Fase 3) Roda pilot com --no-healing para stress-test dos "
+                          "selectors puros. Default: healing ON (comportamento producao).")
     rec.add_argument("--evidence-level", choices=["light", "full"], default="light",
                      help="Nivel de evidencia: light (padrao, sem screenshot por evento) ou full (screenshot + DOM por evento)")
     rec.add_argument("--use-cdp-recorder", dest="use_cdp_recorder", action="store_true", default=True,
