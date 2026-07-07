@@ -1,0 +1,16 @@
+{
+  "policy": "alert_only",
+  "masking_applied": false,
+  "totals": {
+    "hits": 0,
+    "by_pattern": {
+      "production_domain": 1
+    },
+    "by_severity": {
+      "critical": 1
+    },
+    "critical": 1
+  },
+  "production_domain_detected": true,
+  "sources_with_hits": []
+}

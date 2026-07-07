@@ -1,0 +1,24 @@
+{
+  "policy": "alert_only",
+  "masking_applied": false,
+  "totals": {
+    "hits": 28,
+    "by_pattern": {
+      "keycloak_session": 22,
+      "cpf": 4,
+      "password": 1,
+      "pin": 1
+    },
+    "by_severity": {
+      "high": 26,
+      "critical": 2
+    },
+    "critical": 2
+  },
+  "production_domain_detected": false,
+  "sources_with_hits": [
+    "field_snapshots",
+    "raw_events",
+    "value_mutations"
+  ]
+}

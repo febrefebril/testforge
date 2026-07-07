@@ -1,0 +1,60 @@
+{
+  "recording_id": "calculadora1",
+  "application": "web",
+  "base_url": "https://simuladorhabitacao.caixa.gov.br/home",
+  "system": "SIOPI",
+  "suite": "suite exploratoria",
+  "test_case": "testar todos os calculos",
+  "started_at": "2026-07-02T18:38:41.645826+00:00",
+  "finished_at": "2026-07-02T18:39:58.126179+00:00",
+  "status": "intent_complete",
+  "recording_status": "intent_complete",
+  "status_history": [
+    {
+      "status": "recording",
+      "timestamp": "2026-07-02T18:38:43.050926+00:00",
+      "reason": "Recording started",
+      "metadata": {
+        "application": "web",
+        "base_url": "https://simuladorhabitacao.caixa.gov.br/home",
+        "system": "SIOPI",
+        "suite": "suite exploratoria",
+        "test_case": "testar todos os calculos"
+      }
+    },
+    {
+      "status": "recording",
+      "timestamp": "2026-07-02T18:38:43.050943+00:00",
+      "reason": "Recording started",
+      "metadata": {
+        "application": "web",
+        "base_url": "https://simuladorhabitacao.caixa.gov.br/home"
+      }
+    },
+    {
+      "status": "stopped",
+      "timestamp": "2026-07-02T18:39:58.126214+00:00",
+      "reason": "Recording stopped by user",
+      "metadata": {}
+    },
+    {
+      "status": "completed_raw",
+      "timestamp": "2026-07-02T18:39:58.153707+00:00",
+      "reason": "Recording finalized",
+      "metadata": {}
+    },
+    {
+      "status": "intent_complete",
+      "timestamp": "2026-07-02T18:39:58.671249+00:00",
+      "reason": "compile --check: intent_complete",
+      "metadata": {}
+    }
+  ],
+  "fingerprint": {
+    "capture_schema_version": 4,
+    "testforge_version": "0.4.2",
+    "overlay_inject_sha256": "92379794bc5176b8ab26e59a5b914d07d2caae0deaa48fbeb46dcae5b6e5082c",
+    "git_head_sha": "4b780c92fe33e984ae44d6eae4c88da644d72d24",
+    "recorded_at": "2026-07-02T18:38:43.050848+00:00"
+  }
+}

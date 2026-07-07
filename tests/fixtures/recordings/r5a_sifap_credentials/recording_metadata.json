@@ -1,0 +1,60 @@
+{
+  "recording_id": "REC-20260702-144218",
+  "application": "web",
+  "base_url": "https://sifap-frontend-internet-v2-des.apps.nprd.caixa/",
+  "system": "SIFAP",
+  "suite": "Autentica\u00e7\u00e3o",
+  "test_case": "Deve logar no SIFAP com perfil de internet",
+  "started_at": "2026-07-02T17:42:18.704721+00:00",
+  "finished_at": "2026-07-02T17:42:46.587856+00:00",
+  "status": "intent_complete",
+  "recording_status": "intent_complete",
+  "status_history": [
+    {
+      "status": "recording",
+      "timestamp": "2026-07-02T17:42:20.130767+00:00",
+      "reason": "Recording started",
+      "metadata": {
+        "application": "web",
+        "base_url": "https://sifap-frontend-internet-v2-des.apps.nprd.caixa/",
+        "system": "SIFAP",
+        "suite": "Autentica\u00e7\u00e3o",
+        "test_case": "Deve logar no SIFAP com perfil de internet"
+      }
+    },
+    {
+      "status": "recording",
+      "timestamp": "2026-07-02T17:42:20.130781+00:00",
+      "reason": "Recording started",
+      "metadata": {
+        "application": "web",
+        "base_url": "https://sifap-frontend-internet-v2-des.apps.nprd.caixa/"
+      }
+    },
+    {
+      "status": "stopped",
+      "timestamp": "2026-07-02T17:42:46.587877+00:00",
+      "reason": "Recording stopped by user",
+      "metadata": {}
+    },
+    {
+      "status": "completed_raw",
+      "timestamp": "2026-07-02T17:42:46.602171+00:00",
+      "reason": "Recording finalized",
+      "metadata": {}
+    },
+    {
+      "status": "intent_complete",
+      "timestamp": "2026-07-02T17:42:47.664663+00:00",
+      "reason": "compile --check: intent_complete",
+      "metadata": {}
+    }
+  ],
+  "fingerprint": {
+    "capture_schema_version": 4,
+    "testforge_version": "0.1.0",
+    "overlay_inject_sha256": "92379794bc5176b8ab26e59a5b914d07d2caae0deaa48fbeb46dcae5b6e5082c",
+    "git_head_sha": "4b780c92fe33e984ae44d6eae4c88da644d72d24",
+    "recorded_at": "2026-07-02T17:42:20.130698+00:00"
+  }
+}

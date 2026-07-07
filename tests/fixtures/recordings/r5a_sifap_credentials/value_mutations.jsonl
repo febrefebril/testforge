@@ -1,0 +1,5 @@
+{"type": "value_mutation", "timestamp": "2026-07-02T17:42:21.105Z", "fingerprint": "input#[name=]", "value": "t"}
+{"type": "value_mutation", "timestamp": "2026-07-02T17:42:23.524Z", "fingerprint": "input#username[name=username]", "value": "934.765.700-02"}
+{"type": "value_mutation", "timestamp": "2026-07-02T17:42:24.463Z", "fingerprint": "input#[name=]", "value": "t"}
+{"type": "value_mutation", "timestamp": "2026-07-02T17:42:30.606Z", "fingerprint": "input#[name=]", "value": ""}
+{"type": "value_mutation", "timestamp": "2026-07-02T17:42:30.606Z", "fingerprint": "input#[name=]", "value": ""}
