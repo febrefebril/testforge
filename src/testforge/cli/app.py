@@ -1218,6 +1218,59 @@ def cmd_audit(args):
     auditor.print_report(report)
 
 
+def cmd_audit_pii(args):
+    """Detecta dados sensiveis em gravacao. Observability layer.
+
+    Contrato [[feedback-pii-alert-only]]: NAO mascara valores. Preserva massa
+    de teste. Relatorio informa QA para revisao antes de export publico.
+    """
+    import json as _json
+
+    from testforge.security import scan_recording, write_report
+
+    rec_arg = args.recording
+    rec_dir = rec_arg
+    if not os.path.isdir(rec_dir):
+        candidate = _PROJECT_ROOT / "recordings" / rec_arg
+        if candidate.is_dir():
+            rec_dir = str(candidate)
+    if not os.path.isdir(rec_dir):
+        print(f"[TestForge] Gravacao nao encontrada: {rec_arg}")
+        return 2
+
+    report = scan_recording(rec_dir)
+
+    out_path = args.out or os.path.join(rec_dir, "sensitive_alerts.json")
+    written = write_report(report, out_path)
+
+    if args.json:
+        print(_json.dumps(report.as_dict(), indent=2, ensure_ascii=False))
+    else:
+        print(f"[TestForge] audit-pii: {report.recording_id}")
+        print(f"  Gravacao: {report.recording_dir}")
+        print(f"  Base URL: {report.base_url}")
+        print(f"  Policy: alert_only (masking_applied: false)")
+        print(f"  Total hits: {report.total_hits}")
+        if report.production_hit:
+            print(f"  [AVISO] Producao detectada: {report.production_hit.value}")
+        print(f"  Por severidade:")
+        for sev, cnt in sorted(report.by_severity().items()):
+            print(f"    {sev}: {cnt}")
+        print(f"  Por padrao:")
+        for pat, cnt in sorted(report.by_pattern().items()):
+            print(f"    {pat}: {cnt}")
+        print(f"  Fontes com hits: {len(report.hits_by_source)}")
+        for src, hits in report.hits_by_source.items():
+            print(f"    {src}: {len(hits)} hits")
+        print(f"  Relatorio detalhado: {written}")
+        print(f"  Acao sugerida: revisar antes de export publico.")
+
+    if args.fail_on_critical and report.critical_count() > 0:
+        print(f"[TestForge] fail-on-critical: {report.critical_count()} hit(s) severity=critical", file=sys.stderr)
+        return 1
+    return 0
+
+
 def cmd_run(args):
     """Executa script Playwright inline com healing L0→L3 via CuradorAutomatico.
 
@@ -2511,6 +2564,29 @@ def main():
     audit_cmd = sub.add_parser("audit", help="Auditar gravacao: metricas de qualidade, eventos, compilacao")
     audit_cmd.add_argument("recording", help="ID da gravacao (ex: REC-20260613) ou caminho")
     audit_cmd.set_defaults(func=cmd_audit)
+
+    # audit-pii (Fase 1 recording bugs — observability only, valores preservados)
+    audit_pii = sub.add_parser(
+        "audit-pii",
+        help="Detecta dados sensiveis em gravacao (CPF, CNPJ, senha, "
+             "Keycloak, producao). NAO mascara — apenas reporta.",
+    )
+    audit_pii.add_argument("recording", help="Caminho da gravacao ou ID sob recordings/")
+    audit_pii.add_argument(
+        "--json",
+        action="store_true",
+        help="Emite resultado em JSON (default: sumario tabular).",
+    )
+    audit_pii.add_argument(
+        "--fail-on-critical",
+        action="store_true",
+        help="Exit code != 0 se houver hits severity=critical (uso em pre-push hook).",
+    )
+    audit_pii.add_argument(
+        "--out",
+        help="Grava relatorio detalhado em <path> (default: <rec>/sensitive_alerts.json).",
+    )
+    audit_pii.set_defaults(func=cmd_audit_pii)
 
     # admin (Sprint 0: Z1 install-pat helper)
     admin = sub.add_parser("admin", help="(Sprint 0) Comandos administrativos (instalar PAT, etc)")

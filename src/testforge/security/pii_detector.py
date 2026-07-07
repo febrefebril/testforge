@@ -68,7 +68,11 @@ _CPF_RE = re.compile(r"(?<!\d)\d{3}\.?\d{3}\.?\d{3}-?\d{2}(?!\d)")
 # are handled by re-scanning after each hit.
 _CNPJ_RE = re.compile(r"(?<!\d)\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2}")
 _EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
-_PHONE_BR_RE = re.compile(r"\(?\d{2}\)?\s?\d{4,5}-?\d{4}")
+_PHONE_BR_RE = re.compile(
+    # Only match when phone has explicit separator: parens, hyphen, or space.
+    # Prevents 11-digit CPFs unformatted from matching.
+    r"(?:\(\d{2}\)|\d{2})[\s-]?\d{4,5}[\s-]\d{4}"
+)
 _MATRICULA_CAIXA_RE = re.compile(r"\bc\d{5,7}\b", re.IGNORECASE)
 # Corporate filename: e.g. CNT.EMP.MZ.BMX0.PRONAMPE.D260625.R4
 _CORP_FILENAME_RE = re.compile(
@@ -215,6 +219,13 @@ def detect(
             )
         )
     for match in _PHONE_BR_RE.finditer(s):
+        # Skip if overlaps with CPF/CNPJ hit (11-digit CPFs can look like phones)
+        if any(
+            h.match_start <= match.start() < h.match_end
+            for h in hits
+            if h.pattern in (PiiPattern.CPF, PiiPattern.CNPJ)
+        ):
+            continue
         hits.append(
             PiiHit(
                 pattern=PiiPattern.PHONE_BR,
