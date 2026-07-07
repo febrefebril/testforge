@@ -451,7 +451,7 @@ BUG-REC-NN — <sev: crit|high|med|low>: <título curto>
 - **Sintoma**: arquivo `Portal de Massa.zip` sem extração/análise. Terceiro bundle não processado.
 - **Prioridade**: **P4** — deve extrair e analisar para completar cobertura CAIXA (3 recordings, não 2).
 
-### BUG-REC-19 — crit: máscara CPF gera value_mutation por char + duplicata 3-4x mesmo timestamp
+### BUG-REC-19 — **FIXED Fase 4 (2026-07-07)** — value_mutation queue dedup consecutive by fingerprint
 - **Encontrado em**: R3
 - **Sintoma**: usuário digitou CPF `019.493.184-60`. Value_mutations tem 90 linhas para 18 fills (~5x amplification). Cada value aparece 3-4x com timestamp idêntico.
 - **Evidência**:
@@ -992,7 +992,7 @@ BUG-REC-NN — <sev: crit|high|med|low>: <título curto>
 - **Impact**: selector frágil — se Material rebuild interno, quebra.
 - **Prioridade**: **P3** — normalizer detecta `.mat-button-wrapper` filho e promove pro `<button>` ancestral.
 
-### BUG-REC-51 — crit: currency mask R$ typing gera 13+ mutations pra 1 valor
+### BUG-REC-51 — **FIXED Fase 4 (2026-07-07)** — value setter hook dedups consecutive identical mutations
 - **Encontrado em**: R7a, R7b (SIOPI)
 - **Sintoma**: user digita `1000` no campo currency. Value_mutations sequence:
   ```
@@ -1011,7 +1011,7 @@ BUG-REC-NN — <sev: crit|high|med|low>: <título curto>
 - **Evidência**: `wc -l` value_mutations R7b = 85 linhas, sempre `mat-input-N`. Não há promotion pra placeholder/accessible_name.
 - **Prioridade**: **P0 (regressão)** — verificar se `966f3bc` afetou fingerprint fill ou value_mutation. Value_mutation collector precisa mesma demote logic.
 
-### BUG-REC-53 — crit: currency value com espaços leading/trailing em fill event
+### BUG-REC-53 — **FIXED Fase 4 (2026-07-07)** — value trimmed before push to queue
 - **Encontrado em**: R7a, R7b
 - **Sintoma**: fill values incluem espaços:
   ```
@@ -1024,7 +1024,7 @@ BUG-REC-NN — <sev: crit|high|med|low>: <título curto>
 - **Impact**: compile emit `page.fill(loc, " 1.000,00 ")` com espaços. Máscara pode rejeitar (parser não aceita leading space) → replay quebra.
 - **Prioridade**: **P0** — `.strip()` em currency values antes de escrever raw_events + steps. Mesmo tratamento para date masks.
 
-### BUG-REC-54 — crit: **REGRESSÃO CONFIRMADA** — `DD/MM/AAAA` placeholder capturado como value
+### BUG-REC-54 — **FIXED Fase 4 (2026-07-07)** — cross-source placeholder skip (setter hook + _scheduleFillFromMutation)
 - **Encontrado em**: R7a, R7b
 - **Sintoma**: value_mutations linha 6 R7a:
   ```

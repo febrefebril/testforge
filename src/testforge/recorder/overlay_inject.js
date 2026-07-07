@@ -166,6 +166,10 @@
   window.__tfPendingSubmit = null;
   window.__tfLastFillValue = {};
   window.__tfLastSnapshotKey = {};
+  // BUG-REC-19/51/52 (Fase 4): dedup consecutive value_mutations por fingerprint.
+  // Máscara Angular currency reformatava a cada char (13 mutations pra '1.000,00');
+  // CPF mask 5x amplification. Última wins.
+  window.__tfLastMutationByFp = {};
   window.__tfFillDebounceTimers = window.__tfFillDebounceTimers || new WeakMap();
   // Hotfix 22: era 400ms; digitacao humana em campo currencymask (SIOPI) pausa
   // ~500-700ms entre digitos enquanto Angular formatta -> a cada pausa disparava
@@ -906,6 +910,10 @@
         var key = _fillKey(el);
         var val = (el.value || '').trim();
         if (val === '') return;
+        // BUG-REC-54 (Fase 4): skip placeholder as value ('DD/MM/AAAA', 'c999999').
+        var ph = '';
+        try { ph = (el.placeholder || '').trim(); } catch (_pe) {}
+        if (ph && val === ph) return;
         if (window.__tfLastFillValue[key] === val) return;
         window.__tfLastFillValue[key] = val;
         _pushEvent('fill', el);
@@ -933,12 +941,28 @@
           }
         } catch(_e) {}
         orig.set.call(this, v);
-        window.__tfValueMutationQueue.push({
-          type: 'value_mutation',
-          timestamp: new Date().toISOString(),
-          fingerprint: this.tagName.toLowerCase() + '#' + (this.id||'') + '[name=' + (this.name||'') + ']',
-          value: String(v).substring(0, 200)
-        });
+        try {
+          var _vRaw = String(v).substring(0, 200);
+          // BUG-REC-53 (Fase 4): strip whitespace leading/trailing.
+          // Currency mask emitia ' 1.000,00 ' com padding.
+          var _vTrim = _vRaw.trim();
+          // BUG-REC-54 (Fase 4): skip placeholder capture (`DD/MM/AAAA`,
+          // `c999999`, `Selecione`). f1c1881 corrigiu fill events; value_mutations
+          // continuava vazando. Cross-source fix.
+          var _ph = '';
+          try { _ph = (this.placeholder || '').trim(); } catch (_pe) {}
+          if (_ph && _vTrim === _ph) return;
+          // BUG-REC-19/51: dedup consecutive identical mutations.
+          var _fp = this.tagName.toLowerCase() + '#' + (this.id||'') + '[name=' + (this.name||'') + ']';
+          if (window.__tfLastMutationByFp[_fp] === _vTrim) return;
+          window.__tfLastMutationByFp[_fp] = _vTrim;
+          window.__tfValueMutationQueue.push({
+            type: 'value_mutation',
+            timestamp: new Date().toISOString(),
+            fingerprint: _fp,
+            value: _vTrim
+          });
+        } catch (_pushErr) {}
         try { _scheduleFillFromMutation(this); } catch(_e) {}
       },
       configurable: true
