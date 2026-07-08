@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Network Payload Only</title>
+<style>
+  body { font-family: sans-serif; max-width: 500px; margin: 40px auto; padding: 20px; }
+  label { display: block; margin-top: 16px; font-weight: bold; }
+  input { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
+  button { margin-top: 20px; padding: 10px 24px; background: #8b5cf6; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+  .note { color: #666; font-size: 0.85em; margin-top: 4px; }
+</style>
+</head>
+<body>
+  <h1>Network Payload Only</h1>
+  <p>Formulario onde campos sao enviados via POST e precisam ser reconstruidos do payload de rede.</p>
+  <form id="payloadForm" action="/api/save" method="POST">
+    <label for="cpf">CPF</label>
+    <input type="text" id="cpf" name="cpf" placeholder="000.000.000-00">
+    <p class="note">Campo com mascara que suprime input event. Valor so existe no payload POST.</p>
+
+    <label for="renda">Renda Mensal</label>
+    <input type="text" id="renda" name="renda" placeholder="Renda mensal">
+    <p class="note">Outro campo problemático.</p>
+
+    <button type="submit" id="enviar">Enviar</button>
+  </form>
+
+  <div id="output" style="margin-top: 20px;"></div>
+
+  <script>
+    // Suppress input events on both fields
+    document.getElementById('cpf').addEventListener('input', function(e) {
+      e.preventDefault();
+    });
+    document.getElementById('renda').addEventListener('input', function(e) {
+      e.preventDefault();
+    });
+
+    // Set values programmatically
+    document.getElementById('cpf').addEventListener('keyup', function(e) {
+      if (e.key.length === 1) this.value = this.value + e.key;
+    });
+    document.getElementById('renda').addEventListener('keyup', function(e) {
+      if (e.key.length === 1) this.value = this.value + e.key;
+    });
+
+    document.getElementById('payloadForm').addEventListener('submit', function(e) {
+      // Let form submit naturally — POST body contains field values
+      console.log('Submitting: cpf=' + document.getElementById('cpf').value +
+        ', renda=' + document.getElementById('renda').value);
+    });
+  </script>
+</body>
+</html>

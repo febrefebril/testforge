@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>LAB-14 — Angular Material mat-tab-group + mat-slide-toggle (Simulated)</title>
+<style>
+  body { font-family: Roboto, sans-serif; max-width: 680px; margin: 2em auto; padding: 0 1em; background: #fafafa; }
+  h1 { font-size: 1.4em; color: #333; border-bottom: 2px solid #673ab7; padding-bottom: .5em; }
+  /* mat-tab-group simulation */
+  .mat-tab-header {
+    display: flex; border-bottom: 2px solid #e0e0e0; margin-bottom: 1.2em;
+  }
+  [role="tab"] {
+    padding: .7em 1.4em; cursor: pointer; font-size: .95em; color: #666;
+    border-bottom: 2px solid transparent; margin-bottom: -2px; user-select: none;
+  }
+  [role="tab"].mat-tab-label-active {
+    color: #673ab7; border-bottom-color: #673ab7; font-weight: 500;
+  }
+  [role="tab"]:hover { background: #f3e5f5; }
+  [role="tabpanel"] { display: none; }
+  [role="tabpanel"].active { display: block; }
+  /* Form fields */
+  .mat-form-field { margin: .9em 0; }
+  .mat-form-field label { display: block; font-size: .85em; color: #555; margin-bottom: .3em; }
+  .mat-form-field input, .mat-form-field select {
+    width: 100%; padding: .5em .7em; border: 1px solid #bbb; border-radius: 4px; font-size: .95em; box-sizing: border-box;
+  }
+  /* mat-slide-toggle simulation */
+  .mat-slide-toggle-field { display: flex; align-items: center; gap: .8em; margin: 1em 0; }
+  mat-slide-toggle {
+    display: inline-block; width: 40px; height: 20px; border-radius: 10px; background: #ccc;
+    position: relative; cursor: pointer; transition: background .2s;
+  }
+  mat-slide-toggle[aria-checked="true"] { background: #673ab7; }
+  mat-slide-toggle::after {
+    content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; top: 2px; left: 2px; transition: left .2s;
+  }
+  mat-slide-toggle[aria-checked="true"]::after { left: 22px; }
+  .toggle-label { font-size: .95em; color: #333; }
+  button[type="submit"] {
+    margin-top: 1.5em; padding: .7em 2em; background: #673ab7; color: #fff;
+    border: none; border-radius: 4px; font-size: 1em; cursor: pointer;
+  }
+  #result { margin-top: 1.5em; padding: 1em; background: #e8f5e9; border-radius: 4px; display: none; font-family: monospace; }
+</style>
+</head>
+<body>
+  <h1>LAB-14 — mat-tab-group + mat-slide-toggle</h1>
+
+  <!-- mat-tab-group -->
+  <div class="mat-tab-header" role="tablist" aria-label="Formulário por seções">
+    <div role="tab" id="tab-0" aria-selected="true" aria-controls="panel-0"
+         class="mat-tab-label mat-tab-label-active" tabindex="0"
+         onclick="switchTab(0)">Dados Pessoais</div>
+    <div role="tab" id="tab-1" aria-selected="false" aria-controls="panel-1"
+         class="mat-tab-label" tabindex="-1"
+         onclick="switchTab(1)">Endereço</div>
+    <div role="tab" id="tab-2" aria-selected="false" aria-controls="panel-2"
+         class="mat-tab-label" tabindex="-1"
+         onclick="switchTab(2)">Configurações</div>
+  </div>
+
+  <!-- Tab 0: Dados Pessoais -->
+  <div id="panel-0" role="tabpanel" aria-labelledby="tab-0" class="active">
+    <div class="mat-form-field">
+      <label for="nome">Nome completo</label>
+      <input id="nome" aria-label="Nome completo" placeholder="Digite o nome">
+    </div>
+    <div class="mat-form-field">
+      <label for="cpf">CPF</label>
+      <input id="cpf" aria-label="CPF" placeholder="000.000.000-00">
+    </div>
+  </div>
+
+  <!-- Tab 1: Endereço -->
+  <div id="panel-1" role="tabpanel" aria-labelledby="tab-1">
+    <div class="mat-form-field">
+      <label for="cep">CEP</label>
+      <input id="cep" aria-label="CEP" placeholder="00000-000">
+    </div>
+    <div class="mat-form-field">
+      <label for="cidade">Cidade</label>
+      <input id="cidade" aria-label="Cidade" placeholder="Digite a cidade">
+    </div>
+    <div class="mat-form-field">
+      <label for="uf">Estado</label>
+      <select id="uf" aria-label="Estado">
+        <option value="">Selecione...</option>
+        <option value="SP">São Paulo</option>
+        <option value="RJ">Rio de Janeiro</option>
+        <option value="MG">Minas Gerais</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Tab 2: Configurações (com slide-toggle) -->
+  <div id="panel-2" role="tabpanel" aria-labelledby="tab-2">
+    <div class="mat-slide-toggle-field">
+      <mat-slide-toggle id="mat-slide-toggle-0" role="switch"
+                        aria-label="Receber notificações" aria-checked="false"
+                        tabindex="0" onclick="toggleSwitch('mat-slide-toggle-0')">
+      </mat-slide-toggle>
+      <span class="toggle-label">Receber notificações</span>
+    </div>
+
+    <div class="mat-slide-toggle-field">
+      <mat-slide-toggle id="mat-slide-toggle-1" role="switch"
+                        aria-label="Autenticação de dois fatores" aria-checked="true"
+                        tabindex="0" onclick="toggleSwitch('mat-slide-toggle-1')">
+      </mat-slide-toggle>
+      <span class="toggle-label">Autenticação de dois fatores</span>
+    </div>
+
+    <div class="mat-slide-toggle-field">
+      <mat-slide-toggle id="mat-slide-toggle-2" role="switch"
+                        aria-label="Modo escuro" aria-checked="false"
+                        tabindex="0" onclick="toggleSwitch('mat-slide-toggle-2')">
+      </mat-slide-toggle>
+      <span class="toggle-label">Modo escuro</span>
+    </div>
+  </div>
+
+  <button type="submit" id="enviar" onclick="showResult()">Enviar</button>
+  <div id="result"></div>
+
+<script>
+  function switchTab(idx) {
+    var tabs = document.querySelectorAll('[role="tab"]');
+    var panels = document.querySelectorAll('[role="tabpanel"]');
+    tabs.forEach(function(t, i) {
+      t.setAttribute('aria-selected', i === idx ? 'true' : 'false');
+      t.className = 'mat-tab-label' + (i === idx ? ' mat-tab-label-active' : '');
+      t.tabIndex = i === idx ? 0 : -1;
+    });
+    panels.forEach(function(p, i) {
+      if (i === idx) p.classList.add('active');
+      else p.classList.remove('active');
+    });
+  }
+
+  function toggleSwitch(id) {
+    var el = document.getElementById(id);
+    var current = el.getAttribute('aria-checked') === 'true';
+    el.setAttribute('aria-checked', current ? 'false' : 'true');
+  }
+
+  function showResult() {
+    var data = {
+      nome: document.getElementById('nome').value,
+      cpf: document.getElementById('cpf').value,
+      cep: document.getElementById('cep').value,
+      cidade: document.getElementById('cidade').value,
+      uf: document.getElementById('uf').value,
+      notificacoes: document.getElementById('mat-slide-toggle-0').getAttribute('aria-checked'),
+      twofa: document.getElementById('mat-slide-toggle-1').getAttribute('aria-checked'),
+      darkMode: document.getElementById('mat-slide-toggle-2').getAttribute('aria-checked'),
+    };
+    var el = document.getElementById('result');
+    el.textContent = JSON.stringify(data, null, 2);
+    el.style.display = 'block';
+  }
+</script>
+</body>
+</html>

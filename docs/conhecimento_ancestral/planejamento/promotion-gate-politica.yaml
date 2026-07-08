@@ -1,0 +1,98 @@
+version: "1.0"
+kind: "PromotionGatePolicy"
+
+states:
+  - experimental
+  - shadow_validated
+  - canary
+  - trusted
+  - rejected
+  - deprecated
+
+thresholds:
+  min_reviewed_observations_shadow_validated: 30
+  min_reviewed_observations_trusted: 100
+  min_oracle_precision: 0.95
+  max_false_acceptance_rate: 0.02
+  max_false_heal_rate: 0.02
+  max_llm_escalation_rate: 0.10
+  min_semantic_gap: 0.15
+  min_uniqueness_score: 0.85
+  min_actionability_score: 0.95
+
+required_artifacts:
+  evidence_package: true
+  screenshot_before: true
+  screenshot_after: true
+  dom_before: true
+  dom_after: true
+  accessibility_tree_before: true
+  accessibility_tree_after: true
+  score_breakdown: true
+  taxonomy_code: true
+  technology_profile: true
+  post_action_oracle: true
+
+forbid_promotion_if:
+  - false_heal_reviewed
+  - taxonomy_wrong_unresolved
+  - technology_profile_wrong_unresolved
+  - oracle_conflict
+  - oracle_missing
+  - evidence_missing
+  - semantic_gap_too_low
+  - critical_action_without_business_or_network_oracle
+
+promotion_rules:
+  experimental_to_shadow_validated:
+    require_min_reviewed_observations: 30
+    require_false_heal_rate_below: 0.02
+    require_oracle_precision_above: 0.95
+    require_synthetic_lab_passed: true
+
+  shadow_validated_to_canary:
+    require_human_review_sample: true
+    require_no_critical_false_heal: true
+    require_rollback_plan: true
+
+  canary_to_trusted:
+    require_min_reviewed_observations: 100
+    require_no_false_heal_last_n: 30
+    require_runtime_overhead_below_percent: 20
+    require_llm_escalation_below: 0.10
+
+synthetic_mutation_matrix:
+  locator:
+    - code: change_id
+      expected_taxonomy: LOCATOR_NOT_FOUND
+      expected_recoverable: true
+    - code: duplicate_button_text
+      expected_taxonomy: LOCATOR_AMBIGUOUS
+      expected_recoverable: true
+    - code: remove_testid_and_change_text
+      expected_taxonomy: LOCATOR_NOT_FOUND
+      expected_recoverable: false
+
+  actionability:
+    - code: overlay_blocks_click
+      expected_taxonomy: ACTIONABILITY_OBSCURED
+      expected_recoverable: false
+    - code: disabled_button
+      expected_taxonomy: ACTIONABILITY_DISABLED
+      expected_recoverable: false
+
+  react:
+    - code: css_in_js_class_changed
+      expected_taxonomy: REACT_CSS_IN_JS_CLASS_CHANGED
+      expected_recoverable: true
+    - code: portal_modal_context_changed
+      expected_taxonomy: REACT_PORTAL_CONTEXT_CHANGED
+      expected_recoverable: true
+
+  angular:
+    - code: material_overlay_obscured
+      expected_taxonomy: ANGULAR_MATERIAL_OVERLAY_OBSCURED
+      expected_recoverable: false
+    - code: async_validator_pending
+      expected_taxonomy: ANGULAR_ASYNC_VALIDATOR_PENDING
+      expected_recoverable: false

@@ -1,0 +1,144 @@
+@startuml
+title TestForge - Ciclo de Vida da FailureSignature na Curadoria Multiagente
+
+skinparam shadowing false
+skinparam linetype ortho
+skinparam state {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+[*] --> DETECTED : execution_failed / capture_failure_context
+
+state DETECTED
+state NORMALIZED
+state CLASSIFIED
+state EVIDENCE_PACKAGED
+state AGENT_SELECTED
+state PATCH_PROPOSED
+state PATCH_VALIDATING
+state PATCH_REJECTED
+state PATCH_APPLIED_TEMPORARILY
+state REEXECUTING
+state PASSED_STEP
+state PROGRESSED
+state STAGNATED
+state REGRESSED
+state ERROR_CHANGED
+state UNRESOLVED
+state ROLLED_BACK
+state ESCALATED_TO_LLM
+state ESCALATED_TO_MANUAL_REVIEW
+state RESOLVED
+state ABANDONED
+
+DETECTED --> NORMALIZED : normalize_failure / build_failure_signature_json
+NORMALIZED --> CLASSIFIED : classify_failure / assign_failure_family
+CLASSIFIED --> EVIDENCE_PACKAGED : package_evidence / reuse_original_recording_and_run_artifacts
+EVIDENCE_PACKAGED --> AGENT_SELECTED : evidence_ready / consult_knowledge_base_and_select_agent
+AGENT_SELECTED --> PATCH_PROPOSED : agent_selected / propose_deterministic_patch
+PATCH_PROPOSED --> PATCH_VALIDATING : patch_created / validate_patch
+
+PATCH_VALIDATING --> PATCH_REJECTED : patch_invalid / persist_rejection_reason
+PATCH_VALIDATING --> PATCH_APPLIED_TEMPORARILY : patch_valid / apply_to_temporary_version
+
+PATCH_REJECTED --> AGENT_SELECTED : deterministic_strategy_available / select_alternative_agent_or_strategy
+PATCH_REJECTED --> UNRESOLVED : no_valid_deterministic_patch / mark_unresolved_candidate
+
+PATCH_APPLIED_TEMPORARILY --> REEXECUTING : temporary_version_ready / rerun_checkpoint_or_script
+
+REEXECUTING --> PASSED_STEP : step_passed / compare_with_previous_failure
+REEXECUTING --> PROGRESSED : execution_advanced / create_progress_checkpoint
+REEXECUTING --> STAGNATED : no_progress / keep_failure_signature_active
+REEXECUTING --> REGRESSED : regression_detected / trigger_rollback
+REEXECUTING --> ERROR_CHANGED : error_signature_changed / require_reclassification
+REEXECUTING --> UNRESOLVED : no_solution_found / check_limits_and_remaining_strategies
+
+PASSED_STEP --> RESOLVED : failure_removed / accept_patch_and_register_pattern
+
+PROGRESSED --> AGENT_SELECTED : remaining_failure_exists / select_next_agent_or_strategy
+PROGRESSED --> RESOLVED : flow_completed / accept_patch_chain_and_register_pattern
+
+STAGNATED --> AGENT_SELECTED : alternative_deterministic_strategy_available / try_next_strategy
+STAGNATED --> UNRESOLVED : deterministic_strategy_exhausted / mark_unresolved
+
+REGRESSED --> ROLLED_BACK : rollback_required / restore_last_stable_version
+ROLLED_BACK --> AGENT_SELECTED : rollback_completed / select_safer_strategy
+ROLLED_BACK --> UNRESOLVED : no_safe_strategy_remaining / mark_unresolved
+
+ERROR_CHANGED --> CLASSIFIED : reclassify_required / rebuild_failure_signature_context
+
+UNRESOLVED --> AGENT_SELECTED : deterministic_strategy_available / retry_with_next_strategy
+UNRESOLVED --> ESCALATED_TO_LLM : deterministic_limit_exceeded / controlled_llm_fallback
+UNRESOLVED --> ESCALATED_TO_MANUAL_REVIEW : llm_disabled_by_policy / request_human_review
+
+ESCALATED_TO_LLM --> PATCH_PROPOSED : llm_suggested_candidate / validate_like_deterministic_patch
+ESCALATED_TO_LLM --> ESCALATED_TO_MANUAL_REVIEW : no_valid_llm_solution / request_human_review
+ESCALATED_TO_LLM --> ABANDONED : llm_limit_exceeded / preserve_unresolved_report
+
+ESCALATED_TO_MANUAL_REVIEW --> PATCH_PROPOSED : human_hint_provided / create_candidate_patch
+ESCALATED_TO_MANUAL_REVIEW --> ABANDONED : no_solution_available / close_failure_as_abandoned
+
+RESOLVED --> [*] : resolved_pattern_registered
+ABANDONED --> [*] : unresolved_history_preserved
+
+DETECTED --> ABANDONED : unrecoverable_missing_evidence
+NORMALIZED --> ABANDONED : normalization_impossible
+CLASSIFIED --> ABANDONED : classification_blocked_by_invalid_signature
+EVIDENCE_PACKAGED --> ABANDONED : evidence_package_insufficient
+AGENT_SELECTED --> ABANDONED : no_agent_available
+PATCH_APPLIED_TEMPORARILY --> ROLLED_BACK : temporary_version_corrupted / rollback
+REEXECUTING --> ABANDONED : unrecoverable_execution_infrastructure_error
+
+note right of EVIDENCE_PACKAGED
+  O pacote de evidências deve reutilizar a gravação
+  e os artefatos originais da sessão:
+  - session_raw.json
+  - session_normalized.json
+  - selector_candidates.json
+  - fingerprint_initial.json
+  - fingerprint_final.json
+  - screenshots, DOM, rede, console, frames,
+    shadow DOM, storage e trace.
+
+  A curadoria não pode ignorar o contexto coletado
+  durante a interação humana.
+end note
+
+note right of REGRESSED
+  REGRESSED significa que o patch piorou o fluxo,
+  quebrou steps previamente válidos ou removeu
+  comportamento necessário.
+
+  Neste estado o rollback é obrigatório antes de
+  qualquer nova tentativa.
+end note
+
+note right of ERROR_CHANGED
+  ERROR_CHANGED significa que a assinatura da falha
+  mudou após uma tentativa.
+
+  A falha deve voltar para CLASSIFIED para que a nova
+  família seja identificada e roteada para o agente correto.
+end note
+
+note right of ESCALATED_TO_LLM
+  O LLM é fallback controlado.
+
+  Ele só é acionado depois que as estratégias
+  determinísticas aplicáveis foram tentadas ou esgotadas.
+  Sua saída é apenas hipótese ou patch candidato e deve
+  passar por PATCH_VALIDATING antes de qualquer execução.
+end note
+
+note right of RESOLVED
+  RESOLVED exige evidência de validação:
+  - patch aceito;
+  - execução comparativa bem-sucedida;
+  - checkpoint criado;
+  - padrão aprendido registrado na KnowledgeBase;
+  - regra candidata de healing rastreável.
+end note
+
+@enduml

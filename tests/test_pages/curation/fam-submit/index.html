@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>FAM-Submit: Click vs Submit vs Postback</title>
+<style>
+  body { font-family: sans-serif; margin: 20px; }
+  h1 { font-size: 18px; }
+  section { border: 1px solid #ccc; margin: 10px 0; padding: 10px; border-radius: 4px; }
+  section h2 { font-size: 14px; margin: 0 0 8px 0; }
+  button, input[type=submit], a { margin: 4px; }
+  a { display: inline-block; color: #00f; text-decoration: underline; cursor: pointer; }
+  #log { background: #f5f5f5; padding: 10px; font: 12px monospace; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
+</style>
+</head>
+<body>
+<h1>FAM-Submit: Click vs Submit vs Postback Distinction</h1>
+<p>Navigate to: <a href="page2.html">Page 2</a></p>
+
+<!-- 1. Regular form with submit button -->
+<section>
+<h2>1. Form with input[type=submit]</h2>
+<form id="form1" action="page2.html" method="POST">
+  <label for="name1">Name: <input id="name1" name="name" value="test"></label>
+  <input type="submit" id="btn-submit-input" value="Submit (input)">
+  <a href="page2.html" id="link-inside-form">Regular link inside form</a>
+</form>
+</section>
+
+<!-- 2. Form with button[type=submit] -->
+<section>
+<h2>2. Form with button[type=submit]</h2>
+<form id="form2" action="page2.html" method="GET">
+  <label for="name2">Name: <input id="name2" name="name" value="test"></label>
+  <button type="submit" id="btn-submit-button">Submit (button)</button>
+  <button type="button" id="btn-regular-button">Regular button (type=button)</button>
+  <span id="span-in-form" style="cursor:pointer;color:#00f;text-decoration:underline">Span inside form</span>
+</form>
+</section>
+
+<!-- 3. ASP.NET __doPostBack via href -->
+<section>
+<h2>3. ASP.NET __doPostBack (href)</h2>
+<a href="javascript:__doPostBack('ctl00$btnSave','')" id="link-postback-href">Save (__doPostBack href)</a>
+</section>
+
+<!-- 4. ASP.NET __doPostBack via onclick -->
+<section>
+<h2>4. ASP.NET __doPostBack (onclick)</h2>
+<a href="javascript:void(0)" id="link-postback-onclick"
+   onclick="javascript:__doPostBack('ctl00$btnDelete','')">Delete (__doPostBack onclick)</a>
+</section>
+
+<!-- 5. ASP classic document.forms[].submit() via href -->
+<section>
+<h2>5. ASP Classic document.forms[].submit() (href)</h2>
+<a href="javascript:document.forms['form5'].submit()" id="link-asp-classic-href">Submit Form 5 (href)</a>
+<form id="form5" action="page2.html" method="POST">
+  <input name="data" value="asp-classic-href">
+</form>
+</section>
+
+<!-- 6. ASP classic document.forms[].submit() via onclick -->
+<section>
+<h2>6. ASP Classic document.forms[].submit() (onclick)</h2>
+<a href="javascript:void(0)" id="link-asp-classic-onclick"
+   onclick="javascript:document.forms['form6'].submit()">Submit Form 6 (onclick)</a>
+<form id="form6" action="page2.html" method="POST">
+  <input name="data" value="asp-classic-onclick">
+</form>
+</section>
+
+<!-- 7. WebForm_DoPostBackWithOptions via href -->
+<section>
+<h2>7. ASP.NET WebForm_DoPostBackWithOptions (href)</h2>
+<a href="javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions('ctl00$btnOptions','',true,'','',false,true))"
+   id="link-webform-href">Options (WebForm href)</a>
+</section>
+
+<!-- 8. Regular link (not a submit trigger) -->
+<section>
+<h2>8. Regular links (should be CLICK, not SUBMIT)</h2>
+<a href="page2.html" id="link-regular">Regular navigation link</a>
+<a href="javascript:alert('hello')" id="link-alert">Alert link</a>
+<a href="javascript:void(0)" id="link-void">Void link (no-op)</a>
+<a href="#" id="link-hash">Hash link</a>
+</section>
+
+<!-- 9. Regular click on non-interactive elements inside forms -->
+<section>
+<h2>9. Non-submit clicks inside form</h2>
+<form id="form9" action="page2.html" method="POST">
+  <div id="div-in-form" style="padding:8px;background:#eee;cursor:pointer">Clickable div in form (should be CLICK)</div>
+  <p id="p-in-form">Paragraph in form (should be CLICK)</p>
+</form>
+</section>
+
+<!-- 10. Link with document.location (NOT a form submit) -->
+<section>
+<h2>10. document.location (should be CLICK, not submit)</h2>
+<a href="javascript:document.location='page2.html'" id="link-doc-location">document.location link</a>
+</section>
+
+<div id="log"></div>
+
+<script>
+  // Mock __doPostBack for testing
+  var __doPostBack_calls = [];
+  function __doPostBack(eventTarget, eventArgument) {
+    __doPostBack_calls.push({target: eventTarget, arg: eventArgument});
+    logEvent('__doPostBack: ' + eventTarget + ', ' + eventArgument);
+  }
+  function WebForm_DoPostBackWithOptions(options) {
+    logEvent('WebForm_DoPostBackWithOptions called');
+  }
+
+  // Intercept all form submits to prevent actual navigation
+  document.querySelectorAll('form').forEach(function(f) {
+    f.addEventListener('submit', function(e) {
+      e.preventDefault();
+      logEvent('Form submitted: ' + (f.id || f.action));
+    });
+  });
+
+  function logEvent(msg) {
+    var log = document.getElementById('log');
+    log.textContent += msg + '\n';
+  }
+
+  // Log all clicks for debugging
+  document.addEventListener('click', function(e) {
+    var el = e.target;
+    logEvent('Click on: ' + (el.tagName || '?') + (el.id ? '#' + el.id : '') +
+             ' text="' + ((el.textContent||'').trim().substring(0,50)) + '"');
+  }, true);
+</script>
+</body>
+</html>

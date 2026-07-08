@@ -1,0 +1,132 @@
+@startuml
+title TestForge v0.1.0 — C4 Container (L0→L3 healing + ComponentHandlers + native Playwright locators)
+
+skinparam backgroundColor #FFFFFF
+skinparam packageStyle rectangle
+
+rectangle "TestForge CLI\nPython 3.10+" as CLI #LightYellow {
+  component "app.py\nComandos: record,\ncompile --data, run,\npipeline, demo-heal" as App
+}
+
+rectangle "Recorder Sensorial\nPlaywright sync_api" as Recorder #LightGreen {
+  component "RecorderController\n+ RecordingSession\n+ RawEvent\n+ overlay_inject.js\n+ framenavigated tracking" as REC
+}
+
+rectangle "Semantic (MIS)\nModelo Intermediario" as Semantic #LightYellow {
+  component "RecordingNormalizer\n+ SemanticTestCase + SemanticAction\n+ compound candidates\n+ multi-attr fingerprint\n+ intent reconstruction (_ir_*)" as MIS
+  component "PlaywrightCompiler\n+ native PW locators\n+ L0.5 get_by_role regex\n+ data-driven support" as COMP
+  component "DataExtractor\n+ test_data.json" as DE
+}
+
+rectangle "Evidence\nCollector + Store" as Evidence #LightGreen {
+  component "EvidenceCollector\n+ build_llm_payload()\n+ console/network buffers" as EC
+  component "EvidenceStore\nSQLite" as ES
+}
+
+rectangle "Taxonomy\n11 families, 88 codes" as Taxonomy #LightBlue {
+  component "FailureClassifier\nkeyword+group+word-boundary" as FC
+  component "FailureFamily\n+ FailureClassification" as FF
+}
+
+rectangle "Healing L0\nRecipe Catalog" as L0 #LightGreen {
+  component "HealingCatalog\nJSONL recipes, <50ms match\nauto-learn: record_success()" as HC
+}
+
+rectangle "Healing L1\nFallback Runner" as L1 #LightGreen {
+  component "FallbackRunner\ntry_fill, try_click\nMIS candidates" as FR
+}
+
+rectangle "Healing L2\nSpecialist Agents" as L2 #LightBlue {
+  component "SelectorAgent\n(FAM-01)" as SA
+  component "TimingAgent\n(FAM-02)" as TA
+  component "ContextAgent\n(FAM-03)" as CA
+  component "StateAgent\n(FAM-04)" as StA
+  component "DynamicDOMAgent\n(FAM-05)" as DA
+  component "InputAgent\n(FAM-06/07)" as IA
+}
+
+rectangle "Healing L3\nLLM Healer" as L3 #LightBlue {
+  component "CuradorAutomatico\nL0→L1→L2→L3 pipeline\nfailure tracker" as CUR
+  component "LLMHealer\n+ MockLLMHealer" as LLM
+  component "LLMClient\nAzure/OpenAI" as LClient
+  component "LLMPrompts\n11 family prompts (EN)" as LPrompts
+  component "EvidencePayload\nDOM + console + network" as EP
+}
+
+rectangle "Component Handlers\nFramework Detection" as Handlers #LightBlue {
+  component "ComponentHandler\n(ABC)" as BASE
+  component "AngularMaterialHandler\nmat-select, mat-autocomplete\nmat-dialog, mat-tabs, mat-slide" as AMH
+  component "PrimeFacesHandler\n(skeleton)" as PFH
+  component "ReactMUIHandler\n(skeleton)" as RWH
+  component "CDKOverlayHandler\noverlay utilities" as COH
+  component "detect_handler()\nregistry dispatch" as DET
+}
+
+rectangle "Oracle + Gate" as Oracle #LightGreen {
+  component "OracleRunner\nvisual_dom\nbusiness_state" as OR
+  component "PromotionGate\n3 estados\n5 bloqueios" as PG
+}
+
+rectangle "Metrics" as Metrics #LightGreen {
+  component "MetricsRepository\nfalse_heal_rate\nprecision\nllm_rate" as MR
+}
+
+database "recordings/\nJSONL + screenshots" as RECDB
+database "evidence/\nmanifest + DOM" as EVIDB
+database "semantic_tests/\nscripts gerados" as STDB
+database "test_data.json\nmassa externa" as TDB
+
+cloud "Azure OpenAI\n(GPT-4.1-mini)\n[off critical path]" as AZURE
+
+' --- Connections ---
+
+App --> REC : record
+App --> MIS : compile
+App --> COMP : compile
+App --> DE : compile --data
+App --> CUR : run
+
+REC --> RECDB : salva gravacoes
+
+MIS --> RECDB : le raw_events.jsonl
+MIS --> COMP : SemanticTestCase
+DE --> RECDB : le raw_events.jsonl
+DE --> TDB : test_data.json
+COMP --> STDB : script.py
+
+CUR --> HC : L0: match()
+CUR --> FR : L1: fallback
+CUR --> SA : L2: route
+CUR --> TA
+CUR --> CA
+CUR --> StA
+CUR --> DA
+CUR --> IA
+CUR --> LLM : L3: heal()
+LLM --> LClient : chat()
+LLM --> LPrompts : prompts
+LLM --> EP : payload
+CUR --> EC : evidence
+EC --> EVIDB : manifest
+
+FC --> CUR : classify()
+OR --> App : validate
+PG --> OR : evaluate
+MR --> CUR : metrics
+
+' --- Handler connections ---
+
+DET --> BASE : extends
+DET --> AMH : routes
+DET --> PFH : routes
+DET --> RWH : routes
+AMH --> COH : uses
+PFH --> COH : uses
+RWH --> COH : uses
+
+FR --> DET : detect_handler()
+CUR --> DET : handler.heal()
+CUR --> AMH : Angular-specific\nexecute/heal
+LClient ..> AZURE : HTTPS
+
+@enduml

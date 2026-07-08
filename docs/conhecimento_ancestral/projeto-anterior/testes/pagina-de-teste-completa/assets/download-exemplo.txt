@@ -1,0 +1,3 @@
+Este é um arquivo de exemplo para download.
+Criado em: 2026-06-10
+TestForge — Teste de Download (FILE-004)

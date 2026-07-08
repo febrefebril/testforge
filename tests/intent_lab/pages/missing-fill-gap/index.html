@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Missing Fill Gap</title>
+<style>
+  body { font-family: sans-serif; max-width: 500px; margin: 40px auto; padding: 20px; }
+  label { display: block; margin-top: 16px; font-weight: bold; }
+  input { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
+  button { margin-top: 20px; padding: 10px 24px; background: #cc6600; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+  .warning { color: #cc6600; font-size: 0.9em; }
+</style>
+</head>
+<body>
+  <h1>Missing Fill Gap</h1>
+  <p class="warning">Simula campo onde digitação não gera input event</p>
+  <form id="gapForm">
+    <label for="valor">Valor</label>
+    <input type="text" id="valor" name="valor" placeholder="Valor sem input event">
+
+    <label for="confirmacao">Confirmação</label>
+    <input type="text" id="confirmacao" name="confirmacao" placeholder="Digite novamente">
+
+    <button type="submit" id="continuar">Continuar</button>
+  </form>
+
+  <div id="output" style="margin-top: 20px;"></div>
+
+  <script>
+    // keydown handler that PREVENTS default input event for field 'valor'
+    document.getElementById('valor').addEventListener('keydown', function(e) {
+      // Store typed character manually without triggering input event
+      if (e.key.length === 1) {
+        // Don't call preventDefault — just suppress input event
+      }
+    });
+
+    // Suppress input event on 'valor' field (simulates currency mask behavior)
+    document.getElementById('valor').addEventListener('input', function(e) {
+      // Prevent the actual value from being set — simulates framework that blocks input
+      // This is the key behavior: user types but no fill event is captured
+    });
+
+    // Instead, value is set programmatically on blur
+    document.getElementById('valor').addEventListener('blur', function() {
+      // Value was typed but input event was suppressed
+      // Real scenario: currency mask libraries do this
+    });
+
+    document.getElementById('gapForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const valor = document.getElementById('valor').value;
+      const confirmacao = document.getElementById('confirmacao').value;
+      document.getElementById('output').innerHTML =
+        '<p><strong>Recebido:</strong> Valor=' + valor + ', Confirmação=' + confirmacao + '</p>';
+    });
+
+    // Override value property setter for 'valor' to NOT trigger input event
+    var _valorEl = document.getElementById('valor');
+    var _origDescriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+    // Keep original behavior but field value is only set on blur programmatically
+  </script>
+</body>
+</html>

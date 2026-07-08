@@ -1,0 +1,114 @@
+@startuml
+title TestForge — Deploy: LLM Self-Healing em Ambientes
+
+skinparam backgroundColor #FFFFFF
+skinparam nodeBackgroundColor #F5F5F5
+skinparam nodeBorderColor #333333
+skinparam agentBackgroundColor #E8F5E9
+
+' === Ambiente: Dev Local ===
+
+rectangle "DEV — Estacao do QA" as DEV #E3F2FD {
+  node "testforge CLI" as CLI_DEV {
+    agent "cmd_run" as CMD_DEV
+  }
+
+  node "Playwright Browser\n(Chromium headed)" as BROWSER_DEV
+
+  agent "MockLLMHealer" as MOCK_DEV #FFF9C4
+  note right of MOCK_DEV
+    Sem env vars Azure
+    Propostas deterministicas
+    confidence fixa 0.85
+    Zero custo, zero latencia externa
+  end note
+
+  database "HealingCatalog\n(JSONL local)" as CAT_DEV
+  database "Metricas\n(MetricsRepository)" as MET_DEV
+
+  CMD_DEV --> BROWSER_DEV : "page.goto()"
+  CMD_DEV --> MOCK_DEV : "heal_or_unresolved()"
+  MOCK_DEV --> CAT_DEV : "_register_learned()"
+  CMD_DEV --> MET_DEV : "record_run()"
+}
+
+' === Ambiente: CI/CD Pipeline ===
+
+rectangle "CI — GitHub Actions / Azure DevOps" as CI #FFF3E0 {
+  node "Runner Ubuntu" as CI_RUNNER {
+    agent "pytest + testforge" as CI_TEST
+    agent "CuradorAutomatico" as CI_CUR
+
+    agent "LLMHealer" as LLM_CI #FFF9C4
+    note right of LLM_CI
+      AZURE_OPENAI_KEY via secrets
+      model=gpt-4o-mini
+      temp=0.3, max_tokens=500
+      Retry 3x com backoff
+    end
+
+    database "Evidence/\n(artifacts)" as EVID_CI
+  }
+
+  cloud "Azure OpenAI" as AZURE #0078D4 {
+    agent "gpt-4o-mini\n(deployment)" as GPT
+  }
+
+  CI_TEST --> CI_CUR : "cure()"
+  CI_CUR --> LLM_CI : "heal()"
+  LLM_CI --> AZURE : "HTTPS\nchat/completions"
+  AZURE --> GPT : "inference"
+  GPT --> AZURE : "JSON proposal"
+  AZURE --> LLM_CI : "response"
+  CI_CUR --> EVID_CI : "manifest.json"
+}
+
+' === Ambiente: Producao (Shadow Mode) ===
+
+rectangle "PROD — Shadow Mode" as PROD #E8F5E9 {
+  node "Pipeline Noturna" as PROD_PIPE {
+    agent "ExecutorAgent" as EXEC
+    agent "CuradorAutomatico" as CUR_PROD
+    agent "LLMHealer" as LLM_PROD #FFF9C4
+  }
+
+  node "Testes E2E\n(semantic_tests/)" as TESTS_PROD
+
+  database "HealingCatalog\n(produção)" as CAT_PROD
+  database "Evidências\n(7 dias retenção)" as EVID_PROD
+
+  agent "Notificação\n(Email / Teams)" as NOTIFY
+
+  EXEC --> TESTS_PROD : "executa scripts"
+  EXEC --> CUR_PROD : "cure(step, error, evidence)"
+  CUR_PROD --> LLM_PROD : "heal()"
+  CUR_PROD --> CAT_PROD : "register_learned / unresolved"
+  CUR_PROD --> EVID_PROD : "evidence package"
+
+  CAT_PROD --> NOTIFY : "count >= 5"
+  note on link
+    TF_REVIEW_THRESHOLD=5
+    Envia email/Teams
+    para revisao humana
+  end note
+}
+
+' === Cross-cutting ===
+
+cloud "Azure OpenAI\n(shared)" as AZURE_SHARED #0078D4 {
+}
+
+LLM_PROD --> AZURE_SHARED : "HTTPS (curadoria)\nLLM off critical path"
+LLM_CI --> AZURE_SHARED : "HTTPS (validacao CI)"
+
+' === Legend ===
+
+legend bottom
+  |= Cor |= Significado |
+  | <#E3F2FD> | DEV — MockLLMHealer, zero custo |
+  | <#FFF3E0> | CI — LLM real, valida regressao |
+  | <#E8F5E9> | PROD — Shadow mode, notifica revisao |
+  | Amarelo | LLM Healer (Mock ou Real) |
+endlegend
+
+@enduml

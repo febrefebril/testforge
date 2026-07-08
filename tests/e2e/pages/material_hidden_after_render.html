@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Material hidden input regression</title>
+  <style>
+    input[hidden-until-click] { display: none; }
+  </style>
+</head>
+<body>
+  <label for="renda">Renda mensal</label>
+  <input id="renda" name="renda" hidden-until-click type="text" />
+  <script>
+    document.querySelector('label').addEventListener('click', function () {
+      document.querySelector('input').removeAttribute('hidden-until-click');
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,6478 @@
+Estou com um problema no meu testforge. A questão é a seguinte. Começamos tentado resolver tudo pelo gravador, identificar todas as tecnologias e já gerar um script robusto. Usando essa abordagem nós tinhamos que sempre alterar o gravador para cada passo gravado pois ele quebrava muito. Depois nós mudamos essa parte para o runner que rodava esse código. Ele agora era o responsável por corrigir a gravação e a gravação só tentava pegar o máximo de informações durante a gravação. O problema é que novamente, nossa aplicação quebrava a todo passo e tinhamos que corrigir o runner. Depois criamos uma abordagem para criar um selfhealing para o runner usando llm dado que estava insustentável ficar o tempo todo corrigindo o runner. Agora caimos em um outro problema, o prompt para a llm não consegue resolver e temos que ficar alterando o prompt. O problema só foi mudando de lugar. Precisamos de uma solução que seja simples, elegante e eficiente. Acho que o problema está na arquitetura. Faça uma pesquisa para saber como resolver esse problema de gravar testes que não quebrem logo após a gravação e que nasçam com selfhealing deterministico e se essa barreira for rombida usar llm para curar.
+Copilot said:
+Copilot
+
+Processamento concluído em 16 etapas
+Andre, fiz a pesquisa e minha conclusão é bem direta: o problema não é o prompt, nem o runner, nem o gravador isoladamente. O problema é que a arquitetura atual está tentando “inferir intenção” no lugar errado. Cada vez que vocês moveram a inteligência para outra camada, a fragilidade foi junto.
+
+Gerei também um artefato em Markdown com a proposta resumida para download: testforge_arquitetura_selfhealing_deterministico.md
+
+Diagnóstico
+Vocês passaram por esta sequência:
+
+Gravador inteligente demais
+Tentava detectar tecnologia, gerar seletor robusto e produzir script final. Quebrava a cada variação.
+
+Runner inteligente demais
+O gravador virou coletor de evidências, e o runner passou a corrigir. O problema mudou de lugar.
+
+Runner com self-healing via LLM
+A LLM passou a corrigir o runner. Agora o ponto frágil virou o prompt.
+
+Isso é um sintoma clássico de arquitetura sem separação clara entre:
+
+captura;
+representação semântica;
+geração;
+execução;
+healing;
+curadoria.
+A pesquisa confirma que as abordagens mais resilientes não dependem de “um seletor mágico” nem de LLM em tempo real como primeira linha. Elas combinam locators semânticos, múltiplos sinais, fallbacks, pontuação de confiança, persistência de healing e, só depois, IA/LLM como camada de curadoria. Playwright recomenda testar comportamento visível ao usuário e usar locators como role, label, text e test id, evitando depender de detalhes internos frágeis de DOM/CSS.
+playwright
++1
+
+O padrão que aparece nas soluções maduras
+1. O teste deve nascer de um contrato semântico, não de um seletor
+O Playwright recomenda localizar elementos como o usuário percebe a aplicação: getByRole, getByLabel, getByPlaceholder, getByText, getByTestId, além de usar auto-waiting e assertions com retry automático para reduzir flakiness. Isso aponta para uma regra importante: o elemento não deve ser identificado primeiro por CSS/XPath; ele deve ser identificado por papel, nome acessível, label, texto ou contrato de teste.
+playwright
++2
+
+A pesquisa mais recente também reforça essa direção: há proposta de self-healing “zero-cost” usando extração da árvore de acessibilidade e hierarquia de locators, evitando LLM por execução e reextraindo apenas seletores quebrados. O ponto mais importante não é o resultado específico do artigo, mas a arquitetura: descoberta determinística + árvore de acessibilidade + healing pontual, em vez de jogar tudo para uma LLM.
+arxiv
+
+2. Self-healing bom usa múltiplos sinais, não apenas fallback de XPath
+Selenium IDE, embora simples, já usa uma ideia correta: grava múltiplos locators para cada elemento e tenta outros quando o principal falha. Isso é uma forma básica de resiliência determinística.
+selenium
+
+Ferramentas como Testim e mabl levam essa ideia adiante: elas criam locators inteligentes com múltiplos atributos, contexto visual/estrutural, pontuação de confiança e auto-healing/adaptação quando a aplicação muda. A ideia comum é: não existe um locator; existe uma identidade composta do elemento.
+testim
++3
+
+3. Healenium mostra uma arquitetura útil: proxy, base histórica e relatório
+O Healenium é importante como referência arquitetural porque não tenta resolver tudo no script. Ele atua como proxy/intermediário entre cliente e Selenium, intercepta falhas de localização, consulta histórico, compara DOM e persiste healing/report em backend com banco. Isso é muito próximo do que o TestForge deveria ter como camada própria: um runtime de healing observável, persistente e auditável.
+github
++2
+
+Outro ponto importante: BrowserStack documenta que o self-healing precisa de pelo menos uma execução bem-sucedida anterior para capturar contexto do elemento. Isso reforça que healing robusto depende de baseline e evidência histórica, não apenas de prompt.
+browserstack
+
+Minha proposta de arquitetura para o TestForge
+A solução simples, elegante e eficiente seria transformar o TestForge em um pipeline com estas camadas:
+
+
+
+
+Plain Text
+Recorder Sensorial
+        ↓
+Modelo Intermediário Semântico
+        ↓
+Compilador Determinístico
+        ↓
+Runner Playwright
+        ↓
+Self-Healing Determinístico
+        ↓
+Curadoria com LLM, somente se necessário
+A mudança principal é esta:
+
+O gravador não gera teste final.
+O runner não “inventa” correção.
+A LLM não é o mecanismo principal de healing.
+O centro da arquitetura passa a ser um modelo intermediário semântico + motor determinístico de healing.
+
+Como o teste deve nascer
+Em vez de gravar algo assim:
+
+
+
+
+Python
+await page.locator("#btn123").click()
+O TestForge deveria gerar internamente algo assim:
+
+
+
+
+YAML
+action_id: step_004
+intent: clicar no botão de pesquisar proposta
+action: click
+
+target:
+  semantic_role: button
+  accessible_name: Pesquisar
+  visible_text: Pesquisar
+  test_id: null
+  label: null
+
+context:
+  page_url_pattern: /siopi/propostas
+  form_title: Consulta de Propostas
+  nearby_texts:
+    - CPF
+    - Número da Proposta
+    - Situação
+  frame: null
+  shadow_dom: false
+
+locator_candidates:
+  - type: role
+    value: button[name="Pesquisar"]
+    score: 0.95
+  - type: text
+    value: text="Pesquisar"
+    score: 0.82
+  - type: css
+    value: button[type="submit"]
+    score: 0.63
+
+assertion_after_action:
+  expected:
+    - tabela de resultados visível
+    - requisição de consulta concluída
+
+Mostrar mais linhas
+Depois o compilador gera Playwright Python a partir desse contrato. O script nasce robusto porque nasce com intenção, contexto, alternativas e critério de sucesso, não apenas com selector.
+
+O self-healing determinístico
+Quando um passo quebra, o TestForge não deveria chamar a LLM imediatamente. O fluxo deveria ser:
+
+
+
+
+Plain Text
+1. Tentar locator primário.
+2. Se falhar, tentar locators alternativos gravados.
+3. Se falhar, reextrair DOM + accessibility tree.
+4. Gerar candidatos.
+5. Calcular score de similaridade.
+6. Se score >= 0.90: auto-heal.
+7. Se 0.70 <= score < 0.90: quarentena/curadoria.
+8. Se score < 0.70: falha real.
+9. Persistir decisão, evidências e diff.
+Essa abordagem se alinha ao que aparece em Healenium, Testim, mabl e nas recomendações modernas de Playwright: múltiplos sinais, locators semânticos, baseline histórico, retry controlado e healing com evidência.
+github
++3
+
+Onde a LLM entra
+A LLM deve entrar depois que o determinístico falhou, e não como motor principal.
+
+Ela deve receber um pacote fechado de evidências:
+
+
+
+
+YAML
+failed_step:
+  intent: clicar no botão de pesquisar proposta
+  old_locator: "#btn123"
+  error: element not found
+
+evidence:
+  old_dom_fragment: ...
+  current_dom_candidates:
+    - candidate_id: c1
+      role: button
+      text: Consultar
+      nearby_texts: [CPF, Número da Proposta]
+      score: 0.74
+    - candidate_id: c2
+      role: button
+      text: Limpar
+      score: 0.41
+
+request:
+  task: propor cura ou regra nova
+  constraints:
+    - não alterar intenção do teste
+    - não criar seletor sem evidência
+    - justificar decisão
+    - retornar patch estruturado
+
+Mostrar mais linhas
+A resposta da LLM não deve ser “o novo seletor é X”. Ela deve ser uma proposta de curadoria:
+
+
+
+
+YAML
+decision: suggested_heal
+candidate_id: c1
+reason: botão mudou de texto de Pesquisar para Consultar, mantendo contexto do formulário de consulta
+confidence: 0.82
+requires_human_review: true
+suggested_rule:
+  app: SIOPI
+  page_pattern: /siopi/propostas
+  synonym:
+    Pesquisar: Consultar
+Assim o prompt deixa de ser um monstro frágil e vira um protocolo estável de curadoria.
+
+A regra de ouro
+A frase que eu usaria como princípio arquitetural do TestForge é:
+
+Self-healing deve ser determinístico por padrão, probabilístico apenas com score controlado, e generativo somente como curadoria auditável.
+
+Ou seja:
+
+
+
+
+Plain Text
+Determinístico primeiro.
+LLM depois.
+Humano quando houver ambiguidade.
+Decisão arquitetural recomendada
+Eu recomendo abandonar a ideia de que o TestForge deve “gravar e gerar script final” diretamente.
+
+A arquitetura correta seria:
+
+1. Recorder como coletor de evidências
+Ele captura:
+
+evento;
+DOM fragmentado;
+accessibility tree;
+texto visível;
+role;
+label;
+atributos;
+posição relativa;
+screenshot/crop opcional;
+URL;
+frame;
+shadow DOM;
+rede associada;
+estado antes/depois.
+2. Intermediate Representation como fonte de verdade
+Esse modelo é o “coração” do TestForge.
+
+Ele representa:
+
+intenção;
+ação;
+alvo;
+contexto;
+candidatos;
+assertions;
+critérios de sucesso.
+3. Compiler como gerador de código
+Gera Playwright Python com:
+
+get_by_role;
+get_by_label;
+get_by_test_id;
+assertions;
+waits orientados a estado;
+fixtures;
+logging;
+trace.
+4. Runner como executor burro e observável
+Ele executa, coleta evidência e delega healing.
+
+5. Healing Engine como serviço próprio
+Ele decide com score, persiste e audita.
+
+6. LLM como curador
+A LLM não executa teste. Ela propõe evolução de regra.
+
+MVP que eu faria agora
+Eu dividiria em três entregas:
+
+MVP 1 — Teste nasce com identidade composta
+parar de gerar script direto do evento cru;
+criar modelo intermediário;
+gerar locators por ranking;
+salvar múltiplos candidatos por ação;
+usar Playwright locators semânticos primeiro.
+MVP 2 — Healing determinístico
+ao falhar locator, reextrair DOM/acessibilidade;
+calcular similaridade;
+auto-heal com threshold alto;
+persistir healing;
+gerar relatório de evidência.
+MVP 3 — Curadoria com LLM
+LLM só recebe casos em quarentena;
+resposta estruturada em JSON/YAML;
+patch sugerido;
+aprovação humana;
+regra reaproveitável.
+Conclusão
+A solução elegante é parar de tentar “consertar o consertador”. O TestForge precisa de uma arquitetura em que:
+
+o gravador observa;
+o modelo intermediário representa intenção;
+o compilador gera código;
+o runner executa;
+o healing determinístico recupera com score;
+a LLM cura exceções e evolui regras.
+Isso evita que o problema fique migrando de lugar. O prompt deixa de ser o sistema nervoso da solução e passa a ser apenas uma ferramenta de apoio para casos que realmente escaparam da heurística.
+
+Fontes
+
+
+
+
+
+
+
+You said:
+Como implementar o modelo intermediário semântico?
+Copilot said:
+Copilot
+
+Processamento concluído em 3 etapas
+Andre, eu implementaria o Modelo Intermediário Semântico (MIS) como uma camada formal entre o Recorder e o Compiler/Runner. A função dele é impedir que o TestForge grave “um seletor que clicou” e passe a gravar “uma intenção de usuário aplicada a um alvo semântico com evidências”.
+
+Também gerei três arquivos de apoio:
+
+Guia de implementação do MIS
+Exemplo de schema YAML do MIS
+Modelo Python inicial com dataclasses
+1. Ideia central
+Hoje vocês provavelmente têm algo parecido com:
+
+
+
+
+Python
+await page.locator("#btn123").click()
+O MIS deve trocar isso por algo assim:
+
+
+
+
+YAML
+intent: executar pesquisa de proposta
+action: click
+
+target:
+  role: button
+  accessible_name: Pesquisar
+  visible_text: Pesquisar
+
+context:
+  page_url_pattern: /siopi/propostas
+  nearby_texts:
+    - CPF
+    - Número da Proposta
+    - Situação
+
+locator_candidates:
+  - strategy: role
+    playwright: page.get_by_role('button', name='Pesquisar')
+    score: 0.97
+  - strategy: text
+    playwright: page.get_by_text('Pesquisar')
+    score: 0.82
+  - strategy: css
+    playwright: page.locator("button[type='submit']")
+    score: 0.68
+
+Mostrar mais linhas
+Essa abordagem está alinhada com a recomendação do Playwright de priorizar comportamento visível ao usuário e locators resilientes como getByRole, getByLabel, getByPlaceholder e getByTestId, em vez de depender de detalhes frágeis de DOM, CSS ou XPath.
+playwright
++1
+
+2. Pipeline recomendado
+A implementação deveria seguir este fluxo:
+
+
+
+
+Plain Text
+RawRecordedEvent
+        ↓
+EventNormalizer
+        ↓
+SemanticEnricher
+        ↓
+LocatorCandidateGenerator
+        ↓
+LocatorScorer
+        ↓
+SemanticTestCase
+        ↓
+PlaywrightCompiler
+        ↓
+Runner com fallback/healing
+
+Mostrar mais linhas
+A ideia é que o Recorder só capture evidências. Ele não deve decidir o melhor seletor final. A decisão vem depois, de forma determinística e auditável. Ferramentas como Selenium IDE, Healenium, Testim e mabl seguem, em diferentes níveis, a ideia de múltiplos locators, contexto, fallback e healing baseado em histórico ou confiança, não em um único seletor fixo.
+selenium
++3
+
+3. Estrutura mínima do MIS
+Eu começaria com estes objetos:
+
+
+
+
+Plain Text
+SemanticTestCase
+ ├── metadata
+ ├── preconditions
+ ├── steps[]
+ │    └── SemanticAction
+ │          ├── intent
+ │          ├── action
+ │          ├── input
+ │          ├── target
+ │          ├── context
+ │          ├── locator_candidates[]
+ │          └── expected_after_action
+ └── healing_policy
+4. Classe principal: SemanticAction
+Cada passo gravado vira uma SemanticAction.
+
+Exemplo conceitual:
+
+
+
+
+Python
+@dataclass
+class SemanticAction:
+    action_id: str
+    intent: str
+    action: ActionType
+    target: SemanticTarget
+    context: ActionContext
+    locator_candidates: list[LocatorCandidate]
+    input_value: Optional[str] = None
+    expected_after_action: list[dict] = field(default_factory=list)
+Ela não representa apenas “cliquei em X”. Ela representa:
+
+o que o usuário queria fazer;
+em qual elemento;
+em qual contexto;
+quais evidências existiam;
+quais locators candidatos foram encontrados;
+qual critério comprova que a ação funcionou.
+5. SemanticTarget: a identidade composta do elemento
+O alvo não pode ser só CSS/XPath. Ele precisa ser uma composição de sinais:
+
+
+
+
+Python
+@dataclass
+class SemanticTarget:
+    role: Optional[str]
+    accessible_name: Optional[str]
+    label: Optional[str]
+    placeholder: Optional[str]
+    visible_text: Optional[str]
+    test_id: Optional[str]
+    attributes: dict[str, Any]
+    dom_fingerprint: DomFingerprint
+Exemplo:
+
+
+
+
+YAML
+target:
+  role: textbox
+  accessible_name: CPF
+  label: CPF
+  placeholder: Informe o CPF
+  visible_text: null
+  test_id: null
+  attributes:
+    name: cpf
+    type: text
+  dom_fingerprint:
+    tag: input
+    normalized_path_hash: abc123
+    sibling_index: 2
+
+Mostrar mais linhas
+Isso permite que o TestForge identifique o elemento por contrato de usuário, e não só por implementação. O Playwright, inclusive, já trabalha bem com essa filosofia por meio de locators semânticos e auto-waiting/actionability checks.
+playwright
++1
+
+6. LocatorCandidate: múltiplos caminhos, com score
+Cada elemento deve ter vários candidatos:
+
+
+
+
+Python
+@dataclass
+class LocatorCandidate:
+    strategy: LocatorStrategy
+    value: str
+    playwright: str
+    score: float
+    reason: str
+Exemplo:
+
+
+
+
+YAML
+locator_candidates:
+  - strategy: label
+    value: CPF
+    playwright: page.get_by_label('CPF')
+    score: 0.96
+    reason: Campo possui label visível e semanticamente estável.
+
+  - strategy: role
+    value: textbox[name='CPF']
+    playwright: page.get_by_role('textbox', name='CPF')
+    score: 0.91
+    reason: Role e accessible name compatíveis.
+
+  - strategy: css
+    value: input[name='cpf']
+    playwright: page.locator("input[name='cpf']")
+    score: 0.74
+    reason: Atributo name parece estável, mas é detalhe de implementação.
+
+Mostrar mais linhas
+A diferença importante: o MIS não escolhe só um locator e joga fora os demais. Ele preserva todos para:
+
+geração inicial;
+fallback;
+healing;
+auditoria;
+curadoria posterior.
+7. Ordem de prioridade dos locators
+Eu implementaria esta ordem:
+
+
+
+
+Plain Text
+1. role + accessible name
+2. label
+3. placeholder
+4. test id
+5. texto visível, quando for contrato de negócio
+6. atributos estáveis de domínio
+7. relação com elementos próximos
+8. CSS simples
+9. XPath apenas como último recurso
+Essa prioridade evita que o TestForge nasça dependente de estrutura interna da tela. Também fica alinhada à recomendação do Playwright de usar locators orientados ao usuário e test ids quando a semântica visual não for suficiente.
+playwright
++1
+
+8. Scoring inicial
+Para o MVP, você não precisa de ML. Comece com score determinístico.
+
+Exemplo:
+
+
+
+
+Plain Text
+score =
+  0.30 * role_match +
+  0.25 * accessible_name_match +
+  0.15 * label_match +
+  0.10 * nearby_text_match +
+  0.10 * attribute_stability +
+  0.05 * dom_position_similarity +
+  0.05 * historical_success
+Critérios:
+
+
+
+
+Plain Text
+score >= 0.90
+    locator confiável
+
+0.75 <= score < 0.90
+    locator utilizável, mas monitorado
+
+0.60 <= score < 0.75
+    exigir fallback ou curadoria
+
+score < 0.60
+    não gerar automaticamente
+Essa abordagem também deixa o caminho preparado para self-healing determinístico, parecido com o que Healenium faz ao interceptar falhas, comparar DOM e registrar healing/histórico, mas adaptado ao universo Playwright/TestForge.
+github
++1
+
+9. O que o Recorder precisa capturar
+O gravador deve capturar o evento bruto, sem tentar resolver tudo.
+
+Para cada ação:
+
+
+
+
+YAML
+raw_event:
+  type: click
+  timestamp: 2026-06-12T13:58:00-03:00
+  url: /siopi/propostas
+  element:
+    tag: button
+    text: Pesquisar
+    role: button
+    accessible_name: Pesquisar
+    id: btn123
+    class: btn btn-primary
+    attributes:
+      type: submit
+  context:
+    page_title: Consulta de Propostas
+    nearby_texts:
+      - CPF
+      - Número da Proposta
+      - Situação
+  dom_snapshot_ref: snapshots/step_002_dom.html
+  accessibility_snapshot_ref: snapshots/step_002_ax.json
+  screenshot_ref: screenshots/step_002.png
+
+Mostrar mais linhas
+Depois o SemanticEnricher transforma isso em SemanticAction.
+
+10. Compiler para Playwright
+O compilador pega o melhor candidato e gera código.
+
+Exemplo:
+
+
+
+
+Python
+class PlaywrightPythonCompiler:
+    def compile_action(self, action: SemanticAction) -> str:
+        locator = action.best_candidate().playwright
+
+        if action.action == ActionType.CLICK:
+            return f"await {locator}.click()"
+
+        if action.action == ActionType.FILL:
+            return f"await {locator}.fill({action.input_value!r})"
+
+        raise NotImplementedError(action.action)
+Para o caso:
+
+
+
+
+YAML
+action: click
+target:
+  role: button
+  accessible_name: Pesquisar
+Saída:
+
+
+
+
+Python
+await page.get_by_role("button", name="Pesquisar").click()
+11. Como isso ajuda no self-healing
+Quando o teste falhar, o runner não deve perguntar diretamente para a LLM:
+
+“Qual seletor eu uso agora?”
+
+Ele deve consultar o MIS:
+
+
+
+
+Plain Text
+Qual era a intenção?
+Qual era o alvo semântico?
+Quais eram os textos próximos?
+Qual era o role?
+Qual era o accessible name?
+Quais candidatos existiam?
+Qual era o score?
+O DOM atual tem elemento parecido?
+Aí o healing recalcula candidatos.
+
+Fluxo:
+
+
+
+
+Plain Text
+1. Locator primário falhou.
+2. Tentar candidatos alternativos do MIS.
+3. Se todos falharem, reextrair DOM/acessibilidade.
+4. Gerar novos candidatos.
+5. Comparar com SemanticTarget original.
+6. Calcular score.
+7. Se score >= 0.90, auto-heal.
+8. Se score entre 0.75 e 0.90, colocar em quarentena.
+9. Se score < 0.75, acionar LLM/curadoria.
+A LLM entra apenas quando a evidência determinística não for suficiente.
+
+12. MVP prático
+Eu implementaria em quatro blocos.
+
+MVP 1 — Schema e classes
+Entregas:
+
+SemanticTestCase
+SemanticAction
+SemanticTarget
+ActionContext
+LocatorCandidate
+serialização YAML/JSON
+MVP 2 — Conversor do evento bruto
+Entregas:
+
+RawRecordedEvent
+EventNormalizer
+SemanticEnricher
+captura de DOM/accessibility/screenshot references
+MVP 3 — Gerador de candidatos
+Entregas:
+
+RoleLocatorGenerator
+LabelLocatorGenerator
+TestIdLocatorGenerator
+TextLocatorGenerator
+CssLocatorGenerator
+LocatorScorer
+MVP 4 — Compiler e Runner
+Entregas:
+
+geração Playwright Python;
+fallback determinístico;
+logs de decisão;
+relatório de locators usados;
+base de healing.
+13. Decisão importante
+Eu não colocaria a LLM dentro do MIS.
+
+O MIS deve ser estruturado, versionado e determinístico.
+
+A LLM pode consumir o MIS para curadoria, mas não deve ser a dona do modelo.
+
+Arquitetura correta:
+
+
+
+
+Plain Text
+MIS = fonte de verdade
+LLM = assistente de curadoria
+Runner = executor
+Healing Engine = decisor determinístico
+Compiler = tradutor para código
+Assim você evita repetir o problema atual: a inteligência não fica migrando de camada em camada. Ela fica formalizada no modelo.
+
+Fontes
+Como gerar cadidatos de locators automaticamente?
+Como funciona o rankig de score de lcators?
+Como implementar fallback deterministicos?
+Copilot said:
+Copilot
+
+Processamento concluído em 4 etapas
+Andre, eu dividiria isso em três motores separados, porque se misturar tudo no runner o problema volta a ficar insustentável:
+
+
+
+
+Plain Text
+1. LocatorCandidateGenerator
+   gera candidatos
+
+2. LocatorScorer
+   ranqueia por score
+
+3. DeterministicFallbackRunner
+   executa em ordem, valida e registra evidência
+Gerei também dois artefatos para download:
+
+Guia — geração de candidatos, ranking e fallback
+Skeleton Python — locator engine
+1. Como gerar candidatos de locators automaticamente?
+A geração deve partir do Modelo Intermediário Semântico, não do seletor bruto gravado.
+
+Entrada mínima:
+
+
+
+
+YAML
+target:
+  role: button
+  accessible_name: Pesquisar
+  label: null
+  placeholder: null
+  visible_text: Pesquisar
+  test_id: null
+  tag: button
+  attributes:
+    type: submit
+    id: btnPesquisar
+
+context:
+  page_title: Consulta de Propostas
+  nearby_texts:
+    - CPF
+    - Número da Proposta
+    - Situação
+
+Mostrar mais linhas
+A partir disso, você gera vários candidatos.
+
+Ordem recomendada
+
+
+
+Plain Text
+1. role + accessible name
+2. label
+3. placeholder
+4. test id
+5. texto visível
+6. atributos estáveis
+7. locator contextual
+8. CSS simples
+9. XPath relativo
+10. XPath absoluto — evitar ao máximo
+Essa ordem segue a filosofia do Playwright de preferir locators baseados em comportamento visível ao usuário, como getByRole, getByLabel, getByPlaceholder e getByTestId, em vez de seletores frágeis baseados em detalhes internos de DOM ou CSS.
+devstringx
++1
+
+Exemplo de geração
+Para um botão Pesquisar, o gerador produziria:
+
+
+
+
+Python
+[
+    {
+        "strategy": "role",
+        "playwright": "page.get_by_role('button', name='Pesquisar')",
+        "reason": "Role e accessible name representam o elemento como o usuário percebe."
+    },
+    {
+        "strategy": "text",
+        "playwright": "page.get_by_text('Pesquisar')",
+        "reason": "Texto visível compatível, mas pode ser ambíguo."
+    },
+    {
+        "strategy": "css",
+        "playwright": "page.locator(\"button[type='submit']\")",
+        "reason": "Atributo type parece útil, mas pode não ser único."
+    },
+    {
+        "strategy": "contextual",
+        "playwright": "page.get_by_text('CPF').locator('xpath=ancestor::form[1]').get_by_role('button', name='Pesquisar')",
+        "reason": "Restringe busca ao formulário próximo ao campo CPF."
+    }
+]
+
+Mostrar mais linhas
+A ideia é parecida com o conceito usado pelo Selenium IDE: ele grava múltiplos locators e, se um falha, tenta outros até encontrar um que funcione. A diferença é que no TestForge vocês devem fazer isso de forma semântica, ranqueada e auditável.
+frugaltesting
+
+2. Como funciona o ranking de score de locators?
+O score mede:
+
+“Qual a probabilidade de este locator representar o mesmo alvo semântico gravado?”
+
+Eu não começaria com machine learning. Começaria com score determinístico explicável.
+
+Fórmula inicial
+
+
+
+Plain Text
+score =
+  0.25 * semantic_strength +
+  0.20 * uniqueness +
+  0.15 * stability +
+  0.15 * context_match +
+  0.10 * action_compatibility +
+  0.10 * historical_success +
+  0.05 * simplicity
+Critérios
+1. semantic_strength
+Mede se o locator representa o elemento como o usuário enxerga.
+
+Exemplos fortes:
+
+
+
+
+Python
+page.get_by_role("button", name="Pesquisar")
+page.get_by_label("CPF")
+page.get_by_placeholder("Informe o CPF")
+Esses locators são preferíveis porque refletem o comportamento e a acessibilidade da interface, que é justamente a recomendação central do Playwright para testes mais resilientes.
+devstringx
++1
+
+2. uniqueness
+Um bom locator deve resolver para um único elemento.
+
+
+
+
+Plain Text
+count == 1 → bom
+count == 0 → falhou
+count > 1  → ambíguo
+Exemplo:
+
+
+
+
+Python
+count = await locator.count()
+
+if count == 1:
+    uniqueness = 1.0
+elif count > 1:
+    uniqueness = 0.3
+else:
+    uniqueness = 0.0
+3. stability
+Aqui você penaliza valores frágeis.
+
+Penalizar:
+
+
+
+
+Plain Text
+id com número aleatório
+classe CSS gerada
+XPath absoluto
+nth-child
+hashes
+índices posicionais
+Exemplos ruins:
+
+
+
+
+Python
+page.locator("#input-928374")
+page.locator(".css-1abcxyz")
+page.locator("body > div:nth-child(3) > div > button")
+page.locator("/html/body/div[2]/main/div/button")
+Exemplos melhores:
+
+
+
+
+Python
+page.get_by_role("button", name="Pesquisar")
+page.get_by_label("CPF")
+page.locator("input[name='cpf']")
+4. context_match
+Confirma se o locator está na região esperada da tela.
+
+Exemplo:
+
+
+
+
+YAML
+nearby_texts:
+  - CPF
+  - Número da Proposta
+  - Situação
+Se o botão Pesquisar aparece perto desses textos, ele ganha score.
+
+Isso é importante porque telas corporativas costumam ter vários botões iguais:
+
+
+
+
+Plain Text
+Pesquisar cliente
+Pesquisar proposta
+Pesquisar contrato
+Pesquisar agência
+Então o contexto evita clicar no botão certo com nome certo, mas no bloco errado.
+
+5. action_compatibility
+O elemento precisa aceitar a ação.
+
+Exemplo:
+
+
+
+
+Plain Text
+click  → elemento visível, habilitado e clicável
+fill   → input/editável
+check  → checkbox/radio
+select → select/combobox
+O Playwright já faz actionability checks antes de ações como click, fill e check, validando condições como visibilidade, estabilidade, habilitação e capacidade de receber eventos. O TestForge deve usar isso a favor do ranking e do fallback, não tentar substituir com waits manuais frágeis.
+testim
+
+6. historical_success
+Se um candidato já funcionou antes naquele contexto, ele ganha peso.
+
+Exemplo:
+
+
+
+
+YAML
+locator_history:
+  locator: page.get_by_role('button', name='Pesquisar')
+  success_count: 38
+  failure_count: 1
+  last_success: 2026-06-12T10:30:00-03:00
+Esse conceito é semelhante à ideia usada por ferramentas de self-healing como Healenium, que mantêm dados de seletores, healing e histórico em backend/banco para apoiar decisões futuras.
+eminmuhammadi
++1
+
+3. Exemplo prático de ranking
+Suponha estes candidatos:
+
+
+
+
+YAML
+- strategy: role
+  value: button[name='Pesquisar']
+  unique: true
+  actionable: true
+  stable: true
+
+- strategy: text
+  value: Pesquisar
+  unique: false
+  actionable: true
+  stable: medium
+
+- strategy: css
+  value: button[type='submit']
+  unique: false
+  actionable: true
+  stable: medium
+
+- strategy: xpath
+  value: /html/body/div[2]/form/div[5]/button
+  unique: true
+  actionable: true
+  stable: false
+
+Mostrar mais linhas
+Resultado esperado:
+
+
+
+
+Plain Text
+1. role + name       → 0.97
+2. text             → 0.76
+3. css submit       → 0.68
+4. xpath absoluto   → 0.42
+O XPath absoluto pode até funcionar hoje, mas deve ser penalizado porque tende a quebrar com mudanças estruturais simples.
+
+4. Como implementar fallback determinístico?
+Fallback determinístico é:
+
+“Tentar candidatos em ordem objetiva, com regras fixas, sem LLM, e só aceitar sucesso se a intenção for validada.”
+
+Fluxo:
+
+
+
+
+Plain Text
+1. Ordenar candidatos por score.
+2. Remover candidatos abaixo do threshold mínimo.
+3. Tentar locator primário.
+4. Validar se resolve um elemento.
+5. Validar actionability.
+6. Executar ação.
+7. Validar assertion pós-ação.
+8. Se passar, persistir sucesso.
+9. Se falhar, tentar próximo candidato.
+10. Se todos falharem, acionar healing determinístico.
+11. Se healing não tiver confiança, acionar LLM/curadoria.
+Thresholds sugeridos
+
+
+
+Plain Text
+score >= 0.90
+    candidato primário
+
+0.75 <= score < 0.90
+    fallback aceitável
+
+0.60 <= score < 0.75
+    fallback fraco; só usar com assertion pós-ação forte
+
+score < 0.60
+    não usar automaticamente
+5. Regra essencial do fallback
+O fallback não pode ser considerado sucesso só porque conseguiu clicar.
+
+Ele só é sucesso se a intenção foi cumprida.
+
+Exemplo:
+
+
+
+
+Python
+await locator.click()
+await expect(page.get_by_role("table", name="Resultado da consulta")).to_be_visible()
+Ou seja:
+
+
+
+
+Plain Text
+click funcionou?             Não basta.
+estado esperado apareceu?    Aí sim.
+Essa é a diferença entre:
+
+
+
+
+Plain Text
+“consegui interagir com algo”
+e:
+
+
+
+
+Plain Text
+“executei corretamente a intenção do teste”
+6. Exemplo de implementação conceitual
+
+
+
+Python
+async def execute_with_fallback(action, candidates, post_assertion):
+    candidates = sorted(candidates, key=lambda c: c.score, reverse=True)
+
+    for candidate in candidates:
+        if candidate.score < 0.60:
+            continue
+
+        try:
+            locator = resolve_locator(candidate)
+
+            count = await locator.count()
+            if count != 1:
+                raise AmbiguousLocatorError(candidate, count)
+
+            await expect(locator).to_be_visible()
+            await expect(locator).to_be_enabled()
+
+            if action.type == "click":
+                await locator.click()
+
+            elif action.type == "fill":
+                await locator.fill(action.input_value)
+
+            await post_assertion()
+
+            persist_success(candidate)
+            return candidate
+
+        except Exception as error:
+            persist_failure(candidate, error)
+            continue
+
+    raise LocatorFallbackExhausted(action)
+
+Mostrar mais linhas
+7. Onde entra o healing determinístico?
+O fallback trabalha com os candidatos já conhecidos.
+
+O healing determinístico entra quando:
+
+
+
+
+Plain Text
+todos os candidatos conhecidos falharam
+Aí o TestForge deve:
+
+
+
+
+Plain Text
+1. Reextrair DOM atual.
+2. Reextrair accessibility tree.
+3. Gerar novos candidatos.
+4. Comparar com o SemanticTarget original.
+5. Calcular score de similaridade.
+6. Se score >= 0.90, aplicar auto-heal.
+7. Se score entre 0.75 e 0.90, colocar em quarentena.
+8. Se score < 0.75, enviar para LLM/curadoria.
+Essa arquitetura se aproxima do padrão usado por ferramentas de self-healing como Healenium, que interceptam falhas de localização, analisam mudanças no DOM e substituem locators quebrados por alternativas com melhor correspondência, mantendo histórico e relatórios.
+selenium
++1
+
+8. O que persistir a cada execução?
+Persistir isso é fundamental para o sistema melhorar sem depender da LLM:
+
+
+
+
+YAML
+execution_result:
+  action_id: step_002
+  selected_candidate:
+    strategy: role
+    value: button[name='Pesquisar']
+    score: 0.97
+  result: success
+  match_count: 1
+  actionability:
+    visible: true
+    enabled: true
+    stable: true
+  post_assertion:
+    passed: true
+    assertion: tabela de resultados visível
+  duration_ms: 420
+
+Mostrar mais linhas
+E quando falhar:
+
+
+
+
+YAML
+failed_candidate:
+  strategy: text
+  value: Pesquisar
+  score: 0.76
+  match_count: 4
+  error: ambiguous_locator
+  evidence:
+    screenshot: step_002_failure.png
+    dom_snapshot: step_002_dom.html
+    accessibility_snapshot: step_002_ax.json
+9. Minha recomendação para o TestForge
+Eu implementaria nesta ordem:
+
+
+
+
+Plain Text
+MVP 1:
+  gerar candidatos role, label, placeholder, testid, text, css simples
+
+MVP 2:
+  implementar score determinístico
+
+MVP 3:
+  implementar fallback com validação pós-ação
+
+MVP 4:
+  persistir histórico de sucesso/falha
+
+MVP 5:
+  implementar healing determinístico por reextração de DOM/accessibility tree
+
+MVP 6:
+  acionar LLM somente para casos ambíguos ou abaixo do threshold
+
+Mostrar mais linhas
+A decisão arquitetural mais importante é:
+
+Locator bom não é o que “encontra um elemento”. Locator bom é o que encontra exatamente o elemento que cumpre a intenção do passo, no contexto certo, e cuja ação produz o estado esperado.
+
+Fontes
+
+
+
+
+
+
+
+You said:
+Como calcular o score de uniqueness? Como validar a actionability de um locatos? Como pesistir o histórico de sucesso? O que ainda não estamos vendo? O plano anterior falhou mas fomos nós (eu e você) que o fizemos. Como saber se esse realmente vai funcionar?
+Copilot said:
+Copilot
+
+Processamento concluído em 6 etapas
+Andre, essa é a pergunta certa. E vou ser bem honesto: não dá para saber por argumento que essa arquitetura vai funcionar. O plano anterior parecia bom no papel e falhou porque não tínhamos um mecanismo de validação falsificável. Então, desta vez, a arquitetura precisa nascer com métricas, benchmark, shadow mode, kill criteria e medição de falso healing.
+
+Gerei também dois arquivos para apoiar a implementação:
+
+Guia — uniqueness, actionability, histórico e validação
+Código Python — métricas de uniqueness e histórico SQLite
+1. Como calcular o score de uniqueness?
+A forma ingênua seria:
+
+
+
+
+Plain Text
+count == 1 → único
+count > 1  → ambíguo
+count == 0 → inexistente
+Mas isso é fraco. Um locator pode retornar um único elemento hoje e ficar ambíguo amanhã. Ou pode retornar quatro elementos na tela inteira, mas apenas um dentro do formulário correto.
+
+Então eu calcularia uniqueness com quatro dimensões:
+
+
+
+
+Plain Text
+uniqueness_score =
+  0.40 * cardinality_score +
+  0.25 * context_uniqueness_score +
+  0.20 * semantic_gap_score +
+  0.15 * cross_snapshot_stability_score
+1.1 cardinality_score
+Mede quantos elementos o locator encontra.
+
+1.1 cardinality_score
+Mede quantos elementos o locator encontra.
+Pythondef cardinality_score(count: int) -> float:    if count <= 0:        return 0.0    if count == 1:        return 1.0    if count == 2:        return 0.55    if count == 3:        return 0.40    return max(0.10, 1.0 / count)Mostrar mais linhas
+Exemplo:
+Plain Text1 match  → 1.002 matches → 0.553 matches → 0.405 matches → 0.20Mostrar mais linhas
+Mas atenção: count == 1 sozinho não prova que o locator é bom. Ele só prova que ele é único naquele momento.
+
+1.2 context_uniqueness_score
+Esse é mais importante para sistemas corporativos como SIOPI, porque a tela pode ter vários botões iguais.
+Exemplo:
+Plain TextPesquisar clientePesquisar propostaPesquisar contratoPesquisar convênioMostrar mais linhas
+O locator:
+Pythonpage.get_by_text("Pesquisar")Mostrar mais linhas
+pode encontrar vários elementos. Mas se o contexto do passo era o formulário de proposta, e dentro daquele formulário existe só um botão Pesquisar, ele pode ser aproveitável com refinamento contextual.
+Pythondef context_uniqueness_score(total_matches: int, matches_in_context: int) -> float:    if total_matches <= 0:        return 0.0    if matches_in_context == 1:        return 1.0    if matches_in_context > 1:        return 0.50    return 0.0Mostrar mais linhas
+Exemplo:
+Plain Texttotal_matches = 5matches_in_expected_context = 1context_uniqueness_score = 1.0Mostrar mais linhas
+Isso significa:
+
+O locator é ambíguo globalmente, mas pode ser confiável se restringido ao contexto correto.
+
+Essa ideia conversa com a recomendação do Playwright de usar locators que representam como o usuário percebe a tela, mas com refinamento quando houver ambiguidade. O Playwright recomenda locators como role, label, placeholder e test id justamente para evitar dependência de detalhes frágeis do DOM. [testim.io], [testim.io]
+
+1.3 semantic_gap_score
+Esse ponto é essencial para evitar falso healing.
+Quando o sistema encontra candidatos, ele deve comparar:
+Plain Textmelhor candidato vs segundo melhor candidatoMostrar mais linhas
+Se os dois são quase iguais, há risco de ambiguidade.
+Pythondef semantic_gap_score(best_similarity: float, second_best_similarity: float) -> float:    return max(0.0, min(1.0, best_similarity - second_best_similarity))Mostrar mais linhas
+Exemplo bom:
+Plain Textbest_similarity = 0.94second_best_similarity = 0.41gap = 0.53Mostrar mais linhas
+Exemplo perigoso:
+Plain Textbest_similarity = 0.83second_best_similarity = 0.80gap = 0.03Mostrar mais linhas
+Mesmo que o melhor candidato tenha score razoável, um gap pequeno indica:
+
+“Eu acho que é esse elemento, mas existe outro quase igual.”
+
+Nesse caso, não deveria haver auto-heal. Deveria ir para quarentena ou curadoria.
+
+1.4 cross_snapshot_stability_score
+Um locator bom precisa continuar único em variações de tela.
+Você deve testar o locator contra múltiplos snapshots:
+Plain Textsnapshot após loginsnapshot com dados vaziossnapshot com dados preenchidossnapshot com erro de validaçãosnapshot com resultado carregadosnapshot em viewport diferenteMostrar mais linhas
+Pythondef cross_snapshot_stability_score(stable_unique_snapshots: int, total_snapshots: int) -> float:    if total_snapshots <= 0:        return 0.0    return stable_unique_snapshots / total_snapshotsMostrar mais linhas
+Exemplo:
+Plain TextFoi único em 4 de 5 snapshots → 0.80Foi único em 1 de 5 snapshots → 0.20Mostrar mais linhas
+
+2. Como validar a actionability de um locator?
+Aqui a regra é: não basta o locator existir.
+Ele precisa estar pronto para a ação. O Playwright já faz verificações de actionability antes de ações como click, fill, check e outras, incluindo visibilidade, estabilidade, habilitação e capacidade de receber eventos. Isso deve ser usado como parte do mecanismo do TestForge, e não substituído por waits manuais frágeis. [devstringx.com]
+
+2.1 Validação mínima por tipo de ação
+Para click
+Validar:
+Plain Textcount == 1visívelhabilitadoestávelrecebe eventosMostrar mais linhas
+Em Playwright Python, uma forma prática é usar trial=True:
+Pythonawait locator.click(trial=True)Mostrar mais linhas
+Isso verifica se o elemento estaria apto ao clique sem executar o clique de fato.
+Fluxo:
+Pythoncount = await locator.count()if count != 1:    raise AmbiguousLocatorError(count)await expect(locator).to_be_visible()await expect(locator).to_be_enabled()await locator.click(trial=True)Mostrar mais linhas
+Depois, só então:
+Pythonawait locator.click()Mostrar mais linhas
+
+Para fill
+Validar:
+Plain Textcount == 1visívelhabilitadoeditávelMostrar mais linhas
+Exemplo:
+Pythoncount = await locator.count()if count != 1:    raise AmbiguousLocatorError(count)await expect(locator).to_be_visible()await expect(locator).to_be_enabled()await expect(locator).to_be_editable()await locator.fill(valor)Mostrar mais linhas
+
+Para select
+Validar:
+Plain Textcount == 1visívelhabilitadocompatível com select/comboboxopção existeMostrar mais linhas
+Exemplo conceitual:
+Pythonawait expect(locator).to_be_visible()await expect(locator).to_be_enabled()tag_name = await locator.evaluate("el => el.tagName.toLowerCase()")if tag_name != "select":    role = await locator.get_attribute("role")    if role != "combobox":        raise InvalidActionTargetError()Mostrar mais linhas
+
+2.2 Mas actionability não é sucesso
+Esse é o ponto mais importante.
+A actionability só diz:
+
+“Eu consigo interagir com esse elemento.”
+
+Ela não diz:
+
+“Eu interagi com o elemento certo.”
+
+Por isso toda ação precisa de uma assertion pós-ação.
+Exemplo:
+Pythonawait page.get_by_role("button", name="Pesquisar").click()await expect(    page.get_by_role("table", name="Resultado da consulta")).to_be_visible()Mostrar mais linhas
+Sem assertion pós-ação, o TestForge pode clicar no botão errado e achar que curou o teste. Esse é o falso healing.
+
+3. Como persistir o histórico de sucesso?
+Persistir histórico é obrigatório. Sem histórico, cada execução começa “burra”.
+Ferramentas de self-healing como Healenium usam uma arquitetura com backend e banco para armazenar seletores, healing, histórico e relatórios. Isso é importante porque o sistema aprende quais locators funcionaram em quais contextos. [playwright.dev], [chromewebs...google.com]
+Além disso, há ferramentas que dependem de uma execução bem-sucedida anterior para capturar o contexto correto do elemento antes de conseguir aplicar self-healing com segurança. [selenium.dev]
+
+3.1 O que persistir
+Eu persistiria neste nível de granularidade:
+YAMLlocator_observation:  application: SIOPI  page_signature: siopi/propostas/consulta  action_id: step_002  semantic_target_hash: abc123  locator_fingerprint: role:button:Pesquisar  strategy: role  score: 0.97  outcome: success  match_count: 1  duration_ms: 421  failure_reason: null  evidence:    screenshot_before: step_002_before.png    screenshot_after: step_002_after.png    dom_snapshot: step_002_dom.html    ax_snapshot: step_002_ax.jsonMostrar mais linhas
+E em caso de falha:
+YAMLlocator_observation:  application: SIOPI  page_signature: siopi/propostas/consulta  action_id: step_002  semantic_target_hash: abc123  locator_fingerprint: text:Pesquisar  strategy: text  score: 0.76  outcome: failure  match_count: 4  failure_reason: ambiguous_locatorMostrar mais linhas
+
+3.2 Não use apenas success / total
+Se um locator teve:
+Plain Text1 sucesso0 falhasMostrar mais linhas
+O cálculo ingênuo daria:
+Plain Text100% confiávelMostrar mais linhas
+Isso é falso. Ele só tem pouca evidência.
+Eu usaria Wilson lower bound para ter uma estimativa conservadora.
+Pythondef wilson_lower_bound(successes: int, total: int, z: float = 1.96) -> float:    if total <= 0:        return 0.0    phat = successes / total    denominator = 1 + z * z / total    centre = phat + z * z / (2 * total)    margin = z * sqrt((phat * (1 - phat) + z * z / (4 * total)) / total)    return (centre - margin) / denominatorMostrar mais linhas
+Exemplo conceitual:
+Plain Text1 sucesso / 1 execução   → score conservador baixo10 sucessos / 10 execuções → score melhor100 sucessos / 100 execuções → score muito altoMostrar mais linhas
+Isso evita que um locator seja promovido para primário depois de uma única execução feliz.
+
+3.3 Estrutura SQLite inicial
+SQLCREATE TABLE locator_observation (    id INTEGER PRIMARY KEY AUTOINCREMENT,    ts INTEGER NOT NULL,    application TEXT NOT NULL,    page_signature TEXT NOT NULL,    action_id TEXT NOT NULL,    semantic_target_hash TEXT NOT NULL,    locator_fingerprint TEXT NOT NULL,    strategy TEXT NOT NULL,    score REAL NOT NULL,    outcome TEXT NOT NULL,    failure_reason TEXT,    match_count INTEGER,    duration_ms INTEGER,    evidence_json TEXT);Mostrar mais linhas
+Depois o score histórico entra no ranking:
+Plain Textfinal_score =  0.25 * semantic_strength +  0.20 * uniqueness +  0.15 * stability +  0.15 * context_match +  0.10 * actionability +  0.10 * historical_success +  0.05 * simplicityMostrar mais linhas
+
+4. O que ainda não estamos vendo?
+Acho que existem alguns riscos que ainda podem estar subestimados.
+4.1 O problema do oráculo
+O maior risco não é locator. É saber se a ação correta aconteceu.
+Se o teste só faz:
+Pythonawait button.click()Mostrar mais linhas
+ele não sabe se clicou no botão certo.
+Cada passo relevante precisa de uma assertion observável:
+Plain Textclicar em pesquisar    → tabela apareceu    → request retornou 200    → mensagem de sucesso apareceu    → URL mudou    → campo foi preenchidoMostrar mais linhas
+Sem oráculo, qualquer healing vira chute.
+
+4.2 Falso healing
+Esse é o inimigo número um.
+Pior do que o teste quebrar é o teste passar errado.
+Exemplo:
+Plain TextO botão "Pesquisar proposta" sumiu.O healing escolhe "Pesquisar cliente".O teste passa porque uma tabela apareceu.Mas validou o fluxo errado.Mostrar mais linhas
+Por isso o healing precisa de:
+Plain Textscore altogap alto entre primeiro e segundo candidatoassertion pós-ação forteevidência persistidamodo quarentena para ambiguidadeMostrar mais linhas
+
+4.3 Dados de teste instáveis
+Às vezes o locator está certo, mas o dado não existe mais.
+Exemplo:
+Plain TextCPF não tem propostacontrato mudou de situaçãomassa foi apagadaambiente caiuperfil não tem permissãoMostrar mais linhas
+Se o TestForge tratar isso como problema de locator, vai “curar” o lugar errado.
+Então o runner precisa classificar falhas:
+Plain Textlocator_failureactionability_failureassertion_failuredata_failurenetwork_failurepermission_failureenvironment_failureMostrar mais linhas
+
+4.4 Backend e sincronização
+Muitos testes quebram por timing, request pendente, debounce, spinner ou tela parcialmente renderizada.
+O Playwright já possui auto-waiting e web-first assertions, então o TestForge deve preferir assertions de estado em vez de sleep ou waitForTimeout. [devstringx.com], [playwright.dev]
+
+4.5 Acessibilidade ruim
+Se a aplicação não tem bons roles, labels e accessible names, os melhores locators semânticos não vão existir.
+Nesse caso vocês precisarão de uma política institucional:
+Plain Textcomponentes novos devem ter labelbotões devem ter accessible namecampos devem ter label associadaelementos críticos devem ter data-testidMostrar mais linhas
+Ou seja: talvez parte da solução do TestForge não esteja só no TestForge, mas também em contratos mínimos de testabilidade das aplicações.
+
+5. Como saber se esse plano realmente vai funcionar?
+Resposta honesta:
+
+Não sabemos ainda.
+
+O que podemos fazer é transformar a arquitetura em uma hipótese testável.
+O plano anterior falhou porque provavelmente medimos o sucesso tarde demais: só depois de o sistema já estar integrado e quebrando. Desta vez, precisamos validar por experimento.
+
+6. Proposta de validação científica
+6.1 Hipóteses
+Plain TextH1: MIS reduz quebras por locator em relação ao script gerado diretamente.H2: fallback determinístico recupera pelo menos 70% das quebras simples.H3: falso healing fica abaixo de 2%.H4: LLM é acionada em menos de 10% dos casos.H5: tempo de execução não aumenta mais de 20%.Mostrar mais linhas
+
+6.2 Gold set
+Escolher um conjunto pequeno e realista:
+Plain Text10 fluxos reais do SIOPI3 variações de dados por fluxo2 perfis de usuário2 viewportsMostrar mais linhas
+Exemplo:
+Plain Text10 fluxos × 3 massas × 2 perfis × 2 viewports = 120 execuçõesMostrar mais linhas
+
+6.3 Benchmark contra o modelo antigo
+Rodar lado a lado:
+Plain TextA: gravação atualB: gravação com MIS + ranking + fallbackMostrar mais linhas
+Medir:
+Plain Textpass rateflake ratelocator failure ratefalse healing ratetempo médio por testequantidade de intervenção humanaquantidade de chamadas LLMMostrar mais linhas
+
+6.4 Testes com mutação controlada
+Criar mutações sintéticas:
+Plain Textmudar idmudar classe CSSmover botão dentro do formulárioalterar texto Pesquisar → Consultarduplicar botão Pesquisar em outra seçãoremover labeladicionar loading spinnertrocar ordem dos camposMostrar mais linhas
+Resultado esperado:
+Plain Textmudança simples → fallback resolvemudança semântica leve → healing determinístico resolveambiguidade real → quarentenamudança de intenção → falha, não curaMostrar mais linhas
+
+6.5 Shadow mode
+Antes de deixar o healing agir, rodar em modo sombra:
+Plain Text1. O teste quebra.2. O TestForge calcula qual locator usaria.3. Mas não aplica automaticamente.4. Um humano compara a sugestão.5. Medimos acerto/erro.Mostrar mais linhas
+Só depois de uma taxa aceitável, liberar auto-heal.
+
+6.6 Kill criteria
+Definir critérios de morte do experimento:
+Plain Textfalso healing > 2%tempo de execução > 20% acima do baselineLLM acionada em > 20% dos casosfallback gera mais flakinesshealing sem evidence packagehealing sem assertion pós-açãoMostrar mais linhas
+Se bater nesses critérios, a arquitetura não está pronta.
+
+7. Minha avaliação final
+Esse plano é melhor que o anterior por um motivo: ele é falsificável.
+A arquitetura anterior dependia de esperança:
+Plain Textvamos melhorar o gravadorvamos melhorar o runnervamos melhorar o promptMostrar mais linhas
+A nova arquitetura precisa depender de medição:
+Plain Textquantos candidatos gerou?qual score?qual match count?qual actionability?qual assertion pós-ação?qual histórico?qual taxa de falso healing?quantas vezes a LLM foi necessária?Mostrar mais linhas
+Então a resposta mais honesta é:
+
+Não temos garantia de que vai funcionar.
+Mas agora conseguimos descobrir cedo se não funciona.
+
+E isso, arquiteturalmente, é um avanço enorme.
+FontesForneça seus comentários sobre o BizChatYou said: Como implementar o shadow mode na prática? Como medir o falso healing em testes reais? como validar a assertividade pós-ação? Onde entra a taxonomia das falhas? as familias de erros as diferenças de tecnologias? O que podemos aproveitar do que já foi feito?Copilot said: CopilotProcessamento concluído em 2 etapasAndre, aqui a resposta precisa ser mais “pé no chão” do que arquitetural. O ponto central é: não liberar self-healing automático antes de medir, em testes reais, se ele acerta mais do que erra. O mecanismo para isso é o shadow mode.
+Gerei também dois artefatos para download:
+
+Guia — Shadow Mode, falso healing, assertions e taxonomia
+Schema YAML — observação de healing em shadow mode
+
+
+1. Como implementar o shadow mode na prática?
+O shadow mode é um modo em que o TestForge calcula a cura, mas não aplica automaticamente como fonte de verdade.
+Quando um locator falha, o sistema faz isto:
+Plain Text1. O runner detecta a falha real.2. Classifica a falha pela taxonomia.3. Se for falha elegível para healing, gera candidatos.4. Calcula score, uniqueness, actionability e histórico.5. Escolhe o melhor candidato.6. Simula/valida o candidato.7. Registra: “eu teria curado com este locator”.8. O teste continua falhando ou segue o comportamento original configurado.9. Um oracle automático ou humano revisa a sugestão.Mostrar mais linhas
+A diferença para o auto-healing é esta:
+Plain TextAuto-healing:  falhou → cura → executa → altera resultadoShadow mode:  falhou → sugere cura → mede → não promove automaticamenteMostrar mais linhas
+Isso evita que o TestForge comece a “passar teste errado”.
+
+2. Estados do shadow mode
+Eu criaria uma máquina de estados assim:
+Plain TextNO_HEAL_NEEDEDHEAL_CANDIDATE_GENERATEDHEAL_SUGGESTED_NOT_APPLIEDHEAL_VALIDATED_BY_ORACLEHEAL_REJECTED_BY_ORACLEHEAL_REQUIRES_HUMAN_REVIEWHEAL_FALSE_POSITIVEHEAL_PROMOTED_TO_AUTOMostrar mais linhas
+Exemplo:
+YAMLshadow_healing:  mode: suggest_only  original_failure: LOCATOR_NOT_FOUND  suggested_candidate:    strategy: contextual_role    value: "within form[Consulta de Propostas] button[name='Consultar']"    score: 0.87    uniqueness_score: 0.91    actionability_score: 1.0  decision:    applied: false    reason: "Shadow mode ativo"Mostrar mais linhas
+
+3. Como medir falso healing em testes reais?
+Primeiro, precisamos definir claramente.
+Definição
+Falso healing é quando o TestForge escolhe um novo elemento que permite o teste continuar, mas esse elemento não representa a intenção original.
+Exemplo:
+Plain TextIntenção original:  clicar em "Pesquisar proposta"Healing sugerido:  clicar em "Pesquisar cliente"Resultado:  alguma tabela apareceuConclusão:  o teste aparentemente passou, mas validou o fluxo errado.Mostrar mais linhas
+Isso é pior do que falhar.
+
+Métrica principal
+Plain Textfalse_heal_rate =  false_heals / total_heal_suggestions_reviewedMostrar mais linhas
+Exemplo:
+Plain Text100 sugestões revisadas3 eram curas erradasfalse_heal_rate = 3%Mostrar mais linhas
+Para mim, no TestForge, o limite inicial deveria ser rígido:
+Plain Textfalse_heal_rate < 2%Mostrar mais linhas
+Se passar disso, não libera auto-heal.
+
+Outras métricas
+Plain Textprecision =  true_positive_heals / all_heal_suggestions_reviewedrecall =  recovered_locator_failures / all_recoverable_locator_failuresquarantine_rate =  quarantined_heals / heal_suggestionsllm_escalation_rate =  llm_escalations / locator_failuresauto_promotion_rate =  promoted_heals / reviewed_healsMostrar mais linhas
+Critérios iniciais:
+Plain Textprecision >= 95%false_heal_rate < 2%llm_escalation_rate < 10%quarantine_rate aceitável, mesmo que alta no inícioMostrar mais linhas
+No começo, é melhor ter muita quarentena do que falso healing.
+
+4. Como medir isso sem depender só de revisão humana?
+Você mede em camadas.
+Camada 1 — Oracle automático fraco
+Valida se a ação teve efeito técnico esperado:
+Plain TextURL mudou?Request esperado aconteceu?Elemento esperado apareceu?Campo recebeu valor?Mensagem apareceu?Tabela carregou?Mostrar mais linhas
+Exemplo:
+Pythonawait candidate_locator.click()await expect(    page.get_by_role("table", name="Resultado da consulta")).to_be_visible()Mostrar mais linhas
+Isso detecta muito erro, mas não todos.
+
+Camada 2 — Oracle de negócio
+Valida se o resultado pertence à intenção original.
+Exemplo:
+Plain TextPesquisar proposta para CPF 123  → tabela apareceu  → contém CPF 123?  → contém proposta esperada?  → request foi para endpoint de proposta?Mostrar mais linhas
+Esse é mais forte.
+Exemplo conceitual:
+YAMLpost_action_oracle:  - type: network_response    expected: "/api/propostas/consulta status 200"  - type: visible_state    expected: "tabela Resultado da consulta visível"  - type: business_state    expected: "resultado relacionado ao CPF informado"Mostrar mais linhas
+A cura só deve ser promovida se pelo menos um oracle forte passar.
+
+Camada 3 — Revisão humana amostral
+Nem todo caso precisa de revisão humana para sempre, mas no início sim.
+Eu faria:
+Plain TextPrimeiras 100 sugestões:  100% revisão humanaDepois:  revisão humana obrigatória para score < 0.95  revisão humana obrigatória para semantic_gap baixo  revisão humana obrigatória para tecnologia desconhecida  revisão humana amostral para casos de alto scoreMostrar mais linhas
+
+5. Como validar a assertividade pós-ação?
+Aqui precisamos separar três coisas:
+Plain TextActionability:  consigo interagir com o elemento?Post-action assertion:  a tela mudou como esperado?Business oracle:  a intenção de negócio foi cumprida?Mostrar mais linhas
+O erro anterior provavelmente foi tratar “consegui clicar” como sucesso.
+Níveis de assertion pós-ação
+Nível 1 — Técnico/visual
+Plain Textelemento ficou visívelmodal abriumensagem apareceucampo foi preenchidobotão desapareceuMostrar mais linhas
+Exemplo:
+Pythonawait expect(page.get_by_text("Consulta realizada com sucesso")).to_be_visible()Mostrar mais linhas
+
+Nível 2 — Navegação/estado
+Plain TextURL mudourota mudouaba abriuwizard avançouestado visual mudouMostrar mais linhas
+Exemplo:
+Pythonawait expect(page).to_have_url(re.compile(".*/resultado"))Mostrar mais linhas
+
+Nível 3 — Rede
+Plain Textendpoint correto foi chamadostatus esperado retornoupayload contém parâmetro esperadoMostrar mais linhas
+Exemplo conceitual:
+Pythonasync with page.expect_response(    lambda r: "/api/propostas/consulta" in r.url and r.status == 200):    await locator.click()Mostrar mais linhas
+
+Nível 4 — Negócio
+Plain Textresultado retornado corresponde à massa usadaproposta exibida é a esperadaCPF exibido é o CPF pesquisadosituação corresponde ao dado esperadoMostrar mais linhas
+Esse é o melhor nível para evitar falso healing.
+
+Regra de promoção
+Uma cura só pode ser promovida se passar por este funil:
+Plain Textlocator encontrado  ↓único no contexto  ↓actionable  ↓ação executada  ↓assertion técnica passou  ↓oracle de negócio passou ou foi revisado  ↓histórico suficiente  ↓promovidoMostrar mais linhas
+
+6. Onde entra a taxonomia das falhas?
+A taxonomia entra antes do healing.
+Ela decide se o TestForge deve:
+Plain Textcurar locatoresperar estadotrocar contextoinvestigar massainvestigar ambientefalhar como bug realacionar LLMMostrar mais linhas
+Sem taxonomia, tudo vira “problema de locator”, e isso é perigoso.
+
+Exemplo de roteamento
+Plain TextLOCATOR_NOT_FOUND  → gerar candidatos e tentar fallback/healingLOCATOR_AMBIGUOUS  → aplicar refinamento contextualACTIONABILITY_OBSCURED  → verificar overlay, spinner, modal, toast, loadingACTIONABILITY_DISABLED  → verificar estado da tela, permissão ou massa de dadosASSERTION_FAILED  → não curar locator automaticamente  → possível bug, dado inválido ou oracle erradoNETWORK_FAILURE  → classificar como backend, timeout, autenticação ou ambienteAUTHORIZATION_FAILURE  → problema de perfil/permissãoTEST_DATA_FAILURE  → problema de massaFRAME_CONTEXT_FAILURE  → resolver iframe/frame corretoSHADOW_DOM_FAILURE  → estratégia específica de shadow rootTECHNOLOGY_SPECIFIC_FAILURE  → aplicar plugin tecnológicoMostrar mais linhas
+
+7. Onde entram as famílias de erros?
+As famílias de erro viram política de decisão.
+Exemplo:
+YAMLfailure_family_policy:  locator_resolution:    allow_fallback: true    allow_deterministic_healing: true    allow_llm_curation: true  actionability:    allow_fallback: false    allow_wait_policy: true    allow_overlay_detection: true  assertion:    allow_fallback: false    allow_healing: false    require_bug_or_oracle_review: true  network:    allow_healing: false    require_environment_diagnosis: true  data:    allow_healing: false    require_test_data_refresh: trueMostrar mais linhas
+Esse ponto é crítico: nem toda falha deve ativar self-healing.
+
+8. Onde entram as diferenças de tecnologias?
+As tecnologias entram em dois lugares:
+Plain Text1. geração/ranking de candidatos2. classificação de falhas e estratégias de recuperaçãoMostrar mais linhas
+Exemplo de perfis tecnológicos
+Web tradicional/server-side
+YAMLtechnology_profile:  family: server_side_web  locator_weights:    name: high    id: medium    role: high    text: mediumMostrar mais linhas
+IDs e names podem ser mais estáveis.
+
+React/Angular/Vue
+YAMLtechnology_profile:  family: modern_spa  locator_weights:    role: high    test_id: high    text: medium    css_class: very_low    generated_id: very_lowMostrar mais linhas
+Classes geradas e IDs dinâmicos devem ser muito penalizados.
+
+JSF/PrimeFaces
+YAMLtechnology_profile:  family: jsf_primefaces  locator_weights:    id_suffix: medium    label: high    role: medium    generated_full_id: lowMostrar mais linhas
+Em JSF/PrimeFaces, IDs podem ter prefixos compostos por formulário/container. Às vezes o sufixo é útil, mas o ID completo pode ser frágil.
+
+Shadow DOM
+YAMLtechnology_profile:  family: shadow_dom  required_strategy:    - resolve_shadow_root    - locator_inside_component_boundaryMostrar mais linhas
+
+Iframe
+YAMLtechnology_profile:  family: iframe_based  required_strategy:    - identify_frame    - frame_locatorMostrar mais linhas
+
+9. Onde usar plugins tecnológicos?
+Eu criaria plugins pequenos, não regras espalhadas no runner.
+Plain TextTechnologyProfileDetector  detecta pistas da tecnologiaTechnologyPolicy  altera pesos e estratégiasTechnologyRecoveryPlugin  trata casos específicosMostrar mais linhas
+Exemplo:
+Pythonclass ReactPolicy:    def adjust_score(self, candidate):        if candidate.strategy == "css_class" and "css-" in candidate.value:            candidate.score -= 0.30        if candidate.strategy == "test_id":            candidate.score += 0.10        return candidateMostrar mais linhas
+Para SIOPI, a melhor abordagem é começar com um perfil específico:
+YAMLapplication_profile:  application: SIOPI  known_technologies:    - legacy_web    - possible_jsf    - possible_iframe  locator_policy:    prefer:      - label      - role      - stable_name      - contextual_text    penalize:      - absolute_xpath      - generated_id      - css_classMostrar mais linhas
+
+10. O que podemos aproveitar do que já foi feito?
+Eu não jogaria fora o que vocês fizeram. Eu reorganizaria.
+Aproveitar diretamente
+1. Taxonomia de falhas
+Ela vira o roteador de decisão.
+Plain Textfalha → classificar → escolher estratégiaMostrar mais linhas
+
+2. Modelo intermediário semântico
+Ele vira a fonte de verdade:
+Plain TextintençãoalvocontextocandidatosassertionsevidênciasMostrar mais linhas
+
+3. Ranking de locators
+Ele continua, mas agora é medido no shadow mode.
+
+4. Histórico de sucesso/falha
+Continua, mas com métrica conservadora, como Wilson lower bound, para não promover locator com pouca evidência. Já geramos o código-base para isso no arquivo de métricas e histórico. [software-t...mation.com]
+
+5. Evidence package
+Isso é fundamental:
+Plain TextscreenshotDOM snapshotaccessibility snapshotnetwork logtracecandidate listscore breakdowntaxonomy codeMostrar mais linhas
+Sem evidência, não existe curadoria confiável.
+
+6. Prompts LLM
+Podem ser reaproveitados, mas com função diferente.
+Antes:
+Plain TextLLM, resolva o problema.Mostrar mais linhas
+Agora:
+Plain TextLLM, dado este evidence package, classifique ou proponha uma regra.Mostrar mais linhas
+A LLM deixa de ser executor e vira curadora.
+
+7. Relatórios Allure/trace
+Podem virar a interface de inspeção de healing:
+Plain Textqual locator falhouqual candidato foi sugeridoqual scorequal evidencequal oracle passouqual decisão finalMostrar mais linhas
+
+11. O que não devemos reaproveitar como núcleo?
+Eu evitaria reaproveitar como base principal:
+Plain Textprompts enormes tentando resolver tudorunner com regras específicas hardcodedgravador tentando gerar script final perfeitofallback sem assertion pós-açãohealing aplicado sem shadow modeauto-heal baseado só em scoreMostrar mais linhas
+Essas coisas foram justamente o caminho que deslocou o problema de lugar.
+
+12. Como ficaria o fluxo final?
+Plain TextTeste executa  ↓Falhou  ↓Classificar pela taxonomia  ↓É falha elegível para healing?  ↓Não → classificar como dado, ambiente, bug, assertion etc.  ↓Sim  ↓Gerar candidatos  ↓Calcular score + uniqueness + actionability + histórico  ↓Shadow mode sugere cura  ↓Validar com oracle pós-ação  ↓Registrar evidências  ↓Revisão humana ou automática  ↓Se aprovado N vezes, promover  ↓Se ambíguo, quarentena  ↓Se incerto, LLM como curadoriaMostrar mais linhas
+
+13. Minha recomendação prática para o próximo passo
+Eu faria um experimento bem controlado:
+Plain TextEscopo:  5 fluxos reais do SIOPIModo:  shadow mode onlyDuração:  2 semanas ou 100 sugestões de healingMétricas:  false_heal_rate  precision  recall  quarantine_rate  llm_escalation_rate  tempo adicional por testeCritério de sucesso:  false_heal_rate < 2%  precision >= 95%  nenhuma cura crítica errada  evidence package completo em 100% dos casosMostrar mais linhas
+A grande mudança é esta:
+
+O objetivo inicial não é fazer o self-healing funcionar automaticamente.
+O objetivo inicial é medir se ele merece confiança.
+
+Se ele não merecer confiança, o shadow mode vai mostrar cedo. E isso evita repetir o erro anterior: acreditar na arquitetura antes de testá-la.
+Fontes
+
+Como estruturar o experimento de shadow mode? como cirar um oracle pós-ação robusto? como adaptar a taxonomia para diferentes tecnologias?
+Copilot said:
+Copilot
+
+Processamento concluído em 2 etapas
+Andre, eu estruturaria isso como um experimento controlado de confiabilidade, não como uma funcionalidade já “pronta”. A pergunta principal não é “o healing funciona?”, mas:
+
+Em quais condições o healing merece confiança suficiente para ser promovido para auto-heal?
+
+Gerei também os artefatos para download:
+
+Plano do experimento de Shadow Mode
+Schema YAML do experimento
+1. Como estruturar o experimento de shadow mode?
+1.1 Objetivo
+Validar se o TestForge consegue sugerir curas corretas para falhas reais de locator sem introduzir falso healing.
+
+O shadow mode deve responder:
+
+
+
+
+Plain Text
+Quando o teste quebra por locator:
+  o TestForge sugeriu uma cura?
+  a cura era correta?
+  havia evidência suficiente?
+  o oracle pós-ação confirmou a intenção?
+  a taxonomia classificou corretamente a falha?
+  a tecnologia da tela exigia tratamento especial?
+1.2 Hipóteses do experimento
+Defina hipóteses mensuráveis:
+
+
+
+
+Plain Text
+H1: O healing determinístico sugere curas corretas para falhas recuperáveis de locator.
+H2: A taxa de falso healing fica abaixo de 2%.
+H3: A precisão das sugestões fica acima de 95%.
+H4: A LLM é acionada em menos de 10% dos casos.
+H5: O custo adicional de execução fica abaixo de 20%.
+A diferença para o plano anterior é que agora o sucesso é falsificável.
+
+1.3 Escopo inicial
+Eu começaria pequeno:
+
+
+
+
+Plain Text
+Aplicação:
+  SIOPI ou aplicação piloto equivalente
+
+Fluxos:
+  5 a 10 fluxos reais
+
+Massa:
+  3 variações por fluxo
+
+Perfis:
+  pelo menos 2 perfis de usuário
+
+Viewports:
+  desktop padrão
+  desktop alternativo
+
+Volume mínimo:
+  100 sugestões de healing revisadas antes de qualquer auto-heal
+
+Mostrar mais linhas
+Não tentaria validar em toda a suíte no início. O objetivo é ter qualidade de medição, não volume bruto.
+
+1.4 Modos de execução
+Use quatro modos.
+
+Modo A — Baseline
+Executa o teste atual.
+
+
+
+
+Plain Text
+sem MIS
+sem ranking
+sem fallback
+sem healing
+Serve para medir a dor atual.
+
+Modo B — Candidate Mode
+Executa o teste com:
+
+
+
+
+Plain Text
+MIS
+ranking de locators
+fallback conhecido
+sem healing por reextração
+Serve para medir se o simples fato de nascer com locators melhores já reduz falha.
+
+Modo C — Shadow Mode
+Quando falha:
+
+
+
+
+Plain Text
+gera candidatos de cura
+calcula score
+valida actionability
+roda oracle em ambiente controlado
+registra evidências
+não aplica automaticamente
+Esse é o modo principal do experimento.
+
+Modo D — Auto-Heal Canary
+Só depois do shadow mode aprovado.
+
+
+
+
+Plain Text
+auto-heal em poucos fluxos
+baixo risco
+rollback fácil
+observabilidade completa
+2. Pipeline prático do shadow mode
+Quando um passo falha:
+
+
+
+
+Plain Text
+1. Capturar erro bruto.
+2. Classificar pela taxonomia.
+3. Verificar se é elegível para healing.
+4. Reextrair DOM/accessibility tree.
+5. Gerar novos candidatos.
+6. Calcular:
+   - score total
+   - uniqueness
+   - semantic gap
+   - actionability
+   - histórico
+7. Validar candidato em modo shadow.
+8. Executar oracle pós-ação, quando seguro.
+9. Registrar evidence package.
+10. Classificar:
+    - true positive heal
+    - false heal
+    - not recoverable
+    - inconclusive
+11. Enviar para revisão humana se necessário.
+
+Mostrar mais linhas
+Importante: Playwright já possui auto-waiting, actionability checks e web-first assertions, então o TestForge deve usar esses mecanismos como parte da validação, em vez de criar esperas manuais frágeis.
+healenium
++1
+
+3. Métricas obrigatórias
+Eu mediria:
+
+
+
+
+Plain Text
+pass_rate
+locator_failure_rate
+recoverable_locator_failure_rate
+heal_suggestion_rate
+true_positive_heal_rate
+false_heal_rate
+precision
+recall
+quarantine_rate
+llm_escalation_rate
+mean_extra_runtime_percent
+post_action_oracle_pass_rate
+human_review_agreement_rate
+Fórmulas principais
+
+
+
+Plain Text
+false_heal_rate =
+  false_heals / reviewed_heal_suggestions
+
+
+
+Plain Text
+precision =
+  true_positive_heals / reviewed_heal_suggestions
+
+
+
+Plain Text
+llm_escalation_rate =
+  llm_escalations / locator_failures
+
+
+
+Plain Text
+quarantine_rate =
+  quarantined_suggestions / total_heal_suggestions
+4. Critérios para aprovar o experimento
+Eu só liberaria auto-heal se cumprir todos:
+
+
+
+
+Plain Text
+mínimo de 100 sugestões revisadas
+false_heal_rate < 2%
+precision >= 95%
+llm_escalation_rate < 10%
+0 falso healing crítico
+100% das sugestões promovíveis com evidence package
+100% das sugestões promovíveis com oracle pós-ação
+nenhum falso healing nos últimos 30 casos revisados
+Se a precisão for boa, mas o oracle for fraco, não promove.
+
+5. Critérios de parada
+O experimento deve parar se:
+
+
+
+
+Plain Text
+false_heal_rate >= 2%
+qualquer falso healing crítico
+tempo médio aumentar mais de 20%
+LLM acionada em mais de 20% dos casos
+healing sem evidência
+healing sem oracle pós-ação
+taxonomia classificando muitas falhas como locator indevidamente
+Esse último ponto é importante: se o classificador de falhas erra muito, o healing vai tentar corrigir problema de massa, ambiente ou backend como se fosse locator.
+
+6. Como criar um oracle pós-ação robusto?
+Um oracle robusto precisa validar a intenção, não apenas a interação.
+
+A estrutura correta é:
+
+
+
+
+Plain Text
+Actionability:
+  consigo interagir?
+
+Assertion pós-ação:
+  a UI mudou como esperado?
+
+Oracle de negócio:
+  a intenção foi cumprida?
+6.1 Famílias de oracle
+Eu usaria oito famílias.
+
+1. Oracle visual/DOM
+Valida que algo apareceu, sumiu ou mudou.
+
+
+
+
+Python
+await expect(page.get_by_text("Consulta realizada com sucesso")).to_be_visible()
+Bom para sinais rápidos, mas sozinho é fraco.
+
+2. Oracle de URL/rota
+Valida navegação ou mudança de rota.
+
+
+
+
+Python
+await expect(page).to_have_url(re.compile(".*/resultado"))
+Útil em fluxos com mudança de página.
+
+3. Oracle de rede
+Valida que a ação chamou o endpoint correto.
+
+
+
+
+Python
+async with page.expect_response(
+    lambda r: "/api/propostas/consulta" in r.url and r.status == 200
+):
+    await locator.click()
+Esse é muito importante para evitar clicar em botão parecido que chama outro endpoint.
+
+4. Oracle de valor de campo
+Valida que o valor foi realmente aplicado.
+
+
+
+
+Python
+await expect(page.get_by_label("CPF")).to_have_value(cpf)
+Útil para fill, select, check.
+
+5. Oracle de mensagem de sistema
+Valida mensagens funcionais.
+
+
+
+
+Python
+await expect(page.get_by_text("Proposta encontrada")).to_be_visible()
+Cuidado: mensagens genéricas podem gerar falso positivo.
+
+6. Oracle de estado de negócio
+Valida se o resultado corresponde ao dado usado.
+
+Exemplo:
+
+
+
+
+Plain Text
+CPF pesquisado = 123
+resultado exibido contém CPF 123
+proposta exibida pertence ao CPF 123
+situação exibida é a esperada
+Esse é um dos oráculos mais fortes.
+
+7. Oracle via API ou banco de teste
+Quando possível, consulte uma fonte controlada.
+
+
+
+
+Plain Text
+UI exibiu proposta 456
+API de teste confirma que proposta 456 pertence ao CPF informado
+Esse oracle é forte, mas exige cuidado com ambiente, massa e segurança.
+
+8. Oracle de acessibilidade/estrutura semântica
+Valida se o estado semântico esperado surgiu.
+
+
+
+
+Plain Text
+role="table" com accessible name "Resultado da consulta"
+role="dialog" com nome "Confirmar operação"
+Isso combina bem com Playwright, que incentiva locators orientados a acessibilidade e comportamento visível ao usuário.
+dev
++1
+
+7. Política de robustez do oracle
+Para promover uma cura, eu exigiria:
+
+
+
+
+Plain Text
+pelo menos 2 oracles por ação crítica
+pelo menos 1 oracle técnico
+pelo menos 1 oracle de negócio quando houver impacto funcional
+Exemplo para “Pesquisar proposta”:
+
+
+
+
+YAML
+post_action_oracle:
+  - type: network_response
+    endpoint: "/api/propostas/consulta"
+    status: 200
+    request_contains:
+      cpf: "${cliente.cpf}"
+
+  - type: visible_state
+    role: "table"
+    name: "Resultado da consulta"
+
+  - type: business_state
+    table_contains:
+      cpf: "${cliente.cpf}"
+
+Mostrar mais linhas
+A cura só é promovível se:
+
+
+
+
+Plain Text
+locator novo encontrado
+elemento único no contexto
+actionability passou
+ação executou
+oracle técnico passou
+oracle de negócio passou ou foi revisado
+8. Como adaptar a taxonomia para diferentes tecnologias?
+A taxonomia deve ter duas camadas:
+
+
+
+
+Plain Text
+1. Núcleo comum
+2. Extensão tecnológica
+O núcleo comum classifica falhas universais. A extensão tecnológica trata comportamentos específicos de framework, design system, iframe, shadow DOM etc.
+
+9. Núcleo comum da taxonomia
+
+
+
+YAML
+common_failure_taxonomy:
+  locator_resolution:
+    - LOCATOR_NOT_FOUND
+    - LOCATOR_AMBIGUOUS
+    - LOCATOR_STALE
+    - LOCATOR_WRONG_CONTEXT
+
+  actionability:
+    - ACTIONABILITY_NOT_VISIBLE
+    - ACTIONABILITY_DISABLED
+    - ACTIONABILITY_OBSCURED
+    - ACTIONABILITY_NOT_EDITABLE
+    - ACTIONABILITY_UNSTABLE
+
+  synchronization:
+    - PAGE_NOT_READY
+    - NETWORK_IDLE_TIMEOUT
+    - SPINNER_TIMEOUT
+    - DEBOUNCE_PENDING
+    - ASYNC_RENDER_PENDING
+
+  assertion:
+    - ASSERTION_FAILED
+    - ORACLE_WEAK
+    - ORACLE_CONFLICT
+    - EXPECTED_STATE_NOT_REACHED
+
+  environment:
+    - NETWORK_FAILURE
+    - BACKEND_FAILURE
+    - AUTHORIZATION_FAILURE
+    - SESSION_EXPIRED
+    - TEST_DATA_FAILURE
+
+  context:
+    - FRAME_CONTEXT_FAILURE
+    - SHADOW_DOM_CONTEXT_FAILURE
+    - POPUP_OR_TAB_CONTEXT_FAILURE
+
+Mostrar mais linhas
+10. Política por família de erro
+Nem toda falha deve ativar healing.
+
+
+
+
+YAML
+failure_policy:
+  LOCATOR_NOT_FOUND:
+    allow_healing: true
+    action: generate_candidates
+
+  LOCATOR_AMBIGUOUS:
+    allow_healing: true
+    action: refine_context
+
+  ACTIONABILITY_OBSCURED:
+    allow_healing: false
+    action: detect_overlay_or_spinner
+
+  ACTIONABILITY_DISABLED:
+    allow_healing: false
+    action: validate_state_permission_or_data
+
+  ASSERTION_FAILED:
+    allow_healing: false
+    action: investigate_bug_data_or_oracle
+
+  NETWORK_FAILURE:
+    allow_healing: false
+    action: classify_environment_or_backend
+
+  TEST_DATA_FAILURE:
+    allow_healing: false
+    action: refresh_or_recreate_mass
+
+Mostrar mais linhas
+Essa regra evita o erro mais perigoso: tentar curar locator quando o problema real é dado, backend, permissão ou bug.
+
+11. Extensões por tecnologia
+11.1 React, Angular, Vue
+Riscos típicos:
+
+
+
+
+Plain Text
+IDs gerados
+classes CSS geradas
+re-render do virtual DOM
+hydration atrasada
+componentes ainda sem estado final
+Extensão:
+
+
+
+
+YAML
+technology_taxonomy:
+  modern_spa:
+    errors:
+      - GENERATED_ID_CHANGED
+      - VIRTUAL_DOM_RERENDER
+      - HYDRATION_DELAY
+      - COMPONENT_STATE_NOT_READY
+      - CLIENT_SIDE_ROUTE_PENDING
+    locator_policy:
+      prefer:
+        - role
+        - label
+        - test_id
+      penalize:
+        - generated_id
+        - css_class
+        - nth_child
+
+Mostrar mais linhas
+11.2 JSF / PrimeFaces
+Riscos típicos:
+
+
+
+
+Plain Text
+IDs compostos por naming containers
+ajax update parcial
+componentes recriados
+overlays próprios
+tabelas dinâmicas
+Extensão:
+
+
+
+
+YAML
+technology_taxonomy:
+  jsf_primefaces:
+    errors:
+      - NAMING_CONTAINER_ID_CHANGED
+      - AJAX_PARTIAL_UPDATE
+      - COMPONENT_OVERLAY
+      - DYNAMIC_CLIENT_ID
+      - PARTIAL_RENDER_STALE_ELEMENT
+    locator_policy:
+      prefer:
+        - label
+        - role
+        - stable_name
+        - id_suffix
+      penalize:
+        - full_generated_client_id
+        - absolute_xpath
+
+Mostrar mais linhas
+Aqui um id completo pode ser frágil, mas um sufixo ou atributo funcional pode continuar útil.
+
+11.3 Iframe
+Riscos típicos:
+
+
+
+
+Plain Text
+frame errado
+frame ainda não carregado
+frame cross-origin
+mudança de src
+Extensão:
+
+
+
+
+YAML
+technology_taxonomy:
+  iframe:
+    errors:
+      - WRONG_FRAME
+      - FRAME_NOT_LOADED
+      - FRAME_SRC_CHANGED
+      - CROSS_ORIGIN_FRAME
+    recovery_policy:
+      - resolve_frame_by_url
+      - resolve_frame_by_title
+      - resolve_frame_by_nearby_context
+11.4 Shadow DOM
+Riscos típicos:
+
+
+
+
+Plain Text
+closed shadow root
+slot projection
+boundary de componente
+elemento interno inacessível diretamente
+Extensão:
+
+
+
+
+YAML
+technology_taxonomy:
+  shadow_dom:
+    errors:
+      - SHADOW_ROOT_CLOSED
+      - SLOT_PROJECTION_CHANGED
+      - COMPONENT_BOUNDARY_CHANGED
+    locator_policy:
+      prefer:
+        - public_role
+        - host_accessible_name
+        - component_test_id
+      penalize:
+        - internal_dom_path
+11.5 Design System interno
+Riscos típicos:
+
+
+
+
+Plain Text
+componentes com mesmo nome acessível
+botões repetidos
+ausência de data-testid
+estado interno não exposto
+Extensão:
+
+
+
+
+YAML
+technology_taxonomy:
+  design_system:
+    errors:
+      - DUPLICATE_ACCESSIBLE_NAME
+      - MISSING_TEST_ID
+      - COMPONENT_STATE_NOT_EXPOSED
+      - NON_SEMANTIC_COMPONENT
+    governance:
+      require_testability_contract: true
+      require_accessible_name: true
+12. Como detectar a tecnologia?
+Não precisa ser perfeito no começo. Use um detector por evidências:
+
+
+
+
+Plain Text
+DOM hints
+scripts carregados
+atributos típicos
+classes típicas
+estrutura de IDs
+presença de iframes
+presença de shadow roots
+network patterns
+Exemplo:
+
+
+
+
+YAML
+technology_detection:
+  jsf_primefaces:
+    hints:
+      - "javax.faces.ViewState"
+      - "PrimeFaces"
+      - "ui-widget"
+      - "form:idComposto"
+
+  angular:
+    hints:
+      - "ng-version"
+      - "_ngcontent"
+      - "ng-reflect"
+
+  react:
+    hints:
+      - "__REACT_DEVTOOLS_GLOBAL_HOOK__"
+      - "data-reactroot"
+      - generated css classes
+
+  iframe:
+    hints:
+      - "iframe count > 0"
+
+  shadow_dom:
+    hints:
+      - "element.shadowRoot != null"
+
+Mostrar mais linhas
+13. Como isso entra no ranking?
+O perfil tecnológico ajusta pesos.
+
+Exemplo:
+
+
+
+
+YAML
+locator_weight_policy:
+  modern_spa:
+    role: +0.10
+    test_id: +0.15
+    css_class: -0.30
+    generated_id: -0.40
+
+  jsf_primefaces:
+    label: +0.15
+    id_suffix: +0.05
+    full_client_id: -0.20
+    absolute_xpath: -0.40
+
+  iframe:
+    locator_without_frame: -0.50
+    frame_locator: +0.20
+
+Mostrar mais linhas
+Ou seja, a tecnologia não muda o modelo inteiro. Ela muda:
+
+
+
+
+Plain Text
+pesos
+estratégias permitidas
+falhas esperadas
+políticas de recuperação
+14. Estrutura final recomendada
+
+
+
+Plain Text
+ShadowExperimentRunner
+  ├── BaselineExecutor
+  ├── FailureClassifier
+  ├── TechnologyDetector
+  ├── TaxonomyRouter
+  ├── CandidateGenerator
+  ├── LocatorScorer
+  ├── ShadowValidator
+  ├── PostActionOracleRunner
+  ├── EvidenceCollector
+  ├── ReviewQueue
+  └── PromotionGate
+15. O que reaproveitar do que já foi feito?
+Você pode reaproveitar quase tudo, mas em papéis diferentes:
+
+
+
+
+Plain Text
+Taxonomia
+  de documento conceitual para roteador de decisão
+
+MIS
+  de modelo de geração para fonte de verdade do healing
+
+Ranking
+  de heurística solta para métrica medida no shadow mode
+
+Histórico
+  de log simples para evidência estatística de promoção
+
+Prompts LLM
+  de executor para curador de casos inconclusivos
+
+Allure/Trace
+  de relatório de execução para auditoria de healing
+
+Evidence package
+  de debug para base de revisão e promoção
+
+Mostrar mais linhas
+O que eu não reaproveitaria como núcleo:
+
+
+
+
+Plain Text
+prompts que tentam resolver tudo
+runner com regras específicas espalhadas
+gravador que tenta gerar script final perfeito
+healing sem oracle
+healing sem shadow mode
+16. Próxima entrega prática
+Eu sugiro implementar primeiro este slice vertical:
+
+
+
+
+Plain Text
+1 fluxo real do SIOPI
+1 falha sintética de locator
+1 tecnologia/perfil detectado
+1 candidato de healing
+1 oracle de rede
+1 oracle visual
+1 registro em shadow mode
+1 tela/relatório de revisão
+Se esse slice funcionar, expandimos para 5 fluxos e 100 sugestões revisadas.
+
+A arquitetura só deve evoluir depois de responder empiricamente:
+
+
+
+
+Plain Text
+o que o TestForge sugeriu?
+por que sugeriu?
+qual evidência sustentou?
+qual oracle validou?
+um humano concordou?
+isso se repetiu com estabilidade?
+Esse é o ponto que torna o plano diferente do anterior: não confiamos na arquitetura; obrigamos a arquitetura a provar que merece confiança.
+
+Fontes
+
+Como adaptar a taxonomia para tecnologias específicas como React ou Angular? Como medir a precisão do oracle pós-ação? Como registrar e revisar evidências no shadow mode? Como usar sistema falsos para testar tudo sem depender de encontrar todos os casos nos ambientes caixa? Como esse sistema consegue ser melhorando durante o desenvolvimento para criar um banco de dados de healing já no momento da implementação?
+Copilot said:
+Copilot
+
+Processamento concluído em 3 etapas
+Andre, eu estruturaria isso como um ecossistema de validação contínua, não apenas como uma feature de healing. A ideia é: cada execução, inclusive em desenvolvimento, alimenta o banco de conhecimento do TestForge.
+
+Gerei três artefatos novos para download:
+
+Guia completo — tecnologias, oracle, shadow mode e sistemas sintéticos
+Governança YAML — taxonomia, métricas, shadow mode e synthetic lab
+Schema SQL — banco de conhecimento de healing
+1. Como adaptar a taxonomia para React e Angular?
+A taxonomia precisa ter duas camadas:
+
+
+
+
+Plain Text
+Taxonomia Core
+    +
+Extensões por Tecnologia
+A core cobre erros universais:
+
+
+
+
+YAML
+locator_resolution:
+  - LOCATOR_NOT_FOUND
+  - LOCATOR_AMBIGUOUS
+  - LOCATOR_WRONG_CONTEXT
+  - LOCATOR_STALE_OR_DETACHED
+
+actionability:
+  - ACTIONABILITY_NOT_VISIBLE
+  - ACTIONABILITY_DISABLED
+  - ACTIONABILITY_OBSCURED
+  - ACTIONABILITY_NOT_EDITABLE
+
+synchronization:
+  - PAGE_NOT_READY
+  - ASYNC_RENDER_PENDING
+  - NETWORK_IDLE_TIMEOUT
+  - SPINNER_TIMEOUT
+
+oracle:
+  - ORACLE_MISSING
+  - ORACLE_WEAK
+  - ORACLE_CONFLICT
+  - ORACLE_FAILED
+
+Mostrar mais linhas
+As extensões tecnológicas refinam o diagnóstico e mudam pesos do ranking. Isso preserva a arquitetura geral e evita criar um runner cheio de if React, if Angular, if JSF.
+
+1.1 Extensão para React
+React tende a ter problemas como:
+
+
+
+
+YAML
+react_extension:
+  failure_codes:
+    - REACT_GENERATED_ID_CHANGED
+    - REACT_CSS_IN_JS_CLASS_CHANGED
+    - REACT_COMPONENT_RERENDERED
+    - REACT_HYDRATION_DELAY
+    - REACT_PORTAL_CONTEXT_CHANGED
+    - REACT_VIRTUALIZED_LIST_ITEM_NOT_MOUNTED
+
+  locator_policy:
+    prefer:
+      - role
+      - accessible_name
+      - label
+      - test_id
+      - stable_text_with_context
+    penalize:
+      - generated_id
+      - css_in_js_class
+      - nth_child
+      - absolute_xpath
+
+Mostrar mais linhas
+Para React, eu aumentaria o peso de:
+
+
+
+
+Plain Text
+role
+accessible_name
+test_id
+texto estável com contexto
+E penalizaria fortemente:
+
+
+
+
+Plain Text
+classe CSS gerada
+id gerado
+nth-child
+XPath absoluto
+Isso está alinhado à recomendação do Playwright de priorizar locators que representam como o usuário percebe a interface, como getByRole, getByLabel, getByPlaceholder e getByTestId, em vez de detalhes internos frágeis do DOM.
+selenium
++1
+
+1.2 Extensão para Angular
+Angular tem alguns sinais específicos:
+
+
+
+
+YAML
+angular_extension:
+  technology_hints:
+    - ng-version
+    - _ngcontent
+    - ng-reflect
+    - cdk-overlay-container
+    - mat-
+
+  failure_codes:
+    - ANGULAR_NG_GENERATED_ATTRIBUTE_CHANGED
+    - ANGULAR_CHANGE_DETECTION_PENDING
+    - ANGULAR_MATERIAL_OVERLAY_OBSCURED
+    - ANGULAR_ASYNC_VALIDATOR_PENDING
+    - ANGULAR_ROUTER_NAVIGATION_PENDING
+    - ANGULAR_CDK_VIRTUAL_SCROLL_NOT_RENDERED
+
+  locator_policy:
+    prefer:
+      - role
+      - label
+      - test_id
+      - form_control_name
+      - aria_label
+    penalize:
+      - _ngcontent
+      - ng_reflect
+      - material_internal_class
+      - absolute_xpath
+
+Mostrar mais linhas
+Para Angular, eu colocaria atenção especial em:
+
+
+
+
+Plain Text
+overlays do Angular Material
+async validators
+router navigation pending
+virtual scroll
+atributos internos como _ngcontent
+O TestForge não deve tratar ACTIONABILITY_OBSCURED como falha de locator se o problema real for um overlay, modal, spinner ou cdk-overlay-container. A decisão correta é classificar pela taxonomia e aplicar política de sincronização/actionability, não healing de locator.
+
+2. Como a tecnologia entra no ranking?
+O perfil tecnológico ajusta pesos.
+
+Exemplo:
+
+
+
+
+YAML
+score_adjustments:
+  react:
+    test_id: +0.15
+    role: +0.10
+    accessible_name: +0.10
+    generated_id: -0.40
+    css_class_generated: -0.30
+    absolute_xpath: -0.50
+
+  angular:
+    test_id: +0.15
+    role: +0.10
+    form_control_name: +0.08
+    ng_reflect: -0.30
+    _ngcontent: -0.30
+    material_internal_class: -0.20
+    absolute_xpath: -0.50
+
+Mostrar mais linhas
+Ou seja, a tecnologia não muda o pipeline inteiro. Ela muda:
+
+
+
+
+Plain Text
+pesos
+estratégias preferenciais
+erros esperados
+políticas de recuperação
+critérios de promoção
+3. Como medir a precisão do oracle pós-ação?
+O oracle pós-ação precisa ser tratado como um classificador.
+
+Ele pode acertar ou errar. Então precisa de matriz de confusão.
+
+
+
+
+Plain Text
+TP: oracle aprovou e a cura estava correta.
+FP: oracle aprovou, mas a cura estava errada.
+TN: oracle rejeitou e a cura estava errada.
+FN: oracle rejeitou, mas a cura estava correta.
+A métrica mais importante é:
+
+
+
+
+Plain Text
+oracle_precision = TP / (TP + FP)
+Porque o erro mais perigoso é o FP:
+
+O oracle aprovou uma cura errada.
+
+Esse é o falso healing passando como sucesso.
+
+3.1 Métricas recomendadas
+
+
+
+Plain Text
+oracle_precision =
+  TP / (TP + FP)
+
+oracle_recall =
+  TP / (TP + FN)
+
+oracle_f1 =
+  2 * precision * recall / (precision + recall)
+
+false_acceptance_rate =
+  FP / (TP + FP)
+
+false_rejection_rate =
+  FN / (TP + FN)
+
+Mostrar mais linhas
+Critério inicial:
+
+
+
+
+Plain Text
+oracle_precision >= 95%
+false_acceptance_rate < 2%
+mínimo de 30 observações revisadas por tipo de oracle
+O Playwright já oferece auto-waiting, actionability checks e web-first assertions, mas isso valida prontidão e estado observável; não substitui o oracle de negócio.
+dev
++1
+
+3.2 Oracle robusto precisa combinar sinais
+Para uma ação crítica, eu exigiria pelo menos dois oracles:
+
+
+
+
+YAML
+post_action_oracle:
+  - type: network
+    expected: "/api/propostas/consulta status 200"
+
+  - type: visual_dom
+    expected: "tabela Resultado da consulta visível"
+
+  - type: business_state
+    expected: "resultado contém CPF informado"
+Regra:
+
+
+
+
+Plain Text
+Um oracle visual sozinho não promove healing.
+Um oracle de rede sozinho não promove healing.
+Um oracle de negócio aumenta muito a confiança.
+Oracles conflitantes mandam para revisão humana.
+4. Como registrar e revisar evidências no shadow mode?
+Cada sugestão de healing precisa gerar um Evidence Package.
+
+Esse pacote deve ser persistido e revisável.
+
+
+
+
+YAML
+evidence_package:
+  run_id: run-001
+  action_id: step_004
+  taxonomy_code: LOCATOR_NOT_FOUND
+  technology_profile: react
+
+  original_locator:
+    strategy: role
+    value: "button[name='Pesquisar']"
+
+  suggested_locator:
+    strategy: role
+    value: "button[name='Consultar']"
+
+  score_breakdown:
+    semantic_score: 0.82
+    uniqueness_score: 0.91
+    actionability_score: 1.0
+    oracle_score: 0.88
+    historical_score: 0.0
+
+  artifacts:
+    screenshot_before: ...
+    screenshot_after_candidate: ...
+    dom_before: ...
+    dom_after: ...
+    ax_tree_before: ...
+    ax_tree_after: ...
+    network_log: ...
+    trace: ...
+
+  review:
+    status: pending
+    label: null
+
+Mostrar mais linhas
+Ferramentas como Healenium usam backend e banco para guardar seletores, healing, histórico e relatórios; essa ideia é importante para o TestForge porque healing sem histórico e evidência não é auditável.
+browserstack
++1
+
+4.1 Labels da revisão
+A fila de revisão deve permitir classificar:
+
+
+
+
+Plain Text
+TRUE_POSITIVE_HEAL
+FALSE_HEAL
+NOT_RECOVERABLE
+ORACLE_WEAK
+TAXONOMY_WRONG
+TECHNOLOGY_PROFILE_WRONG
+INCONCLUSIVE
+Esses labels são muito importantes porque alimentam o aprendizado do sistema.
+
+Exemplo:
+
+
+
+
+Plain Text
+Se muitos casos forem TAXONOMY_WRONG:
+  melhorar classificador de falhas.
+
+Se muitos forem ORACLE_WEAK:
+  melhorar oracle pós-ação.
+
+Se muitos forem TECHNOLOGY_PROFILE_WRONG:
+  melhorar detector React/Angular/JSF/etc.
+
+Se muitos forem FALSE_HEAL:
+  aumentar thresholds e melhorar semantic gap.
+5. Como usar sistemas falsos para testar tudo?
+Aqui está um ponto essencial: vocês não devem depender apenas de encontrar casos reais nos ambientes CAIXA.
+
+A solução é criar um TestForge Synthetic Lab.
+
+Ele seria um conjunto de aplicações falsas, controladas e mutáveis:
+
+
+
+
+Plain Text
+fake-react-bank-app
+fake-angular-form-app
+fake-jsf-like-legacy-app
+fake-iframe-app
+fake-shadow-dom-app
+fake-design-system-app
+Essas aplicações não precisam ser grandes. Elas precisam ser projetadas para quebrar de forma controlada.
+
+5.1 Exemplo de mutações sintéticas
+
+
+
+YAML
+mutations:
+  locator:
+    - change_id
+    - change_css_class
+    - remove_data_testid
+    - duplicate_button_text
+    - change_accessible_name
+
+  actionability:
+    - add_overlay
+    - disable_button
+    - delayed_enable
+    - animation_before_click
+
+  synchronization:
+    - delayed_render
+    - debounce_search
+    - delayed_network_response
+    - spinner_timeout
+
+  react:
+    - rerender_component
+    - portal_modal
+    - virtualized_row_unmounted
+
+  angular:
+    - material_overlay
+    - async_validator_pending
+    - router_navigation_delay
+
+Mostrar mais linhas
+Com isso, você cria casos que talvez demorem meses para aparecer naturalmente nos sistemas reais.
+
+5.2 Exemplo prático
+Caso sintético:
+
+
+
+
+Plain Text
+Tecnologia:
+  React
+
+Mutação:
+  botão "Pesquisar" mudou id e classe CSS.
+  texto mudou para "Consultar".
+  data-testid permaneceu igual.
+  endpoint continua /api/propostas/consulta.
+
+Resultado esperado:
+  Taxonomia: REACT_GENERATED_ID_CHANGED
+  Healing: deve preferir data-testid ou role/contexto.
+  Oracle: deve passar rede + resultado de negócio.
+  Label final: TRUE_POSITIVE_HEAL
+
+Mostrar mais linhas
+Outro caso:
+
+
+
+
+Plain Text
+Tecnologia:
+  Angular Material
+
+Mutação:
+  overlay cobre botão por 2 segundos.
+
+Resultado esperado:
+  Taxonomia: ANGULAR_MATERIAL_OVERLAY_OBSCURED
+  Healing: não deve trocar locator.
+  Estratégia: wait/overlay policy.
+  Label final: NOT_RECOVERABLE_BY_LOCATOR_HEALING
+Esse segundo caso é importantíssimo: ele garante que o TestForge não tente curar locator quando o problema é actionability/sincronização.
+
+6. Como melhorar o sistema durante o desenvolvimento?
+A cada execução, mesmo local, o TestForge deve registrar observações.
+
+Não espere produção para criar o banco de healing.
+
+Desde o desenvolvimento, persistir:
+
+
+
+
+Plain Text
+locator_observation
+healing_suggestion
+oracle_observation
+review_decision
+technology_detection
+mutation_result
+promotion_decision
+6.1 Estados de promoção
+Cada regra/cura/candidato pode passar por estados:
+
+
+
+
+Plain Text
+experimental
+  ↓
+shadow_validated
+  ↓
+canary
+  ↓
+trusted
+  ↓
+deprecated
+Exemplo:
+
+
+
+
+YAML
+promotion:
+  locator_fingerprint: role:button:Pesquisar
+  technology_family: react
+  state: shadow_validated
+  evidence_count: 42
+  false_heal_count: 0
+  oracle_precision: 0.97
+6.2 Banco de conhecimento inicial
+O schema SQL que gerei cobre estas tabelas:
+
+
+
+
+Plain Text
+technology_profile_detection
+healing_suggestion
+oracle_observation
+evidence_package
+review_decision
+synthetic_mutation_result
+Arquivo: Schema SQL — banco de conhecimento de healing
+
+Esse banco permite responder perguntas como:
+
+
+
+
+Plain Text
+Quais locators funcionam melhor em React?
+Quais mutações geram mais falso healing?
+Qual oracle mais erra?
+Quais falhas são classificadas incorretamente?
+Quais tecnologias exigem mais LLM?
+Quais candidatos podem ser promovidos?
+7. Como esse banco melhora o TestForge?
+7.1 Melhora pesos por tecnologia
+Se o banco mostra que data-testid em React teve alta precisão:
+
+
+
+
+Plain Text
+aumentar peso de test_id em React
+Se mostra que ng-reflect em Angular quebrou muito:
+
+
+
+
+Plain Text
+penalizar mais ng_reflect
+7.2 Melhora a taxonomia
+Se revisores marcam muitos casos como:
+
+
+
+
+Plain Text
+TAXONOMY_WRONG
+Então o classificador precisa ser ajustado.
+
+Exemplo:
+
+
+
+
+Plain Text
+Antes:
+  Timeout no click → LOCATOR_NOT_FOUND
+
+Depois:
+  Timeout no click + overlay visível → ACTIONABILITY_OBSCURED
+7.3 Melhora o oracle
+Se o oracle visual aprova curas erradas:
+
+
+
+
+Plain Text
+reduzir peso do oracle visual
+exigir rede ou negócio
+marcar visual-only como ORACLE_WEAK
+7.4 Melhora os prompts LLM
+A LLM passa a receber casos revisados:
+
+
+
+
+Plain Text
+caso
+evidência
+sugestão
+decisão humana
+motivo
+Isso permite criar prompts mais curtos, com exemplos bons e ruins, sem transformar o prompt em “motor principal”. A LLM continua sendo curadora, não executora.
+
+8. Como validar tudo sem depender do ambiente real?
+Eu faria três níveis de validação.
+
+Nível 1 — Synthetic Lab
+Objetivo:
+
+
+
+
+Plain Text
+testar mutações conhecidas
+validar taxonomia
+validar ranking
+validar oracle
+validar evidence package
+Critério:
+
+
+
+
+Plain Text
+100% das mutações conhecidas classificadas
+false healing < 2%
+oracle_precision >= 95%
+zero auto-heal em caso não recuperável
+Nível 2 — Shadow mode em ambiente real
+Objetivo:
+
+
+
+
+Plain Text
+medir comportamento com ruído real
+massa realista
+perfis reais
+timing real
+componentes reais
+Critério:
+
+
+
+
+Plain Text
+mínimo 100 sugestões revisadas
+precision >= 95%
+false_heal_rate < 2%
+0 falso healing crítico
+Nível 3 — Canary
+Objetivo:
+
+
+
+
+Plain Text
+liberar auto-heal em poucos fluxos de baixo risco
+com rollback
+com revisão obrigatória posterior
+Critério:
+
+
+
+
+Plain Text
+sem falso healing crítico
+sem degradação de tempo
+sem aumento de flakiness
+9. Fluxo final recomendado
+
+
+
+Plain Text
+Desenvolvedor cria ou altera regra
+  ↓
+Roda Synthetic Lab
+  ↓
+Registra mutation_result
+  ↓
+Se passou, habilita shadow mode
+  ↓
+Executa em fluxo real
+  ↓
+Gera evidence package
+  ↓
+Oracle classifica
+  ↓
+Humano revisa amostra ou caso crítico
+  ↓
+Banco atualiza métricas
+  ↓
+PromotionGate decide:
+      experimental
+      shadow_validated
+      canary
+      trusted
+      deprecated
+
+Mostrar mais linhas
+10. A peça mais importante: Promotion Gate
+Eu criaria um componente chamado PromotionGate.
+
+Ele decide se uma cura pode virar confiável.
+
+
+
+
+YAML
+promotion_gate:
+  min_reviewed_observations: 30
+  min_oracle_precision: 0.95
+  max_false_acceptance_rate: 0.02
+  require_evidence_package: true
+  require_business_or_network_oracle_for_critical_actions: true
+  forbid_promotion_if:
+    - taxonomy_wrong
+    - technology_profile_wrong
+    - oracle_conflict
+    - semantic_gap_low
+Sem Promotion Gate, o TestForge volta ao problema anterior: uma parte do sistema começa a “achar” que resolveu e passa a aplicar cura sem governança.
+
+11. O que muda em relação ao plano que falhou?
+Antes, vocês tentavam melhorar o componente que estava quebrando:
+
+
+
+
+Plain Text
+gravador
+runner
+prompt
+Agora, o sistema melhora por evidência:
+
+
+
+
+Plain Text
+cada sugestão é registrada
+cada oracle é medido
+cada tecnologia ajusta pesos
+cada falso healing vira dado
+cada mutação sintética valida uma hipótese
+cada promoção exige critério objetivo
+Essa é a diferença principal.
+
+O TestForge deixa de ser um “gerador de script com healing” e vira um sistema de aprendizado controlado de robustez de testes.
+
+Como implementar o Promotion Gate na prática? Como criar mutações sintéticas controladas? Como registrar evidências automaticamente? O que precisamos decidir para começar o desenvolvimento?
+Copilot said:
+Copilot
+
+Processamento concluído em 2 etapas
+Andre, agora estamos chegando no ponto em que dá para começar desenvolvimento de verdade, porque já temos os componentes governáveis: Promotion Gate, Synthetic Lab, Evidence Collector e decisões de MVP.
+
+Gerei os artefatos para download:
+
+Guia — Promotion Gate, mutações e evidências
+Skeleton Python — Promotion Gate
+Política YAML — Promotion Gate
+Guia — Mutações sintéticas controladas
+1. Como implementar o Promotion Gate na prática?
+O Promotion Gate deve ser um componente separado, não uma regra espalhada no runner.
+
+Ele não deve:
+
+
+
+
+Plain Text
+gerar locator
+executar teste
+chamar LLM
+alterar script
+Ele deve apenas decidir:
+
+
+
+
+Plain Text
+esta sugestão de healing pode evoluir de estado?
+Estados recomendados:
+
+
+
+
+Plain Text
+experimental
+  ↓
+shadow_validated
+  ↓
+canary
+  ↓
+trusted
+E também:
+
+
+
+
+Plain Text
+rejected
+deprecated
+1.1 Entradas do Promotion Gate
+Ele recebe um contexto consolidado:
+
+
+
+
+YAML
+promotion_context:
+  current_state: experimental
+
+  metrics:
+    reviewed_observations: 42
+    oracle_precision: 0.97
+    false_acceptance_rate: 0.01
+    false_heal_rate: 0.00
+    llm_escalation_rate: 0.04
+    semantic_gap: 0.32
+    uniqueness_score: 0.91
+    actionability_score: 1.00
+
+  evidence:
+    screenshot_before: true
+    screenshot_after: true
+    dom_before: true
+    dom_after: true
+    accessibility_tree_before: true
+    accessibility_tree_after: true
+    score_breakdown: true
+    taxonomy_code: true
+    technology_profile: true
+    post_action_oracle: true
+
+  blockers:
+    oracle_conflict: false
+    false_heal_reviewed: false
+    taxonomy_wrong_unresolved: false
+    technology_profile_wrong_unresolved: false
+
+Mostrar mais linhas
+1.2 Regras globais de bloqueio
+Antes de promover, o gate verifica bloqueios absolutos:
+
+
+
+
+Plain Text
+evidence package incompleto
+oracle ausente
+conflito entre oracles
+falso healing revisado
+taxonomia errada não resolvida
+perfil tecnológico errado não resolvido
+semantic gap baixo
+uniqueness baixo
+actionability baixo
+ação crítica sem oracle de negócio ou rede
+Se qualquer um desses existir, não promove.
+
+1.3 Regras por estado
+experimental → shadow_validated
+Exigir:
+
+
+
+
+Plain Text
+mínimo 30 observações revisadas
+oracle_precision >= 95%
+false_acceptance_rate < 2%
+false_heal_rate < 2%
+Synthetic Lab passou
+evidence package completo
+shadow_validated → canary
+Exigir:
+
+
+
+
+Plain Text
+amostra revisada por humano
+nenhum falso healing crítico
+plano de rollback
+auto-heal restrito a poucos fluxos
+canary → trusted
+Exigir:
+
+
+
+
+Plain Text
+mínimo 100 observações revisadas
+nenhum falso healing nos últimos 30 casos
+overhead de execução <= 20%
+LLM acionada em menos de 10%
+O arquivo Skeleton Python — Promotion Gate já traz essa estrutura com PromotionContext, PromotionMetrics, EvidenceCompleteness e PromotionGate.
+
+2. Como criar mutações sintéticas controladas?
+O objetivo das mutações sintéticas é testar o TestForge sem esperar que todos os casos apareçam nos ambientes reais.
+
+Você cria uma aplicação fake, por exemplo:
+
+
+
+
+Plain Text
+fake-react-bank-app
+fake-angular-form-app
+fake-jsf-like-legacy-app
+fake-iframe-app
+fake-shadow-dom-app
+E cada aplicação aceita uma mutação controlada:
+
+
+
+
+Plain Text
+/fake-react-bank-app?mutation=duplicate_button_text
+/fake-angular-form-app?mutation=material_overlay_obscured
+2.1 Formas de implementar mutações
+Opção A — Feature flag na aplicação fake
+A própria aplicação renderiza diferente conforme a mutação.
+
+Exemplo conceitual:
+
+
+
+
+JavaScript
+const mutation = new URLSearchParams(window.location.search).get("mutation");
+
+if (mutation === "duplicate_button_text") {
+  renderTwoSearchButtons();
+} else {
+  renderOneSearchButton();
+}
+Essa é a opção mais limpa para o Synthetic Lab.
+
+Opção B — Mutator no servidor
+O backend fake renderiza HTML/JS diferente conforme o parâmetro.
+
+Útil para simular aplicações server-side ou JSF-like.
+
+Opção C — Injeção controlada no browser
+O runner injeta alteração no DOM antes da execução:
+
+
+
+
+Python
+await page.evaluate("""
+  document.querySelector('#btnPesquisar').id = 'btnPesquisarNovo';
+""")
+Essa opção é útil para criar mutações rápidas sem alterar a aplicação fake.
+
+2.2 Matriz de mutações mínimas
+Eu começaria com esta matriz:
+
+
+
+
+YAML
+synthetic_mutation_matrix:
+  locator:
+    - code: change_id
+      expected_taxonomy: LOCATOR_NOT_FOUND
+      expected_recoverable: true
+
+    - code: duplicate_button_text
+      expected_taxonomy: LOCATOR_AMBIGUOUS
+      expected_recoverable: true
+
+    - code: remove_testid_and_change_text
+      expected_taxonomy: LOCATOR_NOT_FOUND
+      expected_recoverable: false
+
+  actionability:
+    - code: overlay_blocks_click
+      expected_taxonomy: ACTIONABILITY_OBSCURED
+      expected_recoverable: false
+
+    - code: disabled_button
+      expected_taxonomy: ACTIONABILITY_DISABLED
+      expected_recoverable: false
+
+  react:
+    - code: css_in_js_class_changed
+      expected_taxonomy: REACT_CSS_IN_JS_CLASS_CHANGED
+      expected_recoverable: true
+
+    - code: portal_modal_context_changed
+      expected_taxonomy: REACT_PORTAL_CONTEXT_CHANGED
+      expected_recoverable: true
+
+  angular:
+    - code: material_overlay_obscured
+      expected_taxonomy: ANGULAR_MATERIAL_OVERLAY_OBSCURED
+      expected_recoverable: false
+
+    - code: async_validator_pending
+      expected_taxonomy: ANGULAR_ASYNC_VALIDATOR_PENDING
+      expected_recoverable: false
+
+Mostrar mais linhas
+A regra principal é:
+
+Toda mutação sintética precisa ter resposta esperada conhecida.
+
+Ou seja, para cada mutação, você já sabe:
+
+
+
+
+Plain Text
+qual taxonomia deveria sair
+se é recuperável por locator healing
+qual oracle deveria passar
+se deveria ir para quarentena
+se LLM deveria ser acionada
+3. Como registrar evidências automaticamente?
+Crie um componente chamado:
+
+
+
+
+Plain Text
+EvidenceCollector
+Ele deve ser chamado automaticamente em três momentos:
+
+
+
+
+Plain Text
+before_action
+on_failure
+after_shadow_candidate
+3.1 Evidências mínimas
+Para cada sugestão de healing:
+
+
+
+
+YAML
+evidence_package:
+  run_id: run-001
+  action_id: step_004
+  taxonomy_code: LOCATOR_NOT_FOUND
+  technology_profile: react
+
+  original_locator:
+    strategy: role
+    value: "button[name='Pesquisar']"
+
+  suggested_locator:
+    strategy: role
+    value: "button[name='Consultar']"
+
+  score_breakdown:
+    semantic_score: 0.82
+    uniqueness_score: 0.91
+    actionability_score: 1.0
+    oracle_score: 0.88
+    historical_score: 0.0
+
+  artifacts:
+    screenshot_before: evidence/run-001/step_004_before.png
+    screenshot_after: evidence/run-001/step_004_after.png
+    dom_before: evidence/run-001/step_004_dom_before.html
+    dom_after: evidence/run-001/step_004_dom_after.html
+    ax_tree_before: evidence/run-001/step_004_ax_before.json
+    ax_tree_after: evidence/run-001/step_004_ax_after.json
+    network_log: evidence/run-001/step_004_network.json
+    trace: evidence/run-001/trace.zip
+
+Mostrar mais linhas
+3.2 Como coletar com Playwright
+Exemplos conceituais:
+
+
+
+
+Python
+await page.screenshot(path="step_004_before.png", full_page=True)
+
+
+
+Python
+dom = await page.content()
+
+
+
+Python
+ax_snapshot = await page.accessibility.snapshot()
+
+
+
+Python
+context.tracing.start(screenshots=True, snapshots=True, sources=True)
+
+
+
+Python
+context.tracing.stop(path="trace.zip")
+O Playwright já oferece recursos importantes para rastreamento, snapshots, auto-waiting, actionability checks e assertions orientadas a estado, então o EvidenceCollector deve se apoiar nesses recursos em vez de criar observabilidade improvisada.
+aithority
++1
+
+3.3 Banco de evidências
+Você já tem o schema inicial do banco em: https://software-testing-tutorials-automation.com/2026/02/implement-playwright-self-healing-locators-enterprise-framework.html
+
+Schema SQL — banco de conhecimento de healing
+As tabelas principais:
+
+
+
+
+Plain Text
+healing_suggestion
+oracle_observation
+evidence_package
+review_decision
+synthetic_mutation_result
+technology_profile_detection
+Esse banco permite que o sistema melhore durante o desenvolvimento.
+
+4. Como a evidência entra no fluxo?
+Fluxo recomendado:
+
+
+
+
+Plain Text
+Runner executa passo
+  ↓
+Falhou
+  ↓
+FailureClassifier classifica
+  ↓
+EvidenceCollector coleta before/on_failure
+  ↓
+HealingEngine gera candidato
+  ↓
+ShadowValidator avalia candidato
+  ↓
+EvidenceCollector coleta after_candidate
+  ↓
+OracleRunner executa pós-ação
+  ↓
+ReviewQueue registra para revisão
+  ↓
+PromotionGate decide se pode evoluir
+
+Mostrar mais linhas
+5. O que precisamos decidir para começar o desenvolvimento?
+Eu listaria como decisões obrigatórias.
+
+Decisão 1 — Primeiro slice vertical
+Não começar pelo framework inteiro.
+
+Começar com:
+
+
+
+
+Plain Text
+1 aplicação fake
+1 tecnologia
+1 fluxo
+3 mutações
+1 evidence package
+1 oracle
+1 promotion gate
+Minha sugestão:
+
+
+
+
+Plain Text
+fake-react-bank-app
+fluxo: consultar proposta/cliente
+mutações:
+  change_id
+  duplicate_button_text
+  overlay_blocks_click
+Decisão 2 — Tecnologia piloto
+Escolher uma:
+
+
+
+
+Plain Text
+React
+Angular
+JSF-like/legacy
+Minha recomendação: começar com React fake, não porque seja o mais importante, mas porque é mais simples criar app falso e simular mutações.
+
+Depois replicar para Angular e JSF-like.
+
+Decisão 3 — Banco inicial
+Para MVP:
+
+
+
+
+Plain Text
+SQLite
+Para integração corporativa:
+
+
+
+
+Plain Text
+PostgreSQL
+Minha recomendação:
+
+
+
+
+Plain Text
+começar com SQLite local
+manter schema compatível com PostgreSQL
+Decisão 4 — Formato canônico do Evidence Package
+Escolher e congelar logo.
+
+Sugestão:
+
+
+
+
+Plain Text
+metadata.json
+score_breakdown.json
+dom_before.html
+dom_after.html
+ax_before.json
+ax_after.json
+network.json
+screenshot_before.png
+screenshot_after.png
+trace.zip
+Decisão 5 — Thresholds iniciais
+Eu começaria com:
+
+
+
+
+YAML
+thresholds:
+  min_reviewed_observations_shadow_validated: 30
+  min_reviewed_observations_trusted: 100
+  min_oracle_precision: 0.95
+  max_false_acceptance_rate: 0.02
+  max_false_heal_rate: 0.02
+  max_llm_escalation_rate: 0.10
+  min_semantic_gap: 0.15
+  min_uniqueness_score: 0.85
+  min_actionability_score: 0.95
+Esses valores estão no arquivo Política YAML — Promotion Gate.
+
+Decisão 6 — Labels da revisão
+Usar estes:
+
+
+
+
+Plain Text
+TRUE_POSITIVE_HEAL
+FALSE_HEAL
+NOT_RECOVERABLE
+ORACLE_WEAK
+TAXONOMY_WRONG
+TECHNOLOGY_PROFILE_WRONG
+INCONCLUSIVE
+Decisão 7 — Política da LLM
+A LLM deve entrar apenas quando:
+
+
+
+
+Plain Text
+taxonomia inconclusiva
+oracle conflitante
+semantic gap baixo
+candidatos próximos demais
+caso marcado para curadoria
+Ela não deve promover cura diretamente.
+
+6. Ordem de implementação recomendada
+Eu implementaria nesta ordem:
+
+
+
+
+Plain Text
+1. Criar schema SQLite.
+2. Criar EvidenceCollector mínimo.
+3. Criar fake-react-bank-app com 3 mutações.
+4. Criar FailureClassifier mínimo.
+5. Criar ShadowHealingObservation.
+6. Criar OracleRunner com visual + network.
+7. Criar PromotionGate.
+8. Criar ReviewQueue simples via JSON/SQLite.
+9. Rodar bateria sintética.
+10. Só depois integrar com fluxo real.
+7. Definição de pronto para o primeiro MVP
+O MVP inicial estará pronto quando:
+
+
+
+
+Plain Text
+uma falha sintética é gerada
+a taxonomia classifica corretamente
+o healing sugere candidato
+o oracle avalia
+o evidence package é gravado
+o caso aparece na fila de revisão
+o reviewer classifica
+o Promotion Gate aceita ou rejeita com motivos
+o banco guarda tudo
+Se conseguirmos isso, o TestForge deixa de ser “um sistema que tenta se curar” e passa a ser “um sistema que mede se sua cura merece confiança”.
+
+Como criar o EvidenceCollector com Playwright? Como simular falhas sintéticas no fake-reack-app? como registrar evidências no banco SQLite?
+Copilot said:
+Copilot
+
+Processamento concluído em 5 etapas
+Andre, implementei um slice vertical completo para você começar: EvidenceCollector + fake React-like app com mutações + persistência SQLite.
+
+Arquivo para download:
+
+Pacote TestForge Evidence Collector
+O pacote contém:
+
+
+
+
+Plain Text
+testforge_evidence_collector_package/
+├── evidence_collector.py
+├── evidence_store.py
+├── fake_react_bank_app.html
+├── synthetic_failure_demo.py
+└── README.md
+1. Como criar o EvidenceCollector com Playwright?
+O EvidenceCollector deve ser um componente isolado. Ele não decide healing, não promove locator e não chama LLM. Ele apenas coleta e organiza evidências.
+
+Ele coleta:
+
+
+
+
+Plain Text
+screenshot_before.png
+screenshot_after.png
+dom_before.html
+dom_after.html
+ax_tree_before.json
+ax_tree_after.json
+network_log.json
+score_breakdown.json
+oracle_results.json
+promotion_decision.json
+trace.zip
+manifest.json
+O Playwright já possui recursos úteis para isso, como screenshots, tracing, auto-waiting, actionability checks e web-first assertions; o TestForge deve reaproveitar esses recursos em vez de criar waits e logs improvisados.
+mabl
++1
+
+Uso básico
+
+
+
+Python
+collector = EvidenceCollector(page, root_dir="evidence", enable_trace=True)
+
+metadata = EvidenceMetadata(
+    run_id="run-synthetic-001",
+    action_id="step-search-client",
+    application="fake-react-bank-app",
+    page_signature="fake-react-bank-app/search-client",
+    taxonomy_code="LOCATOR_NOT_FOUND",
+    technology_profile="react",
+    original_locator="page.get_by_role('button', name='Pesquisar')",
+    suggested_locator="page.get_by_test_id('btn-search-client')",
+    mode="shadow",
+)
+
+await collector.start_step(metadata)
+
+# Executa tentativa original, healing shadow, oracle etc.
+
+manifest = await collector.finish_step(
+    score_breakdown={
+        "semantic_score": 0.82,
+        "uniqueness_score": 0.91,
+        "actionability_score": 1.0,
+        "historical_score": 0.0,
+        "total_score": 0.88,
+    },
+    oracle_results=[
+        {
+            "type": "visual_dom",
+            "expected": "Tabela Resultado da consulta visível",
+            "actual": "visible",
+            "result": "passed",
+        }
+    ],
+    promotion_decision={
+        "state": "experimental",
+        "allowed": False,
+        "reason": "Requer revisão humana e histórico.",
+    },
+)
+
+Mostrar mais linhas
+O resultado é um diretório assim:
+
+
+
+
+Plain Text
+evidence/
+└── run-synthetic-001/
+    └── step-search-client_XXXXXXXX/
+        ├── metadata.json
+        ├── screenshot_before.png
+        ├── screenshot_after.png
+        ├── dom_before.html
+        ├── dom_after.html
+        ├── ax_tree_before.json
+        ├── ax_tree_after.json
+        ├── network_log.json
+        ├── score_breakdown.json
+        ├── oracle_results.json
+        ├── promotion_decision.json
+        ├── trace.zip
+        └── manifest.json
+
+Mostrar mais linhas
+2. Como simular falhas sintéticas no fake-react-app?
+No pacote, criei um arquivo:
+
+
+
+
+Plain Text
+fake_react_bank_app.html
+Ele é uma aplicação fake “React-like” controlada por query string.
+
+Exemplos:
+
+
+
+
+Plain Text
+fake_react_bank_app.html?mutation=change_id
+fake_react_bank_app.html?mutation=change_accessible_name
+fake_react_bank_app.html?mutation=duplicate_button_text
+fake_react_bank_app.html?mutation=remove_testid_and_change_text
+fake_react_bank_app.html?mutation=overlay_blocks_click
+fake_react_bank_app.html?mutation=disabled_button
+fake_react_bank_app.html?mutation=delayed_enable
+fake_react_bank_app.html?mutation=delayed_response
+Mutações implementadas
+change_id
+Altera o id do botão.
+
+Resultado esperado:
+
+
+
+
+Plain Text
+taxonomia: LOCATOR_NOT_FOUND ou GENERATED_ID_CHANGED
+recuperável: sim
+estratégia esperada: usar role, text, testid ou contexto
+change_accessible_name
+Troca o texto/acessible name de:
+
+
+
+
+Plain Text
+Pesquisar
+para:
+
+
+
+
+Plain Text
+Consultar
+Resultado esperado:
+
+
+
+
+Plain Text
+taxonomia: LOCATOR_NOT_FOUND
+recuperável: sim, se data-testid ou contexto permanecerem
+risco: médio
+duplicate_button_text
+Cria dois botões com o mesmo texto:
+
+
+
+
+Plain Text
+Pesquisar
+Pesquisar
+Resultado esperado:
+
+
+
+
+Plain Text
+taxonomia: LOCATOR_AMBIGUOUS
+recuperável: sim
+estratégia esperada: refinamento contextual
+remove_testid_and_change_text
+Remove data-testid e altera o texto.
+
+Resultado esperado:
+
+
+
+
+Plain Text
+taxonomia: LOCATOR_NOT_FOUND
+recuperável: não ou somente com revisão humana
+estratégia esperada: quarentena
+overlay_blocks_click
+Adiciona overlay bloqueando clique.
+
+Resultado esperado:
+
+
+
+
+Plain Text
+taxonomia: ACTIONABILITY_OBSCURED
+recuperável por locator healing: não
+estratégia esperada: política de overlay/wait, não trocar locator
+Esse caso é fundamental para garantir que o TestForge não tente curar locator quando o problema é actionability.
+
+3. Como registrar evidências no SQLite?
+O pacote inclui:
+
+
+
+
+Plain Text
+evidence_store.py
+Ele cria automaticamente estas tabelas:
+
+
+
+
+Plain Text
+healing_suggestion
+evidence_package
+oracle_observation
+review_decision
+Registro de uma sugestão de healing
+
+
+
+Python
+store = EvidenceStore("testforge_healing.sqlite")
+
+suggestion_id = store.insert_healing_suggestion(
+    run_id="run-synthetic-001",
+    application="fake-react-bank-app",
+    page_signature="fake-react-bank-app/search-client",
+    action_id="step-search-client",
+    technology_family="react",
+    taxonomy_code="LOCATOR_NOT_FOUND",
+    original_locator="page.get_by_role('button', name='Pesquisar')",
+    suggested_locator="page.get_by_test_id('btn-search-client')",
+    total_score=0.88,
+    semantic_score=0.82,
+    uniqueness_score=0.91,
+    actionability_score=1.0,
+    historical_score=0.0,
+    mode="shadow",
+    status="suggested",
+)
+
+Mostrar mais linhas
+Registro do pacote de evidência
+
+
+
+Python
+store.insert_evidence_package(
+    healing_suggestion_id=suggestion_id,
+    manifest=manifest,
+)
+O manifest contém os caminhos dos artefatos:
+
+
+
+
+JSON
+{
+  "artifacts": {
+    "screenshot_before": ".../screenshot_before.png",
+    "screenshot_after": ".../screenshot_after.png",
+    "dom_before": ".../dom_before.html",
+    "dom_after": ".../dom_after.html",
+    "ax_tree_before": ".../ax_tree_before.json",
+    "ax_tree_after": ".../ax_tree_after.json",
+    "network_log": ".../network_log.json",
+    "score_breakdown": ".../score_breakdown.json",
+    "oracle_results": ".../oracle_results.json",
+    "trace": ".../trace.zip"
+  }
+}
+
+Mostrar mais linhas
+Registro dos oracles
+
+
+
+Python
+store.insert_oracle_observation(
+    healing_suggestion_id=suggestion_id,
+    oracle_type="visual_dom",
+    expected="Tabela Resultado da consulta visível",
+    actual="visible",
+    result="passed",
+    evidence_ref=manifest["artifacts"]["oracle_results"],
+)
+E para oracle de negócio:
+
+
+
+
+Python
+store.insert_oracle_observation(
+    healing_suggestion_id=suggestion_id,
+    oracle_type="business_state",
+    expected="Resultado contém CPF pesquisado",
+    actual="12345678900",
+    result="passed",
+    evidence_ref=manifest["artifacts"]["oracle_results"],
+)
+4. Fluxo completo do demo
+O arquivo:
+
+
+
+
+Plain Text
+synthetic_failure_demo.py
+executa o fluxo completo:
+
+
+
+
+Plain Text
+1. Abre fake_react_bank_app.html com mutação.
+2. Inicia EvidenceCollector.
+3. Preenche CPF.
+4. Tenta locator original.
+5. Se falhar, classifica como LOCATOR_NOT_FOUND.
+6. Em shadow/demo, tenta locator sugerido.
+7. Executa oracle visual.
+8. Executa oracle de negócio.
+9. Finaliza evidence package.
+10. Registra tudo no SQLite.
+Como executar
+
+
+
+Shell
+pip install playwright
+playwright install chromium
+python synthetic_failure_demo.py
+Depois da execução, você terá:
+
+
+
+
+Plain Text
+testforge_healing.sqlite
+evidence/
+5. Ponto importante sobre shadow mode
+No mundo real, o shadow mode pode operar em dois níveis:
+
+Modo 1 — Suggest only
+
+
+
+Plain Text
+gera candidato
+valida o máximo possível
+não executa ação curada
+registra evidência
+manda para revisão
+Mais seguro.
+
+Modo 2 — Synthetic validation
+
+
+
+Plain Text
+gera candidato
+executa ação curada em fake app ou ambiente controlado
+roda oracle
+registra evidência
+Foi o modo usado no demo, porque estamos em um sistema falso e controlado.
+
+Para sistemas CAIXA reais, eu começaria com suggest only e só depois usaria execução curada em ambiente seguro.
+
+6. Próximo passo recomendado
+Eu sugiro agora evoluir esse slice assim:
+
+
+
+
+Plain Text
+1. Rodar o pacote com mutation=change_accessible_name.
+2. Rodar com mutation=duplicate_button_text.
+3. Rodar com mutation=overlay_blocks_click.
+4. Verificar se o SQLite registrou corretamente.
+5. Criar uma query simples para listar casos pendentes de revisão.
+6. Integrar o PromotionGate no final do fluxo.
+Critério de pronto do próximo incremento:
+
+
+
+
+Plain Text
+cada mutação gera:
+  evidence package
+  healing_suggestion
+  oracle_observation
+  review_decision pendente
+  decisão preliminar do PromotionGate
+Com isso, o TestForge começa a construir um banco de conhecimento de healing ainda durante o desenvolvimento, sem depender de encontrar todos os casos nos ambientes reais.
+
+Fontes
+
+
+
+
+
+
+
+Como integrar o PromotionGate nesse fluxo? Como criar uma query para listar casos pendentes? como evoluir o slice com novas mutações? Você consegue criar um plano completo para desenvolver o sistema completo que estamos discutindo? Pode ser um plano macro que depois iremos divider em epicos, tarefas, histórias etc
+Copilot said:
+Copilot
+
+Processamento concluído em 5 etapas
+Andre, sim. Eu montei agora um pacote de integração com PromotionGate + queries de revisão + matriz de mutações + plano macro completo.
+
+Arquivos gerados:
+
+Pacote de integração PromotionGate + queries + mutation matrix
+Plano macro completo do TestForge
+Esse pacote complementa o pacote anterior do EvidenceCollector: Pacote TestForge Evidence Collector
+
+1. Como integrar o PromotionGate no fluxo?
+O PromotionGate entra depois que o fluxo já registrou:
+
+
+
+
+Plain Text
+1. healing_suggestion
+2. evidence_package
+3. oracle_observation
+4. opcionalmente review_decision
+Fluxo final:
+
+
+
+
+Plain Text
+synthetic_failure_demo
+  ↓
+EvidenceCollector.finish_step()
+  ↓
+EvidenceStore.insert_healing_suggestion()
+  ↓
+EvidenceStore.insert_evidence_package()
+  ↓
+EvidenceStore.insert_oracle_observation()
+  ↓
+PromotionGateIntegration.evaluate_shadow_validation()
+  ↓
+EvidenceStore.insert_promotion_decision()
+No pacote novo, criei o arquivo:
+
+
+
+
+Plain Text
+promotion_gate_integration.py
+Ele faz exatamente essa ponte: busca evidências, métricas e bloqueadores no banco, monta um PromotionContext, chama o PromotionGate e registra a decisão.
+
+Exemplo de uso:
+
+
+
+
+Python
+from evidence_store import EvidenceStore
+from evidence_store_extensions import monkey_patch_evidence_store
+from promotion_gate_integration import PromotionGateIntegration
+
+monkey_patch_evidence_store(EvidenceStore)
+
+store = EvidenceStore("testforge_healing.sqlite")
+gate_integration = PromotionGateIntegration(store)
+
+decision = gate_integration.evaluate_shadow_validation(
+    healing_suggestion_id=suggestion_id
+)
+
+print(decision)
+
+Mostrar mais linhas
+Resultado esperado:
+
+
+
+
+JSON
+{
+  "allowed": false,
+  "from_state": "experimental",
+  "to_state": "shadow_validated",
+  "reasons": [
+    "Menos de 30 observações revisadas.",
+    "Precisão do oracle abaixo de 95%."
+  ]
+}
+Ou seja: o gate não apenas bloqueia, ele explica por que bloqueou.
+
+2. Como criar uma query para listar casos pendentes?
+Incluí no pacote o arquivo:
+
+
+
+
+Plain Text
+pending_reviews.sql
+A query principal é:
+
+
+
+
+SQL
+SELECT
+    hs.id AS healing_suggestion_id,
+    datetime(hs.created_at, 'unixepoch') AS created_at,
+    hs.application,
+    hs.page_signature,
+    hs.action_id,
+    hs.technology_family,
+    hs.taxonomy_code,
+    hs.original_locator,
+    hs.suggested_locator,
+    hs.total_score,
+    hs.status,
+    ep.screenshot_before,
+    ep.screenshot_after,
+    ep.manifest_json
+FROM healing_suggestion hs
+LEFT JOIN evidence_package ep ON ep.healing_suggestion_id = hs.id
+LEFT JOIN review_decision rd ON rd.healing_suggestion_id = hs.id
+WHERE hs.mode = 'shadow'
+  AND hs.status IN ('suggested', 'pending_review')
+  AND rd.id IS NULL
+ORDER BY hs.created_at DESC
+LIMIT 100;
+
+Mostrar mais linhas
+Essa query lista tudo que ainda precisa de revisão humana.
+
+Também incluí um método Python:
+
+
+
+
+Python
+pending = store.list_pending_reviews(limit=50)
+
+for item in pending:
+    print(item["healing_suggestion_id"], item["taxonomy_code"], item["suggested_locator"])
+No MVP, isso já substitui uma interface visual. Depois podemos evoluir para:
+
+
+
+
+Plain Text
+Review CLI
+Review Web UI
+Relatório HTML
+Integração Allure
+Dashboard interno
+3. Como evoluir o slice com novas mutações?
+A evolução deve ser feita por uma matriz de mutações, não por casos soltos hardcoded.
+
+Incluí no pacote:
+
+
+
+
+Plain Text
+mutation_matrix.yaml
+Exemplo:
+
+
+
+
+YAML
+- code: duplicate_button_text
+  app: fake-react-bank-app
+  technology: react
+  url_query: "mutation=duplicate_button_text"
+  expected_taxonomy: LOCATOR_AMBIGUOUS
+  expected_recoverable: true
+  expected_strategy: "refine_by_context_or_testid"
+  expected_oracles: [visual_dom, business_state]
+Para adicionar uma nova mutação, o processo deve ser sempre:
+
+
+
+
+Plain Text
+1. Adicionar entrada no mutation_matrix.yaml.
+2. Implementar a mutação no fake app.
+3. Declarar taxonomia esperada.
+4. Declarar se é recuperável.
+5. Declarar estratégia esperada.
+6. Declarar oracles esperados.
+7. Rodar Synthetic Lab.
+8. Registrar resultado no banco.
+Exemplo de nova mutação
+Caso: botão fica desabilitado
+No mutation_matrix.yaml:
+
+
+
+
+YAML
+- code: disabled_button
+  app: fake-react-bank-app
+  technology: react
+  url_query: "mutation=disabled_button"
+  expected_taxonomy: ACTIONABILITY_DISABLED
+  expected_recoverable: false
+  expected_strategy: "state_or_test_data_diagnosis"
+  expected_oracles: []
+Interpretação:
+
+
+
+
+Plain Text
+Não é problema de locator.
+Não deve acionar locator healing.
+Deve classificar como actionability/state/data.
+Esse tipo de mutação é fundamental para evitar que o TestForge tente “curar” o elemento errado quando o problema real é estado, permissão, massa ou timing.
+
+4. Como o PromotionGate usa as revisões?
+O fluxo de revisão deve registrar labels como:
+
+
+
+
+Plain Text
+TRUE_POSITIVE_HEAL
+FALSE_HEAL
+NOT_RECOVERABLE
+ORACLE_WEAK
+TAXONOMY_WRONG
+TECHNOLOGY_PROFILE_WRONG
+INCONCLUSIVE
+Depois o gate calcula bloqueadores.
+
+Exemplos:
+
+
+
+
+Plain Text
+Se existe FALSE_HEAL:
+  não promove.
+
+Se existe TAXONOMY_WRONG não resolvido:
+  não promove.
+
+Se existe ORACLE_WEAK:
+  não promove até melhorar oracle.
+
+Se há conflito entre oracles:
+  não promove.
+
+Se evidence package está incompleto:
+  não promove.
+
+Mostrar mais linhas
+Assim, o banco deixa de ser apenas histórico e passa a ser base de governança.
+
+5. Plano macro completo do sistema
+Também criei um plano macro completo para o desenvolvimento: Plano macro completo do TestForge
+
+A visão é:
+
+Construir uma plataforma que grave fluxos como contratos semânticos, gere testes Playwright robustos, execute em shadow mode, sugira self-healing determinístico, colete evidências, valide oracles pós-ação e promova curas apenas mediante governança objetiva.
+
+Fase 0 — Fundação e decisões
+Objetivo: congelar decisões mínimas.
+
+Entregas:
+
+
+
+
+Plain Text
+arquitetura alvo
+schema SQLite inicial
+formato canônico do Evidence Package
+taxonomia core
+política inicial do Promotion Gate
+definição do primeiro fake app
+Critério de saída:
+
+
+
+
+Plain Text
+repositório criado
+pipeline local executando
+SQLite inicial versionado
+primeiro teste sintético abrindo fake app
+Fase 1 — Synthetic Lab mínimo
+Objetivo: criar laboratório controlado.
+
+Entregas:
+
+
+
+
+Plain Text
+fake-react-bank-app
+mutation_matrix.yaml
+mutações iniciais
+runner de mutações
+registro de mutation_result
+Mutações iniciais:
+
+
+
+
+Plain Text
+change_id
+change_accessible_name
+duplicate_button_text
+overlay_blocks_click
+Critério de saída:
+
+
+
+
+Plain Text
+cada mutação gera resultado esperado
+taxonomia classifica casos básicos
+evidências são coletadas automaticamente
+Fase 2 — EvidenceCollector e banco de conhecimento
+Objetivo: registrar automaticamente evidências e histórico.
+
+Entregas:
+
+
+
+
+Plain Text
+EvidenceCollector
+EvidenceStore SQLite
+healing_suggestion
+evidence_package
+oracle_observation
+review_decision
+queries de revisão
+manifest.json por execução
+Critério de saída:
+
+
+
+
+Plain Text
+cada falha sintética gera evidence package completo
+casos pendentes aparecem na query de revisão
+oracles são persistidos
+Fase 3 — Modelo Intermediário Semântico e candidatos
+Objetivo: transformar ações gravadas em intenção, alvo, contexto e candidatos.
+
+Entregas:
+
+
+
+
+Plain Text
+MIS schema
+RawRecordedEvent -> SemanticAction
+LocatorCandidateGenerator
+LocatorScorer
+uniqueness score
+actionability score
+fallback determinístico inicial
+Critério de saída:
+
+
+
+
+Plain Text
+um fluxo fake gera MIS
+candidatos são ranqueados
+fallback roda em ambiente sintético
+Fase 4 — Shadow Mode
+Objetivo: sugerir healing sem autoaplicar.
+
+Entregas:
+
+
+
+
+Plain Text
+ShadowHealingObservation
+FailureClassifier
+TaxonomyRouter
+ShadowValidator
+integração com EvidenceCollector
+revisão humana por query/arquivo/endpoint
+Critério de saída:
+
+
+
+
+Plain Text
+falha sintética gera sugestão de healing
+sugestão não é autoaplicada
+evidência + oracle + revisão são registrados
+Fase 5 — Oracle pós-ação robusto
+Objetivo: validar intenção após ação sugerida.
+
+Entregas:
+
+
+
+
+Plain Text
+OracleRunner
+oracles visual_dom, field_value, network, business_state
+matriz de confusão do oracle
+precision, recall, false_acceptance_rate
+política de oracle por tipo de ação
+Critério de saída:
+
+
+
+
+Plain Text
+pelo menos dois oracles por ação crítica
+falso aceite medido
+oracle fraco impede promoção
+Fase 6 — Promotion Gate
+Objetivo: governar evolução de sugestões.
+
+Entregas:
+
+
+
+
+Plain Text
+PromotionGate
+políticas por estado
+blockers globais
+promotion_decision
+integração com review_decision e oracle_observation
+Critério de saída:
+
+
+
+
+Plain Text
+nenhuma sugestão é promovida sem evidência completa
+gate retorna razões objetivas
+query mostra estado de promoção
+Fase 7 — Adaptação por tecnologia
+Objetivo: suportar políticas específicas por tecnologia.
+
+Entregas:
+
+
+
+
+Plain Text
+TechnologyDetector
+perfis React, Angular, JSF-like, iframe, shadow DOM
+score_adjustments por tecnologia
+extensões de taxonomia
+synthetic apps adicionais
+Critério de saída:
+
+
+
+
+Plain Text
+mutações React e Angular têm classificação especializada
+pesos mudam conforme tecnologia
+casos não recuperáveis não acionam locator healing
+Fase 8 — Aplicação real piloto
+Objetivo: rodar em fluxo real controlado.
+
+Entregas:
+
+
+
+
+Plain Text
+seleção de 5 fluxos reais
+shadow mode only
+evidence package em ambiente real
+métricas por fluxo
+relatório de falsos positivos
+Critério de saída:
+
+
+
+
+Plain Text
+100 sugestões revisadas ou volume acordado
+false_heal_rate < 2%
+precision >= 95%
+0 falso healing crítico
+Fase 9 — Canary auto-heal
+Objetivo: liberar auto-heal limitado.
+
+Entregas:
+
+
+
+
+Plain Text
+feature flag de auto-heal
+rollback
+allowlist de fluxos/casos
+relatório pós-execução
+revisão obrigatória pós-canary
+Critério de saída:
+
+
+
+
+Plain Text
+sem falso healing crítico
+overhead < 20%
+LLM escalation < 10%
+Fase 10 — Produto interno e operação contínua
+Objetivo: transformar em plataforma operável.
+
+Entregas:
+
+
+
+
+Plain Text
+dashboard de revisão
+exportação Allure/HTML
+políticas versionadas
+auditoria
+documentação
+integração CI/CD
+processo de curadoria LLM
+Critério de saída:
+
+
+
+
+Plain Text
+ciclo completo funcionando em rotina de desenvolvimento
+banco de healing evoluindo continuamente
+governança aprovada
+6. Componentes finais do sistema
+A arquitetura completa fica assim:
+
+
+
+
+Plain Text
+Recorder Sensorial
+Modelo Intermediário Semântico
+Candidate Generator
+Locator Scorer
+Failure Classifier
+Technology Detector
+Taxonomy Router
+Deterministic Fallback Runner
+Shadow Validator
+Oracle Runner
+Evidence Collector
+Evidence Store
+Review Queue
+Promotion Gate
+Synthetic Lab
+LLM Curator
+Reporting/Dashboard
+
+Mostrar mais linhas
+7. MVP recomendado
+Eu não começaria pelo sistema inteiro. Começaria por um slice vertical mínimo.
+
+Escopo do MVP:
+
+
+
+
+Plain Text
+fake-react-bank-app
+4 mutações
+EvidenceCollector
+SQLite
+Oracle visual + business_state
+query de pendentes
+PromotionGate experimental -> shadow_validated
+relatório simples
+Resultado esperado:
+
+
+
+
+Plain Text
+uma falha sintética produz uma sugestão de healing
+a sugestão gera evidências
+a sugestão aparece para revisão
+a revisão alimenta métricas
+o Promotion Gate decide com motivos
+8. Decisões que precisamos tomar antes de quebrar em épicos
+Eu sugiro decidirmos estes pontos antes da próxima etapa:
+
+
+
+
+Plain Text
+1. O MVP será SQLite local ou PostgreSQL desde o início?
+2. A primeira UI de revisão será query/CLI ou uma tela web?
+3. O primeiro piloto real será SIOPI ou apenas fake app + app controlada?
+4. Quais dados sensíveis devem ser mascarados nas evidências?
+5. Qual será o formato final do Evidence Package?
+6. Quem será responsável pela revisão humana no shadow mode?
+7. O Promotion Gate será configurado por YAML versionado?
+8. A LLM entra apenas em curadoria manual ou também gera propostas de regra?
+9. Qual threshold inicial de falso healing por criticidade?
+10. O Synthetic Lab será parte obrigatória da pipeline?
+Minha recomendação para começar:
+
+
+
+
+Plain Text
+SQLite local
+sem UI no primeiro momento
+fake-react-bank-app
+query SQL de revisão
+PromotionGate por YAML versionado
+LLM desligada no MVP
+mascaramento básico de CPF/dados sensíveis no EvidenceCollector
+Synthetic Lab obrigatório
+A partir disso, quebramos o plano macro em épicos, histórias e tarefas com critério de aceite.
+
+concordo com a recomendação só removeria o 
+mascaramento básico de CPF/dados sensíveis no EvidenceCollector
+Acho que inicialmento só alertamos a presença de dados sensíveis. Você consegue gerar um zip com tudo que descutimos até aqui: incluindo as minhas perguntas e suas respostas, todos os arquivos gerados etc?
+Memória atualizada
+Memória atualizada
+Copilot said:
+Copilot
+
+Processamento concluído em 11 etapas
+Perfeito, Andre. Concordo com o ajuste: no MVP inicial não faremos mascaramento automático no EvidenceCollector. A política fica como:
+
+
+
+
+Plain Text
+Alertar possível presença de dados sensíveis.
+Não mascarar.
+Não remover.
+Não alterar evidências.
+Registrar o alerta no Evidence Package.
+Também registrei essa decisão para mantermos consistência nas próximas etapas do TestForge.
+
+Gerei o ZIP consolidado com:
+
+perguntas e respostas consolidadas da discussão;
+decisão atualizada sobre dados sensíveis em modo alert_only;
+índice dos artefatos gerados;
+referências dos arquivos produzidos ao longo da conversa;
+snippet de referência para detector de dados sensíveis sem mascaramento;
+manifesto do pacote.
+Download:
+
+Baixar pacote consolidado TestForge
+
+Conteúdo principal do ZIP
+
+
+
+Plain Text
+testforge_consolidado_discussao/
+├── README.md
+├── 00_conversa_testforge_perguntas_respostas.md
+├── 01_decisao_dados_sensiveis_alert_only.md
+├── 02_indice_arquivos_gerados.md
+├── 03_links_e_referencias_arquivos_gerados.md
+├── manifest.json
+└── codigo_referencia/
+    └── sensitive_data_alert_only_detector.py
+Decisão incorporada
+O arquivo 01_decisao_dados_sensiveis_alert_only.md registra formalmente:
+
+
+
+
+JSON
+{
+  "sensitive_data_alert": {
+    "enabled": true,
+    "masking_applied": false,
+    "possible_sensitive_data_detected": true,
+    "detected_categories": ["cpf_pattern", "numeric_identifier"],
+    "policy": "alert_only"
+  }
+}
+Observação importante
+Incluí no ZIP um índice consolidado com os nomes de todos os artefatos gerados ao longo da discussão e uma síntese organizada das perguntas e respostas. Assim conseguimos usar esse pacote como base de rastreabilidade para a próxima etapa: quebrar o plano macro em épicos, histórias, tarefas e critérios de aceite.
+Crie um plano de épicos e histórias. Como registrar critérios de aceite? Como versionar o plano macro?
+Copilot said:
+Copilot
+
+Processamento concluído em 2 etapas
+Andre, criei um pacote com o plano de épicos e histórias, um template de critérios de aceite, um backlog em YAML e um guia de versionamento do plano macro.
+
+Download:
+
+Baixar plano de épicos, histórias e versionamento
+
+O ZIP contém:
+
+
+
+
+Plain Text
+testforge_epicos_historias_plano/
+├── testforge_epicos_historias.md
+├── testforge_backlog_epicos_historias.yaml
+├── testforge_template_criterios_aceite.md
+├── testforge_versionamento_plano_macro.md
+├── CHANGELOG.md
+├── VERSION
+└── manifest.json
+1. Plano de épicos proposto
+Estruturei o backlog em 11 épicos, seguindo o plano macro que já tínhamos consolidado:
+
+
+
+
+Plain Text
+EP-00 — Fundação do Produto e Governança
+EP-01 — Synthetic Lab Mínimo
+EP-02 — EvidenceCollector e EvidenceStore
+EP-03 — Modelo Intermediário Semântico
+EP-04 — Ranking, Uniqueness e Fallback Determinístico
+EP-05 — Taxonomia e Classificação de Falhas
+EP-06 — Shadow Mode
+EP-07 — Oracle Pós-Ação
+EP-08 — Promotion Gate
+EP-09 — Curadoria LLM Controlada
+EP-10 — Piloto Real e Canary
+A lógica é começar pelo que dá sustentação ao experimento:
+
+
+
+
+Plain Text
+Synthetic Lab
+  ↓
+EvidenceCollector
+  ↓
+MIS
+  ↓
+Ranking/Fallback
+  ↓
+Shadow Mode
+  ↓
+Oracle
+  ↓
+Promotion Gate
+  ↓
+Piloto real
+
+Mostrar mais linhas
+Isso evita cair novamente no problema de tentar resolver tudo pelo gravador, pelo runner ou pelo prompt.
+
+2. Exemplos de histórias
+EP-01 — Synthetic Lab Mínimo
+Histórias iniciais:
+
+
+
+
+Plain Text
+US-01.01 — Criar fake-react-bank-app
+US-01.02 — Implementar mutação change_id
+US-01.03 — Implementar mutação duplicate_button_text
+US-01.04 — Implementar mutação overlay_blocks_click
+US-01.05 — Criar matriz de mutações sintéticas
+Exemplo de critério de aceite para overlay_blocks_click:
+
+
+
+
+Plain Text
+- A mutação é acionada por ?mutation=overlay_blocks_click.
+- Um overlay bloqueia a interação com o botão.
+- A taxonomia esperada é ACTIONABILITY_OBSCURED.
+- O caso é marcado como não recuperável por locator healing.
+- O sistema não sugere troca de locator como solução primária.
+EP-02 — EvidenceCollector e EvidenceStore
+Histórias iniciais:
+
+
+
+
+Plain Text
+US-02.01 — Implementar EvidenceCollector básico com Playwright
+US-02.02 — Persistir evidências em SQLite
+US-02.03 — Criar query de casos pendentes de revisão
+Critério importante:
+
+
+
+
+Plain Text
+O EvidenceCollector deve gerar alerta de possível dado sensível em modo alert_only
+e não deve aplicar mascaramento automático no MVP.
+EP-06 — Shadow Mode
+Histórias:
+
+
+
+
+Plain Text
+US-06.01 — Criar ShadowHealingObservation
+US-06.02 — Implementar ShadowValidator
+US-06.03 — Medir falso healing
+Critérios centrais:
+
+
+
+
+Plain Text
+- A sugestão não pode alterar o teste original.
+- O candidato deve ser validado quanto a uniqueness e actionability.
+- A sugestão deve aparecer na fila de revisão.
+- false_heal_rate e precision devem ser calculados.
+EP-08 — Promotion Gate
+Histórias:
+
+
+
+
+Plain Text
+US-08.01 — Implementar estados de promoção
+US-08.02 — Bloquear promoção sem evidência completa
+US-08.03 — Bloquear promoção por falso healing
+US-08.04 — Integrar PromotionGate ao fluxo do shadow mode
+Critérios centrais:
+
+
+
+
+Plain Text
+- Falta de screenshot bloqueia promoção.
+- Falta de DOM bloqueia promoção.
+- Falta de oracle bloqueia promoção.
+- Revisão FALSE_HEAL bloqueia promoção.
+- Toda decisão do gate precisa registrar os motivos.
+3. Como registrar critérios de aceite?
+Minha recomendação é usar critérios no formato Dado / Quando / Então, mas com evidência obrigatória para tudo que envolver healing.
+
+Template:
+
+
+
+
+Markdown
+## US-XX.YY — Título da história
+
+Como **[persona]**, quero **[capacidade]**, para **[benefício]**.
+
+## Contexto
+
+Descreva o problema, decisão arquitetural ou hipótese que justifica a história.
+
+## Critérios de aceite
+
+- Dado **[estado inicial]**, quando **[ação/evento]**, então **[resultado verificável]**.
+- Dado **[condição de falha]**, quando **[componente processa]**, então **[classificação/decisão esperada]**.
+- A execução deve registrar **[evidência obrigatória]**.
+- A execução deve persistir **[registro no banco]**.
+- A história só é aceita se **[teste automatizado/manual/revisão]** passar.
+
+## Evidências obrigatórias
+
+- Screenshot, quando aplicável.
+- DOM snapshot, quando aplicável.
+- Accessibility snapshot, quando disponível.
+- Network log, quando aplicável.
+- Registro SQLite.
+- Resultado de oracle.
+- Decisão do Promotion Gate, quando aplicável.
+
+## Fora de escopo
+
+- Item explicitamente fora de escopo 1.
+- Item explicitamente fora de escopo 2.
+
+Mostrar mais linhas
+Exemplo concreto:
+
+
+
+
+Markdown
+## US-06.02 — Implementar ShadowValidator
+
+Como runtime, quero avaliar candidato de healing sem aplicá-lo automaticamente.
+
+### Critérios de aceite
+
+- Dado um locator original quebrado, quando o ShadowValidator for executado, então deve gerar ao menos um candidato ou registrar motivo de ausência.
+- Dado um candidato com score abaixo do threshold, quando avaliado, então deve ser marcado como rejeitado ou quarentena.
+- Dado um candidato válido, quando avaliado, então deve registrar uniqueness, actionability, score e taxonomia.
+- A sugestão não pode alterar o teste original.
+- A sugestão deve aparecer na query de pendentes.
+- O Evidence Package deve conter screenshot, DOM, AX snapshot, score breakdown e oracle result quando aplicável.
+
+Mostrar mais linhas
+4. Como versionar o plano macro?
+Eu versionaria o plano macro como artefato normativo, não como documento solto.
+
+Estrutura recomendada:
+
+
+
+
+Plain Text
+docs/plano_macro.md
+docs/backlog_epicos_historias.md
+policies/promotion_gate_policy.yaml
+policies/evidence_sensitive_data_policy.yaml
+schemas/semantic_test_case.schema.yaml
+CHANGELOG.md
+VERSION
+adrs/*.md
+Versionamento semântico
+Usar:
+
+
+
+
+Plain Text
+MAJOR.MINOR.PATCH
+Regras:
+
+
+
+
+Plain Text
+MAJOR:
+  muda premissas arquiteturais, governança central ou fluxo de promoção.
+
+MINOR:
+  adiciona épicos, histórias, policies, fases ou escopo funcional.
+
+PATCH:
+  corrige texto, critérios, exemplos ou inconsistências sem mudar escopo.
+Sugestão de linha evolutiva:
+
+
+
+
+Plain Text
+0.1.0 — plano macro inicial consolidado
+0.2.0 — épicos e histórias adicionados
+0.3.0 — critérios de aceite e policies versionadas
+1.0.0 — plano aprovado para MVP
+Cabeçalho obrigatório do plano
+
+
+
+YAML
+artifact: TestForge Plano Macro
+version: 0.2.0
+status: draft
+owner: Andre Perotti Netto
+date: 2026-06-12
+source_of_truth: docs/plano_macro.md
+related_adrs:
+  - ADR-0001-shadow-mode-before-auto-heal
+  - ADR-0002-evidence-alert-only-sensitive-data
+Changelog
+Exemplo incluído no pacote:
+
+
+
+
+Markdown
+# Changelog
+
+## [0.2.0] - 2026-06-12
+
+### Added
+
+- Plano inicial de épicos e histórias.
+- Template de critérios de aceite.
+- Guia de versionamento do plano macro.
+- Backlog em YAML.
+
+### Changed
+
+- Política do EvidenceCollector definida como `alert_only` para dados sensíveis no MVP.
+
+### Removed
+
+- Mascaramento automático de CPF/dados sensíveis no EvidenceCollector para o MVP.
+
+Mostrar mais linhas
+5. ADRs recomendados
+Eu criaria estes ADRs iniciais:
+
+
+
+
+Plain Text
+ADR-0001 — Usar shadow mode antes de auto-heal.
+ADR-0002 — EvidenceCollector em modo alert-only para dados sensíveis.
+ADR-0003 — Usar Synthetic Lab antes de piloto real.
+ADR-0004 — Promotion Gate obrigatório para promoção de healing.
+ADR-0005 — LLM apenas como curadoria, não como mecanismo principal.
+A regra de governança seria:
+
+
+
+
+Plain Text
+Nenhuma mudança estrutural deve existir apenas em conversa ou mensagem.
+
+Toda mudança relevante deve atualizar:
+  - plano macro;
+  - backlog;
+  - changelog;
+  - ADR, se alterar decisão arquitetural;
+  - policy YAML, se alterar regra executável.
+6. Recomendação para o próximo passo
+Eu sugiro que a próxima etapa seja escolher um recorte de MVP e transformar as histórias em tarefas técnicas.
+
+Minha recomendação de primeiro MVP:
+
+
+
+
+Plain Text
+EP-00 — Fundação
+EP-01 — Synthetic Lab mínimo
+EP-02 — EvidenceCollector
+EP-06 — Shadow Mode mínimo
+EP-07 — Oracle visual + business_state
+EP-08 — Promotion Gate básico
+Não incluiria ainda:
+
+
+
+
+Plain Text
+Curadoria LLM
+Piloto real
+Angular
+JSF-like
+Dashboard completo
+Esses entram depois que o slice sintético provar que o fluxo é mensurável e auditável.
+
+
+Andre, eu transformaria isso em um método operacional de refinamento de backlog. A ideia é sair de:
+Plain Textépico → históriaMostrar mais linhas
+para:
+Plain Textépico → história → tarefas técnicas → critérios de aceite → evidências esperadas → estimativaMostrar mais linhas
+Gerei também um pacote com os artefatos:
+Baixar pacote de tarefas, priorização e estimativas
+Conteúdo:
+Plain Texttestforge_tarefas_priorizacao_estimativas/├── testforge_transformar_historias_em_tarefas.md├── testforge_priorizacao_estimativas_mvp.yaml└── testforge_tarefas_mvp1.csvMostrar mais linhas
+
+1. Como transformar histórias em tarefas?
+Uma história deve ser quebrada em tarefas quando ela ainda mistura:
+Plain Textanálisecontrato/schemaimplementaçãotestepersistênciaevidênciadocumentaçãointegraçãovalidaçãoMostrar mais linhas
+A decomposição padrão que eu usaria é:
+Plain TextUS-XX.YY — Nome da históriaTarefas:  T-XX.YY.01 — Refinar contrato/schema/configuração  T-XX.YY.02 — Implementar componente principal  T-XX.YY.03 — Implementar persistência/log/evidência  T-XX.YY.04 — Criar teste unitário  T-XX.YY.05 — Criar teste sintético/integrado  T-XX.YY.06 — Atualizar documentação  T-XX.YY.07 — Revisar critérios de aceiteMostrar mais linhas
+Nem toda história precisa de todas as tarefas, mas toda história deve ter pelo menos:
+Plain Textimplementaçãoteste/validaçãocritério de aceiteevidência quando aplicávelMostrar mais linhas
+
+2. Exemplo prático: EvidenceCollector
+História:
+Plain TextUS-02.01 — Implementar EvidenceCollector básico com PlaywrightMostrar mais linhas
+Tarefas:
+Plain TextT-02.01.01 — Definir contrato do Evidence Package.T-02.01.02 — Implementar captura de screenshot before/after.T-02.01.03 — Implementar captura de DOM before/after.T-02.01.04 — Implementar captura de accessibility tree quando disponível.T-02.01.05 — Implementar coleta de network log.T-02.01.06 — Implementar geração de manifest.json.T-02.01.07 — Implementar alerta de possível dado sensível em modo alert_only.T-02.01.08 — Criar teste sintético com fake-react-bank-app.T-02.01.09 — Atualizar documentação do EvidenceCollector.Mostrar mais linhas
+Critério de pronto da história:
+Plain TextUma execução sintética gera um Evidence Package completo,incluindo manifest, screenshots, DOM, network log e alerta de possível dado sensível,sem aplicar mascaramento automático.Mostrar mais linhas
+
+3. Como priorizar épicos no MVP?
+Para o TestForge, o MVP não deve priorizar “quantidade de funcionalidade”. Ele deve priorizar redução de incerteza arquitetural.
+Eu usaria estes critérios, com notas de 1 a 5:
+Plain Textvalor_aprendizado:  quanto o épico ajuda a provar ou invalidar a arquiteturareducao_risco:  quanto reduz risco de falso healing, flakiness ou decisão erradadependencia:  quanto outros épicos dependem deleobservabilidade:  quanto melhora medição, auditoria e revisãoesforco_inverso:  quanto menor o esforço, maior a notaMostrar mais linhas
+Fórmula:
+Plain Textpriority_score =  0.30 * valor_aprendizado +  0.25 * reducao_risco +  0.20 * dependencia +  0.15 * observabilidade +  0.10 * esforco_inversoMostrar mais linhas
+
+4. Priorização recomendada para o MVP
+Eu dividiria em três MVPs incrementais.
+MVP-1 — Slice sintético auditável
+Objetivo:
+Plain Textprovar que conseguimos gerar falha sintética,coletar evidência,registrar no banco,rodar oracle,e colocar sugestão na fila de revisão.Mostrar mais linhas
+Épicos prioritários:
+Plain Text1. EP-00 — Fundação do Produto e Governança2. EP-01 — Synthetic Lab Mínimo3. EP-02 — EvidenceCollector e EvidenceStore4. EP-07 — Oracle Pós-Ação mínimo5. EP-08 — Promotion Gate básicoMostrar mais linhas
+Fora do MVP-1:
+Plain TextCuradoria LLMPiloto realCanary auto-healAngular completoJSF-like completoDashboard web completoMostrar mais linhas
+
+MVP-2 — Shadow mode com fallback determinístico
+Objetivo:
+Plain Textgerar candidatos,ranquear,classificar falhas,validar actionability/uniqueness,e sugerir healing sem aplicar.Mostrar mais linhas
+Épicos:
+Plain TextEP-03 — Modelo Intermediário SemânticoEP-04 — Ranking, Uniqueness e Fallback DeterminísticoEP-05 — Taxonomia coreEP-06 — Shadow ModeEP-08 — Promotion Gate com transição para shadow_validatedMostrar mais linhas
+
+MVP-3 — Tecnologia e piloto controlado
+Objetivo:
+Plain Textadaptar para tecnologia real,curadoria LLM controlada,e iniciar shadow mode em fluxo real.Mostrar mais linhas
+Épicos:
+Plain TextEP-05 — Extensões React/AngularEP-09 — Curadoria LLM ControladaEP-10 — Piloto Real e Canary, inicialmente apenas shadow mode realMostrar mais linhas
+
+5. Como estimar esforço das histórias?
+Eu usaria Story Points com Fibonacci modificado:
+Plain Text1, 2, 3, 5, 8, 13Mostrar mais linhas
+Referência:
+Plain Text1 ponto:  alteração pequena e conhecida, sem integração relevante.2 pontos:  implementação simples com teste unitário.3 pontos:  componente pequeno com integração simples.5 pontos:  história média com integração, persistência ou teste sintético.8 pontos:  história grande, com incerteza técnica relevante.13 pontos:  grande demais; deve ser quebrada.Mostrar mais linhas
+
+6. Fatores que aumentam estimativa
+Aumente a estimativa quando a história envolver:
+Plain Textintegração com Playwrightpersistência SQLite/PostgreSQLincerteza de taxonomiaoracle pós-açãoevidência obrigatóriadependência de tecnologia específicanecessidade de revisão humanarisco de falso healingMostrar mais linhas
+Exemplo:
+Plain TextCapturar screenshot:  simples, 1 ou 2 pontos.Capturar screenshot + DOM + AX + network + manifest:  5 pontos.Capturar tudo isso e persistir no banco:  provavelmente separar em duas histórias.Mostrar mais linhas
+
+7. Estimativa inicial do MVP-1
+EP-00 — Fundação
+Plain TextUS-00.01 — Criar estrutura inicial do repositório: 2 pontosUS-00.02 — Versionar plano macro: 2 pontosUS-00.03 — Política alert_only para dados sensíveis: 2 pontosMostrar mais linhas
+Subtotal:
+Plain Text6 pontosMostrar mais linhas
+
+EP-01 — Synthetic Lab
+Plain TextUS-01.01 — Criar fake-react-bank-app: 3 pontosUS-01.02 — Implementar mutation change_id: 2 pontosUS-01.03 — Implementar mutation duplicate_button_text: 2 pontosUS-01.04 — Implementar mutation overlay_blocks_click: 3 pontosUS-01.05 — Criar mutation_matrix.yaml: 2 pontosMostrar mais linhas
+Subtotal:
+Plain Text12 pontosMostrar mais linhas
+
+EP-02 — EvidenceCollector
+Plain TextUS-02.01 — EvidenceCollector básico: 5 pontosUS-02.02 — Persistência SQLite: 5 pontosUS-02.03 — Query pendentes de revisão: 2 pontosMostrar mais linhas
+Subtotal:
+Plain Text12 pontosMostrar mais linhas
+
+EP-07 — Oracle Pós-Ação mínimo
+Plain TextUS-07.01 — Oracle visual/DOM: 3 pontosUS-07.03 — Oracle business_state mínimo: 3 pontosMostrar mais linhas
+Subtotal:
+Plain Text6 pontosMostrar mais linhas
+
+EP-08 — Promotion Gate mínimo
+Plain TextUS-08.01 — Estados de promoção: 3 pontosUS-08.02 — Bloqueio sem evidência completa: 3 pontosUS-08.04 — Integração básica ao shadow flow: 5 pontosMostrar mais linhas
+Subtotal:
+Plain Text11 pontosMostrar mais linhas
+Total MVP-1:
+Plain Text44 pontosMostrar mais linhas
+
+8. Sugestão de distribuição em sprints
+Se a equipe entregar aproximadamente 15 a 20 pontos por sprint, o MVP-1 fica em aproximadamente 3 sprints.
+Sprint 1
+Plain TextEP-00 completoUS-01.01 — fake-react-bank-appUS-01.02 — mutation change_idUS-01.05 — mutation_matrix.yamlMostrar mais linhas
+Sprint 2
+Plain TextUS-01.03 — duplicate_button_textUS-01.04 — overlay_blocks_clickUS-02.01 — EvidenceCollector básicoUS-02.03 — Query pendentes de revisãoMostrar mais linhas
+Sprint 3
+Plain TextUS-02.02 — Persistência SQLiteUS-07.01 — Oracle visual/DOMUS-07.03 — Oracle business_state mínimoUS-08.01 — Estados de promoçãoUS-08.02 — Bloqueio sem evidência completaUS-08.04 — Integração básica ao shadow flowMostrar mais linhas
+
+9. Definition of Ready
+Uma história só entra na sprint se:
+Plain Textpossui descrição clarapossui critérios de aceitepossui dependências conhecidaspossui dados/mutação/oracle definidos quando aplicávelpossui estimativapossui fora de escopopossui artefato esperadoMostrar mais linhas
+
+10. Definition of Done
+Uma história só é concluída se:
+Plain Textcritérios de aceite foram atendidostestes unitários ou sintéticos foram executadosevidências foram geradas quando aplicávelbanco foi atualizado quando aplicáveldocumentação foi atualizadachangelog foi atualizado se houver mudança relevanteADR foi criado se houver decisão arquiteturalMostrar mais linhas
+
+11. Recomendação prática
+Eu sugiro que o próximo passo seja pegarmos o MVP-1 e refinarmos somente o primeiro sprint.
+Ou seja, detalhar tarefas e critérios de aceite para:
+Plain TextUS-00.01US-00.02US-00.03US-01.01US-01.02US-01.05Mostrar mais linhas
+Esse recorte é pequeno o suficiente para começar desenvolvimento sem cair novamente no erro de tentar resolver tudo de uma vez.
+
+onde está o gravador? onde ficará o teste gravado?
+Copilot said:
+Copilot
+
+Processamento concluído em 2 etapas
+Você tem razão, Andre. O gravador ficou implícito no plano macro, mas não ficou detalhado no prompt pack atual. No pacote de prompts que geramos, o foco ficou no núcleo de validação do self-healing: Synthetic Lab, EvidenceCollector, SQLite, Oracle, PromotionGate, MIS, taxonomia e shadow mode. O componente Recorder Sensorial aparece como parte da arquitetura, mas ainda não foi quebrado em sprints/prompts específicos.
+CodeInterpreter
+
+Então precisamos corrigir o plano adicionando explicitamente:
+
+
+
+
+Plain Text
+Recorder Sensorial
+  ↓
+Raw Recording
+  ↓
+Semantic Test Case / MIS
+  ↓
+Compiled Playwright Test
+  ↓
+Execution Evidence
+1. Onde entra o gravador?
+O gravador deve ficar antes do Modelo Intermediário Semântico.
+
+Fluxo correto:
+
+
+
+
+Plain Text
+Usuário interage no navegador
+        ↓
+Recorder Sensorial captura eventos e evidências
+        ↓
+RawRecordedSession
+        ↓
+Normalizer / Semantic Enricher
+        ↓
+SemanticTestCase — MIS
+        ↓
+Playwright Compiler
+        ↓
+Teste Playwright gerado
+        ↓
+Runner / Shadow Mode / Healing
+
+Mostrar mais linhas
+Ou seja, o gravador não deve gerar diretamente o teste final. Ele deve gerar uma sessão gravada bruta, rica em evidências.
+
+2. O que o gravador deve capturar?
+O gravador deve capturar o máximo possível, mas sem tentar decidir demais.
+
+Para cada ação:
+
+
+
+
+YAML
+raw_event:
+  event_id: evt_0001
+  timestamp: 2026-06-12T15:20:00-03:00
+  type: click
+  url: /fake-react-bank-app
+  target:
+    tag: button
+    text: Pesquisar
+    role: button
+    accessible_name: Pesquisar
+    id: btnPesquisar
+    test_id: btn-search-client
+    attributes:
+      type: submit
+      aria-label: Pesquisar
+  context:
+    page_title: Consulta de Cliente
+    nearby_texts:
+      - CPF
+      - Resultado da consulta
+  artifacts:
+    dom_snapshot: snapshots/evt_0001_dom.html
+    ax_snapshot: snapshots/evt_0001_ax.json
+    screenshot: screenshots/evt_0001.png
+
+Mostrar mais linhas
+Ele deve capturar:
+
+
+
+
+Plain Text
+click
+fill
+select
+check
+navigation
+submit
+keypress relevante
+URL
+title
+DOM fragment
+DOM completo opcional
+accessibility snapshot
+screenshot opcional
+network events
+frame/shadow context
+element attributes
+texto próximo
+bounding box
+
+Mostrar mais linhas
+3. Onde ficará o teste gravado?
+Precisamos separar quatro coisas diferentes:
+
+
+
+
+Plain Text
+1. Gravação bruta
+2. Teste semântico
+3. Teste Playwright compilado
+4. Evidências de execução
+Eles não devem ficar no mesmo lugar, porque têm funções diferentes.
+
+3.1 Gravação bruta
+A gravação bruta é o que o recorder capturou.
+
+Sugestão de pasta:
+
+
+
+
+Plain Text
+recordings/
+└── REC-20260612-001/
+    ├── recording_metadata.json
+    ├── raw_events.jsonl
+    ├── network_log.json
+    ├── screenshots/
+    │   ├── evt_0001.png
+    │   └── evt_0002.png
+    ├── dom_snapshots/
+    │   ├── evt_0001.html
+    │   └── evt_0002.html
+    └── ax_snapshots/
+        ├── evt_0001.json
+        └── evt_0002.json
+
+Mostrar mais linhas
+Essa é a fonte bruta, quase imutável.
+
+3.2 Teste semântico — MIS
+Depois da gravação, o TestForge transforma a sessão bruta em um SemanticTestCase.
+
+Sugestão de pasta:
+
+
+
+
+Plain Text
+semantic_tests/
+└── SIOPI_CONSULTA_PROPOSTA_001/
+    ├── semantic_test_case.yaml
+    ├── locator_candidates.yaml
+    └── post_action_oracles.yaml
+Esse é o artefato mais importante.
+
+O MIS deve ser a fonte de verdade do teste, não o script Playwright gerado.
+
+3.3 Teste Playwright gerado
+O código Playwright é compilado a partir do MIS.
+
+Sugestão de pasta:
+
+
+
+
+Plain Text
+generated_tests/
+└── SIOPI_CONSULTA_PROPOSTA_001/
+    ├── test_consulta_proposta.py
+    ├── fixtures.py
+    └── test_data.yaml
+Esse código pode ser regenerado. Então ele é um artefato derivado, não a fonte primária.
+
+3.4 Evidências de execução
+As evidências de execução ficam separadas.
+
+Sugestão:
+
+
+
+
+Plain Text
+evidence/
+└── RUN-20260612-001/
+    └── step_001/
+        ├── screenshot_before.png
+        ├── screenshot_after.png
+        ├── dom_before.html
+        ├── dom_after.html
+        ├── ax_tree_before.json
+        ├── ax_tree_after.json
+        ├── network_log.json
+        ├── score_breakdown.json
+        ├── oracle_results.json
+        └── manifest.json
+Isso conversa com o pacote do EvidenceCollector que já geramos.
+medium
+
+4. Estrutura recomendada no repositório
+Eu ajustaria a estrutura do projeto para incluir explicitamente o recorder:
+
+
+
+
+Plain Text
+src/testforge/
+├── recorder/
+│   ├── recorder_controller.py
+│   ├── browser_session.py
+│   ├── event_listener.py
+│   ├── dom_snapshot_collector.py
+│   ├── ax_snapshot_collector.py
+│   ├── network_recorder.py
+│   ├── raw_event_store.py
+│   └── recording_session.py
+│
+├── semantic/
+│   ├── model.py
+│   ├── normalizer.py
+│   └── semantic_enricher.py
+│
+├── compiler/
+│   └── playwright_python_compiler.py
+│
+├── locator/
+│   ├── candidate_generator.py
+│   └── scorer.py
+│
+├── evidence/
+│   ├── evidence_collector.py
+│   └── evidence_store.py
+│
+├── oracle/
+├── taxonomy/
+├── shadow/
+├── promotion/
+└── runner/
+
+Mostrar mais linhas
+E os dados gerados:
+
+
+
+
+Plain Text
+recordings/
+semantic_tests/
+generated_tests/
+evidence/
+5. O que falta no prompt pack atual?
+Falta uma sprint ou bloco específico para o gravador.
+
+Eu adicionaria uma nova sprint antes do MIS:
+
+
+
+
+Plain Text
+Sprint 4 — Recorder Sensorial
+E deslocaria o MIS para depois dela.
+
+A nova ordem ficaria:
+
+
+
+
+Plain Text
+Sprint 1 — Fundação e Synthetic Lab mínimo
+Sprint 2 — EvidenceCollector e EvidenceStore
+Sprint 3 — Oracles e PromotionGate mínimo
+Sprint 4 — Recorder Sensorial
+Sprint 5 — Modelo Intermediário Semântico e candidatos
+Sprint 6 — Taxonomia, ShadowValidator e fallback
+Sprint 7 — Métricas, revisão e preparação para piloto
+6. Histórias novas para o gravador
+Eu criaria um novo épico:
+
+
+
+
+Plain Text
+EP-03 — Recorder Sensorial
+E renumeraria o MIS para EP-04, ou então criaria EP-03A.
+
+Histórias:
+
+
+
+
+Plain Text
+US-03.01 — Iniciar e finalizar sessão de gravação
+US-03.02 — Capturar eventos básicos de usuário
+US-03.03 — Capturar snapshot do alvo da ação
+US-03.04 — Capturar contexto da página
+US-03.05 — Persistir RawRecordedSession
+US-03.06 — Gerar SemanticTestCase inicial a partir da gravação
+US-03.07 — Compilar teste Playwright inicial a partir do MIS
+7. Critérios de aceite do gravador
+US-03.01 — Iniciar e finalizar sessão de gravação
+Critérios:
+
+
+
+
+Plain Text
+- O usuário consegue iniciar uma sessão de gravação.
+- A sessão recebe um recording_id único.
+- A sessão cria diretório em recordings/{recording_id}.
+- A sessão gera recording_metadata.json.
+- A sessão pode ser finalizada explicitamente.
+US-03.02 — Capturar eventos básicos
+Critérios:
+
+
+
+
+Plain Text
+- Captura click.
+- Captura fill.
+- Captura navigation.
+- Captura submit quando detectável.
+- Cada evento é salvo em raw_events.jsonl.
+- Cada evento possui timestamp, url, tipo e alvo.
+US-03.03 — Capturar snapshot do alvo
+Critérios:
+
+
+
+
+Plain Text
+- Para cada evento, captura tag, text, role, accessible_name, id, name, test_id e attributes.
+- Captura bounding box quando disponível.
+- Captura contexto de frame/shadow DOM quando aplicável.
+- Não escolhe locator definitivo.
+US-03.04 — Capturar contexto da página
+Critérios:
+
+
+
+
+Plain Text
+- Captura page title.
+- Captura URL.
+- Captura textos próximos ao elemento.
+- Captura DOM snapshot.
+- Captura accessibility snapshot quando disponível.
+- Captura network log básico.
+US-03.05 — Persistir RawRecordedSession
+Critérios:
+
+
+
+
+Plain Text
+- Cria raw_events.jsonl.
+- Cria diretórios screenshots, dom_snapshots e ax_snapshots.
+- Cria recording_metadata.json.
+- Registra política sensitive_data_alert em modo alert_only.
+- Não mascara dados automaticamente.
+US-03.06 — Gerar SemanticTestCase inicial
+Critérios:
+
+
+
+
+Plain Text
+- Lê raw_events.jsonl.
+- Gera semantic_test_case.yaml.
+- Cada evento vira SemanticAction.
+- Cada alvo vira SemanticTarget.
+- Gera candidatos iniciais de locator.
+- Não gera ainda healing automático.
+US-03.07 — Compilar teste Playwright inicial
+Critérios:
+
+
+
+
+Plain Text
+- Lê semantic_test_case.yaml.
+- Gera test_*.py em generated_tests/.
+- Usa locators priorizados.
+- Inclui assertions básicas quando existirem oracles.
+- O teste gerado roda contra fake-react-bank-app.
+8. Resposta direta às suas perguntas
+Onde está o gravador?
+Ainda não está detalhado no prompt pack atual. Ele aparece como componente arquitetural, mas precisa entrar explicitamente como novo épico/sprint.
+
+Local proposto:
+
+
+
+
+Plain Text
+src/testforge/recorder/
+Com dados persistidos em:
+
+
+
+
+Plain Text
+recordings/{recording_id}/
+Onde ficará o teste gravado?
+Depende do nível:
+
+
+
+
+Plain Text
+Gravação bruta:
+  recordings/{recording_id}/raw_events.jsonl
+
+Teste semântico:
+  semantic_tests/{test_id}/semantic_test_case.yaml
+
+Teste Playwright gerado:
+  generated_tests/{test_id}/test_*.py
+
+Evidências de execução:
+  evidence/{run_id}/...
+A fonte de verdade deve ser:
+
+
+
+
+Plain Text
+semantic_tests/{test_id}/semantic_test_case.yaml
+Não o script Python.
+
+9. Ajuste necessário no próximo arquivo
+Precisamos gerar uma versão nova do prompt pack:
+
+
+
+
+Plain Text
+testforge_prompt_pack_llm_v0.2.0.zip
+Com:
+
+
+
+
+Plain Text
+Sprint 4 — Recorder Sensorial
+E ajuste de ordem:
+
+
+
+
+Plain Text
+Recorder antes do MIS.
+MIS antes do Compiler.
+Compiler antes do Runner/Shadow.
+Minha recomendação: no próximo passo eu gero esse Prompt Pack v0.2.0, já incluindo:
+
+
+
+
+Plain Text
+épico do gravador
+histórias do gravador
+tarefas do gravador
+prompts para implementar recorder_controller
+prompts para raw_events.jsonl
+prompts para semantic_test_case.yaml
+prompts para generated_tests/
+critérios de aceite
+estrutura de armazenamento do teste gravado
+Fontes
+
+crie o épico e histórias do gravador e a gere o Prompt Pack v0.2.0, 
+Copilot said:
+Copilot
+
+Processamento concluído em 2 etapas
+Perfeito, Andre. Corrigi a lacuna que você apontou: agora o Recorder Sensorial está explicitamente modelado como épico, com histórias, critérios de aceite, tarefas e prompts específicos.
+
+Gerei o Prompt Pack v0.2.0 com o gravador incluído:
+
+Baixar Prompt Pack v0.2.0 com Recorder Sensorial
+
+Conteúdo do ZIP
+
+
+
+Plain Text
+testforge_prompt_pack_v0_2_0/
+├── README.md
+├── CHANGELOG_PROMPT_PACK.md
+├── manifest.json
+├── testforge_epico_recorder_sensorial.md
+├── testforge_prompt_pack_index_v0_2_0.yaml
+└── testforge_prompt_pack_llm_v0_2_0.md
+O que foi adicionado
+Novo épico
+
+
+
+Plain Text
+EP-03 — Recorder Sensorial
+Objetivo:
+
+
+
+
+Plain Text
+Capturar interações reais do usuário no navegador,
+preservando eventos, contexto, snapshots e metadados,
+sem gerar diretamente o teste final
+e sem escolher locator definitivo durante a gravação.
+Histórias criadas para o gravador
+Incluí estas histórias:
+
+
+
+
+Plain Text
+US-03.01 — Iniciar e finalizar sessão de gravação
+US-03.02 — Capturar eventos básicos de usuário
+US-03.03 — Capturar snapshot do alvo da ação
+US-03.04 — Capturar contexto da página e textos próximos
+US-03.05 — Capturar eventos de rede associados à gravação
+US-03.06 — Persistir RawRecordedSession
+US-03.07 — Gerar SemanticTestCase inicial a partir da gravação
+US-03.08 — Compilar teste Playwright inicial a partir do SemanticTestCase
+US-03.09 — Criar teste de ponta a ponta da gravação sintética
+Onde fica a gravação e o teste gerado
+O Prompt Pack v0.2.0 agora define explicitamente os diretórios normativos:
+
+
+
+
+Plain Text
+recordings/{recording_id}/
+  gravação bruta
+
+semantic_tests/{test_id}/
+  SemanticTestCase, fonte de verdade
+
+generated_tests/{test_id}/
+  teste Playwright gerado, artefato derivado
+
+evidence/{run_id}/
+  evidências de execução
+A regra ficou clara:
+
+
+
+
+Plain Text
+O Recorder gera RawRecordedSession.
+O SemanticTestCase é a fonte de verdade.
+O teste Playwright é artefato derivado e pode ser regenerado.
+Nova sequência de sprints
+A ordem do Prompt Pack foi corrigida:
+
+
+
+
+Plain Text
+Sprint 1 — Fundação e Synthetic Lab mínimo
+Sprint 2 — Recorder Sensorial
+Sprint 3 — EvidenceCollector e EvidenceStore
+Sprint 4 — SemanticTestCase e Compiler
+Sprint 5 — Oracles e PromotionGate mínimo
+Sprint 6 — Taxonomia, ShadowValidator e fallback
+Sprint 7 — Métricas, revisão e relatório
+Assim o fluxo fica arquiteturalmente correto:
+
+
+
+
+Plain Text
+Recorder
+  ↓
+RawRecordedSession
+  ↓
+SemanticTestCase
+  ↓
+Compiler
+  ↓
+Generated Playwright Test
+  ↓
+Runner / Shadow / Evidence / Oracle / PromotionGate
+Exemplos de prompts adicionados
+Iteração 2.1 — Implementar RecordingSession e RecorderController
+Inclui instruções para criar:
+
+
+
+
+Plain Text
+src/testforge/recorder/recording_session.py
+src/testforge/recorder/recorder_controller.py
+src/testforge/recorder/raw_event.py
+src/testforge/recorder/raw_recording_store.py
+Com critérios como:
+
+
+
+
+Plain Text
+- Iniciar gravação cria diretório correto.
+- Finalizar gravação atualiza metadata.
+- Sessão finalizada não aceita novos eventos.
+- Teste unitário cobre start/stop.
+Iteração 2.2 — Capturar eventos básicos no navegador
+Eventos mínimos:
+
+
+
+
+Plain Text
+click
+input/fill
+navigation
+Critérios:
+
+
+
+
+Plain Text
+- raw_events.jsonl contém eventos de fill e click.
+- Eventos possuem timestamp e URL.
+- O recorder não gera locator final.
+- Teste sintético demonstra a gravação.
+Iteração 2.6 — Teste E2E da gravação bruta
+Fluxo:
+
+
+
+
+Plain Text
+1. Inicia RecorderController.
+2. Abre fake-react-bank-app sem mutação.
+3. Preenche CPF.
+4. Clica em Pesquisar.
+5. Finaliza gravação.
+6. Imprime caminho da gravação.
+Critérios:
+
+
+
+
+Plain Text
+- Cria recordings/{recording_id}.
+- raw_events.jsonl contém fill e click.
+- Existem screenshots e DOM snapshots.
+- Existe sensitive_data_alert.json.
+- README explica como executar.
+Decisões preservadas
+Também mantive no v0.2.0 as decisões anteriores:
+
+
+
+
+Plain Text
+Determinístico primeiro.
+LLM apenas como curadoria.
+Nenhum healing sem evidência.
+Nenhuma promoção sem Promotion Gate.
+Shadow mode antes de auto-heal.
+Synthetic Lab antes de piloto real.
+Dados sensíveis em modo alert_only.
+Sem mascaramento automático no MVP.
+Agora sim temos um prompt pack mais completo para o projeto, incluindo o ponto que faltava: o gravador e o ciclo completo da gravação até o teste gerado.
+
+Adicione critérios de aceite para o gravador. Crie um exemplo de gravação bruta. Como testar o gravador automaticamente°
+Copilot said:
+Copilot
+
+Processamento concluído em 2 etapas
+Andre, gerei um pacote específico para o Recorder Sensorial com:
+
+critérios de aceite detalhados;
+exemplo completo de gravação bruta;
+contrato mínimo do RawRecordedEvent;
+estratégia de testes automáticos;
+exemplos de testes unitários, integração Playwright e E2E.
+Download:
+
+Baixar pacote — Recorder: critérios, exemplo e testes
+
+Conteúdo do ZIP
+
+
+
+Plain Text
+testforge_recorder_criterios_exemplo_testes/
+├── testforge_recorder_criterios_aceite.md
+├── testforge_como_testar_recorder_automaticamente.md
+├── testforge_raw_recorded_event_contrato.md
+├── manifest.json
+└── exemplo_raw_recording/
+    └── REC-20260612-001/
+        ├── recording_metadata.json
+        ├── raw_events.jsonl
+        ├── network_log.json
+        ├── sensitive_data_alert.json
+        ├── screenshots/
+        ├── dom_snapshots/
+        └── ax_snapshots/
+
+Mostrar mais linhas
+1. Critérios de aceite adicionados para o gravador
+Incluí 10 grupos de critérios:
+
+
+
+
+Plain Text
+AC-RC-001 — Sessão de gravação
+AC-RC-002 — Eventos mínimos capturados
+AC-RC-003 — Alvo da ação
+AC-RC-004 — Contexto da página
+AC-RC-005 — Rede
+AC-RC-006 — Dados sensíveis em modo alert_only
+AC-RC-007 — Integridade dos artefatos
+AC-RC-008 — Reprocessabilidade
+AC-RC-009 — Não acoplamento ao teste gerado
+AC-RC-010 — Testabilidade automática
+Critério importante que ficou explícito:
+
+
+
+
+Plain Text
+O gravador não escolhe locator definitivo.
+O gravador não gera diretamente o teste final como fonte de verdade.
+O gravador gera RawRecordedSession.
+O SemanticTestCase é gerado depois.
+O Playwright test é artefato derivado.
+2. Exemplo de gravação bruta
+Incluí uma gravação de exemplo em:
+
+
+
+
+Plain Text
+exemplo_raw_recording/REC-20260612-001/
+Ela contém:
+
+
+
+
+Plain Text
+recording_metadata.json
+raw_events.jsonl
+network_log.json
+sensitive_data_alert.json
+screenshots/
+dom_snapshots/
+ax_snapshots/
+Exemplo de recording_metadata.json
+
+
+
+JSON
+{
+  "schema_version": "0.2.1",
+  "kind": "RawRecordedSession",
+  "recording_id": "REC-20260612-001",
+  "application": "fake-react-bank-app",
+  "recorder_version": "0.2.1",
+  "status": "finished",
+  "event_count": 3,
+  "sensitive_data_alert": {
+    "enabled": true,
+    "policy": "alert_only",
+    "masking_applied": false,
+    "possible_sensitive_data_detected": true,
+    "detected_categories": [
+      "cpf_pattern",
+      "long_numeric_identifier"
+    ]
+  }
+}
+
+Mostrar mais linhas
+Exemplo de evento fill
+
+
+
+JSON
+{
+  "schema_version": "0.2.1",
+  "event_id": "evt_0002",
+  "sequence": 2,
+  "type": "fill",
+  "input": {
+    "value": "12345678900",
+    "value_kind": "literal_observed",
+    "sensitive_data_alert": {
+      "possible_sensitive_data_detected": true,
+      "detected_categories": [
+        "cpf_pattern",
+        "long_numeric_identifier"
+      ],
+      "policy": "alert_only",
+      "masking_applied": false
+    }
+  },
+  "target": {
+    "tag": "input",
+    "role": "textbox",
+    "accessible_name": "CPF",
+    "label": "CPF",
+    "placeholder": "Informe o CPF",
+    "id": "cpfInput",
+    "name": "cpf"
+  }
+}
+
+Mostrar mais linhas
+Repare que o CPF está preservado, conforme nossa decisão:
+
+
+
+
+Plain Text
+alertar, mas não mascarar no MVP.
+3. Como testar o gravador automaticamente
+A estratégia está dividida em três níveis.
+
+Nível 1 — Testes unitários
+Validam componentes isolados:
+
+
+
+
+Plain Text
+RecordingSession
+RecorderController
+RawRecordingStore
+SensitiveDataAlertOnlyDetector
+Exemplo de validação:
+
+
+
+
+Python
+def test_recording_session_start_stop(tmp_path):
+    controller = RecorderController(root_dir=tmp_path)
+
+    session = controller.start(
+        application="fake-react-bank-app",
+        base_url="http://localhost:3000"
+    )
+
+    assert session.recording_id.startswith("REC-")
+    assert (tmp_path / session.recording_id).exists()
+    assert (tmp_path / session.recording_id / "recording_metadata.json").exists()
+
+    controller.stop(session.recording_id)
+
+    metadata = json.loads(
+        (tmp_path / session.recording_id / "recording_metadata.json").read_text()
+    )
+
+    assert metadata["status"] == "finished"
+    assert metadata["finished_at"] is not None
+
+Mostrar mais linhas
+Nível 2 — Integração com Playwright
+Valida a gravação real contra o fake-react-bank-app.
+
+O teste deve:
+
+
+
+
+Plain Text
+abrir fake-react-bank-app
+iniciar gravação
+preencher CPF
+clicar em Pesquisar
+finalizar gravação
+validar raw_events.jsonl
+validar screenshots
+validar DOM snapshots
+validar sensitive_data_alert.json
+Exemplo incluído no arquivo:
+
+
+
+
+Python
+@pytest.mark.asyncio
+async def test_recorder_captures_fake_flow(tmp_path):
+    app_url = Path("synthetic_lab/fake-react-bank-app/index.html").resolve().as_uri()
+
+    controller = RecorderController(root_dir=tmp_path / "recordings")
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context()
+        page = await context.new_page()
+
+        session = await controller.start_browser_recording(
+            page=page,
+            application="fake-react-bank-app",
+            base_url=app_url,
+        )
+
+        await page.goto(app_url)
+        await page.get_by_label("CPF").fill("12345678900")
+        await page.get_by_role("button", name="Pesquisar").click()
+
+        await controller.stop(session.recording_id)
+        await browser.close()
+
+    recording_dir = tmp_path / "recordings" / session.recording_id
+
+    assert (recording_dir / "recording_metadata.json").exists()
+    assert (recording_dir / "raw_events.jsonl").exists()
+    assert (recording_dir / "sensitive_data_alert.json").exists()
+
+Mostrar mais linhas
+Nível 3 — E2E da cadeia completa
+Esse teste valida:
+
+
+
+
+Plain Text
+gravação bruta
+  ↓
+SemanticTestCase
+  ↓
+teste Playwright gerado
+  ↓
+execução do teste gerado
+Critério de pronto:
+
+
+
+
+Plain Text
+O teste gerado a partir da gravação deve passar contra o fake-react-bank-app sem mutação.
+Pseudo-teste incluído:
+
+
+
+
+Python
+@pytest.mark.asyncio
+async def test_recording_can_generate_semantic_test_and_playwright_test(tmp_path):
+    recording_id = await record_fake_flow(tmp_path)
+
+    semantic_test_path = generate_semantic_test_case(
+        recording_dir=tmp_path / "recordings" / recording_id,
+        output_dir=tmp_path / "semantic_tests"
+    )
+
+    assert semantic_test_path.exists()
+
+    generated_test_path = compile_playwright_test(
+        semantic_test_path=semantic_test_path,
+        output_dir=tmp_path / "generated_tests"
+    )
+
+    assert generated_test_path.exists()
+
+    result = run_pytest(generated_test_path)
+    assert result.exit_code == 0
+
+Mostrar mais linhas
+4. Critério para considerar o gravador aprovado no MVP
+O gravador estará aprovado quando conseguir:
+
+
+
+
+Plain Text
+capturar fluxo básico no fake-react-bank-app
+persistir RawRecordedSession completa
+gerar raw_events.jsonl válido
+capturar screenshot e DOM snapshot por evento relevante
+registrar alerta de dado sensível sem mascarar
+gerar SemanticTestCase a partir da gravação
+gerar teste Playwright executável a partir do SemanticTestCase
+executar o teste gerado com sucesso contra o fake app sem mutação
+Com isso, o gravador deixa de ser uma ideia abstrata e passa a ter contrato, exemplo, critérios de aceite e teste automatizado.
+
+
+
+
+

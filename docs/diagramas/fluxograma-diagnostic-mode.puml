@@ -1,0 +1,96 @@
+@startuml
+title TestForge Sprint 0 — Flowchart Diagnostic Mode
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontSize 12
+skinparam ActivityDiamondBackgroundColor #FEF3C7
+
+|#E0F2FE|CLI|
+start
+:testforge diagnose <url>
+OR testforge record --diagnostic-mode
+OR testforge record --pipeline-and-diagnostic-mode;
+
+|#FEF3C7|RecorderController|
+:start(diagnostic_mode=True,
+  replay_mode=immediate|batched);
+note right
+  Reusa Phase 1 CDP/tracing
+  se --use-cdp-recorder ligado
+end note
+
+|#DCFCE7|DiagnosticSession.start|
+:FrameworkDetector.attach()
+  CDP Network.responseReceived
+  watches JS bundles (A3);
+:CaptureQualityTracker init;
+:ReplayCheck init (mode=B1 or B4);
+:GherkinWriter init (lang=pt);
+:DiagnosticTelemetryStore init
+  spans.jsonl path = .testforge/spans.jsonl;
+
+|#E0F2FE|Recording loop|
+repeat
+  :User interacts in browser;
+  if (navigation?) then (yes)
+    :_on_framenavigated
+    -> diagnostic.on_navigation(url, title)
+    -> Gherkin seeds Funcionalidade (C4b);
+  else (no — click/fill/assert)
+    :_persist_raw_event
+    -> diagnostic.assess_event:
+       1. CaptureQualityTracker.assess()
+          (value_kind, value_source,
+           framework_signal, blind_spots,
+           idle_before_ms)
+       2. TelemetryStore.append_step
+          + emit OTel span (E4)
+       3. GherkinWriter.on_step
+          (Quando/E + opaque value phrase)
+       4. ReplayCheck.check
+          - immediate: probe via LocatorResolver
+          - batched:   queue for drain
+       5. update totals counters;
+  endif
+repeat while (recording active?)
+
+|#FECACA|Stop sequence|
+:Shift+S OR Ctrl+C;
+:_prompt_gherkin_confirm (C4c)
+  shows auto Funcionalidade/Cenário
+  user accepts | overrides | 'e' opens $EDITOR;
+
+|#DCFCE7|DiagnosticSession.finalize|
+:FrameworkDetector.detect()
+  combines A1 + A2 + A3 + A4
+  -> primary framework + evidence;
+:ReplayCheck.drain (B4 only);
+:GherkinWriter.write(overrides)
+  -> session_dir/scenario.feature;
+:write session.json with totals;
+
+|#F3E8FF|Q4 fork|
+if (--diagnostic-mode only?) then (yes)
+  :Skip compile + run + validate;
+else (--pipeline-and-diagnostic-mode)
+  :Continue Phase 2+ pipeline:
+    completeness check
+    compile (legacy or v2)
+    run-incremental;
+endif
+
+|#FEF3C7|Publisher|
+if (config.yml provider=azure-devops?) then (yes)
+  :AzureDevOpsPublisher.publish
+   1. resolve_credentials (Z5):
+      env > secrets > azure > git helper
+   2. git clone HTTPS+PAT (or SSH)
+   3. copy diagnostic/<rid>/*
+   4. git add -f + commit + push
+   5. print remote_path + commit_sha;
+else (no)
+  :Skip publish;
+endif
+
+stop
+@enduml

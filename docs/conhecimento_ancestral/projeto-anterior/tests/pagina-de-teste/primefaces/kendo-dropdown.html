@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Kendo UI DropDownList — Página de Teste</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; background: #f5f5f5; }
+h1 { margin-bottom: 8px; color: #333; }
+.sub { color: #666; margin-bottom: 32px; }
+.row { display: flex; gap: 40px; flex-wrap: wrap; }
+.col { flex: 1; min-width: 320px; background: white; border-radius: 8px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+.col h2 { font-size: 16px; color: #444; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #eee; }
+.form-group { margin-bottom: 20px; position: relative; }
+label { display: block; font-size: 13px; color: #555; margin-bottom: 4px; }
+
+/* Kendo-styled dropdownlist (simulates real Kendo DOM) */
+.k-dropdownlist {
+  display: inline-flex; position: relative; width: 100%; height: 36px;
+  border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: white;
+}
+.k-dropdownlist .k-dropdown-wrap {
+  display: flex; align-items: center; padding: 6px 12px; width: 100%;
+}
+.k-dropdownlist .k-input {
+  flex: 1; border: none; outline: none; font-size: 14px; background: transparent;
+}
+.k-dropdownlist .k-select {
+  color: #999; font-size: 12px; cursor: pointer;
+}
+.k-animation-container {
+  position: absolute; top: 100%; left: 0; z-index: 1000; min-width: 100%;
+}
+.k-popup {
+  background: white; border: 1px solid #ccc; border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-height: 200px; overflow-y: auto;
+}
+.k-list { list-style: none; padding: 4px 0; margin: 0; }
+.k-item { padding: 8px 12px; cursor: pointer; font-size: 14px; }
+.k-item:hover, .k-item.k-state-hover { background: #e3f2fd; }
+.k-item.k-state-selected { background: #bbdefb; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>🧪 Kendo UI DropDownList — Página de Teste</h1>
+<p class="sub">Simula a estrutura DOM e comportamento do Kendo DropDownList sem CDN. 
+O overlay detecta via <code>.k-dropdownlist</code> e <code>span.k-widget</code>.</p>
+
+<div class="row">
+  <div class="col">
+    <h2>Kendo DropDownList (simulado)</h2>
+    <form id="form1">
+      <div class="form-group">
+        <label for="kendoCategoriaSr">Categoria</label>
+        <span id="kendoCategoria" class="k-dropdownlist">
+          <span class="k-dropdown-wrap" id="kendoCategoriaWrap">
+            <span class="k-input" id="kendoCategoriaLabel">Selecione</span>
+            <span class="k-select">▼</span>
+          </span>
+          <div class="k-animation-container" id="kendoCategoriaPopup" style="display:none">
+            <div class="k-popup">
+              <ul class="k-list" role="listbox">
+                <li class="k-item" data-value="1">Eletrônicos</li>
+                <li class="k-item" data-value="2">Roupas e Acessórios</li>
+                <li class="k-item" data-value="3">Alimentos e Bebidas</li>
+                <li class="k-item" data-value="4">Móveis e Decoração</li>
+                <li class="k-item" data-value="5">Esportes e Lazer</li>
+              </ul>
+            </div>
+          </div>
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label for="kendoFornecedorSr">Fornecedor</label>
+        <span id="kendoFornecedor" class="k-dropdownlist">
+          <span class="k-dropdown-wrap" id="kendoFornecedorWrap">
+            <span class="k-input" id="kendoFornecedorLabel">Selecione</span>
+            <span class="k-select">▼</span>
+          </span>
+          <div class="k-animation-container" id="kendoFornecedorPopup" style="display:none">
+            <div class="k-popup">
+              <ul class="k-list" role="listbox">
+                <li class="k-item" data-value="dist">Distribuidora Nacional</li>
+                <li class="k-item" data-value="imp">Importadora Brasil</li>
+                <li class="k-item" data-value="fab">Fábrica Local</li>
+              </ul>
+            </div>
+          </div>
+        </span>
+      </div>
+    </form>
+  </div>
+
+  <div class="col">
+    <h2>Resultado</h2>
+    <p id="result" style="font-size:14px; color:#555;">Selecione um valor...</p>
+  </div>
+</div>
+
+<script>
+// Simula window.kendo para page tech detection
+window.kendo = { version: '2023.3.1115' };
+
+function setupKendoDropdown(prefix) {
+  var wrap = document.getElementById(prefix + 'Wrap');
+  var popup = document.getElementById(prefix + 'Popup');
+  var label = document.getElementById(prefix + 'Label');
+  var items = popup.querySelectorAll('.k-item');
+
+  wrap.addEventListener('click', function(e) {
+    e.stopPropagation();
+    var open = popup.style.display !== 'none';
+    document.querySelectorAll('.k-animation-container').forEach(function(p) { p.style.display = 'none'; });
+    popup.style.display = open ? 'none' : 'block';
+  });
+
+  items.forEach(function(item) {
+    item.addEventListener('click', function(e) {
+      e.stopPropagation();
+      label.textContent = item.textContent;
+      popup.style.display = 'none';
+      document.getElementById('result').textContent = 'Kendo selected: ' + item.textContent + ' (value=' + item.getAttribute('data-value') + ')';
+    });
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.k-dropdownlist')) popup.style.display = 'none';
+  });
+}
+
+setupKendoDropdown('kendoCategoria');
+setupKendoDropdown('kendoFornecedor');
+
+console.log('[Kendo Sim] Widgets prontos. kendo.version =', window.kendo.version);
+console.log('[Kendo Sim] DOM structure matches real Kendo: .k-dropdownlist > .k-dropdown-wrap > .k-input + .k-select');
+</script>
+</body>
+</html>

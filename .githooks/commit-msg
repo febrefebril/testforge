@@ -1,0 +1,50 @@
+#!/bin/bash
+# commit-msg hook: enforce conventional commits for BMAD->GSD->GIT pipeline
+# Rejects commits that don't follow: type(scope): description
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Skip validation for merge commits
+if echo "$COMMIT_MSG" | grep -qE '^(Merge |Revert |Automatic merge)'; then
+    exit 0
+fi
+
+# Conventional commit regex
+# Allowed types: feat, fix, refactor, docs, test, chore, infra, perf, ci, build, style, revert
+VALID_TYPES="feat|fix|refactor|docs|test|chore|infra|perf|ci|build|style|revert"
+
+if ! echo "$COMMIT_MSG" | head -1 | grep -qP "^($VALID_TYPES)(\([a-z0-9_-]+\))?: .{1,72}"; then
+    echo ""
+    echo "⛔  COMMIT REJEITADO: nao segue conventional commits"
+    echo ""
+    echo "Formato: tipo(scope): descricao"
+    echo "  feat: nova funcionalidade"
+    echo "  fix: correcao de bug"
+    echo "  refactor: refatoracao"
+    echo "  docs: documentacao"
+    echo "  test: testes"
+    echo "  chore: manutencao"
+    echo "  infra: infraestrutura/MCP/agentes"
+    echo "  perf: performance"
+    echo "  ci: CI/CD"
+    echo "  build: build system"
+    echo "  style: formatacao"
+    echo "  revert: reversao"
+    echo ""
+    echo "Exemplo: feat: add user authentication"
+    echo "         fix(auth): correct token expiry check"
+    echo ""
+    echo "Pipeline: BMAD(plan) -> GSD(exec) -> GIT(commit)"
+    exit 1
+fi
+
+# Check for empty/meaningless messages
+if [ ${#COMMIT_MSG} -lt 10 ]; then
+    echo "⛔  Mensagem de commit muito curta (< 10 caracteres)"
+    exit 1
+fi
+
+# Warn if no working tree check mentioned
+echo "✓  Commit validado (conventional commit)"
+exit 0

@@ -1,0 +1,471 @@
+# Guia de Testes Manuais — TestForge
+
+## Pré-requisitos
+
+```bash
+# Terminal 1: Servir a página de teste principal (Epic A)
+python3 -m http.server 8080 --directory testes/pagina-de-teste
+
+# Terminal 2: Servir as páginas de cura (Epic B)
+python3 -m http.server 8081 --directory tests/test_pages/curation
+
+# Verificar instalação
+testforge --help
+```
+
+## Índice
+
+1. [Testes de Gravação (Epic A)](#1-testes-de-gravação-epic-a)
+2. [Testes de Execução com Fallbacks (Epic A)](#2-testes-de-execução-com-fallbacks-epic-a)
+3. [Testes de Healing (Epic B)](#3-testes-de-healing-epic-b)
+4. [Testes de Curadoria Manual (B.5)](#4-testes-de-curadoria-manual-b5)
+5. [Testes de Assert e Relatório](#5-testes-de-assert-e-relatório)
+6. [Testes Cross-Cutting](#6-testes-cross-cutting)
+7. [Checklist de Regressão Rápida](#7-checklist-de-regressão-rápida)
+8. [Roteiro Manual Completo (D.1)](testes/roteiro-manual.md) — passo-a-passo detalhado para testar todas as 73 taxonomias
+
+---
+
+## 1. Testes de Gravação (Epic A)
+
+### 1.1 — Seletores Frágeis (SEL)
+
+**Página:** `http://localhost:8080` — seção "Seletores Frágeis"
+
+| # | Ação | Resultado Esperado |
+|---|------|--------------------|
+| 1 | Gravar: `testforge record --name teste-sel --url http://localhost:8080` | Overlay aparece com indicador "REC" |
+| 2 | Clicar no campo "Campo sem ID (SEL-006)" e digitar "teste" | Step capturado como `fill` |
+| 3 | Clicar no campo "Label sem for (SEL-010)" e digitar "label" | Step capturado |
+| 4 | Clicar em "Opção A" (radio sem for) | Step capturado como `click` no label |
+| 5 | Clicar em ambos os botões "Confirmar" (texto duplicado) | 2 steps capturados, seletores diferentes (`data-id` ou posição) |
+| 6 | Clicar na div genérica "Clique aqui" (SEL-004) | Step capturado |
+| 7 | Clicar em "Ação fora do form" (SEL-007) | Step capturado |
+| 8 | Finalizar gravação (botão "Stop" no overlay) | Script + data.json gerados |
+
+**Validar:**
+- Nenhum seletor gerado é XPath absoluto (`/html/body/...`)
+- Seletores seguem prioridade: `data-testid` > `id` > `name` > `aria-label` > `placeholder` > `has-text` > `href` > `alt` > `class` > XPath relativo
+
+### 1.2 — Input Especializado (INP)
+
+| # | Ação | Resultado Esperado |
+|---|------|--------------------|
+| 1 | Gravar: `testforge record --name teste-inp --url http://localhost:8080` | Overlay ativo |
+| 2 | Digitar CPF "12345678901" no campo "Máscara de input" | Input mascara para `123.456.789-01`; step captura **valor formatado final** |
+| 3 | Clicar no date picker jQuery UI e selecionar uma data | Step captura como `click` + `fill` com data selecionada |
+| 4 | Digitar no combobox customizado e selecionar "Python" | Step capturado |
+| 5 | Fazer upload de um arquivo qualquer | Step capturado como `upload` |
+| 6 | Arrastar item para a drop zone | Step capturado como `drag` |
+| 7 | Digitar no rich text (contenteditable) | Step capturado como `fill` |
+| 8 | Digitar no autocomplete jQuery UI (ex: "Bras") e selecionar "Brasília" | Step capturado com valor final "Brasília" |
+| 9 | Finalizar gravação | Script gerado |
+
+**Validar:**
+- Upload gera step com `action: "upload"` e referencia o nome do arquivo, não o binário
+- Autocomplete captura o valor final selecionado, não a digitação parcial
+- Drag gera `action: "drag"` com seletor de origem e destino
+
+### 1.3 — Contextos Especiais (CTX)
+
+| # | Ação | Resultado Esperado |
+|---|------|--------------------|
+| 1 | Gravar: `testforge record --name teste-ctx --url http://localhost:8080` | Overlay ativo |
+| 2 | Clicar no input dentro do Shadow DOM (`#shadow-host`) e digitar "shadow" | Step capturado com seletor quer penetra o shadow root |
+| 3 | Clicar em um campo dentro do iframe | Step capturado com `iframeSelector` nos attrs |
+| 4 | Clicar "Abrir Modal", preencher campo e clicar "Confirmar" | Steps capturados dentro do modal |
+| 5 | Clicar "Alert" → dialog nativo é auto-acceptado | Step concluído sem travar |
+| 6 | Clicar "Confirm" → auto-acceptado | Step concluído |
+| 7 | Finalizar gravação | Script gerado |
+
+### 1.4 — DOM Dinâmico (DOM)
+
+| # | Ação | Resultado Esperado |
+|---|------|--------------------|
+| 1 | Gravar: `testforge record --name teste-dom --url http://localhost:8080` | Overlay ativo |
+| 2 | Esperar 3s (conteúdo lazy carrega), clicar no campo carregado | Step capturado |
+| 3 | Clicar no select assíncrono e selecionar "Opção 1" | Step capturado |
+| 4 | Clicar "Reordenar" (inverte a lista) | Step capturado |
+| 5 | Clicar "Carregar Conteúdo", depois no campo/ botão que aparece | Steps capturados em ordem |
+| 6 | Finalizar gravação | Script gerado |
+
+---
+
+## 2. Testes de Execução com Fallbacks (Epic A)
+
+Para cada script gerado acima, executar:
+
+```bash
+# Modo headed (ver o navegador)
+testforge run testes/<nome>/<nome>.py --headed --timeout 30000
+
+# Modo headless
+testforge run testes/<nome>/<nome>.py --timeout 30000
+
+# Com auto-healing (registra fallbacks no catálogo)
+testforge run testes/<nome>/<nome>.py --healing ~/.testforge/healing-catalog.jsonl
+```
+
+### 2.1 — Fallback de Seletores
+
+Depois de gravar um script contra a página limpa, **forçar falha** simulando mudança na UI:
+
+```bash
+# Editar data.json: trocar o seletor primário por um seletor inválido
+# Executar com healing:
+testforge run <script>.py --healing healing-catalog.jsonl
+```
+
+**Resultado esperado:**
+- Runner tenta seletor primário → falha
+- Tenta fallbacks em sequência → um funciona
+- Step passa com fallback
+- Fallback é registrado no catálogo (se `--healing` fornecido)
+
+### 2.2 — Fill com Máscara (INP-007)
+
+Para testar o fill com campo de máscara JS:
+
+```bash
+# 1. Gravar script preenchendo o campo CPF com "12345678901"
+# 2. Executar o script gerado:
+testforge run <script>.py --headed
+```
+
+**Resultado esperado:**
+- `page.fill()` tenta preencher → overlay/máscara pode bloquear
+- Runner detecta que valor não foi aplicado (re-check)
+- `pressSequentially` digita caractere por caractere
+- Máscara JS formata o valor
+- Step passa
+
+### 2.3 — Execução com Slow-mo
+
+```bash
+testforge run <script>.py --headed --slow-mo 500
+```
+
+**Resultado:** 500ms de pausa entre cada step. Útil para depuração visual.
+
+---
+
+## 3. Testes de Healing (Epic B)
+
+### 3.1 — Pipeline de Cura via Teste Automatizado
+
+Os testes de cura já existem e podem ser executados com:
+
+```bash
+cd packages/core
+pytest tests/test_curation_pipeline.py -v --headed  # headed para ver
+pytest tests/test_curation_pipeline.py -v            # headless (padrão)
+```
+
+**Testes específicos:**
+```bash
+# Testar família específica
+pytest tests/test_curation_pipeline.py -v -k "fam_01"
+
+# Testar todas as camadas (L1, L2, L3)
+pytest tests/test_curation_pipeline.py -v -k "layer"
+
+# Ver cobertura de testes no terminal
+pytest tests/test_curation_pipeline.py -v --tb=short
+```
+
+### 3.2 — Pipeline de Cura Manual (Passo a Passo)
+
+Usando as páginas de cura (servidas em `:8081`):
+
+```bash
+# 1. Gravar contra a página limpa (v1)
+testforge record --name teste-cura-fam01 --url http://localhost:8081/fam-01-selector/
+
+# 2. Clicar no botão "Salvar" (tem data-testid)
+# 3. Finalizar gravação
+
+# 4. Executar contra a mesma URL (v1) — deve passar
+testforge run testes/teste-cura-fam01/teste-cura-fam01.py --headed
+
+# 5. Agora executar contra a URL com erro (v2) — deve falhar
+#    Editar o data.json: trocar a URL base para incluir ?error=1
+#    Ou: regenerar script com a URL de erro
+
+# 6. Executar com healing:
+testforge run testes/teste-cura-fam01/teste-cura-fam01.py \
+  --healing ~/.testforge/healing-catalog.jsonl --headed
+```
+
+**Repetir para cada família:**
+
+| Família | Página | Erro induzido (v2) |
+|---------|--------|--------------------|
+| FAM-01 (SEL) | `/fam-01-selector/` | `?error=1` remove data-testid e id |
+| FAM-02 (TIM) | `/fam-02-timing/` | `?error=1` delay de 5s |
+| FAM-03 (CTX) | `/fam-03-context/` | `?error=1` iframe vazio |
+| FAM-04 (STA) | `/fam-04-state/` | `?error=1` oculta botão "Avançar" |
+| FAM-05 (DOM) | `/fam-05-dom-dinamico/` | `?error=1` lista parcial |
+| FAM-06 (INP) | `/fam-06-fill/` | `?error=1` máscara CPF agressiva |
+| FAM-07 (FILE) | `/fam-07-capture/` | `?error=1` remove accept |
+| FAM-08 (ASSERT) | `/fam-08-assertion/` | `?error=1` texto muda |
+| FAM-09 (REC) | `/fam-09-recorder/` | `?error=1` overlay bloqueante |
+| FAM-10 (EXEC) | `/fam-10-execution/` | `?error=1` alert bloqueante |
+| FAM-11 (BROWSER) | `/fam-11-browser/` | `?error=1` popup |
+
+### 3.3 — Teste de Classificação Taxonômica (B.4)
+
+```bash
+cd packages/core
+pytest tests/test_classifier.py -v
+```
+
+**Testes específicos do classificador:**
+```bash
+# Classificação por regex
+pytest tests/test_classifier.py -v -k "regex"
+
+# Classificação por LLM (fallback)
+pytest tests/test_classifier.py -v -k "llm"
+```
+
+### 3.4 — Teste dos Agentes Especialistas (B.3)
+
+```bash
+cd packages/core
+pytest tests/test_agent_pipeline.py -v
+```
+
+**Agentes testados individualmente:**
+- **SelectorAgent**: Propõe novo seletor quando data-testid muda
+- **TimingAgent**: Detecta necessidade de wait semântico
+- **InputAgent**: Escolhe estratégia de input alternativa
+- **ContextAgent**: Ajusta escopo para iframe/Shadow DOM
+- **StateAgent**: Diagnostica estado da aplicação
+
+---
+
+## 4. Testes de Curadoria Manual (B.5)
+
+### 4.1 — Pré-popular catálogo (se vazio)
+
+```bash
+# O catálogo é pré-povoado na instalação, mas pode ser recriado:
+testforge healing list                        # Ver entradas
+testforge healing list --fix-type pre_populated  # Só pré-povoadas
+```
+
+### 4.2 — Revisar catálogo
+
+```bash
+# Ver todas as entradas
+testforge healing review --all
+
+# Ver entradas stale (>90 dias sem uso)
+testforge healing review --stale
+
+# Ver entradas duplicadas (mesmo system + symptom)
+testforge healing review --duplicates
+
+# Ver entradas não resolvidas
+testforge healing review --unresolved
+```
+
+### 4.3 — Mesclar duplicatas
+
+```bash
+# Identificar duplicatas
+testforge healing review --duplicates
+
+# Mesclar duas entradas
+testforge healing merge <id1> <id2>
+
+# Ver resultado
+testforge healing list
+```
+
+### 4.4 — Promover entrada a "regra"
+
+```bash
+# Promover entrada revisada (pula validação, vai direto pra cura)
+testforge healing promote <id>
+
+# Confirmar (typer.confirm)
+```
+
+### 4.5 — Remover entrada
+
+```bash
+# Remover com backup automático + confirmação
+testforge healing delete <id>
+```
+
+### 4.6 — Backup e Auditoria
+
+```bash
+# Backup manual
+testforge healing delete <id>     # Cria .bak automaticamente
+
+# Verificar status
+testforge healing list
+```
+
+---
+
+## 5. Testes de Assert e Relatório
+
+### 5.1 — Asserts na Gravação
+
+```bash
+# Gravar com asserts
+testforge record --name teste-assert --url http://localhost:8080
+
+# Durante a gravação:
+# - Pressionar Shift+A sobre um elemento → menu de assert aparece
+# - Selecionar "textual" → verifica texto do elemento
+# - Selecionar "visível" → verifica se elemento está visível
+# - Selecionar "estado" → verifica se está enabled/disabled/checked
+
+# Finalizar gravação
+```
+
+### 5.2 — Executar com asserts
+
+```bash
+testforge run testes/teste-assert/teste-assert.py --headed
+```
+
+**Resultado esperado:**
+- Asserts textuais verificam `to_contain_text()`
+- Asserts de estado verificam `to_be_enabled/disabled/checked`
+- Asserts de visibilidade verificam `to_be_visible()`
+- Relatório mostra cada assert como step separado
+
+### 5.3 — Relatório em Duas Camadas
+
+```bash
+# Após execução, gerar relatório
+testforge report --history                         # Ver histórico completo
+
+# Filtrar por período
+testforge report --history --period 7d             # Últimos 7 dias
+
+# Filtrar por status
+testforge report --history --status failed         # Só falhas
+
+# Filtrar por taxonomia (B.4)
+testforge report --history --taxonomy SEL-004      # Só falhas SEL-004
+testforge report --history --family FAM-01         # Só falhas FAM-01
+```
+
+---
+
+## 6. Testes Cross-Cutting
+
+### 6.1 — Notificações
+
+```bash
+# Configurar e-mail (opcional)
+export TF_NOTIFY_EMAIL_SMTP_HOST=smtp.gmail.com
+export TF_NOTIFY_EMAIL_FROM=testforge@exemplo.com
+export TF_NOTIFY_EMAIL_TO=voce@exemplo.com
+export TF_NOTIFY_EMAIL_USERNAME=seu-email@gmail.com
+export TF_NOTIFY_EMAIL_PASSWORD=sua-senha
+
+# Configurar Teams (opcional)
+export TF_NOTIFY_TEAMS_WEBHOOK=https://seu-webhook
+
+# Executar com notificação
+testforge run <script>.py --notify
+```
+
+**Comportamento esperado:** Se não configurado, skipa graceful (apenas log).
+
+### 6.2 — Modo Shortcuts vs Full
+
+```bash
+# Modo full (com overlay visual)
+testforge record --name teste-full --url http://localhost:8080 --mode full
+
+# Modo shortcuts (sem overlay visual, só listeners)
+testforge record --name teste-shortcuts --url http://localhost:8080 --mode shortcuts
+```
+
+### 6.3 — Shadow DOM + Iframe (End-to-End)
+
+```bash
+# 1. Servir página com iframe (já incluso na página principal em :8080)
+# 2. Gravar interação com elemento dentro do iframe
+# 3. Executar script gerado
+
+testforge record --name teste-iframe --url http://localhost:8080
+# Clicar em algum elemento dentro do iframe
+# Finalizar
+testforge run testes/teste-iframe/teste-iframe.py --headed
+```
+
+### 6.4 — Teste de Upload/Download
+
+```bash
+# Upload já incluso na página principal (INP-002)
+# Para download, usar um link que inicia download
+
+testforge record --name teste-upload --url http://localhost:8080
+# Clicar "Choose File" no campo de upload (INP-002)
+# Selecionar arquivo local
+# Finalizar
+testforge run testes/teste-upload/teste-upload.py --headed
+```
+
+---
+
+## 7. Checklist de Regressão Rápida
+
+Antes de cada release ou merge, executar na ordem:
+
+```bash
+# 1. Testes unitários
+cd packages/core
+pytest tests/ -v --tb=short 2>&1 | tail -30
+
+# 2. Pipeline de cura com Playwright
+pytest tests/test_curation_pipeline.py -v --tb=short
+
+# 3. Classificador
+pytest tests/test_classifier.py -v --tb=short
+
+# 4. Agentes
+pytest tests/test_agent_pipeline.py -v --tb=short
+
+# 5. CLI de healing
+pytest tests/test_healing_cli.py -v --tb=short
+```
+
+### Métricas de Sucesso
+
+| Bloco | Testes | Mínimo Esperado |
+|-------|--------|----------------|
+| Unitários | `pytest tests/` | 139+ passando, 0 falhas |
+| Cura (L1+L2+L3) | `test_curation_pipeline.py` | 20 passando |
+| Classificador | `test_classifier.py` | 37 passando |
+| Agentes | `test_agent_pipeline.py` | 30+ passando |
+| CLI Healing | `test_healing_cli.py` | 26 passando |
+| Gravação + Exec | Manual (seções 1-2) | Todos os steps passam |
+| Healing (v1+v2) | Manual (seção 3.2) | Cura resolve em alguma camada |
+
+### Comando Único de Regressão
+
+```bash
+cd packages/core && pytest tests/ -v --tb=short 2>&1 | grep -E "(PASSED|FAILED|ERROR|passed|failed|error)"
+```
+
+---
+
+## Legenda de Resultados
+
+| Símbolo | Significado |
+|---------|-------------|
+| ✅ | Teste passou conforme esperado |
+| ❌ | Teste falhou — algo precisa ser corrigido |
+| ⚠️ | Passou parcialmente ou com ressalvas |
+| 🔄 | Fallback foi acionado e funcionou |
+| 🩺 | Healing foi aplicado (cura registrada) |

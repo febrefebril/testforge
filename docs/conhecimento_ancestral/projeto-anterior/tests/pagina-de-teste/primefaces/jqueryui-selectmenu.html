@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>jQuery UI SelectMenu — Página de Teste</title>
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.3/themes/base/jquery-ui.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; background: #f5f5f5; }
+h1 { margin-bottom: 8px; color: #333; }
+.sub { color: #666; margin-bottom: 32px; }
+.row { display: flex; gap: 40px; flex-wrap: wrap; }
+.col { flex: 1; min-width: 320px; background: white; border-radius: 8px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+.col h2 { font-size: 16px; color: #444; margin-bottom: 16px; }
+.form-group { margin-bottom: 20px; }
+label { display: block; font-size: 13px; color: #555; margin-bottom: 4px; }
+select.ui-selectmenu { width: 100%; }
+.ui-selectmenu-button { width: 100% !important; }
+</style>
+</head>
+<body>
+
+<h1>🧪 jQuery UI SelectMenu — Página de Teste</h1>
+<p class="sub">Widget jQuery UI SelectMenu nativo. Carregado via CDN.</p>
+
+<div class="row">
+  <div class="col">
+    <h2>SelectMenu Nativo</h2>
+    <form id="form1">
+      <div class="form-group">
+        <label for="estadoCivil">Estado Civil</label>
+        <select id="estadoCivil" class="ui-selectmenu">
+          <option value="">Selecione</option>
+          <option value="solteiro">Solteiro(a)</option>
+          <option value="casado">Casado(a)</option>
+          <option value="divorciado">Divorciado(a)</option>
+          <option value="viuvo">Viúvo(a)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="escolaridade">Escolaridade</label>
+        <select id="escolaridade" class="ui-selectmenu">
+          <option value="">Selecione</option>
+          <option value="fundamental">Ensino Fundamental</option>
+          <option value="medio">Ensino Médio</option>
+          <option value="superior">Ensino Superior</option>
+          <option value="pos">Pós-Graduação</option>
+          <option value="mestrado">Mestrado</option>
+          <option value="doutorado">Doutorado</option>
+        </select>
+      </div>
+    </form>
+  </div>
+
+  <div class="col">
+    <h2>Resultado</h2>
+    <p id="result" style="font-size:14px; color:#555;">Selecione um valor...</p>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.3/jquery-ui.min.js"></script>
+<script>
+$(function() {
+  $('.ui-selectmenu').selectmenu({
+    change: function(event, ui) {
+      $('#result').text('Selected: ' + ui.item.label + ' (value=' + ui.item.value + ')');
+    }
+  });
+  console.log('[jQuery UI] SelectMenus initialized');
+  console.log('[jQuery UI] $.ui.version =', $.ui && $.ui.version);
+});
+</script>
+</body>
+</html>

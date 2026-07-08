@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Upload File — Input type=file</title>
+  <style>
+    body { font-family: sans-serif; max-width: 500px; margin: 2em auto; }
+    label { display: block; margin-top: 1em; }
+    input, select { width: 100%; padding: 0.5em; margin-top: 0.25em; box-sizing: border-box; }
+    button { margin-top: 1.5em; padding: 0.5em 2em; }
+    .result { margin-top: 1em; padding: 1em; background: #e8f5e9; border-radius: 4px; }
+    .file-info { margin-top: 0.5em; font-size: 0.9em; color: #555; }
+  </style>
+</head>
+<body>
+  <h1>Upload de Arquivo</h1>
+  <form id="upload-form">
+    <label for="nome">Nome do documento</label>
+    <input id="nome" name="nome" placeholder="Nome do documento" />
+
+    <label for="tipo">Tipo</label>
+    <select id="tipo" name="tipo">
+      <option value="">Selecione</option>
+      <option value="rg">RG</option>
+      <option value="cpf">CPF</option>
+      <option value="comprovante">Comprovante</option>
+    </select>
+
+    <label for="arquivo">Arquivo</label>
+    <input id="arquivo" name="arquivo" type="file" accept=".pdf,.jpg,.png" />
+
+    <div class="file-info">Nenhum arquivo selecionado</div>
+
+    <button type="submit" id="btn-enviar">Enviar</button>
+  </form>
+
+  <div class="result" id="resultado" style="display:none">
+    ✅ Upload processado
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('arquivo');
+    const fileInfo = document.querySelector('.file-info');
+
+    fileInput.addEventListener('change', function() {
+      if (this.files && this.files[0]) {
+        fileInfo.textContent = 'Arquivo: ' + this.files[0].name + ' (' + this.files[0].size + ' bytes)';
+      }
+    });
+
+    document.getElementById('upload-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      document.getElementById('resultado').style.display = 'block';
+    });
+  </script>
+</body>
+</html>

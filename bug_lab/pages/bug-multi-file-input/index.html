@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BUG: Multi File Input — Identical/Ambiguous Selectors</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; }
+    h1 { color: #333; }
+    .upload-area {
+      border: 2px dashed #ccc; border-radius: 8px;
+      padding: 20px; margin: 16px 0;
+    }
+    .upload-area label { display: block; font-weight: bold; margin-bottom: 8px; }
+    input[type="file"] { margin: 8px 0; }
+    .output {
+      margin-top: 8px; padding: 10px;
+      background: #f5f5f5; border-radius: 4px;
+      font-family: monospace; font-size: 13px;
+      min-height: 20px;
+    }
+    .output.success { background: #e8f5e9; color: #2e7d32; }
+    .output.error { background: #ffebee; color: #c62828; }
+    hr { border: none; border-top: 1px solid #e0e0e0; margin: 24px 0; }
+  </style>
+</head>
+<body>
+  <h1>Bug Lab — Multi File Input: Selector Ambiguity</h1>
+
+  <p>
+    <strong>Bug:</strong> When a page has multiple <code>&lt;input type="file"&gt;</code>
+    elements, the recorder/normalizer may generate identical or ambiguous selectors.
+    If the healing system falls back to <code>input[type=file]</code>, it matches
+    ALL file inputs — causing <strong>strict mode violation</strong>.
+  </p>
+
+  <p>
+    Each input below uses a <strong>different identification strategy</strong>
+    (label, aria-label, data-testid, id+name only). Tests verify that each
+    generates a <em>distinct, unique</em> selector.
+  </p>
+
+  <!-- Input 1: Visible <label> association -->
+  <div class="upload-area" id="area-resume">
+    <label for="resume-upload">Upload Resume (PDF)</label>
+    <input type="file" id="resume-upload" name="resume" accept=".pdf"
+           onchange="showOutput(this, 'output-resume')" />
+    <div id="output-resume" class="output"></div>
+  </div>
+
+  <hr>
+
+  <!-- Input 2: aria-label only, no visible <label> -->
+  <div class="upload-area" id="area-photo">
+    <input type="file" id="photo-upload" name="photo" accept="image/*"
+           aria-label="Upload Profile Photo"
+           onchange="showOutput(this, 'output-photo')" />
+    <div id="output-photo" class="output"></div>
+  </div>
+
+  <hr>
+
+  <!-- Input 3: data-testid -->
+  <div class="upload-area" id="area-cert">
+    <input type="file" id="cert-upload" name="cert" accept=".pdf,.png,.jpg"
+           data-testid="cert-upload-input"
+           onchange="showOutput(this, 'output-cert')" />
+    <div id="output-cert" class="output"></div>
+  </div>
+
+  <hr>
+
+  <!-- Input 4: id + name only, minimal identification -->
+  <div class="upload-area" id="area-doc">
+    <input type="file" id="doc-upload" name="document" accept=".txt,.csv,.json"
+           onchange="showOutput(this, 'output-doc')" />
+    <div id="output-doc" class="output"></div>
+  </div>
+
+  <script>
+    function showOutput(input, outputId) {
+      var file = input.files[0];
+      var out = document.getElementById(outputId);
+
+      if (file) {
+        out.className = "output success";
+        out.textContent = "[" + input.id + "] " + file.name + " (" + file.size + " bytes)";
+      } else {
+        out.className = "output error";
+        out.textContent = "[" + input.id + "] No file selected";
+      }
+    }
+  </script>
+</body>
+</html>

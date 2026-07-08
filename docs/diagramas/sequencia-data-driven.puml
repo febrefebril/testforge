@@ -1,0 +1,83 @@
+@startuml
+title TestForge — Sequência: Data-Driven Testing (massa externa JSON)
+
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 12
+
+actor "QA" as QA
+participant "CLI\n(compile --data)" as CLI
+participant "Recording\nNormalizer" as NORM
+participant "Data\nExtractor" as DE
+database "recordings/\n(raw_events.jsonl)" as REC
+participant "Compiler\nPlaywright" as COMP
+database "test_data.json\n(massa externa)" as TDATA
+database "semantic_tests/\n(script.py)" as SCRIPT
+participant "Runner\nInline" as RUN
+participant "Browser\n(Playwright)" as BROWSER
+
+== 1. Extração da Massa de Dados ==
+
+CLI -> NORM: normalize(rec_dir) → SemanticTestCase
+NORM -> REC: le raw_events.jsonl
+NORM --> CLI: 46 steps
+
+CLI -> DE: extract_test_data(rec_dir)
+DE -> REC: le raw_events.jsonl
+
+loop cada evento fill
+  DE -> DE: extrai value + target.label/placeholder
+  DE -> DE: nomeia campo: "cpf", "nome"...
+  DE -> DE: deduplica (mesmo nome+valor)
+  DE -> DE: detecta sensivel (CPF, senha) → alerta
+end
+
+DE -> TDATA: {\n  "fields": {\n    "cpf": "12345678900"\n  },\n  "sensitive_alerts": [...]\n}
+
+CLI -> CLI: ⚠ Sensitive: cpf — alert_only
+
+== 2. Compilação Data-Driven ==
+
+CLI -> COMP: compile(stc, data_file="test_data.json")
+
+COMP -> COMP: gera script com:\nimport json, os\n_data = json.load(open("test_data.json"))
+
+loop cada step fill
+  COMP -> COMP: resolve valor:\n_data.get("cpf", "12345678900")
+  note right: Se JSON existe → usa valor externo\nSe JSON ausente → fallback hardcoded
+end
+
+COMP -> SCRIPT: test_st_fluxo.py
+
+== 3. Execução com Massa Externa ==
+
+QA -> RUN: testforge run script.py
+RUN -> BROWSER: page.goto(url)
+
+loop cada step fill
+  RUN -> RUN: le valor do step
+  RUN -> SCRIPT: _data.get("cpf", "12345678900")
+  RUN -> TDATA: le test_data.json
+  TDATA --> RUN: "cpf": "12345678900"
+  RUN -> BROWSER: page.fill(sel, "12345678900")
+end
+
+== 4. Alteração de Massa (sem recompilar) ==
+
+QA -> TDATA: edita JSON:\n"cpf": "99988877766"
+
+QA -> RUN: testforge run script.py
+RUN -> TDATA: le test_data.json
+TDATA --> RUN: "cpf": "99988877766"
+RUN -> BROWSER: page.fill(sel, "99988877766")
+note right: Mesmo script, dados diferentes\nSem recompilar!
+
+== 5. Múltiplos Cenários (--scenarios) ==
+
+QA -> CLI: compile "fluxo" --data --scenarios
+
+DE -> TDATA: {\n  "scenarios": {\n    "default": {"cpf": "123"},\n    "cpf_invalido": {"cpf": "000"}\n  }\n}
+
+note over TDATA: Script lê _data["scenarios"]["default"]\nPode testar múltiplos cenários
+
+@enduml

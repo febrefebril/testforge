@@ -1,0 +1,98 @@
+{
+  "steps": [
+    {
+      "action": "navigate",
+      "url": "http://127.0.0.1:19876/",
+      "intention": "Abrir sistema"
+    },
+    {
+      "action": "click",
+      "selector": "text=Busca",
+      "intention": "Ir para Busca",
+      "fallbacks": [
+        "text=Busca",
+        "text=Ir para Busca"
+      ]
+    },
+    {
+      "action": "fill",
+      "selector": "[data-testid='campo-busca']",
+      "value": "testforge",
+      "intention": "Digitar busca",
+      "fallbacks": [
+        "[data-testid='campo-busca']",
+        "text=Digitar busca"
+      ]
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='btn-buscar']",
+      "intention": "Clicar Buscar",
+      "fallbacks": [
+        "[data-testid='btn-buscar']",
+        "text=Clicar Buscar"
+      ]
+    },
+    {
+      "action": "click",
+      "selector": "text=Cadastro",
+      "intention": "Ir para Cadastro",
+      "fallbacks": [
+        "text=Cadastro",
+        "text=Ir para Cadastro"
+      ]
+    },
+    {
+      "action": "fill",
+      "selector": "[data-testid='input-nome']",
+      "value": "Marilha Testadora",
+      "intention": "Preencher nome",
+      "fallbacks": [
+        "[data-testid='input-nome']",
+        "text=Preencher nome"
+      ]
+    },
+    {
+      "action": "fill",
+      "selector": "[data-testid='input-email']",
+      "value": "marilha@testforge.ai",
+      "intention": "Preencher email",
+      "fallbacks": [
+        "[data-testid='input-email']",
+        "text=Preencher email"
+      ]
+    },
+    {
+      "action": "select",
+      "selector": "[data-testid='select-tipo']",
+      "value": "pf",
+      "text": "Pessoa Física",
+      "intention": "Selecionar PF",
+      "fallbacks": [
+        "[data-testid='select-tipo']",
+        "text=Selecionar PF"
+      ]
+    },
+    {
+      "action": "assert",
+      "assert_type": "textual",
+      "selector": "h2",
+      "expected_value": "Cadastro",
+      "intention": "Ver titulo Cadastro",
+      "fallbacks": [
+        "h2",
+        "text=Ver titulo Cadastro"
+      ]
+    },
+    {
+      "action": "assert",
+      "assert_type": "visivel",
+      "selector": "[data-testid='btn-salvar']",
+      "intention": "Ver botao salvar visivel",
+      "fallbacks": [
+        "[data-testid='btn-salvar']",
+        "text=Ver botao salvar visivel"
+      ]
+    }
+  ]
+}

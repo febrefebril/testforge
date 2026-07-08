@@ -1,0 +1,214 @@
+@startuml
+title TestForge - Ciclo de Vida da FailureSignature na Curadoria em 3 Camadas
+
+skinparam shadowing false
+skinparam linetype ortho
+skinparam state {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+[*] --> DETECTED : execution_failed / capture_failure_context
+
+state DETECTED
+state NORMALIZED
+state CLASSIFIED
+state EVIDENCE_PACKAGED
+state CATALOG_CHECKED
+state AGENT_SELECTED_L2
+state PATCH_PROPOSED
+state PATCH_VALIDATING
+state PATCH_REJECTED
+state PATCH_APPLIED_TEMPORARILY
+state REEXECUTING
+state PASSED_STEP
+state PROGRESSED
+state STAGNATED
+state REGRESSED
+state ERROR_CHANGED
+state UNRESOLVED
+state CONFIDENCE_GATE
+state HEALING_RETRY
+state GENERAL_LLM_L3
+state RESOLVED
+state ABANDONED
+
+DETECTED --> NORMALIZED : normalize_failure / build_failure_signature_json
+NORMALIZED --> CLASSIFIED : classify_failure / assign_family_and_taxonomy_case
+CLASSIFIED --> EVIDENCE_PACKAGED : package_evidence / reuse_recording_and_run_artifacts
+EVIDENCE_PACKAGED --> CATALOG_CHECKED : evidence_ready / query_healing_catalog_by_family_and_symptom
+
+state CATALOG_CHECKED {
+  [*] --> CATALOG_MATCH_FOUND : match_exact
+  [*] --> CATALOG_NO_MATCH : no_entry_found
+  --
+  state CATALOG_MATCH_FOUND
+  state CATALOG_NO_MATCH
+}
+
+CATALOG_MATCH_FOUND --> PATCH_PROPOSED : apply_primary_strategy / use_catalog_entry_fix
+CATALOG_NO_MATCH --> AGENT_SELECTED_L2 : no_catalog_entry / route_to_specialist_agent
+
+AGENT_SELECTED_L2 --> PATCH_PROPOSED : agent_selected / heal() determínistico primeiro
+AGENT_SELECTED_L2 --> PATCH_PROPOSED : regras_exauridas / _llm_fallback() via _build_prompt()
+
+PATCH_PROPOSED --> PATCH_VALIDATING : patch_created / validate_patch
+
+PATCH_VALIDATING --> PATCH_REJECTED : patch_invalid / persist_rejection_reason
+PATCH_VALIDATING --> PATCH_APPLIED_TEMPORARILY : patch_valid / apply_to_temporary_version
+
+PATCH_REJECTED --> AGENT_SELECTED_L2 : alternative_specialist_agent_available / retry_with_different_approach
+PATCH_REJECTED --> GENERAL_LLM_L3 : no_valid_specialist_patch / escalate_to_general_llm
+PATCH_REJECTED --> UNRESOLVED : all_layers_exhausted / mark_unresolved
+
+PATCH_APPLIED_TEMPORARILY --> REEXECUTING : temporary_version_ready / rerun_step
+
+REEXECUTING --> PASSED_STEP : step_passed / compare_with_previous_failure
+REEXECUTING --> PROGRESSED : execution_advanced / create_progress_checkpoint
+REEXECUTING --> STAGNATED : no_progress / keep_failure_signature_active
+REEXECUTING --> REGRESSED : regression_detected / trigger_rollback
+REEXECUTING --> ERROR_CHANGED : error_signature_changed / require_reclassification
+REEXECUTING --> UNRESOLVED : no_solution_found / check_remaining_layers
+
+PASSED_STEP --> RESOLVED : layer_1_match / update_catalog_hit_counter
+PASSED_STEP --> RESOLVED : layer_2_or_3_learned / register_new_entry_in_catalog
+
+PROGRESSED --> AGENT_SELECTED_L2 : remaining_failure_exists / select_next_agent_or_strategy
+PROGRESSED --> GENERAL_LLM_L3 : specialist_agents_exhausted / escalate
+PROGRESSED --> RESOLVED : flow_completed / accept_patch_chain
+
+STAGNATED --> AGENT_SELECTED_L2 : alternative_specialist_available / try_next_agent
+STAGNATED --> GENERAL_LLM_L3 : specialist_agents_exhausted / escalate
+STAGNATED --> UNRESOLVED : all_layers_exhausted / mark_unresolved
+
+REGRESSED --> ROLLED_BACK : rollback_required / restore_last_stable_version
+ROLLED_BACK --> AGENT_SELECTED_L2 : rollback_completed / select_safer_specialist_strategy
+ROLLED_BACK --> GENERAL_LLM_L3 : no_safe_specialist_strategy / escalate
+ROLLED_BACK --> UNRESOLVED : all_layers_exhausted / mark_unresolved
+
+ERROR_CHANGED --> CLASSIFIED : reclassify_required / rebuild_failure_signature
+
+GENERAL_LLM_L3 --> CONFIDENCE_GATE : llm_suggested_candidate / check confidence
+
+CONFIDENCE_GATE --> PATCH_PROPOSED : confidence >= 0.5 / accept_proposal
+CONFIDENCE_GATE --> UNRESOLVED : confidence < 0.5 / low_confidence_reject
+CONFIDENCE_GATE --> UNRESOLVED : taxonomy_invalid / invalid_proposal
+
+REEXECUTING --> HEALING_RETRY : l3_retry_needed / retry_with_new_error
+
+HEALING_RETRY --> PATCH_PROPOSED : depth < MAX_RETRY_DEPTH(1) / _run_healing_cycle_again
+HEALING_RETRY --> UNRESOLVED : depth_exceeded / mark_unresolved
+
+GENERAL_LLM_L3 --> ABANDONED : llm_limit_exceeded / preserve_unresolved_report
+
+UNRESOLVED --> AGENT_SELECTED_L2 : layer_2_still_available / retry_with_different_agent
+UNRESOLVED --> GENERAL_LLM_L3 : only_layer_3_remaining / controlled_llm_fallback
+UNRESOLVED --> ABANDONED : no_more_layers / close_failure_as_unresolved
+
+RESOLVED --> [*] : resolved_and_registered
+ABANDONED --> [*] : unresolved_history_preserved
+
+DETECTED --> ABANDONED : unrecoverable_missing_evidence
+NORMALIZED --> ABANDONED : normalization_impossible
+CLASSIFIED --> ABANDONED : classification_blocked_by_invalid_signature
+EVIDENCE_PACKAGED --> ABANDONED : evidence_package_insufficient
+AGENT_SELECTED_L2 --> ABANDONED : no_agent_available
+PATCH_APPLIED_TEMPORARILY --> ROLLED_BACK : temporary_version_corrupted / rollback
+REEXECUTING --> ABANDONED : unrecoverable_execution_infrastructure_error
+
+note right of CATALOG_CHECKED
+  Layer 1 — Catálogo de Cura:
+  Consulta healing-catalog.jsonl por
+  match exato de família + sintoma.
+
+  Custo: ZERO de LLM.
+  Latência: <50ms.
+  Cobertura esperada: ~70% dos casos.
+end note
+
+note right of AGENT_SELECTED_L2
+  Layer 2 — Agente Especialista:
+  Roteia pelo FAMILY_AGENT_MAP:
+  FAM-01→Selector, FAM-02/05→Timing,
+  FAM-03→Context, FAM-04→State,
+  FAM-06/07→Input.
+
+  FAM-08/09/10/11 → sem agente → L3 direto.
+
+  Cada agente heal(): regras determínisticas
+  primeiro. Ao final, _llm_fallback() via
+  _build_prompt() se não resolveu.
+
+  Prompt otimizado (~200 tokens).
+  Custo LLM baixo.
+  Cobertura esperada: ~20%.
+end note
+
+note right of GENERAL_LLM_L3
+  Layer 3 — _run_healing_cycle():
+  LLMHealer real (Azure OpenAI) ou
+  MockLLMHealer (fallback simulado).
+
+  - load_llm_config() em CuradorAutomatico.__init__()
+  - AZURE_OPENAI_KEY + AZURE_OPENAI_ENDPOINT → LLMHealer
+  - Env vars ausentes → MockLLMHealer
+  - Model configurável: AZURE_OPENAI_MODEL (default gpt-4.1-mini)
+  - FAMILY_PROMPTS selecionados por family=""
+  - Prompt enxuto (~500 tok)
+
+  Confidence gate: >= 0.5 aceita proposta.
+  < 0.5 → UNRESOLVED.
+
+  Retry depth: MAX_RETRY_DEPTH=1.
+  ERROR_CHANGED → 1 retry com novo erro.
+  REGRESSED/STAGNATED → rollback.
+  PASSED → _register_learned() no catálogo.
+end note
+
+note right of CONFIDENCE_GATE
+  LLMHealingProposal.confidence >= 0.5:
+  - strategy in ALLOWED_STRATEGIES
+  - family in FAMILIES
+  - taxonomy_id in TAXONOMIES[family]
+
+  Se qualquer validação falha,
+  confidence é zerada → rejeitado.
+end note
+
+note right of HEALING_RETRY
+  ERROR_CHANGED:
+  O erro mudou após o patch.
+  _run_healing_cycle() é chamado
+  novamente com depth+1.
+
+  MAX_RETRY_DEPTH = 1 (CuradorAutomatico).
+  Se depth >= 1 após retry → UNRESOLVED.
+end note
+
+note right of REGRESSED
+  REGRESSED significa que o patch piorou o fluxo,
+  quebrou steps previamente válidos ou removeu
+  comportamento necessário.
+
+  Rollback obrigatório antes de qualquer
+  nova tentativa em qualquer layer.
+end note
+
+note right of ERROR_CHANGED
+  ERROR_CHANGED significa que a assinatura
+  da falha mudou após uma tentativa.
+
+  A falha deve voltar para CLASSIFIED
+  para reclassificação antes de prosseguir.
+end note
+
+note right of RESOLVED
+  RESOLVED exige:
+  - patch aceito e validado por execução
+  - catálogo atualizado (contador ou nova entrada)
+  - classificação taxonômica preservada no relatório
+  - camada usada (1, 2 ou 3) registrada
+end note
+
+@enduml

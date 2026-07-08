@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>FAM-03: Contexto e Escopo</title>
+<script src="../common.js"></script>
+<script src="error.js"></script>
+</head>
+<body>
+  <h1>FAM-03: Contexto e Escopo</h1>
+  <iframe id="iframe-content" src="about:blank" width="400" height="200"></iframe>
+  <p id="result"></p>
+  <script>
+    var iframe = document.getElementById("iframe-content");
+    var iframeDelay = window.__CURATION_TEST && window.__CURATION_TEST.isError ? 5000 : 100;
+    setTimeout(function() {
+      iframe.srcdoc = '<html><body><button id="btn-iframe">Clique no Iframe</button><script>document.getElementById("btn-iframe").addEventListener("click", function() { parent.document.getElementById("result").textContent = "Iframe clicado!"; });<\/script></body></html>';
+    }, iframeDelay);
+  </script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+{
+  "steps": [
+    {
+      "action": "navigate",
+      "url": "http://localhost:8765/",
+      "intention": "Abrir sistema de teste"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='campo-busca']",
+      "intention": "Clicar no campo de busca"
+    },
+    {
+      "action": "fill",
+      "selector": "[data-testid='campo-busca']",
+      "value": "testforge",
+      "intention": "Digitar termo de busca"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='btn-buscar']",
+      "intention": "Clicar em Buscar"
+    },
+    {
+      "action": "click",
+      "selector": "a",
+      "intention": "Navegar para Cadastro"
+    },
+    {
+      "action": "fill",
+      "selector": "[data-testid='input-nome']",
+      "value": "Marilha Testadora",
+      "intention": "Preencher nome"
+    },
+    {
+      "action": "fill",
+      "selector": "[data-testid='input-email']",
+      "value": "marilha@testforge.ai",
+      "intention": "Preencher email"
+    },
+    {
+      "action": "select",
+      "selector": "[data-testid='select-tipo']",
+      "value": "pf",
+      "text": "Pessoa Física",
+      "intention": "Selecionar tipo PF"
+    },
+    {
+      "action": "assert",
+      "assert_type": "textual",
+      "selector": "h2",
+      "expected_value": "Cadastro",
+      "intention": "Verificar titulo da pagina"
+    },
+    {
+      "action": "assert",
+      "assert_type": "visivel",
+      "selector": "[data-testid='btn-salvar']",
+      "intention": "Verificar botao salvar visivel"
+    }
+  ]
+}

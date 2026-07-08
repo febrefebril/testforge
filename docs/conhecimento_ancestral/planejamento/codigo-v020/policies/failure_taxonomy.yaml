@@ -1,0 +1,19 @@
+version: "0.2.0"
+taxonomy:
+  locator_resolution:
+    LOCATOR_NOT_FOUND: {allow_healing: true, description: "Elemento não encontrado."}
+    LOCATOR_AMBIGUOUS: {allow_healing: true, description: "Locator resolveu mais de um elemento."}
+    LOCATOR_STALE: {allow_healing: true, description: "Elemento stale ou detached."}
+  actionability:
+    ACTIONABILITY_NOT_VISIBLE: {allow_healing: false, description: "Não visível."}
+    ACTIONABILITY_DISABLED: {allow_healing: false, description: "Desabilitado."}
+    ACTIONABILITY_OBSCURED: {allow_healing: false, description: "Coberto por overlay."}
+  synchronization:
+    ASYNC_RENDER_PENDING: {allow_healing: false, description: "Renderização pendente."}
+    NETWORK_IDLE_TIMEOUT: {allow_healing: false, description: "Timeout de rede."}
+  oracle:
+    ORACLE_FAILED: {allow_healing: false, description: "Oracle falhou."}
+    ORACLE_WEAK: {allow_healing: false, description: "Oracle insuficiente."}
+  environment:
+    NETWORK_FAILURE: {allow_healing: false, description: "Falha de rede."}
+    TEST_DATA_FAILURE: {allow_healing: false, description: "Problema de massa."}

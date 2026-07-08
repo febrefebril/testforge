@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  body { width: 280px; font: 13px sans-serif; margin: 0; padding: 12px;
+         background: #1a1a2e; color: #e0e0e0; }
+  h2 { margin: 0 0 10px; font-size: 14px; color: #e94560; }
+  .row { display: flex; gap: 6px; margin-bottom: 8px; }
+  button { flex: 1; padding: 8px; border: none; border-radius: 6px;
+           cursor: pointer; font-size: 12px; }
+  #recordBtn { background: #e94560; color: #fff; }
+  #recordBtn.recording { background: #4ecca3; }
+  #assertBtn { background: #0f3460; color: #fff; }
+  #finalizeBtn { background: #16213e; color: #e0e0e0; border: 1px solid #0f3460; }
+  .info { font-size: 11px; color: #6c757d; margin: 6px 0; }
+  #stepCount { font-size: 18px; font-weight: bold; text-align: center;
+               padding: 12px 0; color: #4ecca3; }
+</style>
+</head>
+<body>
+<h2>⛓ TestForge</h2>
+<div id="stepCount">0 passos</div>
+<div class="row">
+  <button id="recordBtn">⏺ Gravar</button>
+  <button id="assertBtn">✓ Assert</button>
+</div>
+<button id="finalizeBtn" style="width:100%">⏹ Finalizar</button>
+<div class="info" id="statusInfo">● Conectando...</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

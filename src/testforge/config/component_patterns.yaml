@@ -1,0 +1,90 @@
+# Phase 7: Declarative component-detection patterns.
+#
+# Replaces the hand-rolled `detect()` methods inside
+# src/testforge/handlers/{angular_material,primeFaces,react_mui}.py.
+# Adding a new UI framework is a few YAML lines (plus optional Python
+# backend for complex execute() flows).
+#
+# Order matters: more-specific patterns first. AngularMaterial wins
+# over PrimeFaces; PrimeFaces wins over ReactMUI.
+#
+# Detection schema (all keys optional, ANY-of semantics across keys):
+#   tag_in:                       list[str]   exact match on lowered tag
+#   element_id_starts_with:       list[str]   lowered prefix match
+#   element_id_contains_any:      list[str]   lowered substring match
+#   selector_contains_any:        list[str]   literal substring (case-sensitive)
+#   selector_contains_any_lower:  list[str]   substring on lowered selector
+#   selector_skip_if_contains:    list[str]   per-candidate exclusion: a
+#                                              selector that matches this is
+#                                              ignored before further checks.
+#
+# A pattern fires when at least one rule produced a hit (after
+# selector_skip_if_contains pre-filtering of candidates).
+
+patterns:
+  - name: angular-material
+    handler_class: testforge.handlers.angular_material:AngularMaterialHandler
+    detect:
+      tag_in:
+        - mat-select
+        - mat-option
+        - mat-slide-toggle
+      element_id_starts_with:
+        - mat-select-
+        - mat-option-
+        - mat-dialog-
+        - mat-tab-
+      selector_skip_if_contains:
+        - mat-radio
+      selector_contains_any:
+        - mat-select
+        - mat-option
+        - mat-autocomplete
+        - aria-autocomplete
+        - mat-dialog
+        - '[role="tab"]'
+        - mat-tab-label
+        - mat-tab-header
+        - mat-slide-toggle
+        - '[role="switch"]'
+
+  - name: primefaces
+    handler_class: testforge.handlers.primeFaces:PrimeFacesHandler
+    detect:
+      element_id_contains_any:
+        - j_idt
+        - ui-datepicker
+      selector_contains_any_lower:
+        - ui-selectonemenu
+        - ui-selectmanymenu
+        - ui-datepicker
+        - ui-autocomplete
+        - ui-dropdown
+        - ui-multiselect
+        - p-dropdown
+        - p-autocomplete
+        - p-calendar
+        - p-multiselect
+        - p-selectbutton
+        - primefaces
+        - ui-widget
+
+  - name: react-mui
+    handler_class: testforge.handlers.react_mui:ReactMUIHandler
+    detect:
+      selector_contains_any:
+        - MuiSelect
+        - MuiAutocomplete
+        - MuiMenuItem
+        - MuiMenu
+        - MuiPopover
+        - MuiPopper
+        - MuiInputBase
+        - MuiFormControl
+        - MuiDatePicker
+        - MuiTimePicker
+        - MuiDateTimePicker
+        - MuiMultiSelect
+        - MuiToggleButton
+        - MuiSwitch
+        - data-popper-placement

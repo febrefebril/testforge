@@ -1,0 +1,467 @@
+@startuml
+title TestForge - Diagrama de Pacotes / Organização do Código
+
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam componentStyle rectangle
+
+' ============================================================
+' Camada de entrada
+' ============================================================
+
+package "testforge.cli" as cli {
+  [main]
+  [commands.record]
+  [commands.run]
+  [commands.curate]
+}
+
+package "testforge.config" as config {
+  [settings_loader]
+  [policies]
+  [profiles]
+}
+
+' ============================================================
+' Infraestrutura de navegador e gravação
+' ============================================================
+
+package "testforge.browser" as browser {
+  [browser_context_manager]
+  [playwright_adapter]
+  [trace_manager]
+}
+
+package "testforge.recorder" as recorder {
+  [smart_recorder]
+  [js_injector]
+  [overlay]
+  [event_listener]
+  [assert_hint_collector]
+  [checkpoint_collector]
+}
+
+package "testforge.fingerprint" as fingerprint {
+  [fingerprint_engine]
+  [technology_detector]
+  [jsf_primefaces]
+  [jquery]
+  [angular]
+  [legacy_jsp]
+  [ionic_cordova]
+  [component_cataloger]
+}
+
+package "testforge.evidence" as evidence {
+  [evidence_collector]
+  [dom_snapshot]
+  [screenshot]
+  [network]
+  [console]
+  [storage]
+  [selectors]
+  [sensitive_data_guard]
+}
+
+' ============================================================
+' Sessão, geração e execução
+' ============================================================
+
+package "testforge.session" as session {
+  [serializer]
+  [parser]
+  [validator]
+  [normalizer]
+  [step_merger]
+}
+
+package "testforge.generator" as generator {
+  [script_generator]
+  [templates]
+  [locator_strategy_builder]
+  [wait_strategy_builder]
+}
+
+package "testforge.executor" as executor {
+  [executor_agent]
+  [execution_collector]
+  [run_repository]
+}
+
+' ============================================================
+' Falhas, agentes e patches
+' ============================================================
+
+package "testforge.failure" as failure {
+  [failure_diagnostic]
+  [failure_signature]
+  [failure_classifier]
+  [taxonomy]
+}
+
+package "testforge.agents" as agents {
+  [orchestrator]
+  [selector_repair]
+  [timing_async]
+  [context_scope]
+  [state_recovery]
+  [dynamic_dom]
+  [special_interaction]
+  [general_diagnostic]
+  [llm_fallback]
+}
+
+package "testforge.patch" as patch {
+  [patch_generator]
+  [patch_validator]
+  [progress_detector]
+  [rollback_manager]
+  [version_manager]
+}
+
+' ============================================================
+' Self-healing, dados, otimização e conhecimento
+' ============================================================
+
+package "testforge.selfhealing" as selfhealing {
+  [deterministic_self_healing]
+  [locator_registry]
+  [healing_rule_registry]
+}
+
+package "testforge.data" as data {
+  [data_extractor]
+  [test_data_generator]
+  [data_masking]
+}
+
+package "testforge.optimization" as optimization {
+  [performance_optimizer]
+  [stability_runner]
+}
+
+package "testforge.knowledge" as knowledge {
+  [knowledge_base]
+  [failure_patterns]
+  [resolved_patterns]
+  [healing_rules]
+}
+
+package "testforge.reporting" as reporting {
+  [report_generator]
+  [final_artifact_builder]
+}
+
+package "testforge.models" as models {
+  [recording_session]
+  [recorded_step]
+  [locator_candidate]
+  [fingerprint_model]
+  [evidence_bundle]
+  [execution_run]
+  [failure_signature]
+  [agent_attempt]
+  [patch_model]
+  [healing_rule]
+}
+
+' ============================================================
+' Dependências internas por pacote
+' ============================================================
+
+[main] --> [commands.record]
+[main] --> [commands.run]
+[main] --> [commands.curate]
+
+[commands.record] --> config
+[commands.record] --> browser
+[commands.record] --> recorder
+[commands.record] --> fingerprint
+[commands.record] --> evidence
+[commands.record] --> session
+
+[commands.run] --> config
+[commands.run] --> executor
+[commands.run] --> generator
+[commands.run] --> reporting
+
+[commands.curate] --> config
+[commands.curate] --> failure
+[commands.curate] --> agents
+[commands.curate] --> patch
+[commands.curate] --> selfhealing
+[commands.curate] --> reporting
+
+settings_loader --> policies
+settings_loader --> profiles
+
+browser_context_manager --> playwright_adapter
+browser_context_manager --> trace_manager
+browser_context_manager --> config
+browser_context_manager --> models
+
+smart_recorder --> browser
+smart_recorder --> fingerprint
+smart_recorder --> evidence
+smart_recorder --> session
+smart_recorder --> models
+js_injector --> browser
+edge_hidden_1 -[hidden]-> overlay
+overlay --> browser
+event_listener --> browser
+event_listener --> evidence
+assert_hint_collector --> models
+checkpoint_collector --> models
+
+fingerprint_engine --> technology_detector
+technology_detector --> jsf_primefaces
+technology_detector --> jquery
+technology_detector --> angular
+technology_detector --> legacy_jsp
+technology_detector --> ionic_cordova
+fingerprint_engine --> component_cataloger
+fingerprint_engine --> browser
+fingerprint_engine --> models
+
+technology_detector --> evidence : usa sinais DOM/script
+component_cataloger --> evidence : cataloga componentes
+
+sensitive_data_guard --> config : políticas de mascaramento
+evidence_collector --> dom_snapshot
+evidence_collector --> screenshot
+evidence_collector --> network
+evidence_collector --> console
+evidence_collector --> storage
+evidence_collector --> selectors
+evidence_collector --> sensitive_data_guard
+evidence_collector --> models
+selectors --> models
+
+serializer --> models
+parser --> models
+validator --> models
+validator --> evidence
+normalizer --> parser
+normalizer --> step_merger
+normalizer --> models
+step_merger --> models
+
+script_generator --> session
+script_generator --> fingerprint
+script_generator --> evidence
+script_generator --> templates
+script_generator --> locator_strategy_builder
+script_generator --> wait_strategy_builder
+script_generator --> models
+locator_strategy_builder --> evidence
+locator_strategy_builder --> models
+wait_strategy_builder --> evidence
+wait_strategy_builder --> fingerprint
+wait_strategy_builder --> models
+
+executor_agent --> browser
+executor_agent --> execution_collector
+executor_agent --> run_repository
+executor_agent --> models
+execution_collector --> evidence
+execution_collector --> models
+run_repository --> models
+
+failure_diagnostic --> executor
+failure_diagnostic --> evidence
+failure_diagnostic --> models
+failure_signature --> models
+failure_classifier --> taxonomy
+failure_classifier --> models
+
+orchestrator --> failure
+orchestrator --> evidence
+orchestrator --> knowledge
+orchestrator --> patch
+orchestrator --> models
+selector_repair --> failure
+selector_repair --> evidence
+selector_repair --> knowledge
+selector_repair --> patch
+timing_async --> failure
+timing_async --> evidence
+timing_async --> knowledge
+timing_async --> patch
+context_scope --> failure
+context_scope --> evidence
+context_scope --> knowledge
+context_scope --> patch
+state_recovery --> failure
+state_recovery --> evidence
+state_recovery --> knowledge
+state_recovery --> patch
+dynamic_dom --> failure
+dynamic_dom --> evidence
+dynamic_dom --> knowledge
+dynamic_dom --> patch
+special_interaction --> failure
+special_interaction --> evidence
+special_interaction --> knowledge
+special_interaction --> patch
+general_diagnostic --> failure
+general_diagnostic --> evidence
+general_diagnostic --> knowledge
+general_diagnostic --> patch
+llm_fallback --> failure
+llm_fallback --> evidence
+llm_fallback --> knowledge
+llm_fallback --> patch
+
+patch_generator --> models
+patch_validator --> models
+patch_validator --> generator
+patch_validator --> config
+progress_detector --> executor
+progress_detector --> failure
+progress_detector --> knowledge
+progress_detector --> models
+rollback_manager --> version_manager
+rollback_manager --> models
+version_manager --> models
+
+selfhealing --> knowledge
+selfhealing --> models
+deterministic_self_healing --> locator_registry
+deterministic_self_healing --> healing_rule_registry
+deterministic_self_healing --> patch
+locator_registry --> models
+healing_rule_registry --> knowledge
+healing_rule_registry --> models
+
+data_extractor --> session
+data_extractor --> models
+test_data_generator --> data_extractor
+test_data_generator --> models
+data_masking --> config
+data_masking --> models
+
+performance_optimizer --> executor
+performance_optimizer --> selfhealing
+performance_optimizer --> models
+stability_runner --> executor
+stability_runner --> reporting
+stability_runner --> models
+
+knowledge_base --> failure_patterns
+knowledge_base --> resolved_patterns
+knowledge_base --> healing_rules
+knowledge_base --> models
+failure_patterns --> models
+resolved_patterns --> models
+healing_rules --> models
+
+report_generator --> models
+report_generator --> knowledge
+report_generator --> executor
+final_artifact_builder --> generator
+final_artifact_builder --> data
+final_artifact_builder --> selfhealing
+final_artifact_builder --> reporting
+final_artifact_builder --> models
+
+' ============================================================
+' Dependências de alto nível sem ciclo
+' ============================================================
+
+cli ..> config : entrada/configuração
+cli ..> browser : inicia navegador
+cli ..> recorder : gravação
+cli ..> executor : execução
+cli ..> agents : curadoria
+cli ..> reporting : entrega
+
+browser ..> config
+browser ..> models
+recorder ..> browser
+recorder ..> fingerprint
+recorder ..> evidence
+recorder ..> session
+recorder ..> models
+fingerprint ..> browser
+fingerprint ..> evidence
+fingerprint ..> models
+evidence ..> config
+evidence ..> models
+session ..> evidence
+session ..> models
+generator ..> session
+generator ..> fingerprint
+generator ..> evidence
+generator ..> models
+executor ..> browser
+executor ..> evidence
+executor ..> models
+failure ..> executor
+failure ..> evidence
+failure ..> models
+agents ..> failure
+agents ..> evidence
+agents ..> knowledge
+agents ..> patch
+agents ..> models
+patch ..> executor
+patch ..> failure
+patch ..> knowledge
+patch ..> models
+selfhealing ..> knowledge
+selfhealing ..> models
+data ..> session
+data ..> config
+data ..> models
+optimization ..> executor
+optimization ..> selfhealing
+optimization ..> models
+knowledge ..> models
+reporting ..> generator
+reporting ..> data
+reporting ..> selfhealing
+reporting ..> knowledge
+reporting ..> models
+
+' ============================================================
+' Notas arquiteturais
+' ============================================================
+
+note right of cli
+  testforge.cli é camada de entrada.
+  Ela depende dos serviços principais,
+  mas nenhum pacote de domínio deve depender da CLI.
+end note
+
+note right of agents
+  testforge.agents depende de:
+  - failure para classificação e taxonomia;
+  - evidence para pacote mínimo de evidências;
+  - knowledge para histórico e padrões resolvidos;
+  - patch para geração, validação e controle.
+
+  O llm_fallback permanece dentro do pacote de agentes,
+  mas deve ser acionado apenas após estratégias determinísticas.
+end note
+
+note right of generator
+  testforge.generator depende de session,
+  fingerprint e evidence para gerar script_v0.py
+  com locators, waits e contexto técnico derivados
+  da gravação enriquecida.
+end note
+
+note right of selfhealing
+  testforge.selfhealing depende de knowledge e models.
+  As regras finais devem ser determinísticas,
+  rastreáveis e validadas antes de entrar no artefato final.
+end note
+
+note bottom of models
+  testforge.models deve concentrar entidades de domínio
+  e evitar dependências para pacotes de serviço.
+  Isso reduz acoplamento e ajuda a evitar ciclos.
+end note
+
+@enduml

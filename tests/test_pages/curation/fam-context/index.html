@@ -1,0 +1,11 @@
+<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>FAM-03: Context</title></head>
+<body>
+<h1>FAM-03: Context / Scope (CTX-001)</h1>
+<iframe id="test-frame" name="test-frame" src="iframe-content.html" width="400" height="150"></iframe>
+<div id="result" role="status"></div>
+<script>
+window.addEventListener('message', function(e){
+  document.getElementById('result').textContent = e.data;
+});
+</script>
+</body></html>

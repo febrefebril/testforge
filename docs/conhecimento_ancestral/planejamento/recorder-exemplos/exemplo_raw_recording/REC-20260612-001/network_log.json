@@ -1,0 +1,17 @@
+[
+  {
+    "event": "request",
+    "timestamp": "2026-06-12T15:20:07.500-03:00",
+    "method": "GET",
+    "url": "file:///api/clientes?cpf=12345678900",
+    "resource_type": "fetch",
+    "correlated_event_id": "evt_0003"
+  },
+  {
+    "event": "response",
+    "timestamp": "2026-06-12T15:20:07.650-03:00",
+    "url": "file:///api/clientes?cpf=12345678900",
+    "status": 200,
+    "correlated_event_id": "evt_0003"
+  }
+]

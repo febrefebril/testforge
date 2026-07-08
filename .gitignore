@@ -1,0 +1,108 @@
+node_modules/
+.env
+.env.local
+*.log
+.DS_Store
+dist/
+build/
+.coverage
+__pycache__/
+*.pyc
+.venv/
+venv/
+.trash/
+_bmad-output/
+_bmad/_config/
+.bmad/_config/
+*.pyo
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+playwright-report/
+test-results/
+recordings/
+semantic_tests/
+generated_tests/
+/evidence/
+.config/google-chrome-for-testing/
+.claude/
+.testforge/
+evidencias/
+runs/
+.attic/
+.planning/
+
+# NB-12: keystroke buffer nunca vai pro repo — contem teclas por tecla incluindo
+# campos password. Massa de teste e preservada localmente (contrato feedback-pii-alert-only)
+# mas nunca commitada. Sem este ignore, gravacoes ficaram vulneraveis a leak.
+**/keystroke_buffer.jsonl
+
+# ===================================================================
+# Contrato: GitHub publico recebe APENAS codigo + docs sanitizadas.
+# Gravacoes, massa de teste e configs de ambiente NAO vao para o repo publico.
+# Para publicacao local, use `testforge publish --target=local`.
+# ===================================================================
+
+# Todas as artefatos de gravacao
+**/raw_events.jsonl
+**/steps.jsonl
+**/value_mutations.jsonl
+**/field_snapshots.jsonl
+**/final_state_snapshot.json
+**/network_log.json
+**/rrweb_events.jsonl
+**/suggested_assertions.jsonl
+**/submission_report.json
+**/recording_metadata.json
+**/recording_config.json
+**/screenshots/
+**/dom_snapshots/
+**/ax_snapshots/
+**/completeness/
+**/readiness/
+**/diagnostic/
+**/_pilot_runs/
+**/_pilot_tmp/
+**/FAILED_MARKER.json
+
+# Diretorios raiz de gravacao (dev local)
+recordings_failed/
+
+# Massa de teste — customize com os nomes dos seus diretorios locais.
+# Nao commitar nomes de sistemas internos aqui.
+"PLATAFORMA DES/"
+"Portal de Massa/"
+"MASSA_DE_TESTE/"
+"MASSA_DE_TESTE_01/"
+uncategorized/
+PDes.zip
+PDes.b64
+*.zip
+*.b64
+*.7z
+
+# Dirs de massa em src/testforge/ (crie um .gitignore local em src/testforge/
+# ou adicione seus dirs especificos aqui)
+src/testforge/*/raw_events.jsonl
+src/testforge/*/steps.jsonl
+src/testforge/*/*/raw_events.jsonl
+src/testforge/*/*/steps.jsonl
+
+# Configs de ambiente
+.testforge/config.yml
+.testforge/secrets/
+.testforge/timeouts.yaml
+.env.*
+!.env.example
+.ralphy/
+
+# Tooling interno — nao vai pro repo publico
+.agents/
+.github/workflows/
+.opencode/
+_bmad/
+adrs/
+AGENTS.md
+CLAUDE.md

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>TestForge War Room — SPA de Teste</title>
+<style>
+  body { font-family: sans-serif; margin: 0; padding: 20px; }
+  nav { margin-bottom: 20px; }
+  nav a { margin-right: 10px; cursor: pointer; color: #0066cc; }
+  nav a:hover { text-decoration: underline; }
+  #app { border: 1px solid #ccc; padding: 20px; border-radius: 8px; min-height: 200px; }
+  button { padding: 8px 16px; cursor: pointer; }
+  input, select { padding: 6px; margin: 4px 0; display: block; }
+  .card { border: 1px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>🏪 Sistema de Teste</h1>
+<nav>
+  <a onclick="navigate('home')">🏠 Home</a>
+  <a onclick="navigate('busca')">🔍 Busca</a>
+  <a onclick="navigate('cadastro')">📝 Cadastro</a>
+</nav>
+<div id="app">
+  <h2>Home</h2>
+  <p>Bem-vindo ao sistema de teste para a War Room do TestForge.</p>
+  <button onclick="alert('Botão clicado!')">Clique aqui</button>
+</div>
+
+<script>
+  const pages = {
+    home: `<h2>Home</h2><p>Página inicial.</p><button onclick="alert('Home clicado')">Botão Home</button>`,
+    busca: `<h2>🔍 Busca</h2>
+      <input type="text" id="campo-busca" placeholder="Digite sua busca..." data-testid="campo-busca">
+      <button onclick="alert('Buscando: '+document.getElementById('campo-busca').value)" data-testid="btn-buscar">Buscar</button>
+      <div class="card" data-testid="resultado-busca" style="display:none">Resultados aparecem aqui</div>`,
+    cadastro: `<h2>📝 Cadastro</h2>
+      <form id="form-cadastro">
+        <input type="text" id="nome" placeholder="Nome" data-testid="input-nome">
+        <input type="email" id="email" placeholder="Email" data-testid="input-email">
+        <select data-testid="select-tipo">
+          <option value="">Selecione...</option>
+          <option value="pf">Pessoa Física</option>
+          <option value="pj">Pessoa Jurídica</option>
+        </select>
+        <button type="submit" data-testid="btn-salvar">Salvar</button>
+      </form>`,
+  };
+
+  function navigate(page) {
+    history.pushState({ page }, '', '#' + page);
+    document.getElementById('app').innerHTML = pages[page] || '<h2>404</h2>';
+  }
+
+  window.addEventListener('popstate', () => {
+    const page = location.hash.slice(1) || 'home';
+    document.getElementById('app').innerHTML = pages[page] || '<h2>404</h2>';
+  });
+
+  document.getElementById('form-cadastro')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    alert('Cadastro salvo!');
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,296 @@
+{
+  "entities": [
+    {
+      "name": "TestForge",
+      "entityType": "project",
+      "observations": [
+        "Gravador inteligente de testes com Playwright + LLM",
+        "Hybrid: Python + TypeScript, CLI Typer",
+        "LLM: GPT-4.1-mini via Azure API",
+        "Storage: JSONL/filesystem (DB futuramente)",
+        "Script generation via AST module, Playwright Python puro",
+        "Notificacoes: env vars TF_NOTIFY_EMAIL_* e TF_NOTIFY_TEAMS_WEBHOOK, desligado por padrao"
+      ]
+    },
+    {
+      "name": "Epic 1",
+      "entityType": "epic",
+      "observations": [
+        "Completo - Stories 1-0 a 1-8"
+      ]
+    },
+    {
+      "name": "Story 1-3",
+      "entityType": "story",
+      "observations": [
+        "Execucao headed/headless, step timeout, recovery, relatorio partial",
+        "CLI: testforge run"
+      ]
+    },
+    {
+      "name": "Story 1-4",
+      "entityType": "story",
+      "observations": [
+        "Asserts multi-tipo (texto, estado, visivel, automatico)",
+        "Shift+A no overlay abre menu assert"
+      ]
+    },
+    {
+      "name": "Story 1-5",
+      "entityType": "story",
+      "observations": [
+        "Relatorio em duas camadas + historico com --period e --status",
+        "CLI: testforge report <path> e testforge report --history"
+      ]
+    },
+    {
+      "name": "Story 1-6",
+      "entityType": "story",
+      "observations": [
+        "Notificacao e-mail (SMTP) e Teams (webhook MessageCard)",
+        "CLI: testforge run --notify"
+      ]
+    },
+    {
+      "name": "Story 1-7",
+      "entityType": "story",
+      "observations": [
+        "Upload/download de arquivos",
+        "Overlay detecta input[type=file], Playwright page.on download"
+      ]
+    },
+    {
+      "name": "Story 1-8",
+      "entityType": "story",
+      "observations": [
+        "Shadow DOM, select com label=, date picker, autocomplete com debounce 400ms"
+      ]
+    },
+    {
+      "name": "Decision: pointerup event capture",
+      "entityType": "technical_decision",
+      "observations": [
+        "Chromium nao dispara click/mousedown/mouseup em elementos disabled",
+        "pointerup (window, capture phase) funciona consistentemente para todos elementos",
+        "Synthetic click (isTrusted=false) em disabled sem remover atributo disabled",
+        "Listener no window (nao document) para evitar capture phase de paginas bancarias/jQuery"
+      ]
+    },
+    {
+      "name": "Decision: fill detection",
+      "entityType": "technical_decision",
+      "observations": [
+        "Unificada: input + keydown + change + polling (500ms)",
+        "Campos com mascara JS (Caixa, bancos) nao disparam input events",
+        "Detectados via keydown + verificacao periodica de valor"
+      ]
+    },
+    {
+      "name": "Decision: selector priority",
+      "entityType": "technical_decision",
+      "observations": [
+        "Prioridade unificada overlay + builder: data-testid > id > name > aria-label > placeholder > has-text > href > alt > class > XPath/DOM path",
+        "Overlay ja gera o melhor seletor na captura (generateBestSelector)",
+        "rawSelector enviado como fallback para o data.json",
+        "Runner tenta fallbacks em sequencia via _try_with_fallbacks()"
+      ]
+    },
+    {
+      "name": "Decision: overlay modes",
+      "entityType": "technical_decision",
+      "observations": [
+        "full: overlay com UI DOM (botoes, painel)",
+        "shortcuts: sem UI DOM, apenas listeners ativos, zero interferencia visual",
+        "CLI: testforge record --mode full|shortcuts"
+      ]
+    },
+    {
+      "name": "Decision: browser config",
+      "entityType": "technical_decision",
+      "observations": [
+        "Args compartilhados: --no-first-run, --disable-sync, --disable-translate, --disable-notifications",
+        "Context locale pt-BR",
+        "Centralizado em browser_config.py para runner e session"
+      ]
+    },
+    {
+      "name": "Decision: dialog handling",
+      "entityType": "technical_decision",
+      "observations": [
+        "page.on(dialog) com auto-accept em runner e session",
+        "alert()/confirm() bloqueiam Playwright se nao houver handler"
+      ]
+    },
+    {
+      "name": "Decision: autocomplete detection",
+      "entityType": "technical_decision",
+      "observations": [
+        "Apos clique em .ui-menu-item, verifica valor do input focado apos 50ms",
+        "Cria fill step com valor final selecionado"
+      ]
+    },
+    {
+      "name": "Current Session State",
+      "entityType": "session_state",
+      "observations": [
+        "Acabamos de configurar MCP servers: Playwright MCP, Filesystem MCP, Memory MCP, Context7 MCP",
+        "Context7 instalado via npx ctx7 setup --opencode --mcp",
+        "Project-context.md criado em .opencode/project-context.md com resumo completo",
+        "Memory graph salvo em .opencode/memory.json",
+        "Config de projeto movida para .opencode/opencode.json (localizacao valida)",
+        "Ultima tarefa: salvar estado da sessao no Memory MCP para retomada futura",
+        "Proximo passo sugerido: fazer gravacao real da Caixa com overlay corrigido",
+        "Pending: avaliar se steps duplicados (fill Res + fill Residencial) precisam de dedup",
+        "Pending: adicionar wait_for_selector() para paginas SPA"
+      ]
+    },
+    {
+      "name": "Target Site: Caixa",
+      "entityType": "test_target",
+      "observations": [
+        "JSP/jQuery, HTML 4.01 Transitional, sem CSP",
+        "X-Frame-Options: deny, oncontextmenu=\"return false\"",
+        "Campos com mascara JS (maskMoedaSemPrefix, maskCpf)",
+        "Autocomplete jQuery UI (#uf_input, #tipoImovel_input)",
+        "Campo #valorImovel com mascara monetaria"
+      ]
+    },
+    {
+      "name": "overlay.js",
+      "entityType": "source_file",
+      "observations": [
+        "packages/core/testforge/core/recording/overlay.js",
+        "generateBestSelector(), fill detection unificada, deteccao de autocomplete",
+        "Synthetic click para disabled, modo shortcuts, Shift+H hide/show",
+        "captureAttributes(), try/catch em todos handlers"
+      ]
+    },
+    {
+      "name": "session.py",
+      "entityType": "source_file",
+      "observations": [
+        "packages/core/testforge/core/recording/session.py",
+        "Aceita mode (full/shortcuts), test_name opcional",
+        "Fallback de injecao do overlay pos-load",
+        "Verificacao de __tfReady, handler de dialog"
+      ]
+    },
+    {
+      "name": "runner.py",
+      "entityType": "source_file",
+      "observations": [
+        "packages/core/testforge/core/execution/runner.py",
+        "_try_with_fallbacks() para fallbacks do data.json",
+        "_dialog_handler auto-accept, exibe seletor usado"
+      ]
+    },
+    {
+      "name": "selectors.py",
+      "entityType": "source_file",
+      "observations": [
+        "packages/core/testforge/core/script/selectors.py",
+        "generate_strategies() com attrs: dict",
+        "Prioridade: data-testid > id > name > aria-label > placeholder > label-text > role+text > href > alt > class > XPath"
+      ]
+    },
+    {
+      "name": "builder.py",
+      "entityType": "source_file",
+      "observations": [
+        "packages/core/testforge/core/script/builder.py",
+        "Gera script usando generate_strategies()",
+        "Insere raw_selector como primeiro fallback no data.json",
+        "Steps de navigate ignoram generate_strategies()"
+      ]
+    },
+    {
+      "name": "browser_config.py",
+      "entityType": "source_file",
+      "observations": [
+        "packages/core/testforge/core/browser_config.py",
+        "Args de lancamento e context options compartilhados"
+      ]
+    },
+    {
+      "name": "step.py",
+      "entityType": "source_file",
+      "observations": [
+        "packages/core/testforge/core/models/step.py",
+        "RecordedStep com attrs: dict, fallbacks: list, raw_selector: str"
+      ]
+    },
+    {
+      "name": "README-EPIC1.md",
+      "entityType": "source_file",
+      "observations": [
+        "README-EPIC1.md",
+        "Guia manual com roteiro de teste, troubleshooting, CLI, fallbacks"
+      ]
+    },
+    {
+      "name": "Playwright MCP",
+      "entityType": "mcp_server",
+      "observations": [
+        "@playwright/mcp via npx",
+        "Configurado em .opencode/opencode.json"
+      ]
+    },
+    {
+      "name": "Filesystem MCP",
+      "entityType": "mcp_server",
+      "observations": [
+        "@modelcontextprotocol/server-filesystem via npx",
+        "Acesso a /home/febre/Projetos/testforge e /home/febre/Projetos",
+        "Configurado em .opencode/opencode.json"
+      ]
+    },
+    {
+      "name": "Memory MCP",
+      "entityType": "mcp_server",
+      "observations": [
+        "@modelcontextprotocol/server-memory via npx",
+        "Persistencia em .opencode/memory.json",
+        "Configurado em .opencode/opencode.json"
+      ]
+    },
+    {
+      "name": "Context7 MCP",
+      "entityType": "mcp_server",
+      "observations": [
+        "MCP remoto em https://mcp.context7.com/mcp",
+        "Autenticado via OAuth + API Key",
+        "Configurado em ~/.config/opencode/opencode.json (global)"
+      ]
+    }
+  ],
+  "relations": [
+    { "from": "TestForge", "relationType": "has_epic", "to": "Epic 1" },
+    { "from": "Epic 1", "relationType": "has_story", "to": "Story 1-3" },
+    { "from": "Epic 1", "relationType": "has_story", "to": "Story 1-4" },
+    { "from": "Epic 1", "relationType": "has_story", "to": "Story 1-5" },
+    { "from": "Epic 1", "relationType": "has_story", "to": "Story 1-6" },
+    { "from": "Epic 1", "relationType": "has_story", "to": "Story 1-7" },
+    { "from": "Epic 1", "relationType": "has_story", "to": "Story 1-8" },
+    { "from": "TestForge", "relationType": "uses", "to": "Decision: pointerup event capture" },
+    { "from": "TestForge", "relationType": "uses", "to": "Decision: fill detection" },
+    { "from": "TestForge", "relationType": "uses", "to": "Decision: selector priority" },
+    { "from": "TestForge", "relationType": "uses", "to": "Decision: overlay modes" },
+    { "from": "TestForge", "relationType": "uses", "to": "Decision: browser config" },
+    { "from": "TestForge", "relationType": "uses", "to": "Decision: dialog handling" },
+    { "from": "TestForge", "relationType": "uses", "to": "Decision: autocomplete detection" },
+    { "from": "TestForge", "relationType": "tested_on", "to": "Target Site: Caixa" },
+    { "from": "TestForge", "relationType": "has_file", "to": "overlay.js" },
+    { "from": "TestForge", "relationType": "has_file", "to": "session.py" },
+    { "from": "TestForge", "relationType": "has_file", "to": "runner.py" },
+    { "from": "TestForge", "relationType": "has_file", "to": "selectors.py" },
+    { "from": "TestForge", "relationType": "has_file", "to": "builder.py" },
+    { "from": "TestForge", "relationType": "has_file", "to": "browser_config.py" },
+    { "from": "TestForge", "relationType": "has_file", "to": "step.py" },
+    { "from": "TestForge", "relationType": "has_file", "to": "README-EPIC1.md" },
+    { "from": "TestForge", "relationType": "has_mcp", "to": "Playwright MCP" },
+    { "from": "TestForge", "relationType": "has_mcp", "to": "Filesystem MCP" },
+    { "from": "TestForge", "relationType": "has_mcp", "to": "Memory MCP" },
+    { "from": "TestForge", "relationType": "has_mcp", "to": "Context7 MCP" },
+    { "from": "Current Session State", "relationType": "belongs_to", "to": "TestForge" }
+  ]
+}

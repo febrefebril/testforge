@@ -1,0 +1,12 @@
+<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>FAM-10: Execution</title></head>
+<body>
+<h1>FAM-10: Execution / Observability (OBS-002, OBS-003)</h1>
+<button id="trigger-error" onclick="console.error('TestForge E2E error: elemento não encontrado')">Disparar console.error</button>
+<button id="trigger-404" onclick="fetch('/api/nao-existe').catch(function(){})">Disparar 404</button>
+<div id="result" role="status" style="margin-top:10px"></div>
+<script>
+document.getElementById('trigger-error').addEventListener('click', function(){
+  document.getElementById('result').textContent = 'Console error disparado';
+});
+</script>
+</body></html>

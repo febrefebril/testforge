@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Two Similar Fields — Campos Parecidos</title>
+  <style>
+    body { font-family: sans-serif; max-width: 500px; margin: 2em auto; padding: 0 1em; }
+    .field-group { border: 1px solid #ccc; padding: 1em; margin-bottom: 1em; border-radius: 4px; }
+    label { display: block; margin-top: 0.5em; }
+    input { width: 100%; padding: 0.5em; margin-top: 0.25em; box-sizing: border-box; }
+    button { margin-top: 1em; padding: 0.5em 2em; }
+    .result { margin-top: 1em; padding: 0.5em; background: #fff3e0; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Campos Parecidos</h1>
+  <p>Dois campos com labels e placeholders similares. Risco de associação errada.</p>
+
+  <form id="form1">
+    <div class="field-group">
+      <h3>Endereço de Entrega</h3>
+      <label for="entrega-logradouro">Logradouro</label>
+      <input id="entrega-logradouro" name="entrega_logradouro" placeholder="Logradouro" />
+
+      <label for="entrega-numero">Número</label>
+      <input id="entrega-numero" name="entrega_numero" placeholder="Número" />
+
+      <label for="entrega-bairro">Bairro</label>
+      <input id="entrega-bairro" name="entrega_bairro" placeholder="Bairro" />
+
+      <button type="submit" id="btn-entrega">Salvar Endereço</button>
+    </div>
+  </form>
+
+  <form id="form2">
+    <div class="field-group">
+      <h3>Endereço de Cobrança</h3>
+      <label for="cobranca-logradouro">Logradouro</label>
+      <input id="cobranca-logradouro" name="cobranca_logradouro" placeholder="Logradouro" />
+
+      <label for="cobranca-numero">Número</label>
+      <input id="cobranca-numero" name="cobranca_numero" placeholder="Número" />
+
+      <label for="cobranca-bairro">Bairro</label>
+      <input id="cobranca-bairro" name="cobranca_bairro" placeholder="Bairro" />
+
+      <button type="submit" id="btn-cobranca">Salvar Cobrança</button>
+    </div>
+  </form>
+
+  <div class="result" id="resultado" style="display:none">
+    <p id="result-text"></p>
+  </div>
+
+  <script>
+    document.getElementById('form1').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const log = document.getElementById('entrega-logradouro').value;
+      const num = document.getElementById('entrega-numero').value;
+      const bairro = document.getElementById('entrega-bairro').value;
+      document.getElementById('result-text').textContent =
+        `✅ Entrega salva: ${log}, ${num} - ${bairro}`;
+      document.getElementById('resultado').style.display = 'block';
+    });
+    document.getElementById('form2').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const log = document.getElementById('cobranca-logradouro').value;
+      const num = document.getElementById('cobranca-numero').value;
+      const bairro = document.getElementById('cobranca-bairro').value;
+      document.getElementById('result-text').textContent =
+        `✅ Cobrança salva: ${log}, ${num} - ${bairro}`;
+      document.getElementById('resultado').style.display = 'block';
+    });
+  </script>
+</body>
+</html>

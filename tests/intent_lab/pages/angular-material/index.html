@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Angular Material — Simulated DOM Pattern</title>
+  <style>
+    body { font-family: Roboto, sans-serif; max-width: 600px; margin: 2em auto; padding: 0 1em; background: #fafafa; }
+    h1 { font-size: 1.5em; color: #333; border-bottom: 2px solid #673ab7; padding-bottom: .5em; }
+    h2 { font-size: 1.1em; color: #555; margin-top: 1.5em; }
+    .mat-form-field { display: block; margin: 1em 0; }
+    .mat-form-field-flex { border: 1px solid #ccc; border-radius: 4px; padding: .5em; background: #fff; }
+    .mat-form-field-infix { display: flex; }
+    .mat-form-field-infix input { border: none; outline: none; flex: 1; padding: .25em 0; font-size: 1em; }
+    .mat-form-field-label-wrapper { font-size: .85em; color: #666; margin-bottom: .25em; }
+    .mat-radio-group { display: flex; flex-direction: column; gap: .5em; margin: 1em 0; }
+    .mat-radio-button { display: flex; align-items: center; gap: .5em; cursor: pointer; }
+    .mat-radio-container { width: 20px; height: 20px; border: 2px solid #666; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .mat-radio-container.checked { border-color: #673ab7; }
+    .mat-radio-outer-circle { width: 10px; height: 10px; border-radius: 50%; }
+    .mat-radio-container.checked .mat-radio-outer-circle { background: #673ab7; }
+    .mat-radio-input { display: none; }
+    .mat-checkbox { display: flex; align-items: center; gap: .5em; margin: 1em 0; cursor: pointer; }
+    .mat-checkbox-inner-container { width: 18px; height: 18px; border: 2px solid #666; border-radius: 2px; display: flex; align-items: center; justify-content: center; }
+    .mat-checkbox-inner-container.checked { background: #673ab7; border-color: #673ab7; }
+    .mat-checkbox-input { display: none; }
+    .mat-select { border: 1px solid #ccc; border-radius: 4px; padding: .5em; background: #fff; cursor: pointer; position: relative; }
+    .mat-select-arrow { position: absolute; right: .5em; top: 50%; transform: translateY(-50%); border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 5px solid #666; }
+    .mat-select-panel { display: none; border: 1px solid #ccc; border-radius: 4px; background: #fff; max-height: 200px; overflow-y: auto; margin-top: 2px; }
+    .mat-select-panel.open { display: block; }
+    .mat-option { padding: .5em; cursor: pointer; }
+    .mat-option:hover { background: #e8e0f0; }
+    .mat-option.selected { background: #d1c4e9; font-weight: bold; }
+    button[type="submit"] { background: #673ab7; color: #fff; border: none; padding: .75em 2em; border-radius: 4px; font-size: 1em; cursor: pointer; margin-top: 1.5em; }
+    .result { margin-top: 1.5em; padding: 1em; background: #e8f5e9; border-radius: 4px; display: none; }
+  </style>
+</head>
+<body>
+  <h1>Angular Material — Simulated</h1>
+  <p>DOM structure matching Angular Material patterns. No framework loaded.</p>
+
+  <form id="mainForm">
+    <!-- mat-form-field: input -->
+    <div class="mat-form-field">
+      <div class="mat-form-field-label-wrapper">
+        <label for="nome-input">Nome completo</label>
+      </div>
+      <div class="mat-form-field-flex">
+        <div class="mat-form-field-infix">
+          <input id="nome-input" name="nome" matInput placeholder="Digite seu nome"
+                 autocomplete="off" class="mat-input-element">
+        </div>
+      </div>
+    </div>
+
+    <!-- mat-form-field: email -->
+    <div class="mat-form-field">
+      <div class="mat-form-field-label-wrapper">
+        <label for="email-input">E-mail</label>
+      </div>
+      <div class="mat-form-field-flex">
+        <div class="mat-form-field-infix">
+          <input id="email-input" name="email" matInput placeholder="email@exemplo.com"
+                 autocomplete="off" class="mat-input-element">
+        </div>
+      </div>
+    </div>
+
+    <!-- mat-radio-group -->
+    <h2>Gênero</h2>
+    <div class="mat-radio-group" role="radiogroup" aria-label="Gênero">
+      <label class="mat-radio-button" id="radio-masculino">
+        <input type="radio" name="genero" value="masculino" class="mat-radio-input">
+        <span class="mat-radio-container">
+          <span class="mat-radio-outer-circle"></span>
+        </span>
+        <span class="mat-radio-label-content">Masculino</span>
+      </label>
+      <label class="mat-radio-button" id="radio-feminino">
+        <input type="radio" name="genero" value="feminino" class="mat-radio-input">
+        <span class="mat-radio-container">
+          <span class="mat-radio-outer-circle"></span>
+        </span>
+        <span class="mat-radio-label-content">Feminino</span>
+      </label>
+    </div>
+
+    <!-- mat-checkbox -->
+    <label class="mat-checkbox" id="checkbox-aceite">
+      <input type="checkbox" name="aceite" value="sim" class="mat-checkbox-input">
+      <span class="mat-checkbox-inner-container">
+        <span class="mat-checkbox-checkmark"></span>
+      </span>
+      <span class="mat-checkbox-label">Aceito os termos</span>
+    </label>
+
+    <!-- mat-select -->
+    <h2>Cidade</h2>
+    <div class="mat-select" id="cidade-select" role="combobox" aria-label="Cidade"
+         aria-expanded="false" aria-haspopup="listbox">
+      <span class="mat-select-value-text" id="cidade-value">Selecione uma cidade</span>
+      <span class="mat-select-arrow"></span>
+    </div>
+    <div class="mat-select-panel" id="cidade-panel" role="listbox" aria-label="Cidade">
+      <div class="mat-option" role="option" data-value="sp">São Paulo</div>
+      <div class="mat-option" role="option" data-value="rj">Rio de Janeiro</div>
+      <div class="mat-option" role="option" data-value="mg">Belo Horizonte</div>
+      <div class="mat-option" role="option" data-value="pr">Curitiba</div>
+    </div>
+
+    <button type="submit" id="btn-enviar">Enviar</button>
+  </form>
+
+  <div class="result" id="resultado">
+    <p>✅ Formulário enviado!</p>
+    <p id="result-text"></p>
+  </div>
+
+  <script>
+    // Simulated mat-select behavior
+    const selectEl = document.getElementById('cidade-select');
+    const panel = document.getElementById('cidade-panel');
+    const valueSpan = document.getElementById('cidade-value');
+    let selectOpen = false;
+
+    selectEl.addEventListener('click', function(e) {
+      selectOpen = !selectOpen;
+      panel.classList.toggle('open', selectOpen);
+      this.setAttribute('aria-expanded', selectOpen);
+    });
+
+    document.querySelectorAll('.mat-option').forEach(function(opt) {
+      opt.addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.querySelectorAll('.mat-option').forEach(function(o) { o.classList.remove('selected'); });
+        this.classList.add('selected');
+        valueSpan.textContent = this.textContent;
+        selectEl.setAttribute('aria-activedescendant', '');
+        panel.classList.remove('open');
+        selectOpen = false;
+        selectEl.setAttribute('aria-expanded', 'false');
+
+        // Set value on hidden native select for form submission
+        document.getElementById('cidade-hidden').value = this.getAttribute('data-value');
+      });
+    });
+
+    // Close on outside click
+    document.addEventListener('click', function(e) {
+      if (!selectEl.contains(e.target) && !panel.contains(e.target)) {
+        panel.classList.remove('open');
+        selectOpen = false;
+        selectEl.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // Radio button visual toggle
+    document.querySelectorAll('.mat-radio-button').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.mat-radio-button').forEach(function(b) {
+          b.querySelector('.mat-radio-container').classList.remove('checked');
+          b.querySelector('.mat-radio-input').checked = false;
+        });
+        this.querySelector('.mat-radio-container').classList.add('checked');
+        this.querySelector('.mat-radio-input').checked = true;
+      });
+    });
+
+    // Checkbox visual toggle
+    document.getElementById('checkbox-aceite').addEventListener('click', function() {
+      var input = this.querySelector('.mat-checkbox-input');
+      input.checked = !input.checked;
+      this.querySelector('.mat-checkbox-inner-container').classList.toggle('checked', input.checked);
+    });
+
+    // Form submit
+    document.getElementById('mainForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var nome = document.getElementById('nome-input').value;
+      var email = document.getElementById('email-input').value;
+      var genero = document.querySelector('.mat-radio-input:checked');
+      var generoVal = genero ? genero.value : 'não selecionado';
+      var aceite = document.querySelector('.mat-checkbox-input').checked ? 'Sim' : 'Não';
+      var cidade = valueSpan.textContent;
+      document.getElementById('result-text').textContent =
+        'Nome: ' + nome + ' | Email: ' + email + ' | Gênero: ' + generoVal +
+        ' | Aceite: ' + aceite + ' | Cidade: ' + cidade;
+      document.getElementById('resultado').style.display = 'block';
+    });
+
+    // Hidden native select to demonstrate Angular Material pattern
+    // (real Angular Material hides native select, value only accessible via component)
+    var hiddenSelect = document.createElement('input');
+    hiddenSelect.type = 'hidden';
+    hiddenSelect.id = 'cidade-hidden';
+    hiddenSelect.name = 'cidade';
+    document.getElementById('mainForm').appendChild(hiddenSelect);
+  </script>
+</body>
+</html>

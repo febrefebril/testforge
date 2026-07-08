@@ -1,0 +1,1 @@
+Fixture criada pelo test runner

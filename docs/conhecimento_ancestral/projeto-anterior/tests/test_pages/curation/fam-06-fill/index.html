@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>FAM-06: Fill</title>
+<script src="../common.js"></script>
+<script src="error.js"></script>
+</head>
+<body>
+  <h1>FAM-06: Fill com Máscara</h1>
+  <label>CPF: <input type="text" id="campo-cpf" name="cpf" placeholder="000.000.000-00"></label>
+  <button id="btn-validar">Validar</button>
+  <p id="result"></p>
+  <script>
+    var cpf = document.getElementById("campo-cpf");
+    var mask = window.__CURATION_TEST && window.__CURATION_TEST.isError;
+    cpf.addEventListener("input", function() {
+      if (mask) {
+        var v = this.value.replace(/\D/g, "").slice(0, 11);
+        if (v.length > 9) v = v.slice(0, 3) + "." + v.slice(3, 6) + "." + v.slice(6, 9) + "-" + v.slice(9);
+        else if (v.length > 6) v = v.slice(0, 3) + "." + v.slice(3, 6) + "." + v.slice(6);
+        else if (v.length > 3) v = v.slice(0, 3) + "." + v.slice(3);
+        this.value = v;
+      }
+    });
+    document.getElementById("btn-validar").addEventListener("click", function() {
+      document.getElementById("result").textContent = "CPF: " + cpf.value;
+    });
+  </script>
+</body>
+</html>

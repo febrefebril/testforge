@@ -1,0 +1,15 @@
+<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>FAM-08: Assertion</title></head>
+<body>
+<h1>FAM-08: Assertions (AST-004)</h1>
+<button id="show-result" onclick="document.getElementById('result').textContent='Sucesso: operação concluída'">Mostrar resultado</button>
+<div id="result" role="status" style="margin-top:10px;font-weight:bold"></div>
+<script>
+if(location.search.includes('error=1')){
+  // Change expected text on error mode
+  var btn = document.getElementById('show-result');
+  btn.addEventListener('click', function(){
+    document.getElementById('result').textContent = 'Erro: operação falhou';
+  }, {once: true});
+}
+</script>
+</body></html>

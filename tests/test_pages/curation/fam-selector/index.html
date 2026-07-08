@@ -1,0 +1,17 @@
+<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>FAM-01: Selector</title></head>
+<body>
+<h1>FAM-01: Locator Resolution (SEL-004)</h1>
+<p>Página sem ?error=1 mostra botão com ID estável.</p>
+<p>Página com ?error=1 altera o ID do botão via JS.</p>
+<button id="btn-stable">Clique Aqui (estável)</button>
+<div id="result" role="status" style="margin-top:10px"></div>
+<script>
+if (location.search.includes('error=1')) {
+  var btn = document.getElementById('btn-stable');
+  btn.id = 'btn-dynamic-' + Date.now();
+}
+document.querySelector('button').addEventListener('click', function(){
+  document.getElementById('result').textContent = 'Botão clicado com sucesso!';
+});
+</script>
+</body></html>

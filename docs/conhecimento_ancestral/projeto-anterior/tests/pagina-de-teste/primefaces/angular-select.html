@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Angular Material mat-select — Página de Teste</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Roboto, -apple-system, BlinkMacSystemFont, sans-serif; padding: 40px; background: #f5f5f5; }
+h1 { margin-bottom: 8px; color: #333; }
+.sub { color: #666; margin-bottom: 32px; }
+.row { display: flex; gap: 40px; flex-wrap: wrap; }
+.col { flex: 1; min-width: 320px; background: white; border-radius: 8px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+.col h2 { font-size: 16px; color: #444; margin-bottom: 16px; }
+.form-group { margin-bottom: 20px; }
+label { display: block; font-size: 13px; color: #555; margin-bottom: 8px; }
+
+/* === Angular Material mat-select simulation === */
+.mat-select {
+  display: inline-block; position: relative; width: 100%;
+  border-bottom: 1px solid #ccc; padding: 8px 0; cursor: pointer;
+  font-size: 14px; min-height: 36px;
+}
+.mat-select-trigger {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.mat-select-value { flex: 1; color: #333; }
+.mat-select-arrow { color: #999; font-size: 10px; margin-left: 8px; }
+.mat-select-panel {
+  position: absolute; z-index: 1000; background: white;
+  border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  max-height: 250px; overflow-y: auto; min-width: 200px; top: 100%; margin-top: 4px;
+}
+.mat-option {
+  padding: 10px 16px; cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.mat-option:hover { background: #f5f5f5; }
+.mat-option.mat-selected { background: #e8eaf6; color: #3f51b5; }
+.mat-option[aria-selected="true"] { background: #e8eaf6; }
+.mat-option-check { visibility: hidden; }
+.mat-option.mat-selected .mat-option-check { visibility: visible; }
+
+.result { margin-top: 24px; padding: 12px; background: #f0f7ff; border-radius: 4px; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<h1>🧪 Angular Material mat-select — Página de Teste</h1>
+<p class="sub">Estrutura DOM idêntica ao Angular Material mat-select. 
+Usa ARIA roles para detecção genérica (role="listbox" + role="option").</p>
+
+<div class="row">
+  <div class="col">
+    <h2>mat-select</h2>
+    <form id="form1">
+      <div class="form-group">
+        <label for="matCategoria">Categoria</label>
+        <!-- mat-select simulado com DOM idêntico ao Angular Material -->
+        <div id="matCategoria" class="mat-select" role="listbox" tabindex="0"
+             aria-labelledby="matCategoriaLabel" aria-required="false" aria-disabled="false"
+             aria-invalid="false" aria-multiselectable="false">
+          <div class="mat-select-trigger" id="matCategoriaTrigger">
+            <span class="mat-select-value" id="matCategoriaValue">Selecione</span>
+            <span class="mat-select-arrow">▼</span>
+          </div>
+        </div>
+        <div class="mat-select-panel" id="matCategoriaPanel" role="listbox" style="display:none">
+          <div class="mat-option" role="option" data-value="1" aria-selected="false">
+            <span class="mat-option-check">✓</span>
+            <span>Eletrônicos</span>
+          </div>
+          <div class="mat-option" role="option" data-value="2" aria-selected="false">
+            <span class="mat-option-check">✓</span>
+            <span>Roupas</span>
+          </div>
+          <div class="mat-option" role="option" data-value="3" aria-selected="false">
+            <span class="mat-option-check">✓</span>
+            <span>Alimentos</span>
+          </div>
+          <div class="mat-option" role="option" data-value="4" aria-selected="false">
+            <span class="mat-option-check">✓</span>
+            <span>Móveis</span>
+          </div>
+          <div class="mat-option" role="option" data-value="5" aria-selected="false">
+            <span class="mat-option-check">✓</span>
+            <span>Serviços</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="matPagamento">Forma de Pagamento</label>
+        <div id="matPagamento" class="mat-select" role="listbox" tabindex="0"
+             aria-labelledby="matPagamentoLabel">
+          <div class="mat-select-trigger" id="matPagamentoTrigger">
+            <span class="mat-select-value" id="matPagamentoValue">Selecione</span>
+            <span class="mat-select-arrow">▼</span>
+          </div>
+        </div>
+        <div class="mat-select-panel" id="matPagamentoPanel" role="listbox" style="display:none">
+          <div class="mat-option" role="option" data-value="boleto" aria-selected="false">
+            <span class="mat-option-check">✓</span>
+            <span>Boleto Bancário</span>
+          </div>
+          <div class="mat-option" role="option" data-value="credito" aria-selected="false">
+            <span class="mat-option-check">✓</span>
+            <span>Cartão de Crédito</span>
+          </div>
+          <div class="mat-option" role="option" data-value="debito" aria-selected="false">
+            <span class="mat-option-check">✓</span>
+            <span>Cartão de Débito</span>
+          </div>
+          <div class="mat-option" role="option" data-value="pix" aria-selected="false">
+            <span class="mat-option-check">✓</span>
+            <span>PIX</span>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="col">
+    <h2>Resultado</h2>
+    <p id="matResult" style="font-size:14px; color:#555;">Selecione um valor...</p>
+  </div>
+</div>
+
+<script>
+// Simula o comportamento do mat-select
+document.querySelectorAll('.mat-select').forEach(function(select) {
+  var trigger = select.querySelector('.mat-select-trigger');
+  var valueEl = select.querySelector('.mat-select-value');
+  var panelId = select.getAttribute('id') + 'Panel';
+  var panel = document.getElementById(panelId);
+  var options = panel.querySelectorAll('.mat-option');
+
+  trigger.addEventListener('click', function(e) {
+    e.stopPropagation();
+    document.querySelectorAll('.mat-select-panel').forEach(function(p) {
+      if (p !== panel) p.style.display = 'none';
+    });
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  });
+
+  options.forEach(function(opt) {
+    opt.addEventListener('click', function() {
+      var text = opt.querySelector('span:last-child').textContent;
+      var val = opt.getAttribute('data-value');
+      valueEl.textContent = text;
+      panel.style.display = 'none';
+      options.forEach(function(o) {
+        o.classList.remove('mat-selected');
+        o.setAttribute('aria-selected', 'false');
+      });
+      opt.classList.add('mat-selected');
+      opt.setAttribute('aria-selected', 'true');
+      document.getElementById('matResult').textContent = 'mat-select: ' + text + ' (value=' + val + ')';
+    });
+  });
+});
+
+document.addEventListener('click', function() {
+  document.querySelectorAll('.mat-select-panel').forEach(function(p) {
+    p.style.display = 'none';
+  });
+});
+</script>
+</body>
+</html>

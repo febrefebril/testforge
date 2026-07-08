@@ -1,0 +1,86 @@
+@startuml
+title TestForge - C4 Container Diagram
+
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+Person(test_engineer, "Test Automation Engineer", "Engenheiro responsável por gravar fluxos, executar diagnósticos, curar falhas e gerar artefatos finais de automação.")
+
+System_Boundary(testforge_system, "TestForge - Runtime Local") {
+  Container(cli, "TestForge CLI", "Python CLI", "Ponto de entrada local para comandos record, run, curate e finalize. Carrega configurações, políticas e orquestra o fluxo principal.")
+
+  Container(recorder_engine, "Recorder Engine", "Python", "Coordena a gravação enriquecida: captura eventos humanos, checkpoints, assert hints, contexto técnico e persistência incremental dos steps.")
+
+  Container(fingerprint_engine, "Fingerprint Engine", "Python", "Executa fingerprint antes da primeira interação e atualiza sinais técnicos durante a gravação: tecnologias, frames, shadow DOM, IDs dinâmicos, componentes e riscos.")
+
+  ContainerDb(evidence_repository, "Evidence Repository", "File System / JSON / HTML / PNG / ZIP", "Repositório central de evidências: session_raw, session_normalized, fingerprints, DOM, screenshots, rede, console, storage, frames, selectors, traces e artefatos de execução.")
+
+  Container(script_generator, "Script Generator", "Python", "Gera script_v0.py a partir de steps normalizados, locators candidatos, fingerprint, evidências e estratégias de wait/contexto.")
+
+  Container(diagnostic_executor, "Diagnostic Executor", "Python + Playwright", "Executa script_v0.py ou checkpoints, coleta runs, traces, screenshots, DOM de falha, console/rede e produz dados para diagnóstico.")
+
+  Container(multi_agent_curator, "Multi-Agent Curator", "Python", "Classifica falhas, monta pacote mínimo de evidências, seleciona agentes especializados, coordena patches determinísticos, validação, progresso e rollback.")
+
+  ContainerDb(knowledge_base, "Knowledge Base", "JSONL / JSON", "Armazena failure_signatures.jsonl, resolved_patterns.jsonl e healing_rules.json. Fornece histórico para curadoria, classificação e self-healing determinístico.")
+
+  Container(final_artifact_builder, "Final Artifact Builder", "Python", "Consolida script_final.py, test_data.json, locators.json, healing_rules.json, execution_report.json, agent_history.json e fingerprint_summary.json.")
+
+  Container(optional_llm_gateway, "Optional LLM Gateway", "Azure OpenAI Client / HTTP", "Fallback controlado e opcional. Recebe somente pacote mínimo de evidências mascarado e retorna hipótese ou patch candidato, nunca aplicado diretamente.", $tags="Optional")
+
+  Container(local_browser, "Local Browser via Playwright", "Chrome / Edge", "Navegador local controlado pelo Playwright. Executa a aplicação alvo com Recorder JS, Overlay e MutationObserver injetados.")
+}
+
+System_Ext(target_web_app, "Target Web Application", "Aplicação web alvo testada pelo TestForge. Pode conter JSF/PrimeFaces, jQuery/jQuery UI, Angular, JSP legado, Ionic/Cordova ou outras tecnologias.")
+
+Rel(test_engineer, cli, "Usa", "CLI local")
+
+Rel(cli, recorder_engine, "Aciona gravação enriquecida", "record")
+Rel(cli, diagnostic_executor, "Aciona execução diagnóstica", "run")
+Rel(cli, multi_agent_curator, "Aciona curadoria", "curate")
+Rel(cli, final_artifact_builder, "Aciona consolidação final", "finalize")
+
+Rel(recorder_engine, local_browser, "Controla e instrumenta", "Playwright API")
+Rel(local_browser, target_web_app, "Interage com", "HTTP / HTTPS / XHR / fetch / WebSocket")
+
+Rel(recorder_engine, fingerprint_engine, "Envia página/contexto para fingerprint", "DOM, scripts, frames, shadow DOM")
+Rel(recorder_engine, evidence_repository, "Persiste steps e evidências incrementais", "JSON / HTML / PNG / ZIP")
+Rel(fingerprint_engine, evidence_repository, "Persiste fingerprints e sinais tecnológicos", "fingerprint_initial.json / fingerprint_final.json")
+
+Rel(script_generator, evidence_repository, "Consome sessão normalizada, locators e evidências", "session_normalized.json / selector_candidates.json")
+Rel(script_generator, diagnostic_executor, "Entrega script gerado", "script_v0.py")
+Rel(diagnostic_executor, evidence_repository, "Persiste runs e evidências de falha", "execution.json / trace.zip / failure artifacts")
+
+Rel(diagnostic_executor, multi_agent_curator, "Envia falhas diagnosticadas", "failure_signature.json")
+Rel(multi_agent_curator, evidence_repository, "Consome evidências originais da gravação e execução", "recording / evidence / generated / runs")
+Rel(multi_agent_curator, knowledge_base, "Consulta e atualiza padrões", "failure signatures / resolved patterns / healing rules")
+Rel(multi_agent_curator, diagnostic_executor, "Solicita reexecução de patch/checkpoint", "temporary script / checkpoint")
+
+Rel(multi_agent_curator, optional_llm_gateway, "Usa somente como fallback controlado", "pacote mínimo mascarado", $tags="Optional")
+Rel(optional_llm_gateway, multi_agent_curator, "Retorna hipótese ou patch candidato", "sugestão não aplicada diretamente", $tags="Optional")
+
+Rel(final_artifact_builder, evidence_repository, "Lê artefatos estabilizados", "generated / runs / agents / final")
+Rel(final_artifact_builder, knowledge_base, "Consolida regras determinísticas aprendidas", "healing_rules.json")
+Rel(final_artifact_builder, cli, "Disponibiliza entrega final", "paths e relatórios")
+
+UpdateElementStyle(evidence_repository, $bgColor="#FFF2CC", $borderColor="#D6B656")
+UpdateElementStyle(optional_llm_gateway, $bgColor="#F8CECC", $borderColor="#B85450")
+
+AddElementTag("Optional", $bgColor="#F8CECC", $borderColor="#B85450", $fontColor="#000000")
+
+note right of evidence_repository
+  Evidence Repository é central.
+  A curadoria não deve ignorar dados da gravação:
+  session_raw, session_normalized, fingerprints,
+  selector_candidates, DOM, rede, console,
+  frames, shadow DOM, storage, screenshots e traces.
+end note
+
+note right of optional_llm_gateway
+  Opcional e controlado.
+  Não participa da primeira tentativa de correção.
+  Toda sugestão deve passar por PatchValidator
+  e por reexecução diagnóstica antes de ser aceita.
+end note
+
+@enduml

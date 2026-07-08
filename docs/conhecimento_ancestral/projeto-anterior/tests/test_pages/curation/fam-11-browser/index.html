@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>FAM-11: Browser</title>
+<script src="../common.js"></script>
+<script src="error.js"></script>
+</head>
+<body>
+  <h1>FAM-11: Limites Técnicos</h1>
+  <button id="btn-popup">Abrir Popup</button>
+  <p id="result"></p>
+  <script>
+    document.getElementById("btn-popup").addEventListener("click", function() {
+      window.open("about:blank", "_blank", "width=300,height=200");
+      document.getElementById("result").textContent = "Popup aberto!";
+    });
+  </script>
+</body>
+</html>

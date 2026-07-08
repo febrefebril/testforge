@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Blocking Step Failure — Falha Bloqueante</title>
+  <style>
+    body { font-family: sans-serif; max-width: 500px; margin: 2em auto; padding: 0 1em; }
+    label { display: block; margin-top: 1em; }
+    input, select { width: 100%; padding: 0.5em; margin-top: 0.25em; box-sizing: border-box; }
+    button { margin-top: 1.5em; padding: 0.5em 2em; }
+    .error { color: #c62828; margin-top: 0.5em; font-size: 0.9em; }
+    .result { margin-top: 1.5em; padding: 1em; border-radius: 4px; }
+    .result.success { background: #e8f5e9; }
+    .result.failure { background: #ffebee; }
+  </style>
+</head>
+<body>
+  <h1>Fluxo com Falha Bloqueante</h1>
+  <p>O step de UF é obrigatório e bloqueante — sem ele, os steps seguintes não funcionam.</p>
+
+  <form id="main-form">
+    <label for="uf">UF (obrigatório — falha se não selecionar)</label>
+    <select id="uf" name="uf" required>
+      <option value="">Selecione a UF</option>
+      <option value="SP">São Paulo</option>
+      <option value="RJ">Rio de Janeiro</option>
+      <option value="MG">Minas Gerais</option>
+      <option value="RS">Rio Grande do Sul</option>
+    </select>
+
+    <label for="cidade-dependente">Cidade (depende da UF)</label>
+    <select id="cidade-dependente" name="cidade" disabled>
+      <option value="">Selecione primeiro a UF</option>
+    </select>
+
+    <label for="unidade">Unidade (depende da cidade)</label>
+    <select id="unidade" name="unidade" disabled>
+      <option value="">Selecione primeiro a cidade</option>
+    </select>
+
+    <button type="submit" id="btn-enviar">Enviar</button>
+  </form>
+
+  <div id="mensagem-erro" class="error" style="display:none">
+    ⚠ Selecione a UF primeiro!
+  </div>
+
+  <div id="resultado" class="result" style="display:none"></div>
+
+  <script>
+    const ufSelect = document.getElementById('uf');
+    const cidadeSelect = document.getElementById('cidade-dependente');
+    const unidadeSelect = document.getElementById('unidade');
+    const erroDiv = document.getElementById('mensagem-erro');
+    const resultadoDiv = document.getElementById('resultado');
+
+    const cidades = {
+      'SP': ['São Paulo', 'Campinas', 'Santos'],
+      'RJ': ['Rio de Janeiro', 'Niterói', 'Duque de Caxias'],
+      'MG': ['Belo Horizonte', 'Uberlândia', 'Juiz de Fora'],
+      'RS': ['Porto Alegre', 'Caxias do Sul', 'Pelotas'],
+    };
+
+    const unidades = {
+      'São Paulo': ['Unidade Centro', 'Unidade Zona Sul'],
+      'Campinas': ['Unidade Campinas I', 'Unidade Campinas II'],
+      'Rio de Janeiro': ['Unidade Centro RJ', 'Unidade Barra'],
+      'Belo Horizonte': ['Unidade BH Centro', 'Unidade BH Pampulha'],
+    };
+
+    ufSelect.addEventListener('change', function() {
+      const uf = this.value;
+      erroDiv.style.display = 'none';
+      cidadeSelect.innerHTML = '<option value="">Selecione a cidade</option>';
+      cidadeSelect.disabled = true;
+      unidadeSelect.innerHTML = '<option value="">Selecione primeiro a cidade</option>';
+      unidadeSelect.disabled = true;
+
+      if (uf && cidades[uf]) {
+        cidades[uf].forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c;
+          opt.textContent = c;
+          cidadeSelect.appendChild(opt);
+        });
+        cidadeSelect.disabled = false;
+      }
+    });
+
+    cidadeSelect.addEventListener('change', function() {
+      const cidade = this.value;
+      unidadeSelect.innerHTML = '<option value="">Selecione a unidade</option>';
+      unidadeSelect.disabled = true;
+
+      if (cidade && unidades[cidade]) {
+        unidades[cidade].forEach(u => {
+          const opt = document.createElement('option');
+          opt.value = u;
+          opt.textContent = u;
+          unidadeSelect.appendChild(opt);
+        });
+        unidadeSelect.disabled = false;
+      }
+    });
+
+    document.getElementById('main-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      if (!document.getElementById('uf').value) {
+        erroDiv.style.display = 'block';
+        resultadoDiv.style.display = 'none';
+        return;
+      }
+      const uf = document.getElementById('uf').value;
+      const cidade = document.getElementById('cidade-dependente').value || '(não selecionada)';
+      const unidade = document.getElementById('unidade').value || '(não selecionada)';
+      resultadoDiv.className = 'result success';
+      resultadoDiv.innerHTML = `<p>✅ Fluxo completo: UF=${uf}, Cidade=${cidade}, Unidade=${unidade}</p>`;
+      resultadoDiv.style.display = 'block';
+      erroDiv.style.display = 'none';
+    });
+  </script>
+</body>
+</html>

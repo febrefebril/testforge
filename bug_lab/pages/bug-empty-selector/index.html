@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BUG: Empty Selector — Reproduction</title>
+</head>
+<body>
+  <h1>Bug Lab — Empty Selector</h1>
+  <p id="status">Ready.</p>
+  <button id="save-btn" onclick="doSave()">Save</button>
+
+  <script>
+    let saved = false;
+    function doSave() {
+      saved = true;
+      document.getElementById("status").textContent = "Saved.";
+    }
+  </script>
+</body>
+</html>

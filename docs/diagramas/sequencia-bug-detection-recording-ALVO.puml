@@ -1,0 +1,98 @@
+@startuml sequencia-bug-detection-recording-ALVO
+title Bug Detection Durante Gravação — feature Fase 7 (nova)\nQuando QA está gravando aplicação crítica e ela apresenta bug,\nTestForge detecta automaticamente e captura o comportamento esperado.
+
+skinparam BackgroundColor #F0FDF4
+skinparam SequenceGroupBackgroundColor #DCFCE7
+
+actor "QA gravando" as QA
+participant "Browser\n(overlay_inject.js)" as OVERLAY
+participant "RecorderController\nrecorder_controller.py" as REC
+participant "AnomalyDetector\n(NOVO)\nrecorder/anomaly_detector.py" as ANO
+database "bug_report.jsonl\n+ steps.jsonl anot." as STORE
+participant "PlaywrightCompiler\n(atualizado)" as COMP
+database "test_st_*.py\n+ pytest.mark.known_bug" as GEN
+
+== Detecção automática (sem input do QA) ==
+
+QA -> OVERLAY: clica botão "Salvar" (esperando dialog sucesso)
+OVERLAY -> REC: emit raw_event(click, target=...)
+
+par Detectores paralelos
+  ANO -> OVERLAY: page.on("console") = mensagem "error" ou "assert"
+  ANO -> OVERLAY: page.on("pageerror") = uncaught JS exception
+  ANO -> OVERLAY: page.on("crash") = tab crashou
+  ANO -> OVERLAY: request/response 4xx/5xx via CDP
+  ANO -> OVERLAY: DOM diff pós-click: dialog esperado ausente\n  (heurística: click com role=button e texto "Salvar"\n  sem novo dialog OU nova URL OU h1 mudança em N ms)
+end
+
+ANO -> ANO: consolidar signals\n  {console_errors: [...], network: [{url, status: 500, body_snip}],\n   dom_expected_delta: "no dialog after Save click"}
+ANO -> REC: bug_suspect emitido
+activate REC
+
+== Prompt inline no browser (não CLI) ==
+
+REC -> OVERLAY: renderizar modal "🚨 Possível bug detectado"
+OVERLAY -> QA: mostrar modal\n  "Detectamos: 500 no POST /api/simulate\n   O botão Salvar não abriu dialog esperado.\n\n   Você esperava que isso acontecesse?"
+
+alt QA confirma: "É esperado (comportamento correto)"
+  QA -> OVERLAY: [OK — esperado]
+  OVERLAY -> REC: bug_suspect.dismissed_as_expected
+  note right of REC #DCFCE7
+    Salva metadata "expected_behavior_confirmed"
+    no evento — futuro run não vai flaggear igual.
+  end note
+else QA confirma: "É BUG na aplicação"
+  QA -> OVERLAY: [Sim, é bug]
+  OVERLAY -> QA: modal 2: "Qual seria o comportamento correto?"
+  QA -> OVERLAY: descreve: "Ao clicar Salvar deveria abrir dialog\n  'Simulação salva com sucesso' e limpar formulário."
+  OVERLAY -> REC: bug_confirmed(user_expected_behavior)
+  REC -> STORE: append bug_report.jsonl\n  {bug_id, timestamp, target, signals,\n   observed_behavior, user_expected_behavior,\n   severity_hint, screenshot_path,\n   network_trace_path}
+  REC -> STORE: anotar step em steps.jsonl\n  {step_idx, has_bug_ref: bug_id,\n   test_action: "skip" | "assert_current_broken_state"}
+else QA marca como bug do TestForge
+  QA -> OVERLAY: [Não é bug da aplicação, é do TestForge]
+  OVERLAY -> REC: telemetry.testforge_bug_report
+  note right: emit para telemetry_store.jsonl\n  como bug do produto próprio
+end
+
+deactivate REC
+
+== Compilação (pós-gravação) ==
+
+QA -> COMP: testforge compile <recording>
+COMP -> STORE: read bug_report.jsonl
+COMP -> COMP: para cada step com has_bug_ref, decidir mode:\n  - skip (BUG bloqueia flow): @pytest.mark.skip(reason=bug_id)\n  - assert_broken (documenta estado atual): assert_text("Error 500")\n  - warn_only (registra mas segue): logger.warning + segue
+COMP -> GEN: emit test_st_*.py com marks:\n\n  @pytest.mark.known_bug(\n    bug_id="BUG-BANK-2026-07-01",\n    detected_during_recording=True,\n    user_expected="Dialog 'Simulação salva'",\n    observed="500 POST /api/simulate")\n  def test_clica_salvar(self, page: Page):
+COMP -> GEN: emit docs/bugs/BUG-BANK-2026-07-01.md\n  (relatório human-readable p/ time dev do cliente)
+
+== Re-execução do teste ==
+
+TEST -> GEN: pytest run
+GEN -> GEN: teste com known_bug mark\n  - skip: pulado com reason visível\n  - assert_broken: passa se estado ainda broken (evita false-fail)\n  - se aplicação foi corrigida: assert_broken FALHA\n    → sinal para remover mark, teste vira sucesso normal
+
+legend right #D1FAE5
+  <b>Requisitos (aplicação testando aplicações críticas)</b>:
+  1. Detecção **automática** — QA não deve precisar apertar botão para reportar bug.
+  2. Prompt **no browser overlay**, nunca CLI (QA pode estar em GUI mode).
+  3. Captura do comportamento esperado — futuro fix da aplicação tem spec clara.
+  4. Diferenciação **bug da app testada** vs **bug do TestForge** vs **esperado**.
+  5. Código gerado documenta bug: `@pytest.mark.known_bug(...)` visível no test.
+  6. Se bug for corrigido depois, teste "acorda" automaticamente:
+     `assert_broken` deixa de bater → falha → QA remove mark.
+  7. Nunca perder o momento: bug detectado é bug capturado, mesmo se QA sair.
+
+  <b>Sinais de detecção mínimos</b>:
+  - Console errors (severidade >= "error")
+  - Network status 4xx / 5xx em request originado por ação recente
+  - PageError JS uncaught
+  - Page crash
+  - DOM diff post-action: elemento esperado (role=dialog, h1 mudança, redirect) ausente após N ms
+  - Fill em campo com validação nativa que aceita valor invalid (regex mismatch)
+
+  <b>Módulos novos</b>:
+  - `src/testforge/recorder/anomaly_detector.py`
+  - `src/testforge/models/bug_report.py` (dataclass BugReport)
+  - Extensão em `overlay_inject.js` (modal bug detection)
+  - Extensão em `semantic/compiler.py` (emit pytest.mark.known_bug)
+end legend
+
+@enduml

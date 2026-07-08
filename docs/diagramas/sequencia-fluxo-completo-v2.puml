@@ -1,0 +1,138 @@
+@startuml
+title TestForge v2 — Sequence: Record -> Compile v2 -> Run (Phases 1-7)
+
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 10
+
+actor "QA" as QA
+
+box "Recorder" #E0F2FE
+participant "CLI\nrecord" as CLI_R
+participant "RecorderController" as REC
+participant "TracingManager\n(Phase 1)" as TM
+participant "CDPSnapshotter\n(Phase 1)" as CDP
+participant "overlay_inject.js" as OV
+end box
+
+box "Storage" #FEF3C7
+database "raw_events.jsonl\n+ steps.jsonl\n+ ax_snapshots/\n+ trace.zip" as STORE
+end box
+
+box "Compile" #DCFCE7
+participant "CLI\ncompile --use-v2-compiler" as CLI_C
+participant "RecordingNormalizer\nuse_pipeline" as NORM
+participant "Pipes&Filters Stages\n(Phase 5)" as STG
+participant "LocatorExtractor v2\n(Phase 2)" as EXT
+participant "PlaywrightCompiler\n.compile_v2()" as COMP
+database "test_<id>.py\n+ candidates/step_NNN.json\n+ test_data.json" as GEN
+end box
+
+box "Runtime" #F3E8FF
+participant "CLI\nrun (pytest)" as CLI_X
+participant "runtime.step.*\n(Phase 3)" as STEP
+participant "LocatorResolver\n(Phase 3+4)" as RES
+participant "IntentCatalog\nSQLite (Phase 4)" as SQL
+participant "_pw_dispatch\nAST allowlist" as DISP
+participant "ComponentResolver\nYAML (Phase 7)" as CR
+participant "Telemetry\n(Phase 6)" as TEL
+end box
+
+== Phase 1: Record ==
+QA -> CLI_R: testforge record <url>\n  --use-cdp-recorder
+CLI_R -> REC: start(use_cdp=True)
+REC -> TM: tracing.start(snapshots,sources,screenshots)
+REC -> CDP: attach() + enable AX domain
+REC -> OV: inject overlay_inject.js
+
+QA -> OV: click / fill / Shift+A assert
+OV -> OV: __tfEventQueue.push(...)
+CLI_R -> REC: flush_events() (poll)
+REC -> CDP: getFullAXTree()
+CDP --> REC: ax tree dict
+REC -> STORE: append raw_event\n  + ax_snapshot_path
+
+QA -> OV: Shift+S stop
+OV -> OV: __tfCommandQueue.push('STOP')
+CLI_R -> REC: stop()
+REC -> TM: stop() -> trace.zip
+REC -> CDP: detach()
+REC -> STORE: finalize
+
+== Phase 2-5: Compile v2 ==
+QA -> CLI_C: testforge compile <rec> --use-v2-compiler --data
+CLI_C -> NORM: normalize(rec_dir, use_v2_locator=True, use_pipeline=True)
+
+NORM -> STG: Pipeline.run(ctx)
+note right of STG
+ LoadStage   -> ctx.raw_events
+ DedupStage  -> remove snapshot cycles
+ CompactStage-> keypress + fill collapse
+ AuditStage  -> blind spots
+end note
+
+loop per converted action
+  NORM -> EXT: extract(target_data)
+  EXT -> EXT: attribute_stability per attr\n  + emit_playwright_call\n  + normalize_intent
+  EXT --> NORM: LocatorCandidate[] with\n  playwright_call, intent_text,\n  attribute_stability
+end
+
+NORM --> CLI_C: SemanticTestCase
+
+CLI_C -> COMP: compile_v2(stc, out_dir)
+loop per step
+  COMP -> GEN: candidates/step_NNN.json
+  COMP -> GEN: append step.<verb>(page,...) line
+end
+COMP -> GEN: test_<id>.py minimal\n  (4 imports + 1 line/step)
+
+CLI_C -> GEN: test_data.json\n  (fields + sensitive_alerts)
+
+== Phase 3+4+6: Run ==
+QA -> CLI_X: pytest test_<id>.py
+
+CLI_X -> STEP: step.click(page, intent, candidates_file)
+STEP -> TEL: start_span("step.click")
+STEP -> RES: resolve(intent, candidates, action)
+RES -> TEL: start_span("resolve")
+
+alt L0a memory hit
+  RES -> RES: cache lookup
+  RES --> STEP: cached Locator
+else L0b SQLite hit
+  RES -> SQL: lookup(intent, url, action)
+  SQL --> RES: IntentResolution
+  RES -> DISP: dispatch(page, resolved_call)
+  DISP --> RES: Locator
+else L1 candidates
+  loop per candidate by score
+    RES -> DISP: dispatch(page, playwright_call)
+    DISP -> DISP: ast.parse + allowlist check
+    DISP --> RES: Locator (or skip)
+  end
+  RES -> SQL: record_success(intent, resolved_call,\n  attributes_at_record)
+end
+
+RES -> TEL: end_span (level, strategy, score, ms)
+RES --> STEP: Locator
+
+STEP -> CR: find_handler(step) [optional Phase 7]
+CR -> CR: match YAML patterns
+CR --> STEP: backend handler or None
+
+STEP -> STEP: locator.click() + wait
+STEP -> TEL: end_span("step.click")
+
+note over TEL
+ .testforge/spans.jsonl
+ schema: OTel-compatible
+ (trace_id, span_id, parent, attrs)
+end note
+
+== Phase 6: Observability ==
+QA -> CLI_X: testforge dashboard
+CLI_X -> CLI_X: read spans.jsonl + intent_catalog.sqlite
+CLI_X -> GEN: reports/dashboard.html\n  (Chart.js, zero infra)
+
+QA -> CLI_X: open trace.zip in trace.playwright.dev
+@enduml

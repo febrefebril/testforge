@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Dynamic Result — Resultado Dinâmico</title>
+  <style>
+    body { font-family: sans-serif; max-width: 500px; margin: 2em auto; }
+    label { display: block; margin-top: 1em; }
+    input, select { width: 100%; padding: 0.5em; margin-top: 0.25em; box-sizing: border-box; }
+    button { margin-top: 1.5em; padding: 0.5em 2em; }
+    .result { margin-top: 1em; padding: 1em; border-radius: 4px; }
+    .result.success { background: #e8f5e9; }
+    .result.info { background: #e3f2fd; }
+  </style>
+</head>
+<body>
+  <h1>Resultado Dinâmico</h1>
+  <p>O resultado muda conforme os dados de entrada — o assert não pode depender de valor fixo.</p>
+
+  <form id="calc-form">
+    <label for="valor1">Valor 1</label>
+    <input id="valor1" name="valor1" type="number" placeholder="Primeiro valor" />
+
+    <label for="operacao">Operação</label>
+    <select id="operacao" name="operacao">
+      <option value="soma">Soma (+)</option>
+      <option value="subtracao">Subtração (-)</option>
+      <option value="multiplicacao">Multiplicação (×)</option>
+      <option value="divisao">Divisão (÷)</option>
+    </select>
+
+    <label for="valor2">Valor 2</label>
+    <input id="valor2" name="valor2" type="number" placeholder="Segundo valor" />
+
+    <button type="submit" id="btn-calcular">Calcular</button>
+  </form>
+
+  <div id="resultado" class="result" style="display:none">
+    <p><strong>Resultado:</strong> <span id="result-value"></span></p>
+  </div>
+
+  <div id="historico" class="result info" style="display:none">
+    <p><strong>Últimos cálculos:</strong></p>
+    <ul id="historico-lista"></ul>
+  </div>
+
+  <script>
+    let calcCount = 0;
+
+    document.getElementById('calc-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const v1 = parseFloat(document.getElementById('valor1').value) || 0;
+      const v2 = parseFloat(document.getElementById('valor2').value) || 0;
+      const op = document.getElementById('operacao').value;
+      let result;
+      switch (op) {
+        case 'soma': result = v1 + v2; break;
+        case 'subtracao': result = v1 - v2; break;
+        case 'multiplicacao': result = v1 * v2; break;
+        case 'divisao': result = v2 !== 0 ? v1 / v2 : 'Erro: divisão por zero'; break;
+        default: result = 0;
+      }
+      document.getElementById('result-value').textContent = result;
+      document.getElementById('resultado').style.display = 'block';
+
+      calcCount++;
+      const li = document.createElement('li');
+      li.textContent = `${v1} ${op} ${v2} = ${result} (calc #${calcCount})`;
+      document.getElementById('historico-lista').appendChild(li);
+      document.getElementById('historico').style.display = 'block';
+    });
+  </script>
+</body>
+</html>

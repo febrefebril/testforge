@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>🧪 TestForge — Epic F: Widgets JS Customizados</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 40px; background: #1a1a2e; color: #eee; }
+h1 { font-size: 24px; margin-bottom: 8px; }
+.sub { color: #aaa; margin-bottom: 32px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+.card {
+  background: #16213e; border-radius: 12px; padding: 24px; text-decoration: none; color: #eee;
+  border: 1px solid #0f3460; transition: all 0.2s; display: block;
+}
+.card:hover { border-color: #e94560; transform: translateY(-2px); }
+.card h2 { font-size: 18px; margin-bottom: 8px; }
+.card .framework { font-size: 12px; color: #e94560; text-transform: uppercase; letter-spacing: 1px; }
+.card p { font-size: 13px; color: #aaa; margin-top: 8px; line-height: 1.5; }
+.card .widgets { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+.card .tag { background: #0f3460; padding: 2px 8px; border-radius: 4px; font-size: 11px; color: #8ab4f8; }
+.status { margin-top: 40px; padding: 16px; background: #16213e; border-radius: 8px; font-size: 13px; border-left: 3px solid #e94560; }
+.status code { background: #0f3460; padding: 1px 6px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<h1>🧪 TestForge — Páginas de Teste: Widgets JS Customizados</h1>
+<p class="sub">Epic F: Páginas para validar detecção, gravação e execução de widgets PrimeFaces, jQuery UI, Kendo UI e Angular Material.</p>
+
+<div class="grid">
+  <a class="card" href="primefaces.html">
+    <div class="framework">PrimeFaces 12 (Simulado)</div>
+    <h2>SelectOneMenu + AutoComplete</h2>
+    <p>DOM idêntico ao PrimeFaces real. Testa detecção de <code>ui-selectonemenu</code>, <code>ui-autocomplete</code>, hidden select, e page_technology via PrimeFaces.widgets.</p>
+    <div class="widgets">
+      <span class="tag">SelectOneMenu</span>
+      <span class="tag">AutoComplete</span>
+      <span class="tag">Hidden select</span>
+      <span class="tag">PrimeFaces.widgets</span>
+    </div>
+  </a>
+
+  <a class="card" href="jqueryui-selectmenu.html">
+    <div class="framework">jQuery UI 1.13 (CDN)</div>
+    <h2>SelectMenu Nativo</h2>
+    <p>Widget <code>selectmenu</code> nativo do jQuery UI. Carregado via CDN. Testa detecção de <code>$.ui.selectmenu</code> e integração com <code>page_technology</code>.</p>
+    <div class="widgets">
+      <span class="tag">jQuery UI</span>
+      <span class="tag">selectmenu</span>
+      <span class="tag">$.ui</span>
+    </div>
+  </a>
+
+  <a class="card" href="kendo-dropdown.html">
+    <div class="framework">Kendo UI 2023.3 (CDN)</div>
+    <h2>DropDownList</h2>
+    <p>Widget <code>kendoDropDownList</code> nativo. Carregado via CDN Telerik. Testa detecção de <code>kendo</code> no window e fallback via <code>$el.data('kendoDropDownList')</code>.</p>
+    <div class="widgets">
+      <span class="tag">Kendo UI</span>
+      <span class="tag">DropDownList</span>
+      <span class="tag">kendo.all.min.js</span>
+    </div>
+  </a>
+
+  <a class="card" href="angular-select.html">
+    <div class="framework">Angular Material (Estrutura DOM)</div>
+    <h2>mat-select (ARIA)</h2>
+    <p>Estrutura DOM idêntica ao <code>mat-select</code> do Angular Material. Usa <code>role="listbox"</code> + <code>role="option"</code> para detecção ARIA genérica.</p>
+    <div class="widgets">
+      <span class="tag">mat-select</span>
+      <span class="tag">ARIA listbox</span>
+      <span class="tag">role="option"</span>
+    </div>
+  </a>
+</div>
+
+<div class="status">
+<strong>📋 Instruções:</strong><br>
+1. Inicie um servidor HTTP: <code>cd testes/pagina-de-teste/primefaces && python3 -m http.server 8081</code><br>
+2. Grave interações: <code>testforge record http://localhost:8081/primefaces.html --name teste-primefaces</code><br>
+3. Execute: <code>testforge run teste-primefaces.py --headed --debug</code>
+</div>
+
+<script>
+console.log('[Epic F] Páginas de teste carregadas');
+</script>
+</body>
+</html>

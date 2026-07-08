@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>FAM-04: Estado — Input Disabled</title>
+<script src="../common.js"></script>
+<script src="error.js"></script>
+</head>
+<body>
+  <h1>FAM-04: Input Disabled (Estado)</h1>
+  <input type="text" id="campo-nome" name="nome" placeholder="Digite seu nome">
+  <button id="btn-enviar">Enviar</button>
+  <p id="result"></p>
+  <script>
+    document.getElementById("btn-enviar").addEventListener("click", function() {
+      var nome = document.getElementById("campo-nome").value;
+      document.getElementById("result").textContent = "Olá, " + nome + "!";
+    });
+  </script>
+</body>
+</html>

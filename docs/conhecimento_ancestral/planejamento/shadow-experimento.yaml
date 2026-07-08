@@ -1,0 +1,121 @@
+version: "1.0"
+kind: "ShadowModeExperimentPlan"
+experiment_id: "testforge-shadow-sioapi-001"
+application: "SIOPI"
+mode: "shadow"
+
+goals:
+  primary: "Validar assertividade do healing determinístico antes do auto-heal."
+  secondary:
+    - "Medir falso healing."
+    - "Medir necessidade de LLM."
+    - "Medir impacto no tempo de execução."
+
+hypotheses:
+  - id: "H1"
+    statement: "Fallback/healing determinístico sugere curas corretas para falhas recuperáveis de locator."
+    success_metric: "precision >= 0.95"
+  - id: "H2"
+    statement: "Falso healing permanece abaixo do limite aceitável."
+    success_metric: "false_heal_rate < 0.02"
+  - id: "H3"
+    statement: "LLM permanece como exceção, não como mecanismo principal."
+    success_metric: "llm_escalation_rate < 0.10"
+
+sample:
+  flows_min: 5
+  flows_target: 10
+  data_variations_per_flow: 3
+  user_profiles_min: 2
+  viewports:
+    - "desktop_default"
+    - "desktop_alternative"
+  minimum_reviewed_heal_suggestions: 100
+
+execution_modes:
+  - name: "baseline"
+    description: "Teste atual sem healing."
+  - name: "candidate_mode"
+    description: "MIS e ranking, sem healing."
+  - name: "shadow_mode"
+    description: "Sugere healing, valida oracle e registra evidência, mas não aplica."
+  - name: "auto_heal_canary"
+    description: "Auto-heal limitado após aprovação do shadow mode."
+
+metrics:
+  required:
+    - "pass_rate"
+    - "locator_failure_rate"
+    - "recoverable_locator_failure_rate"
+    - "heal_suggestion_rate"
+    - "true_positive_heal_rate"
+    - "false_heal_rate"
+    - "quarantine_rate"
+    - "llm_escalation_rate"
+    - "mean_extra_runtime_percent"
+    - "post_action_oracle_pass_rate"
+    - "human_review_agreement_rate"
+
+promotion_criteria:
+  false_heal_rate_max: 0.02
+  precision_min: 0.95
+  llm_escalation_rate_max: 0.10
+  require_evidence_package: true
+  require_post_action_oracle: true
+  min_reviewed_suggestions: 100
+  critical_false_heals_allowed: 0
+
+kill_criteria:
+  false_heal_rate_gte: 0.02
+  critical_false_heal_gte: 1
+  mean_extra_runtime_percent_gt: 20
+  llm_escalation_rate_gt: 0.20
+  missing_evidence_package: true
+  missing_post_action_oracle: true
+
+oracle_policy:
+  minimum_oracles_per_action: 2
+  require_business_oracle_for_promotion: true
+  allowed_families:
+    - "visual_dom"
+    - "url_route"
+    - "network"
+    - "field_value"
+    - "system_message"
+    - "business_state"
+    - "test_api_or_database"
+    - "accessibility_state"
+
+taxonomy_policy:
+  common_core:
+    - "LOCATOR_NOT_FOUND"
+    - "LOCATOR_AMBIGUOUS"
+    - "ACTIONABILITY_NOT_VISIBLE"
+    - "ACTIONABILITY_DISABLED"
+    - "ACTIONABILITY_OBSCURED"
+    - "ASSERTION_FAILED"
+    - "NETWORK_FAILURE"
+    - "AUTHORIZATION_FAILURE"
+    - "TEST_DATA_FAILURE"
+    - "FRAME_CONTEXT_FAILURE"
+    - "SHADOW_DOM_CONTEXT_FAILURE"
+    - "TECHNOLOGY_SPECIFIC_FAILURE"
+  technology_extensions:
+    react_angular_vue:
+      - "GENERATED_ID_CHANGED"
+      - "VIRTUAL_DOM_RERENDER"
+      - "HYDRATION_DELAY"
+      - "COMPONENT_STATE_NOT_READY"
+    jsf_primefaces:
+      - "NAMING_CONTAINER_ID_CHANGED"
+      - "AJAX_PARTIAL_UPDATE"
+      - "COMPONENT_OVERLAY"
+      - "DYNAMIC_CLIENT_ID"
+    iframe:
+      - "WRONG_FRAME"
+      - "FRAME_NOT_LOADED"
+      - "CROSS_ORIGIN_FRAME"
+    shadow_dom:
+      - "SHADOW_ROOT_CLOSED"
+      - "SLOT_PROJECTION_CHANGED"
+      - "COMPONENT_BOUNDARY_CHANGED"

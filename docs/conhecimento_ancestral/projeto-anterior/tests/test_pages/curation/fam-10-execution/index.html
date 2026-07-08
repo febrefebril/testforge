@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>FAM-10: Execution</title>
+<script src="../common.js"></script>
+<script src="error.js"></script>
+</head>
+<body>
+  <h1>FAM-10: Execução</h1>
+  <button id="btn-alert">Mostrar Alert</button>
+  <p id="result"></p>
+  <script>
+    document.getElementById("btn-alert").addEventListener("click", function() {
+      alert("Alerta de exemplo");
+      document.getElementById("result").textContent = "Alert fechado!";
+    });
+  </script>
+</body>
+</html>

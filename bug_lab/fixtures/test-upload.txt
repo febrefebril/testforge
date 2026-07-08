@@ -1,0 +1,2 @@
+Hello from TestForge fixture file!
+This file is used to test file upload via set_input_files.

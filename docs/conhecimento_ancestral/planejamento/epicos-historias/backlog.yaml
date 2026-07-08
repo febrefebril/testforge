@@ -1,0 +1,133 @@
+version: "0.2.0"
+artifact: "TestForge Backlog Inicial de Épicos e Histórias"
+status: "draft"
+owner: "Andre Perotti Netto"
+updated_at: "2026-06-12"
+
+principles:
+  - "Determinístico primeiro."
+  - "LLM apenas como curadoria."
+  - "Nenhum healing sem evidência."
+  - "Nenhuma promoção sem Promotion Gate."
+  - "EvidenceCollector em modo alert_only para dados sensíveis no MVP."
+
+epics:
+  - id: "EP-00"
+    title: "Fundação do Produto e Governança"
+    stories:
+      - id: "US-00.01"
+        title: "Criar estrutura inicial do repositório"
+      - id: "US-00.02"
+        title: "Versionar plano macro como artefato normativo"
+      - id: "US-00.03"
+        title: "Definir política inicial de dados sensíveis nas evidências"
+
+  - id: "EP-01"
+    title: "Synthetic Lab Mínimo"
+    stories:
+      - id: "US-01.01"
+        title: "Criar fake-react-bank-app"
+      - id: "US-01.02"
+        title: "Implementar mutação change_id"
+      - id: "US-01.03"
+        title: "Implementar mutação duplicate_button_text"
+      - id: "US-01.04"
+        title: "Implementar mutação overlay_blocks_click"
+      - id: "US-01.05"
+        title: "Criar matriz de mutações sintéticas"
+
+  - id: "EP-02"
+    title: "EvidenceCollector e EvidenceStore"
+    stories:
+      - id: "US-02.01"
+        title: "Implementar EvidenceCollector básico com Playwright"
+      - id: "US-02.02"
+        title: "Persistir evidências em SQLite"
+      - id: "US-02.03"
+        title: "Criar query de casos pendentes de revisão"
+
+  - id: "EP-03"
+    title: "Modelo Intermediário Semântico"
+    stories:
+      - id: "US-03.01"
+        title: "Definir schema do Semantic Test Case"
+      - id: "US-03.02"
+        title: "Converter RawRecordedEvent para SemanticAction"
+      - id: "US-03.03"
+        title: "Gerar candidatos de locator a partir do SemanticTarget"
+
+  - id: "EP-04"
+    title: "Ranking, Uniqueness e Fallback Determinístico"
+    stories:
+      - id: "US-04.01"
+        title: "Implementar LocatorScorer determinístico"
+      - id: "US-04.02"
+        title: "Calcular uniqueness score"
+      - id: "US-04.03"
+        title: "Validar actionability por tipo de ação"
+      - id: "US-04.04"
+        title: "Executar fallback determinístico"
+
+  - id: "EP-05"
+    title: "Taxonomia e Classificação de Falhas"
+    stories:
+      - id: "US-05.01"
+        title: "Implementar taxonomia core"
+      - id: "US-05.02"
+        title: "Criar TaxonomyRouter"
+      - id: "US-05.03"
+        title: "Adicionar extensão React"
+      - id: "US-05.04"
+        title: "Adicionar extensão Angular"
+
+  - id: "EP-06"
+    title: "Shadow Mode"
+    stories:
+      - id: "US-06.01"
+        title: "Criar ShadowHealingObservation"
+      - id: "US-06.02"
+        title: "Implementar ShadowValidator"
+      - id: "US-06.03"
+        title: "Medir falso healing"
+
+  - id: "EP-07"
+    title: "Oracle Pós-Ação"
+    stories:
+      - id: "US-07.01"
+        title: "Implementar oracle visual/DOM"
+      - id: "US-07.02"
+        title: "Implementar oracle de valor de campo"
+      - id: "US-07.03"
+        title: "Implementar oracle de negócio mínimo"
+      - id: "US-07.04"
+        title: "Medir precisão do oracle"
+
+  - id: "EP-08"
+    title: "Promotion Gate"
+    stories:
+      - id: "US-08.01"
+        title: "Implementar estados de promoção"
+      - id: "US-08.02"
+        title: "Bloquear promoção sem evidência completa"
+      - id: "US-08.03"
+        title: "Bloquear promoção por falso healing"
+      - id: "US-08.04"
+        title: "Integrar PromotionGate ao fluxo do shadow mode"
+
+  - id: "EP-09"
+    title: "Curadoria LLM Controlada"
+    stories:
+      - id: "US-09.01"
+        title: "Definir contrato de entrada da LLM"
+      - id: "US-09.02"
+        title: "Registrar proposta da LLM como curadoria"
+
+  - id: "EP-10"
+    title: "Piloto Real e Canary"
+    stories:
+      - id: "US-10.01"
+        title: "Selecionar fluxos reais piloto"
+      - id: "US-10.02"
+        title: "Rodar shadow mode em piloto real"
+      - id: "US-10.03"
+        title: "Habilitar canary controlado"

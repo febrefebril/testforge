@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Iframe Field — Campo em iframe same-origin</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 2em auto; }
+    iframe { width: 100%; height: 200px; border: 1px solid #ccc; margin-top: 1em; }
+    .result { margin-top: 1em; padding: 1em; background: #e8f5e9; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Campo dentro de Iframe</h1>
+  <p>O formulário abaixo está dentro de um iframe same-origin.</p>
+
+  <label>Campo fora do iframe</label>
+  <input id="campo-externo" name="campo_externo" placeholder="Campo externo" />
+
+  <iframe id="meu-iframe" srcdoc="
+    <!DOCTYPE html>
+    <html><body style='font-family:sans-serif;padding:1em'>
+      <h3>Formulário no Iframe</h3>
+      <label for='nome-iframe'>Nome</label>
+      <input id='nome-iframe' name='nome_iframe' placeholder='Nome no iframe' />
+      <label for='email-iframe' style='display:block;margin-top:0.5em'>Email</label>
+      <input id='email-iframe' name='email_iframe' placeholder='Email no iframe' />
+      <button id='btn-iframe'>Enviar Iframe</button>
+      <p id='result-iframe' style='margin-top:0.5em'></p>
+      <script>
+        document.getElementById('btn-iframe').addEventListener('click', function() {
+          var nome = document.getElementById('nome-iframe').value;
+          var email = document.getElementById('email-iframe').value;
+          document.getElementById('result-iframe').textContent = 'Iframe: ' + nome + ' / ' + email;
+        });
+      <\/script>
+    </body></html>
+  "></iframe>
+
+  <button id="btn-finalizar">Finalizar</button>
+  <div class="result" id="resultado" style="display:none">
+    ✅ Fluxo completo com iframe
+  </div>
+
+  <script>
+    document.getElementById('btn-finalizar').addEventListener('click', function() {
+      document.getElementById('resultado').style.display = 'block';
+    });
+  </script>
+</body>
+</html>

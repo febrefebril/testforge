@@ -1,0 +1,123 @@
+@startuml
+title TestForge v2 — Flowchart Pipeline (Phase 1-7)
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontSize 12
+skinparam ActivityDiamondBackgroundColor #FEF3C7
+
+|#E0F2FE|Recorder|
+start
+:RecorderController.start(use_cdp=True|False);
+:page.goto(BASE_URL);
+note right
+  Phase 1 (use_cdp=True):
+  ✦ TracingManager.start()
+    -> trace.zip per session
+  ✦ CDPSnapshotter.attach()
+    -> Accessibility domain
+end note
+:Inject overlay_inject.js
+(UI panel + keyboard shortcuts);
+
+repeat
+  :User interacts
+  click, fill, select_option;
+  if (Shift+A pressed?) then (yes)
+    :Assert mode
+    User picks element
+    Choose: text/state/visible/auto;
+    :_addStep('assert', el, type)
+    -> steps.jsonl;
+  elseif (Shift+P?) then (yes)
+    :Toggle pause;
+  elseif (Shift+S?) then (yes)
+    :Confirm stop;
+    break
+  else (no)
+    :JS captures event
+    -> __tfEventQueue;
+    :CLI flush_events()
+    page.evaluate() reads queues;
+    :_persist_raw_event()
+    -> raw_events.jsonl
+    + ax_snapshots/<id>.json (Phase 1);
+  endif
+repeat while (recording active?)
+
+|#FEF3C7|Compile|
+:RecordingNormalizer.normalize()
+use_pipeline=True
+   -> Phase 5 stages: Load -> Dedup
+      -> Compact -> Convert -> Audit;
+:Build LocatorCandidates
+use_v2_locator=True
+   -> Phase 2 super-selector:
+   role, accessible_name, ax_path,
+   attribute_stability, playwright_call,
+   intent_text;
+
+if (--use-v2-compiler?) then (yes)
+  |#DCFCE7|v2 Compiler (Phase 3)|
+  :PlaywrightCompiler.compile_v2()
+   -> candidates/step_NNN.json per step
+   -> test_<id>.py minimal:
+        step.click(page, intent, candidates_file)
+        step.fill(page, intent, value, candidates_file)
+        step.assert_text(page, intent, expected, candidates_file);
+else (no)
+  |#FECACA|Legacy Compiler|
+  :PlaywrightCompiler.compile()
+   -> test_<id>.py with inline try/except
+   -> 600+ lines for fallback chain;
+endif
+
+if (--data?) then (yes)
+  :data_extractor.py
+  -> test_data.json
+  fields + sensitive_alerts
+  + optional scenarios;
+endif
+
+|#E0F2FE|Run|
+:pytest test_<id>.py;
+
+repeat
+  :Next step;
+  if (v2 script?) then (yes)
+    |#DCFCE7|runtime.step.* (Phase 3+6)|
+    :tracer.start_span("step.<verb>");
+    :_resolver.resolve(intent, candidates)
+       L0a: in-memory cache hit?
+       L0b: SQLite IntentCatalog hit? (Phase 4)
+       L1: walk candidates by score;
+    :LocatorResolver returns Locator;
+    :locator.click() / fill() / select_option()
+    + Tab press for Angular blur;
+    :tracer.end_span()
+    -> .testforge/spans.jsonl;
+  else (legacy)
+    :Inline try/except chain
+    legacy fallback_runner + healing L0-L3;
+  endif
+repeat while (more steps?)
+
+if (failures occurred?) then (yes)
+  |#FECACA|Healing L0-L3|
+  :L0: HealingCatalog substring match
+  L2: 6 specialist agents
+  L3: LLMHealer (Azure GPT-4.1-mini or Mock);
+  :Update SQLite catalog
+  record_heal(attributes_at_heal);
+endif
+
+|#F3E8FF|Report|
+:testforge dashboard (Phase 6)
+   -> reports/dashboard.html
+   reads .testforge/spans.jsonl
+        + intent_catalog.sqlite
+        + pilot_metrics;
+:Open trace.zip at trace.playwright.dev
+(Phase 1 artifact);
+
+stop
+@enduml

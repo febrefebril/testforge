@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Form Submit Values</title>
+<style>
+  body { font-family: sans-serif; max-width: 500px; margin: 40px auto; padding: 20px; }
+  label { display: block; margin-top: 16px; font-weight: bold; }
+  input { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
+  button { margin-top: 20px; padding: 10px 24px; background: #006600; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+  .note { color: #666; font-size: 0.85em; margin-top: 4px; }
+</style>
+</head>
+<body>
+  <h1>Form Submit Values</h1>
+  <p>Form where campos sem input event sao resolvidos pelo submit.</p>
+  <form id="testForm" action="/submit" method="POST">
+    <label for="nome">Nome</label>
+    <input type="text" id="nome" name="nome" placeholder="Nome completo">
+    <p class="note">Campo normal com input event.</p>
+
+    <label for="telefone">Telefone</label>
+    <input type="text" id="telefone" name="telefone" placeholder="Telefone (sem input event)">
+    <p class="note">Campo onde input event e suprimido. Valor vai direto no submit.</p>
+
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" placeholder="email@exemplo.com">
+
+    <button type="submit" id="enviar">Enviar</button>
+  </form>
+
+  <div id="output" style="margin-top: 20px;"></div>
+
+  <script>
+    // Suppress input event on telefone field
+    document.getElementById('telefone').addEventListener('input', function(e) {
+      e.preventDefault();
+    });
+
+    // Set value programmatically on telefone (no input event)
+    document.getElementById('telefone').addEventListener('keyup', function(e) {
+      if (e.key.length === 1) {
+        this.value = this.value + e.key;
+      }
+    });
+
+    document.getElementById('testForm').addEventListener('submit', function(e) {
+      // Do NOT prevent default — let form submit naturally
+      // Values will be captured by the overlay's form_values handler
+      console.log('Submitting form with nome=' + document.getElementById('nome').value +
+        ', telefone=' + document.getElementById('telefone').value +
+        ', email=' + document.getElementById('email').value);
+    });
+  </script>
+</body>
+</html>

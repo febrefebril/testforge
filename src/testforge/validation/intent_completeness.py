@@ -1,0 +1,660 @@
+"""TestForge — Verificador de Completude de Intencao.
+
+Valida que todos os campos necessarios em uma gravacao tem valores confiaveis.
+Produz relatorios estruturados e classifica o status de completude de cada campo.
+"""
+
+import json
+import os
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from enum import Enum
+from typing import Optional
+
+
+class FieldCompleteness(str, Enum):
+    """Classificacao para o estado de completude de cada campo."""
+    resolved = "resolved"
+    resolved_with_warning = "resolved_with_warning"
+    review_required = "review_required"
+    missing = "missing"
+
+
+@dataclass
+class FieldStatus:
+    """Status de completude para um unico campo."""
+    field_key: str
+    label: str
+    placeholder: str = ""
+    element_id: str = ""
+    name: str = ""
+    selector: str = ""
+    step_index: int = -1
+    value: str = ""
+    source: str = ""
+    completeness: FieldCompleteness = FieldCompleteness.missing
+    reason: str = ""
+    identifiers: dict = field(default_factory=dict)
+
+
+@dataclass
+class CompletenessReport:
+    """Relatorio completo de completude para uma gravacao."""
+    recording_id: str = ""
+    application: str = ""
+    base_url: str = ""
+    fields: list = field(default_factory=list)
+    total_fields: int = 0
+    resolved_count: int = 0
+    resolved_with_warning_count: int = 0
+    review_required_count: int = 0
+    missing_count: int = 0
+    is_complete: bool = False
+    generated_at: str = ""
+
+    def __post_init__(self):
+        if not self.generated_at:
+            self.generated_at = datetime.now(timezone.utc).isoformat()
+
+    @property
+    def pending_fields(self) -> list:
+        """Campos que precisam de atencao do usuario (ausentes ou revisao_requerida)."""
+        return [f for f in self.fields
+                if f.completeness in (FieldCompleteness.missing,
+                                      FieldCompleteness.review_required)]
+
+    @property
+    def captured_fields(self) -> list:
+        """Campos que foram resolvidos com sucesso."""
+        return [f for f in self.fields
+                if f.completeness == FieldCompleteness.resolved]
+
+    @property
+    def synthesized_fields(self) -> list:
+        """Campos resolvidos por sintese (nao captura direta)."""
+        return [f for f in self.fields
+                if f.completeness == FieldCompleteness.resolved_with_warning]
+
+    def to_dict(self) -> dict:
+        """Serializa relatorio para dicionario."""
+        return {
+            "recording_id": self.recording_id,
+            "application": self.application,
+            "base_url": self.base_url,
+            "generated_at": self.generated_at,
+            "summary": {
+                "total_fields": self.total_fields,
+                "resolved": self.resolved_count,
+                "resolved_with_warning": self.resolved_with_warning_count,
+                "review_required": self.review_required_count,
+                "missing": self.missing_count,
+                "is_complete": self.is_complete,
+                "pending": len(self.pending_fields),
+            },
+            "fields": [
+                {
+                    "field_key": f.field_key,
+                    "label": f.label,
+                    "placeholder": f.placeholder,
+                    "element_id": f.element_id,
+                    "name": f.name,
+                    "selector": f.selector,
+                    "step_index": f.step_index,
+                    "value": f.value,
+                    "source": f.source,
+                    "completeness": f.completeness.value,
+                    "reason": f.reason,
+                    "identifiers": f.identifiers,
+                }
+                for f in self.fields
+            ],
+        }
+
+    def to_markdown(self) -> str:
+        """Gera relatorio markdown legivel por humanos."""
+        lines = [
+            f"# Relatorio de Completude de Intencao",
+            f"",
+            f"**Recording:** {self.recording_id}",
+            f"**Application:** {self.application or 'N/A'}",
+            f"**Generated:** {self.generated_at}",
+            f"",
+            f"## Summary",
+            f"",
+            f"| Metric | Value |",
+            f"|--------|-------|",
+            f"| Total Fields | {self.total_fields} |",
+            f"| [OK] Resolvido | {self.resolved_count} |",
+            f"| [AVISO] Resolvido (Aviso) | {self.resolved_with_warning_count} |",
+            f"| [REVISAO] Revisao Requerida | {self.review_required_count} |",
+            f"| [FAIL] Ausente | {self.missing_count} |",
+            f"| **Completo** | **{'[OK] Sim' if self.is_complete else '[FAIL] Nao'}** |",
+            f"",
+        ]
+
+        if self.captured_fields:
+            lines.extend([
+                f"## [OK] Campos Capturados",
+                f"",
+                f"| Field | Value | Source | Step |",
+                f"|-------|-------|--------|------|",
+            ])
+            for f in self.captured_fields:
+                lines.append(
+                    f"| {f.label or f.field_key} | {f.value or '(empty)'} "
+                    f"| {f.source} | {f.step_index} |"
+                )
+            lines.append("")
+
+        if self.synthesized_fields:
+            lines.extend([
+                f"## [AVISO] Campos Sintetizados",
+                f"",
+                f"| Field | Value | Source | Reason | Step |",
+                f"|-------|-------|--------|--------|------|",
+            ])
+            for f in self.synthesized_fields:
+                lines.append(
+                    f"| {f.label or f.field_key} | {f.value or '(empty)'} "
+                    f"| {f.source} | {f.reason} | {f.step_index} |"
+                )
+            lines.append("")
+
+        if self.pending_fields:
+            lines.extend([
+                f"## [FAIL] Campos Pendentes",
+                f"",
+                f"| Field | Status | Label | ID | Selector | Reason | Step |",
+                f"|-------|--------|-------|----|----------|--------|------|",
+            ])
+            for f in self.pending_fields:
+                lines.append(
+                    f"| {f.field_key} | {f.completeness.value} "
+                    f"| {f.label or '-'} | {f.element_id or '-'} "
+                    f"| `{f.selector or '-'}` | {f.reason} | {f.step_index} |"
+                )
+            lines.append("")
+
+        if not self.is_complete:
+            lines.extend([
+                f"## Proximos Passos",
+                f"",
+                f"1. Revisar campos pendentes acima.",
+                f"2. Fornecer valores ausentes via flag `--data` ou prompt CLI.",
+                f"3. Reexecutar verificacao de completude apos fornecer valores.",
+                f"",
+            ])
+
+        return "\n".join(lines)
+
+
+class IntentCompletenessChecker:
+    """Valida completude da intencao de teste em uma gravacao.
+
+    Examina field_value_map, passos semanticos e blind spots
+    para determinar se todos os campos necessarios tem valores confiaveis.
+    """
+
+    FIELD_TAGS = {"input", "textarea", "select"}
+
+    def check_steps(self, steps: list,
+                    field_values: Optional[dict] = None,
+                    recording_id: str = "",
+                    application: str = "",
+                    base_url: str = "") -> CompletenessReport:
+        """Verifica completude de uma gravacao a partir de passos semanticos.
+
+        Args:
+            steps: Lista de objetos SemanticAction.
+            field_values: Dict opcional de field_key -> FieldValueMap.
+            recording_id: NB-17 — propagado ao report.
+            application: NB-17 — propagado ao report.
+            base_url: NB-17 — propagado ao report.
+
+        Returns:
+            CompletenessReport com status por campo e resumo.
+        """
+        report = CompletenessReport(
+            recording_id=recording_id,
+            application=application,
+            base_url=base_url,
+        )
+        fields: dict = {}  # field_key -> FieldStatus
+
+        # 1. Examina entradas do field_value_map
+        if field_values:
+            for key, fvm in field_values.items():
+                fs = FieldStatus(
+                    field_key=key,
+                    label=fvm.identifiers.get("label", ""),
+                    placeholder=fvm.identifiers.get("placeholder", ""),
+                    element_id=fvm.identifiers.get("element_id", ""),
+                    name=fvm.identifiers.get("name", ""),
+                    step_index=fvm.step_index,
+                    value=fvm.value,
+                    source=fvm.source,
+                    identifiers=fvm.identifiers,
+                )
+
+                if fvm.source == "missing_fill":
+                    fs.completeness = FieldCompleteness.missing
+                    fs.reason = "typing_not_captured"
+                elif fvm.source == "form_values":
+                    fs.completeness = FieldCompleteness.resolved_with_warning
+                    fs.reason = "reconstructed_from_form_values"
+                elif fvm.source in ("setter_hook", "snapshot_diff", "checked_transition", "final_state"):
+                    fs.completeness = FieldCompleteness.resolved_with_warning
+                    fs.reason = f"reconstructed_from_{fvm.source}"
+                elif fvm.source == "polling":
+                    fs.completeness = FieldCompleteness.resolved_with_warning
+                    fs.reason = "reconstructed_from_polling"
+                elif fvm.source == "network_payload":
+                    fs.completeness = FieldCompleteness.resolved_with_warning
+                    fs.reason = "reconstructed_from_network"
+                elif fvm.source == "user_supplied_cli":
+                    fs.completeness = FieldCompleteness.review_required
+                    fs.reason = "user_supplied_cli_not_validated"
+                elif fvm.value:
+                    fs.completeness = FieldCompleteness.resolved
+                    fs.reason = "direct_capture"
+                else:
+                    fs.completeness = FieldCompleteness.missing
+                    fs.reason = "empty_value"
+
+                fields[key] = fs
+
+        # 2. Examina passos para interacoes de campo sem entrada no field_value_map
+        if steps:
+            # Constroi indices dos campos existentes — pula passos ja cobertos.
+            # B26/B31 (2026-06-28): a verificacao por element_id apenas falhava
+            # para mascaras Material que reutilizam contadores mat-input-N entre
+            # focus e final_state_snapshot. Tambem indexamos por label /
+            # aria_label / name / placeholder / canonical key, para que
+            # campos cuja entrada em field_value_map veio de final_state
+            # (sem id coincidente) ainda sejam reconhecidos como cobertos
+            # pelo caminho 2 do verificador de completude.
+            covered_el_ids: set = set()
+            covered_label_keys: set = set()
+            covered_canonical_keys: set = set(fields.keys())
+            # B30: Angular form_control_name e material_field_label sao
+            # identificadores ESTAVEIS entre renders — ao contrario de
+            # mat-input-N que Angular renumera ao re-renderizar a pagina.
+            # Indexamos em conjuntos separados para que o dedup do Step 2
+            # consiga corresponder clicks e fill_events do mesmo campo
+            # mesmo quando element_id difere entre foco e final_state.
+            covered_form_control_names: set = set()
+            covered_material_field_labels: set = set()
+
+            def _norm(s: str) -> str:
+                import re as _re
+                if not s:
+                    return ""
+                s = s.strip().lower()
+                s = _re.sub(r'[^a-zA-Z0-9_]', '_', s)
+                return _re.sub(r'_+', '_', s).strip('_')
+
+            for fs in fields.values():
+                ids = fs.identifiers or {}
+                el_id = (ids.get("id", "") or "").strip()
+                if el_id:
+                    covered_el_ids.add(el_id)
+                for k in ("label", "aria_label", "aria-label",
+                          "name", "placeholder"):
+                    v = (ids.get(k, "") or "").strip()
+                    if v:
+                        covered_label_keys.add(_norm(v))
+                for direct in (fs.label, fs.name, fs.placeholder, fs.field_key):
+                    nv = _norm(direct or "")
+                    if nv:
+                        covered_label_keys.add(nv)
+                # B30: indexa form_control_name e material_field_label —
+                # identificadores estaveis entre renders Angular, ao contrario
+                # de mat-input-N que muda.
+                fcn = (ids.get("form_control_name", "") or "").strip()
+                if fcn:
+                    covered_form_control_names.add(fcn)
+                mfl = (ids.get("material_field_label", "") or "").strip()
+                if mfl:
+                    covered_material_field_labels.add(mfl)
+
+            from testforge.semantic.model import SemanticAction
+            for i, step in enumerate(steps):
+                if not isinstance(step, SemanticAction):
+                    continue
+
+                ctx = step.context or {}
+                tag = (step.target.tag or "").lower() if step.target else ""
+
+                # Verifica cliques em input/textarea/select com flag missing_fill
+                if (step.action in ("click", "fill")
+                        and tag in self.FIELD_TAGS):
+                    field_key = self._field_key_from_step(step)
+
+                    # Pula se ja estiver no dict fields (por key ou element_id).
+                    # B26/B31: tambem pula quando label / aria_label / name /
+                    # placeholder do step bate com algum ja coberto. Fecha a
+                    # lacuna onde Material reusa ids mat-input-N e o id do
+                    # final_state nao coincide com o id do click step,
+                    # deixando o campo reportado como `typing_not_captured`
+                    # mesmo quando final_state ja tinha o valor.
+                    if field_key and field_key in fields:
+                        continue
+                    step_el_id = (getattr(step.target, "element_id", "") or "").strip()
+                    if step_el_id and step_el_id in covered_el_ids:
+                        continue
+                    _label_candidates = (
+                        getattr(step.target, "accessible_name", "") or "",
+                        getattr(step.target, "label", "") or "",
+                        getattr(step.target, "name", "") or "",
+                        getattr(step.target, "placeholder", "") or "",
+                    )
+                    if any(
+                        _norm(c) in covered_label_keys
+                        for c in _label_candidates if c
+                    ):
+                        continue
+                    if field_key and _norm(field_key) in covered_canonical_keys:
+                        continue
+                    # B30: Angular form_control_name e material_field_label
+                    # sao estaveis entre renders — ao contrario de mat-input-N.
+                    # Se o step e um fill_event compartilham o mesmo
+                    # formControlName, sao o mesmo campo.
+                    step_fcn = (
+                        getattr(step.target, "form_control_name", "") or ""
+                    ).strip()
+                    if step_fcn and step_fcn in covered_form_control_names:
+                        continue
+                    step_mfl = (
+                        getattr(step.target, "material_field_label", "") or ""
+                    ).strip()
+                    if step_mfl and step_mfl in covered_material_field_labels:
+                        continue
+
+                    # Detecta missing fill via flag de contexto
+                    is_missing = ctx.get("missing_fill", False)
+                    has_fill_value = bool(step.value)
+
+                    fs = FieldStatus(
+                        field_key=field_key or f"field_step_{i}",
+                        label=(
+                            getattr(step.target, "accessible_name", None)
+                            or getattr(step.target, "label", None)
+                            or getattr(step.target, "placeholder", None)
+                            or ""
+                        ),
+                        placeholder=getattr(step.target, "placeholder", "") or "",
+                        element_id=getattr(step.target, "element_id", "") or "",
+                        name=getattr(step.target, "name", "") or "",
+                        selector=self._first_selector(step),
+                        step_index=i,
+                        value=step.value or "",
+                        source="missing_fill" if is_missing else "step_capture",
+                        identifiers=self._identifiers_from_step(step),
+                    )
+
+                    if is_missing and not has_fill_value:
+                        fs.completeness = FieldCompleteness.missing
+                        fs.reason = "typing_not_captured"
+                        if tag == "select":
+                            fs.reason = "select_not_captured"
+                    elif is_missing and has_fill_value:
+                        fs.completeness = FieldCompleteness.resolved_with_warning
+                        fs.reason = "has_value_but_missing_flag"
+                    elif has_fill_value:
+                        fs.completeness = FieldCompleteness.resolved
+                        fs.reason = "direct_capture"
+                    else:
+                        fs.completeness = FieldCompleteness.missing
+                        fs.reason = "no_value_captured"
+
+                    fields[fs.field_key] = fs
+
+                # Verifica selects sem valor capturado
+                elif (step.action == "click"
+                      and tag == "select"
+                      and not step.value):
+                    ctx = step.context or {}
+                    if not ctx.get("form_values"):
+                        field_key = self._field_key_from_step(step) or f"select_step_{i}"
+                        if field_key not in fields:
+                            fs = FieldStatus(
+                                field_key=field_key,
+                                label=(
+                                    getattr(step.target, "accessible_name", None)
+                                    or getattr(step.target, "label", None)
+                                    or getattr(step.target, "placeholder", None)
+                                    or ""
+                                ),
+                                element_id=getattr(step.target, "element_id", "") or "",
+                                name=getattr(step.target, "name", "") or "",
+                                selector=self._first_selector(step),
+                                step_index=i,
+                                completeness=FieldCompleteness.missing,
+                                reason="select_not_captured",
+                                identifiers=self._identifiers_from_step(step),
+                            )
+                            fields[field_key] = fs
+
+        # 3. Compila relatorio
+        report.fields = list(fields.values())
+        report.total_fields = len(report.fields)
+        report.resolved_count = sum(
+            1 for f in report.fields
+            if f.completeness == FieldCompleteness.resolved
+        )
+        report.resolved_with_warning_count = sum(
+            1 for f in report.fields
+            if f.completeness == FieldCompleteness.resolved_with_warning
+        )
+        report.review_required_count = sum(
+            1 for f in report.fields
+            if f.completeness == FieldCompleteness.review_required
+        )
+        report.missing_count = sum(
+            1 for f in report.fields
+            if f.completeness == FieldCompleteness.missing
+        )
+        report.is_complete = (
+            report.missing_count == 0
+            and report.review_required_count == 0
+        )
+
+        return report
+
+    def _field_key_from_step(self, step) -> Optional[str]:
+        """Extrai chave de campo canonica de um passo semantico."""
+        from testforge.semantic.model import SemanticAction
+        if not isinstance(step, SemanticAction):
+            return None
+        target = step.target
+        if not target:
+            return None
+
+        # Tenta name primeiro, depois id, label, placeholder
+        key = (target.name or target.element_id
+               or target.label or target.placeholder
+               or target.test_id or "")
+        if not key:
+            return None
+
+        # Canonicaliza: minusculo, substitui espacos/hifens por underscore
+        import re
+        key = re.sub(r'[^a-zA-Z0-9_]', '_', key.lower())
+        key = re.sub(r'_+', '_', key).strip('_')
+        return key or None
+
+    def _first_selector(self, step) -> str:
+        """Obtem primeiro seletor candidato de um passo."""
+        from testforge.semantic.model import SemanticAction
+        if not isinstance(step, SemanticAction):
+            return ""
+        if step.target and step.target.candidates:
+            return step.target.candidates[0].selector or ""
+        return ""
+
+    def _identifiers_from_step(self, step) -> dict:
+        """Extrai dicionario de identificadores de um passo."""
+        from testforge.semantic.model import SemanticAction
+        if not isinstance(step, SemanticAction) or not step.target:
+            return {}
+        t = step.target
+        return {
+            "name": t.name or "",
+            "id": t.element_id or "",
+            "label": t.label or "",
+            "placeholder": t.placeholder or "",
+            "role": t.role or "",
+            "test_id": t.test_id or "",
+            "form_control_name": t.form_control_name or "",
+            "material_field_label": t.material_field_label or "",
+        }
+
+
+class IntentCompletenessValidator:
+    """Valida completude de intenção a partir de um SemanticTestCase.
+
+    Calcula score de 0.0 a 1.0 baseado na proporção de campos esperados
+    que possuem valores confiáveis. Campos com blind_spot de
+    'typing_not_captured' ou 'select_not_captured' contam como ausentes
+    se não resolvidos por field_values.
+
+    Gate: score < 0.70 → passes_gate=False.
+    """
+
+    # Fontes que indicam campo sem valor confiável (conta como missing)
+    MISSING_SOURCES = {"missing_fill", ""}
+    # Padrões de blind_spot que indicam campo de preenchimento ausente
+    MISSING_BLIND_SPOT_PATTERNS = {"typing_not_captured", "select_not_captured"}
+
+    def validate(self, stc) -> dict:
+        """Valida completude de intencao no SemanticTestCase.
+
+        Args:
+            stc: SemanticTestCase com steps, field_values e blind_spots.
+
+        Returns:
+            Dicionario com:
+              - completeness_score: float (0.0-1.0)
+              - missing_fields: list[str] — chaves dos campos ausentes
+              - blind_spots_count: int — total de blind_spots no STC
+              - passes_gate: bool — True se score >= 0.70
+              - reason: str — descricao legivel do resultado
+        """
+        field_values: dict = getattr(stc, "field_values", None) or {}
+        blind_spots: list = getattr(stc, "blind_spots", None) or []
+
+        # Classificar campos de field_values em preenchidos vs ausentes
+        campos_com_valor: set = set()
+        campos_ausentes: set = set()
+
+        for chave, fvm in field_values.items():
+            if hasattr(fvm, "source"):
+                source = fvm.source
+                value = fvm.value
+            else:
+                source = fvm.get("source", "")
+                value = fvm.get("value", "")
+
+            # Campo conta como ausente se source indica captura falha ou valor vazio
+            if source in self.MISSING_SOURCES or not value:
+                campos_ausentes.add(chave)
+            else:
+                campos_com_valor.add(chave)
+
+        # Blind spots com padrão de digitação/select não capturado → campo ausente
+        blind_spots_count = len(blind_spots)
+        for bs in blind_spots:
+            if isinstance(bs, dict):
+                pattern = bs.get("pattern", "")
+                label = bs.get("label", "")
+                step_num = bs.get("step", 0)
+            else:
+                pattern = getattr(bs, "pattern", "")
+                label = getattr(bs, "label", "")
+                step_num = getattr(bs, "step", 0)
+
+            if pattern not in self.MISSING_BLIND_SPOT_PATTERNS:
+                continue
+
+            # Derivar chave canônica a partir do label do blind_spot
+            chave_bs = self._canonicalizar_chave(label) if label else ""
+
+            if chave_bs:
+                # Blind spot com label identificável: rebaixa campo para ausente
+                # mesmo que estivesse em campos_com_valor (ex: field_values com
+                # source correto mas blind_spot indica que digitação foi perdida)
+                if chave_bs in campos_com_valor:
+                    campos_com_valor.discard(chave_bs)
+                campos_ausentes.add(chave_bs)
+            else:
+                # Sem label identificável — gera chave genérica pelo número do step
+                chave_generica = f"campo_blind_spot_step_{step_num}"
+                if chave_generica not in campos_com_valor:
+                    campos_ausentes.add(chave_generica)
+
+        total = len(campos_com_valor) + len(campos_ausentes)
+
+        if total == 0:
+            # Nenhum campo de preenchimento esperado — completude perfeita por vacuidade
+            score = 1.0
+            missing_fields: list = []
+            passes_gate = True
+            reason = "Nenhum campo de preenchimento esperado — completude por vacuidade."
+        else:
+            score = round(len(campos_com_valor) / total, 4)
+            missing_fields = sorted(campos_ausentes)
+            passes_gate = score >= 0.70
+            if passes_gate:
+                reason = (
+                    f"Score {score:.0%} — {len(campos_com_valor)} de {total} campos "
+                    f"preenchidos. Gate 70% aprovado."
+                )
+            else:
+                reason = (
+                    f"Score {score:.0%} — {len(campos_ausentes)} de {total} campos "
+                    f"ausentes. Gate 70% reprovado."
+                )
+
+        return {
+            "completeness_score": score,
+            "missing_fields": missing_fields,
+            "blind_spots_count": blind_spots_count,
+            "passes_gate": passes_gate,
+            "reason": reason,
+        }
+
+    @staticmethod
+    def _canonicalizar_chave(texto: str) -> str:
+        """Canonicaliza texto para chave de campo (lowercase, underscores)."""
+        import re
+        chave = re.sub(r"[^a-zA-Z0-9_]", "_", texto.lower())
+        chave = re.sub(r"_+", "_", chave).strip("_")
+        return chave or ""
+
+
+def save_completeness_report(report: CompletenessReport,
+                               output_dir: str,
+                               recording_id: str = "") -> tuple[str, str]:
+    """Salva relatorio de completude em arquivos JSON e Markdown.
+
+    Args:
+        report: CompletenessReport a salvar.
+        output_dir: Diretorio para salvar os arquivos.
+        recording_id: ID opcional da gravacao para nomes de arquivo.
+
+    Returns:
+        Tupla de (json_path, md_path).
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    if recording_id:
+        report.recording_id = recording_id
+
+    json_path = os.path.join(output_dir, f"intent_completeness_report.json")
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(report.to_dict(), f, indent=2, default=str)
+
+    md_path = os.path.join(output_dir, f"intent_completeness_report.md")
+    with open(md_path, "w", encoding="utf-8") as f:
+        f.write(report.to_markdown())
+
+    return json_path, md_path

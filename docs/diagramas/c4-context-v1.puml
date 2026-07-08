@@ -1,0 +1,44 @@
+@startuml
+title TestForge v0.1.0 — C4 Context
+
+skinparam backgroundColor #FFFFFF
+skinparam packageStyle rectangle
+
+actor "QA Engineer" as QA
+
+rectangle "TestForge CLI\nv0.1.0" as TF #LightBlue {
+  usecase "Gravar fluxo\n(record)" as UC1
+  usecase "Compilar script\n(compile --data)" as UC2
+  usecase "Executar + Curar\n(run L0→L3)" as UC3
+  usecase "Pipeline completa\n(pipeline)" as UC4
+  usecase "Demo healing\n(demo-heal)" as UC5
+}
+
+actor "Dev" as DEV
+actor "Pipeline CI" as CI
+
+rectangle "Aplicacao Web Alvo\n(PrimeFaces, Angular, React)" as APP #LightGreen
+
+cloud "Azure OpenAI\n(GPT-4.1-mini)\n[Opcional]" as LLM #LightGray
+
+database "recordings/\n(JSONL + screenshots)" as REC
+database "semantic_tests/\n(scripts gerados)" as ST
+database "test_data.json\n(massa externa)" as TD
+
+QA --> UC1
+QA --> UC2
+QA --> UC3
+QA --> UC4
+QA --> UC5
+
+DEV --> UC3
+CI --> UC3
+
+TF --> APP : Playwright\n(page.goto, fill, click)
+TF --> REC : salva/le gravacoes
+TF --> ST : gera scripts
+TF --> TD : extrai/le massa
+
+TF ..> LLM : HTTPS (L3 healing)\n[off critical path]
+
+@enduml

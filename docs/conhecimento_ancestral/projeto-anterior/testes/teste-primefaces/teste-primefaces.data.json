@@ -1,0 +1,164 @@
+{
+  "steps": [
+    {
+      "action": "click",
+      "selector": "#tipoImovelLabel",
+      "fallbacks": [
+        "#tipoImovelLabel",
+        "label:has-text(\"Selecione\")",
+        "label:has-text(\"Selecione\")",
+        "label.ui-selectonemenu-label"
+      ],
+      "tag_name": "label",
+      "text": "Selecione",
+      "value": "",
+      "url": "http://localhost:8081/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "tipoImovelLabel",
+        "name": "",
+        "classes": "ui-selectonemenu-label",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Selecione",
+        "parentTag": "div",
+        "parentText": "Selecione\n              Residencial\n              Comercial\n              Terreno\n              Rura",
+        "parentId": "tipoImovel",
+        "framework": "primefaces",
+        "pageTechnology": ""
+      }
+    },
+    {
+      "action": "select",
+      "selector": "#tipoImovelSelect",
+      "fallbacks": [
+        "#tipoImovelSelect"
+      ],
+      "tag_name": "select",
+      "text": "Residencial",
+      "value": "1",
+      "url": "http://localhost:8081/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "tipoImovelSelect",
+        "name": "",
+        "classes": "",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Selecione\n              Residencial\n              Comercial\n              Terreno\n              Rura",
+        "parentId": "",
+        "framework": "primefaces",
+        "pageTechnology": ""
+      }
+    },
+    {
+      "action": "click",
+      "selector": "#ufSelectLabel",
+      "fallbacks": [
+        "#ufSelectLabel",
+        "label:has-text(\"Selecione\")",
+        "label:has-text(\"Selecione\")",
+        "label.ui-selectonemenu-label"
+      ],
+      "tag_name": "label",
+      "text": "Selecione",
+      "value": "",
+      "url": "http://localhost:8081/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "ufSelectLabel",
+        "name": "",
+        "classes": "ui-selectonemenu-label",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Selecione",
+        "parentTag": "div",
+        "parentText": "Selecione\n              Distrito Federal\n              Goiás\n              Minas Gerais\n            ",
+        "parentId": "ufSelect",
+        "framework": "primefaces",
+        "pageTechnology": ""
+      }
+    },
+    {
+      "action": "select",
+      "selector": "#ufSelectOption",
+      "fallbacks": [
+        "#ufSelectOption"
+      ],
+      "tag_name": "select",
+      "text": "Distrito Federal",
+      "value": "DF",
+      "url": "http://localhost:8081/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "ufSelectOption",
+        "name": "",
+        "classes": "",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "",
+        "parentTag": "div",
+        "parentText": "Selecione\n              Distrito Federal\n              Goiás\n              Minas Gerais\n            ",
+        "parentId": "",
+        "framework": "primefaces",
+        "pageTechnology": ""
+      }
+    },
+    {
+      "action": "assert",
+      "selector": "h2:has-text(\"Tipo de Imóvel\")",
+      "fallbacks": [
+        "h2:has-text(\"Tipo de Imóvel\")",
+        "h2:has-text(\"PrimeFaces SelectOneMenu\")"
+      ],
+      "tag_name": "h2",
+      "text": "PrimeFaces SelectOneMenu",
+      "value": "",
+      "url": "http://localhost:8081/primefaces.html",
+      "intention": "",
+      "attrs": {
+        "id": "",
+        "name": "",
+        "classes": "",
+        "type": "",
+        "placeholder": "",
+        "ariaLabel": "",
+        "role": "",
+        "href": "",
+        "alt": "",
+        "dataTestid": "",
+        "labelText": "Tipo de Imóvel",
+        "parentTag": "div",
+        "parentText": "PrimeFaces SelectOneMenu\n    \n      \n        Tipo de Imóvel\n        \n          \n            \n       ",
+        "parentId": "",
+        "framework": "",
+        "pageTechnology": ""
+      },
+      "assert_type": "textual",
+      "assert_state": "enabled",
+      "expected_value": "PrimeFaces SelectOneMenu"
+    }
+  ]
+}

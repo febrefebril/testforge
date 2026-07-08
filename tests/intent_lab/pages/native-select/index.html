@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Native Select</title>
+<style>
+  body { font-family: sans-serif; max-width: 500px; margin: 40px auto; padding: 20px; }
+  label { display: block; margin-top: 16px; font-weight: bold; }
+  select, input { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
+  button { margin-top: 20px; padding: 10px 24px; background: #8b5cf6; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+  .note { color: #666; font-size: 0.85em; margin-top: 4px; }
+</style>
+</head>
+<body>
+  <h1>Native Select</h1>
+  <p>Formulario com selects nativos e input normal.</p>
+  <form id="selectForm">
+    <label for="uf">Estado</label>
+    <select id="uf" name="uf">
+      <option value="">Selecione o estado...</option>
+      <option value="SP">Sao Paulo</option>
+      <option value="RJ">Rio de Janeiro</option>
+      <option value="MG">Minas Gerais</option>
+      <option value="RS">Rio Grande do Sul</option>
+      <option value="BA">Bahia</option>
+    </select>
+
+    <label for="cidade">Cidade</label>
+    <input type="text" id="cidade" name="cidade" placeholder="Digite a cidade">
+
+    <label for="categoria">Categoria</label>
+    <select id="categoria" name="categoria">
+      <option value="">Selecione...</option>
+      <option value="pessoa_fisica">Pessoa Fisica</option>
+      <option value="pessoa_juridica">Pessoa Juridica</option>
+      <option value="outro">Outro</option>
+    </select>
+
+    <button type="submit" id="enviar">Enviar</button>
+  </form>
+
+  <div id="output" style="margin-top: 20px;"></div>
+
+  <script>
+    document.getElementById('selectForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var uf = document.getElementById('uf').value;
+      var cidade = document.getElementById('cidade').value;
+      var cat = document.getElementById('categoria').value;
+      var ufText = document.getElementById('uf').options[document.getElementById('uf').selectedIndex].text;
+      var catText = document.getElementById('categoria').options[document.getElementById('categoria').selectedIndex].text;
+      document.getElementById('output').innerHTML =
+        '<p><strong>Recebido:</strong> ' + ufText + ' (' + uf + '), ' + cidade + ', ' + catText + ' (' + cat + ')</p>';
+    });
+  </script>
+</body>
+</html>

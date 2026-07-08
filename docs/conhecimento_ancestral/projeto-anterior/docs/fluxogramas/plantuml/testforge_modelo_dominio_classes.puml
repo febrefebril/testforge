@@ -1,0 +1,517 @@
+@startuml
+title TestForge - Modelo de Domínio / Diagrama de Classes
+
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam linetype ortho
+hide empty methods
+
+' ============================================================
+' Enums
+' ============================================================
+
+enum StepType {
+  NAVIGATION
+  CLICK
+  INPUT
+  SELECT
+  SUBMIT
+  KEYBOARD
+  UPLOAD
+  DIALOG
+  ASSERTION_HINT
+  CHECKPOINT
+  SPECIAL_INTERACTION
+  UNKNOWN
+}
+
+enum FailureFamily {
+  FRAGILE_SELECTOR
+  TIMING_ASYNC
+  CONTEXT_SCOPE
+  APPLICATION_STATE
+  DYNAMIC_DOM
+  SPECIAL_INTERACTION
+  UNKNOWN
+}
+
+enum ProgressState {
+  PASSED_STEP
+  PROGRESSED
+  STAGNATED
+  REGRESSED
+  ERROR_CHANGED
+  UNRESOLVED
+}
+
+enum ScriptStatus {
+  GENERATED
+  DIAGNOSTIC
+  FAILED
+  CURATED
+  STABILIZED
+  FINAL
+  DEPRECATED
+}
+
+enum RecordingStatus {
+  CREATED
+  RECORDING
+  RECORDED
+  INSUFFICIENT
+  VALIDATED
+  NORMALIZED
+  SCRIPT_GENERATED
+  DIAGNOSTIC_FAILED
+  CURATING
+  STABILIZED
+  DELIVERED
+}
+
+enum ExecutionStatus {
+  CREATED
+  RUNNING
+  PASSED
+  FAILED
+  ERROR
+  CANCELLED
+}
+
+enum PatchValidationStatus {
+  PROPOSED
+  VALID
+  INVALID
+  APPLIED_TEMPORARY
+  ACCEPTED
+  REJECTED
+  ROLLED_BACK
+}
+
+' ============================================================
+' Sessão de gravação
+' ============================================================
+
+package "Gravação e sessão" {
+  class RecordingSession {
+    +session_id: String
+    +test_name: String
+    +target_url: String
+    +browser: String
+    +viewport: String
+    +started_at: DateTime
+    +finished_at: DateTime
+    +status: RecordingStatus
+    +metadata: Map<String, Any>
+  }
+
+  class RecordedStep {
+    +step_id: String
+    +sequence: Integer
+    +type: StepType
+    +action: String
+    +value: String
+    +raw_selector: String
+    +preferred_locator: String
+    +timestamp: DateTime
+    +validated: Boolean
+    +risk_flags: List<String>
+  }
+
+  class ElementContext {
+    +tag: String
+    +id: String
+    +name: String
+    +type: String
+    +role: String
+    +aria_label: String
+    +label_text: String
+    +placeholder: String
+    +visible_text: String
+    +css_classes: List<String>
+    +bounding_box: Map<String, Number>
+    +dom_path: String
+  }
+
+  class LocatorCandidate {
+    +candidate_id: String
+    +strategy: String
+    +value: String
+    +score: Float
+    +stability: Float
+    +reason: String
+    +volatile: Boolean
+    +preferred: Boolean
+  }
+
+  class AssertHint {
+    +assert_id: String
+    +type: String
+    +target: String
+    +expected_value: String
+    +soft: Boolean
+    +timeout_ms: Integer
+    +evidence_ref: String
+  }
+}
+
+' ============================================================
+' Fingerprint e sinais tecnológicos
+' ============================================================
+
+package "Fingerprint e tecnologia" {
+  class Fingerprint {
+    +fingerprint_id: String
+    +technologies: List<String>
+    +dynamic_id_patterns: List<String>
+    +frames: List<String>
+    +shadow_roots: List<String>
+    +components: List<String>
+    +risks: List<String>
+    +created_at: DateTime
+  }
+
+  class TechnologySignal {
+    +name: String
+    +detected: Boolean
+    +confidence: Float
+    +evidence: List<String>
+  }
+}
+
+' ============================================================
+' Evidências e hints
+' ============================================================
+
+package "Evidências e hints" {
+  class EvidenceBundle {
+    +bundle_id: String
+    +step_id: String
+    +screenshot_ref: String
+    +dom_snapshot_ref: String
+    +network_ref: String
+    +console_ref: String
+    +storage_ref: String
+    +trace_ref: String
+  }
+
+  class NetworkHint {
+    +request_url: String
+    +method: String
+    +status: Integer
+    +resource_type: String
+    +started_at: DateTime
+    +finished_at: DateTime
+    +related_step_id: String
+  }
+
+  class MutationHint {
+    +changed_nodes: Integer
+    +stabilization_time_ms: Integer
+    +mutation_type: String
+    +related_step_id: String
+  }
+}
+
+' ============================================================
+' Normalização e geração
+' ============================================================
+
+package "Normalização e geração" {
+  class CanonicalStep {
+    +step_id: String
+    +sequence: Integer
+    +action_type: String
+    +locator: String
+    +value: String
+    +wait_strategy: String
+    +context_strategy: String
+  }
+
+  class GeneratedScript {
+    +script_id: String
+    +version: String
+    +path: String
+    +status: ScriptStatus
+    +generated_at: DateTime
+  }
+
+  class TestData {
+    +data_id: String
+    +key: String
+    +value: String
+    +masked: Boolean
+    +source_step_id: String
+  }
+}
+
+' ============================================================
+' Execução, falha e curadoria
+' ============================================================
+
+package "Execução diagnóstica e curadoria" {
+  class ExecutionRun {
+    +run_id: String
+    +script_id: String
+    +started_at: DateTime
+    +finished_at: DateTime
+    +status: ExecutionStatus
+    +duration_ms: Integer
+  }
+
+  class FailureSignature {
+    +failure_id: String
+    +run_id: String
+    +step_id: String
+    +error_type: String
+    +error_message: String
+    +stacktrace: String
+    +family: FailureFamily
+    +fingerprint_ref: String
+  }
+
+  class AgentAttempt {
+    +attempt_id: String
+    +agent_name: String
+    +failure_id: String
+    +strategy: String
+    +patch_ref: String
+    +result: String
+    +progress_state: ProgressState
+    +created_at: DateTime
+  }
+
+  class Patch {
+    +patch_id: String
+    +target_file: String
+    +diff: String
+    +reason: String
+    +validation_status: PatchValidationStatus
+  }
+
+  class HealingRule {
+    +rule_id: String
+    +family: FailureFamily
+    +strategy: String
+    +condition: String
+    +action: String
+    +confidence: Float
+    +source: String
+  }
+}
+
+' ============================================================
+' Entrega final
+' ============================================================
+
+package "Entrega final" {
+  class FinalArtifact {
+    +artifact_id: String
+    +script_final_path: String
+    +test_data_path: String
+    +locators_path: String
+    +healing_rules_path: String
+    +execution_report_path: String
+  }
+}
+
+' ============================================================
+' Relacionamentos principais
+' ============================================================
+
+RecordingSession "1" *-- "0..*" RecordedStep : contém
+RecordedStep "1" *-- "1" ElementContext : possui contexto do elemento
+RecordedStep "1" *-- "0..*" LocatorCandidate : possui candidatos
+RecordingSession "1" o-- "1" Fingerprint : fingerprint inicial
+RecordingSession "1" o-- "1" Fingerprint : fingerprint final
+Fingerprint "1" *-- "0..*" TechnologySignal : possui sinais
+RecordedStep "1" o-- "0..1" EvidenceBundle : pode possuir
+RecordedStep "1" o-- "0..*" NetworkHint : pode possuir
+RecordedStep "1" o-- "0..*" MutationHint : pode possuir
+RecordingSession "1" o-- "0..*" AssertHint : pode possuir
+
+CanonicalStep "1" ..> "1" RecordedStep : deriva de
+GeneratedScript "1" ..> "1..*" CanonicalStep : gerado a partir de
+ExecutionRun "0..*" --> "1" GeneratedScript : executa
+FailureSignature "0..*" --> "1" ExecutionRun : pertence a
+FailureSignature "0..*" --> "0..1" RecordedStep : referencia step gravado
+FailureSignature "0..*" --> "0..1" CanonicalStep : referencia step canônico
+AgentAttempt "0..*" --> "1" FailureSignature : atua sobre
+AgentAttempt "1" --> "0..1" Patch : gera
+Patch "0..1" --> "0..*" HealingRule : pode gerar
+FinalArtifact "1" --> "1" GeneratedScript : consolida script final
+FinalArtifact "1" --> "0..*" TestData : consolida massa
+FinalArtifact "1" --> "0..*" HealingRule : consolida regras
+
+' ============================================================
+' Relacionamentos auxiliares para rastreabilidade
+' ============================================================
+
+EvidenceBundle "0..*" --> "0..*" NetworkHint : referencia sinais de rede
+EvidenceBundle "0..*" --> "0..*" MutationHint : referencia mutações
+AssertHint "0..*" --> "0..1" EvidenceBundle : evidenciado por
+TestData "0..*" --> "0..1" RecordedStep : extraído de
+HealingRule "0..*" --> "0..1" AgentAttempt : aprendida em tentativa
+GeneratedScript "0..*" --> "0..*" LocatorCandidate : usa locators selecionados
+CanonicalStep "0..*" --> "0..1" ElementContext : preserva contexto
+FailureSignature "0..*" --> "0..1" Fingerprint : usa fingerprint_ref
+Patch "0..*" --> "0..1" GeneratedScript : altera versão temporária ou curada
+ExecutionRun "0..*" --> "0..1" EvidenceBundle : produz evidências de execução
+
+' ============================================================
+' Notas arquiteturais
+' ============================================================
+
+note right of RecordingSession
+  A sessão representa o pipeline completo
+  de coleta de evidências, e não apenas
+  uma sequência de ações do usuário.
+end note
+
+note right of RecordedStep
+  Cada step deve preservar ação,
+  contexto técnico, risco, locators
+  alternativos e vínculo com evidências.
+end note
+
+note right of Fingerprint
+  O fingerprint existe no início e no fim
+  da gravação e pode ser atualizado
+  incrementalmente durante a sessão.
+end note
+
+note right of FailureSignature
+  A família da falha orienta o roteamento
+  multiagente e as estratégias determinísticas
+  antes de qualquer fallback LLM.
+end note
+
+note right of AgentAttempt
+  Toda tentativa deve registrar agente,
+  estratégia, patch, resultado e estado
+  de progresso: PASSED_STEP, PROGRESSED,
+  STAGNATED, REGRESSED, ERROR_CHANGED
+  ou UNRESOLVED.
+end note
+
+note right of Patch
+  Um patch nunca deve ser aceito diretamente.
+  Ele precisa passar por validação,
+  execução comparativa e rollback em regressão.
+end note
+
+note right of HealingRule
+  HealingRule representa self-healing
+  determinístico e rastreável.
+  Regras opacas ou não validadas não entram
+  no artefato final.
+end note
+
+note right of TestData
+  Dados variáveis devem ser separados
+  do script final e gravados em JSON,
+  com mascaramento quando necessário.
+end note
+
+' ============================================================
+' BUG-020: Classes adicionadas em BUG-007–BUG-014
+' ============================================================
+
+class BrowserConfig {
+  + browser: str
+  + headless: bool
+  + viewport_width: int
+  + viewport_height: int
+  + locale: str
+  + timezone: str
+  + navigation_timeout_ms: int
+  + navigation_wait_until: str
+}
+
+note right of BrowserConfig
+  navigation_timeout_ms: int — padrão 60000 ms.
+  Usado por BrowserManager ao navegar para endpoint.
+  navigation_wait_until: str — padrão "networkidle".
+  Ambos adicionados em BUG-007 (enriquecimento).
+end note
+
+class RecordingConfig {
+  + slug: str
+  + output_dir: str
+  + debug_mode: bool
+  + max_polls: int
+  + poll_interval_ms: int
+}
+
+note right of RecordingConfig
+  debug_mode: bool — ativa DebugLogger quando True.
+  max_polls: int — padrão 300 (collect_step loop).
+  poll_interval_ms: int — padrão 100ms (pull-based).
+end note
+
+class Recorder {
+  + session_id: str
+  + _page: Page
+  + _browser_manager: BrowserManager
+  + _fingerprint_collector: FingerprintCollector
+  + start(): None
+  + finish(): None
+}
+
+note right of Recorder
+  BUG-019: finish() verifica page.is_closed()
+  antes de FingerprintCollector.collect_final().
+  BrowserManager.close() em try/except.
+end note
+
+class RecorderOverlay {
+  + _page: Page
+  + _event_queue: "queue.Queue"
+  + inject(): None
+  + remove(): None
+}
+
+note right of RecorderOverlay
+  _event_queue: queue.Queue — thread-safe.
+  OVERLAY_JS usa window.__tfEventQueue (JS-side).
+  BUG-018: window.__tfRecordingActive +
+  sessionStorage persiste estado entre navigations.
+end note
+
+class DebugLogger {
+  + debug_mode: bool
+  + output_dir: str
+  + slug: str
+  + configure(slug, output_dir, debug_mode): None
+  + event(name, payload): None
+  + _sanitize(payload): dict
+}
+
+note right of DebugLogger
+  Singleton: debug_logger = DebugLogger().
+  event() → stderr + output/{slug}/debug/debug.log.
+  _sanitize() remove password/token/api_key/secret.
+  Ativado por RecordingConfig.debug_mode=True ou --debug.
+end note
+
+class BrowserManager {
+  + _browser: Browser
+  + _context: BrowserContext
+  + _page: Page
+  + launch(config: BrowserConfig): Page
+  + close(): None
+}
+
+note right of BrowserManager
+  BUG-019: close() chamado em try/except em Recorder.finish()
+  pois o browser pode já estar fechado (usuário fechou aba).
+end note
+
+DebugLogger --> Recorder : instrumenta
+DebugLogger --> RecorderOverlay : instrumenta
+Recorder --> BrowserManager : usa
+Recorder --> RecorderOverlay : injeta OVERLAY_JS
+Recorder --> RecordingConfig : configurado por
+BrowserManager --> BrowserConfig : configurado por
+
+@enduml

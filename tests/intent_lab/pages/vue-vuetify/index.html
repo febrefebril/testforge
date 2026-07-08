@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Vue Vuetify — Simulated DOM Pattern</title>
+  <style>
+    body { font-family: 'Roboto', sans-serif; max-width: 600px; margin: 2em auto; padding: 0 1em; background: #f5f5f5; }
+    h1 { font-size: 1.5em; color: #1867c0; border-bottom: 2px solid #1867c0; padding-bottom: .5em; }
+    .v-input { display: block; margin: 1em 0; }
+    .v-input__control { border: 1px solid #ccc; border-radius: 4px; background: #fff; }
+    .v-input__slot { padding: .5em; display: flex; }
+    .v-text-field__slot { flex: 1; }
+    .v-text-field__slot input { border: none; outline: none; width: 100%; padding: .25em 0; font-size: 1em; background: none; }
+    .v-label { font-size: .85em; color: #666; margin-bottom: .25em; display: block; }
+    .v-radio-group { margin: 1em 0; }
+    .v-radio { display: flex; align-items: center; gap: .5em; cursor: pointer; padding: .25em 0; }
+    .v-radio__ripple { width: 20px; height: 20px; border: 2px solid #666; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .v-radio__ripple.primary { border-color: #1867c0; }
+    .v-radio__icon { width: 10px; height: 10px; border-radius: 50%; }
+    .v-radio__ripple.primary .v-radio__icon { background: #1867c0; }
+    .v-radio input { display: none; }
+    .v-input--checkbox { display: flex; align-items: center; gap: .5em; cursor: pointer; }
+    .v-input--checkbox .v-input__slot { border: none; padding: 0; }
+    .v-input--selection-controls__ripple { width: 18px; height: 18px; border: 2px solid #666; border-radius: 2px; display: flex; align-items: center; justify-content: center; }
+    .v-input--selection-controls__ripple.primary { background: #1867c0; border-color: #1867c0; }
+    .v-input--selection-controls__input input { display: none; }
+    .v-select { border: 1px solid #ccc; border-radius: 4px; padding: .5em; background: #fff; cursor: pointer; position: relative; }
+    .v-select__selection { display: inline-block; }
+    .v-select__slot { display: flex; align-items: center; }
+    .v-icon { margin-left: auto; }
+    .v-menu__content { display: none; border: 1px solid #ccc; border-radius: 4px; background: #fff; max-height: 200px; overflow-y: auto; margin-top: 2px; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+    .v-menu__content.open { display: block; }
+    .v-list-item { padding: .5em; cursor: pointer; }
+    .v-list-item:hover { background: #e3f2fd; }
+    .v-list-item--active { background: #bbdefb; font-weight: bold; }
+    button.v-btn { background: #1867c0; color: #fff; border: none; padding: .75em 2em; border-radius: 4px; font-size: 1em; cursor: pointer; margin-top: 1.5em; }
+    .result { margin-top: 1.5em; padding: 1em; background: #e3f2fd; border-radius: 4px; display: none; }
+  </style>
+</head>
+<body>
+  <h1>Vue Vuetify — Simulated</h1>
+  <p>DOM structure matching Vuetify patterns. No Vue loaded.</p>
+
+  <form id="mainForm">
+    <!-- v-text-field -->
+    <div class="v-input v-text-field">
+      <label class="v-label" for="nome-input">Nome</label>
+      <div class="v-input__control">
+        <div class="v-input__slot">
+          <div class="v-text-field__slot">
+            <input id="nome-input" name="nome" placeholder="Seu nome">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="v-input v-text-field">
+      <label class="v-label" for="endereco-input">Endereço</label>
+      <div class="v-input__control">
+        <div class="v-input__slot">
+          <div class="v-text-field__slot">
+            <input id="endereco-input" name="endereco" placeholder="Rua, número">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- v-radio-group -->
+    <div class="v-radio-group" role="radiogroup" aria-label="Turno">
+      <div class="v-label">Turno Preferido</div>
+      <div class="v-radio">
+        <label class="v-radio">
+          <input type="radio" name="turno" value="manha">
+          <span class="v-radio__ripple"><span class="v-radio__icon"></span></span>
+          <span class="v-radio__label">Manhã</span>
+        </label>
+      </div>
+      <div class="v-radio">
+        <label class="v-radio">
+          <input type="radio" name="turno" value="tarde">
+          <span class="v-radio__ripple"><span class="v-radio__icon"></span></span>
+          <span class="v-radio__label">Tarde</span>
+        </label>
+      </div>
+      <div class="v-radio">
+        <label class="v-radio">
+          <input type="radio" name="turno" value="noite">
+          <span class="v-radio__ripple"><span class="v-radio__icon"></span></span>
+          <span class="v-radio__label">Noite</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- v-checkbox -->
+    <label class="v-input v-input--checkbox">
+      <div class="v-input--selection-controls__input">
+        <input type="checkbox" name="newsletter" value="sim">
+        <span class="v-input--selection-controls__ripple"></span>
+      </div>
+      <div class="v-label">Receber newsletter</div>
+    </label>
+
+    <!-- v-select -->
+    <div class="v-input v-select">
+      <label class="v-label">Curso</label>
+      <div class="v-input__control">
+        <div class="v-select__slot" id="curso-select" role="combobox"
+             aria-label="Curso" aria-expanded="false" aria-haspopup="listbox"
+             tabindex="0">
+          <span class="v-select__selection" id="curso-value">Selecione um curso</span>
+          <span class="v-icon">▼</span>
+        </div>
+      </div>
+    </div>
+    <div class="v-menu__content" id="curso-panel" role="listbox" aria-label="Curso">
+      <div class="v-list-item" role="option" data-value="cc">Ciência da Computação</div>
+      <div class="v-list-item" role="option" data-value="eng">Engenharia</div>
+      <div class="v-list-item" role="option" data-value="adm">Administração</div>
+      <div class="v-list-item" role="option" data-value="dir">Direito</div>
+    </div>
+
+    <button type="submit" class="v-btn">Salvar</button>
+  </form>
+
+  <div class="result" id="resultado">
+    <p>✅ Formulário salvo!</p>
+    <p id="result-text"></p>
+  </div>
+
+  <script>
+    // v-select behavior
+    const selectSlot = document.getElementById('curso-select');
+    const panel = document.getElementById('curso-panel');
+    const valueSpan = document.getElementById('curso-value');
+
+    selectSlot.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var isOpen = panel.classList.toggle('open');
+      this.setAttribute('aria-expanded', isOpen);
+    });
+
+    document.querySelectorAll('.v-list-item').forEach(function(item) {
+      item.addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.querySelectorAll('.v-list-item').forEach(function(i) { i.classList.remove('v-list-item--active'); });
+        this.classList.add('v-list-item--active');
+        valueSpan.textContent = this.textContent;
+        panel.classList.remove('open');
+        selectSlot.setAttribute('aria-expanded', 'false');
+      });
+    });
+
+    document.addEventListener('click', function() {
+      panel.classList.remove('open');
+      selectSlot.setAttribute('aria-expanded', 'false');
+    });
+
+    // Radio visual toggle
+    document.querySelectorAll('.v-radio').forEach(function(radio) {
+      radio.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var input = this.querySelector('input[type="radio"]');
+        if (input) {
+          document.querySelectorAll('input[name="' + input.name + '"]').forEach(function(inp) { inp.checked = false; });
+          document.querySelectorAll('.v-radio__ripple').forEach(function(r) { r.classList.remove('primary'); });
+          input.checked = true;
+          this.querySelector('.v-radio__ripple').classList.add('primary');
+        }
+      });
+    });
+
+    // Checkbox visual toggle
+    document.querySelector('.v-input--checkbox').addEventListener('click', function() {
+      var input = this.querySelector('input[type="checkbox"]');
+      if (input) {
+        input.checked = !input.checked;
+        this.querySelector('.v-input--selection-controls__ripple').classList.toggle('primary', input.checked);
+      }
+    });
+
+    // Form submit
+    document.getElementById('mainForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var nome = document.getElementById('nome-input').value;
+      var endereco = document.getElementById('endereco-input').value;
+      var turno = document.querySelector('input[name="turno"]:checked');
+      var turnoVal = turno ? turno.value : 'não selecionado';
+      var news = document.querySelector('input[name="newsletter"]:checked') ? 'Sim' : 'Não';
+      document.getElementById('result-text').textContent =
+        'Nome: ' + nome + ' | End: ' + endereco + ' | Turno: ' + turnoVal +
+        ' | Newsletter: ' + news + ' | Curso: ' + valueSpan.textContent;
+      document.getElementById('resultado').style.display = 'block';
+    });
+  </script>
+</body>
+</html>

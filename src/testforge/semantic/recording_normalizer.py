@@ -1,0 +1,3666 @@
+"""TestForge — Normalizador de Gravação.
+
+Converte RawRecordedSession (JSONL) em SemanticTestCase (YAML).
+Gera múltiplos candidatos de localizador ordenados por score determinístico.
+"""
+import json
+import logging
+import os
+import re as _re
+from collections import Counter
+from datetime import datetime
+from typing import Optional
+from urllib.parse import urlparse, urlunparse
+
+from .model import LocatorCandidate, SemanticAction, SemanticTarget, SemanticTestCase
+from testforge.handlers import HANDLERS
+from testforge.metrics.metrics_repository import MetricsRepository
+
+logger = logging.getLogger(__name__)
+
+
+
+# Material icon ligatures that appear in text content but are not real text
+_MATERIAL_ICONS = {
+    "home", "search", "calculate", "calculate_outline", "attach_money",
+    "trending_up", "schedule", "arrow_forward", "arrow_back", "check",
+    "close", "menu", "settings", "person", "delete", "edit", "add",
+    "remove", "refresh", "download", "upload", "file_upload", "file_download",
+    "share", "favorite", "star", "info", "warning", "error",
+    "visibility", "visibility_off", "calendar_today", "table_view",
+    "list", "grid_view", "filter_list", "more_vert", "more_horiz",
+    "expand_more", "expand_less", "chevron_right", "chevron_left",
+    "open_in_new", "launch", "help", "support", "feedback",
+    "account_balance", "payment", "shopping_cart", "credit_card",
+    "location_on", "place", "phone", "email", "language", "lock",
+    "cloud_upload", "cloud_download", "print", "save", "send",
+    "keyboard_arrow_down", "keyboard_arrow_up", "keyboard_arrow_right",
+    "keyboard_arrow_left", "cancel", "done", "clear",
+    "fact_check", "paid", "receipt", "monetization_on",
+    "check_circle", "check_circle_outline", "radio_button_checked", "radio_button_unchecked",
+    "check_box", "check_box_outline_blank", "indeterminate_check_box",
+}
+
+
+# NB-13: skip overlay elements + known auto-fire (carousel etc). Estas amostras
+# vazam quando handler de click do overlay não filtra ou quando página tem
+# auto-play. Normalizer é a última linha de defesa antes do compiler.
+_OVERLAY_ID_PREFIXES = ("tf-", "__tf-")
+_AUTO_FIRE_CLASSES = frozenset({
+    "carousel-control-next", "carousel-control-prev",
+    "swiper-button-next", "swiper-button-prev",
+    "slick-next", "slick-prev",
+})
+
+
+def _is_noise_event(event: dict) -> bool:
+    """NB-13: returns True if event should be skipped (overlay or auto-fire)."""
+    target = event.get("target") or {}
+    eid = (target.get("element_id") or "").strip()
+    if any(eid.startswith(p) for p in _OVERLAY_ID_PREFIXES):
+        return True
+    class_list = target.get("class_list") or []
+    if any(c in _AUTO_FIRE_CLASSES for c in class_list):
+        return True
+    return False
+
+
+def _aggregate_check_then_act(steps: list) -> None:
+    """REC-28: colapsa assert(visible|enabled) + click no mesmo target.
+    
+    Preserva intent — usuario quis verificar antes de clicar. Marca no click
+    step que houve precondition assert. Elimina 1 step redundante.
+    Modifica steps in-place.
+    """
+    if len(steps) < 2:
+        return
+    result = []
+    i = 0
+    while i < len(steps):
+        curr = steps[i]
+        if (i + 1 < len(steps)
+            and getattr(curr, "action", "") == "assert"
+            and getattr(steps[i+1], "action", "") in ("click", "submit")
+            and _same_target(curr, steps[i+1])):
+            assert_kind = (getattr(curr, "context", None) or {}).get("assert_type", "")
+            if assert_kind in ("visivel", "visible", "enabled", "habilitado"):
+                merged = steps[i+1]
+                merged.context = getattr(merged, "context", None) or {}
+                merged.context["preceded_by_assert"] = assert_kind
+                merged.notes = (merged.notes or "") + f" REC-28: preceded by assert {assert_kind}"
+                result.append(merged)
+                i += 2
+                continue
+        result.append(curr)
+        i += 1
+    steps[:] = result
+
+
+def _same_target(a, b) -> bool:
+    """Compare targets ignorando None-vs-empty-string."""
+    ta = getattr(a, "target", None) or {}
+    tb = getattr(b, "target", None) or {}
+    if ta.get("element_id") and ta.get("element_id") == tb.get("element_id"):
+        return True
+    if ta.get("css_path") and ta.get("css_path") == tb.get("css_path"):
+        return True
+    return False
+
+
+def _detect_auto_fire_clusters(events: list[dict]) -> set[int]:
+    """NB-05: detecta clusters de clicks no mesmo target com gap regular < 12s.
+    
+    Retorna set de indices a marcar como noise."""
+    from datetime import datetime as _dt
+    noise: set[int] = set()
+    groups: dict = {}
+    for i, e in enumerate(events):
+        if e.get("type") != "click":
+            continue
+        t = e.get("target") or {}
+        key = (t.get("element_id", ""), t.get("css_path", ""))
+        groups.setdefault(key, []).append((i, e))
+    for key, items in groups.items():
+        if len(items) < 4:
+            continue
+        ts = [_dt.fromisoformat(e["timestamp"].replace("Z", "+00:00")) for _, e in items]
+        gaps = [(ts[i + 1] - ts[i]).total_seconds() for i in range(len(ts) - 1)]
+        if not gaps:
+            continue
+        median = sorted(gaps)[len(gaps) // 2]
+        if 3.0 < median < 12.0:
+            for i, _ in items:
+                noise.add(i)
+    return noise
+
+
+def _clean_text(text: str, max_len: int = 60) -> str:
+    """Remove material icon ligatures from text content and truncate."""
+    if not text:
+        return ""
+    # Split by whitespace and filter out material icons
+    parts = text.split()
+    cleaned = []
+    for p in parts:
+        pl = p.lower()
+        # Exact match: whole word is a material icon
+        if pl in _MATERIAL_ICONS:
+            continue
+        # Prefix match: material icon fused with next word (e.g., "attach_moneyValor")
+        stripped = p
+        for icon in sorted(_MATERIAL_ICONS, key=len, reverse=True):
+            if pl.startswith(icon) and len(pl) > len(icon):
+                # Check boundary: icon ends, next char is uppercase (camelCase) or space-equivalent
+                next_char = p[len(icon):len(icon)+1]
+                if next_char.isupper() or next_char in '_-':
+                    stripped = p[len(icon):]
+                    break
+        cleaned.append(stripped)
+    result = " ".join(cleaned).strip()
+    if len(result) > max_len:
+        result = result[:max_len]
+    return result
+
+
+# Generic UI text that produces poor, brittle locators.
+# Scored at 0.10 to deprioritize below all structural strategies.
+
+_GENERIC_TEXT_SET = {
+    "ok", "cancel", "cancelar", "submit", "enviar", "search", "buscar",
+    "select", "selecione", "choose", "escolha", "next", "previous",
+    "back", "voltar", "close", "fechar", "save", "salvar", "delete",
+    "excluir", "edit", "editar", "add", "adicionar", "remove", "remover",
+    "filter", "filtrar", "sort", "ordenar", "reset", "limpar",
+    "página inicial", "pagina inicial", "home", "início", "inicio",
+    "download", "upload", "print", "imprimir",
+    "refresh", "atualizar", "help", "ajuda", "settings", "configurações",
+    "yes", "sim", "no", "não", "nao", "confirm", "confirmar",
+    "login", "logout", "sign in", "sign out", "register", "cadastrar",
+    "load more", "carregar mais", "show more", "mostrar mais",
+    "read more", "saiba mais", "click here", "clique aqui",
+}
+
+# IDs genéricos que reaparecem em múltiplas páginas Angular/JSF — usá-los como
+# primary selector causa colisão entre elementos não relacionados. Demovidos para
+# score 0.35 para que role+name, label e placeholder vençam.
+_GENERIC_ID_BLACKLIST: frozenset = frozenset({
+    "next", "prev", "previous", "back", "submit", "save", "cancel",
+    "continue", "ok", "confirm", "close", "yes", "no", "btnok", "btncancelar",
+    "btnconfirm", "btnsubmit", "btnnext", "btnprev", "btnback", "btnsave",
+})
+
+
+def _is_generic_text(text: str) -> bool:
+    """Check if text is a generic UI label that produces brittle locators.
+
+    Returns True for text like 'OK', 'Cancelar', 'Selecione', etc.
+    These are common across many pages and produce non-unique selectors.
+    """
+    if not text or not text.strip():
+        return True
+    clean = text.strip().lower()
+    # Exact match in generic set
+    if clean in _GENERIC_TEXT_SET:
+        return True
+    # Single character or only digits
+    if len(clean) <= 1 or clean.isdigit():
+        return True
+    return False
+
+
+def _attr_css_variants(attr_name: str, value: str, tag: str,
+                       exact_score: float, reason: str) -> list:
+    """Generate CSS attribute variant selectors for locator healing.
+
+    Produces starts-with (^=), ends-with ($=), and contains (*=, case-insensitive)
+    variants for a single attribute. These handle minor DOM changes between
+    recording and execution: dynamic suffixes, case differences, partial updates.
+
+    Only generates variants when value length is sufficient to avoid
+    over-broad matching (min 4 chars for starts-with, 3 for ends-with, 5 for contains).
+    Scores degrade progressively from exact_score.
+    """
+    variants = []
+    if not value or len(value) < 3:
+        return variants
+
+    _CSS_ATTR_MAP = {
+        "test_id": "data-testid",
+        "aria_label": "aria-label",
+    }
+    css_attr = _CSS_ATTR_MAP.get(attr_name, attr_name)
+
+    # Build selector prefix: tag[attr  or just [attr
+    if attr_name == "test_id":
+        sel_prefix = "[data-testid"
+    elif tag and attr_name != "id":
+        sel_prefix = f"{tag}[{css_attr}"
+    elif attr_name == "id":
+        sel_prefix = "[id"
+    else:
+        sel_prefix = f"[{css_attr}"
+
+    v = value
+
+    # starts-with: tag[attr^="value"]
+    if len(v) >= 4:
+        # Skip auto-generated angular/react id prefixes
+        if attr_name == "id" and (v.startswith("mat-") or v.startswith("ng-")):
+            pass
+        elif attr_name == "test_id" and len(v) < 6:
+            pass  # short test_ids already unique
+        else:
+            sel = f'{sel_prefix}^="{v}"]'
+            score = max(0.20, round(exact_score - 0.15, 2))
+            variants.append(LocatorCandidate(
+                f"{attr_name}_starts", sel, score, f"{reason} (starts-with)"
+            ))
+
+    # ends-with: tag[attr$="value"]
+    if len(v) >= 3:
+        sel = f'{sel_prefix}$="{v}"]'
+        score = max(0.20, round(exact_score - 0.20, 2))
+        variants.append(LocatorCandidate(
+            f"{attr_name}_ends", sel, score, f"{reason} (ends-with)"
+        ))
+
+    # contains (case-insensitive): tag[attr*="value" i]
+    if len(v) >= 5:
+        sel = f'{sel_prefix}*="{v}" i]'
+        score = max(0.20, round(exact_score - 0.25, 2))
+        variants.append(LocatorCandidate(
+            f"{attr_name}_contains", sel, score, f"{reason} (contains)"
+        ))
+
+    return variants
+
+
+def _compound_candidates(target_data: dict, tag: str) -> list:
+    """Generate compound attribute selectors combining 2 attributes.
+
+    Compound selectors (input[placeholder="X"][aria-label="Y"]) have higher
+    specificity than single-attribute selectors. Score = min(score1, score2) + 0.05.
+
+    Pairs generated when both attributes exist:
+      - placeholder + aria_label  (most common form pattern)
+      - placeholder + name
+      - aria_label + name
+    """
+    variants = []
+    ph = target_data.get("placeholder") or ""
+    name_val = target_data.get("name") or ""
+
+    # Resolve aria-label from multiple possible sources
+    aria_label = (target_data.get("accessible_name") or ""
+                  or (target_data.get("aria_attrs") or {}).get("aria-label", "")
+                  or (target_data.get("all_attributes") or {}).get("aria-label", "")
+                  or "")
+
+    if not tag:
+        tag = (target_data.get("tag") or "").lower()
+
+    pairs = []
+    if ph and aria_label and len(ph) >= 3 and len(aria_label) >= 3:
+        pairs.append(("placeholder", ph, "aria-label", aria_label, 0.90))
+    if ph and name_val and len(ph) >= 3 and len(name_val) >= 2:
+        pairs.append(("placeholder", ph, "name", name_val, 0.75))
+    if aria_label and name_val and len(aria_label) >= 3 and len(name_val) >= 2:
+        pairs.append(("aria-label", aria_label, "name", name_val, 0.75))
+
+    for attr1, val1, attr2, val2, score in pairs:
+        # Build compound selector: tag[attr1="val1"][attr2="val2"]
+        if tag:
+            sel = f'{tag}[{attr1}="{val1}"][{attr2}="{val2}"]'
+        else:
+            sel = f'[{attr1}="{val1}"][{attr2}="{val2}"]'
+        reason = f"compound {attr1}={val1} + {attr2}={val2}"
+        variants.append(LocatorCandidate("compound", sel, score, reason))
+
+    return variants
+
+
+class RecordingNormalizer:
+    """Converte eventos brutos em SemanticTestCase.
+
+    Fase 2: flag opcional `use_v2_locator` ativa o extrator moderno
+    de super-seletores (`semantic.locator.LocatorExtractor`)
+    em paralelo com as heuristicas legadas `_build_target`. Quando ligado,
+    candidatos v2 sao adicionados apos candidatos legados; codigo
+    downstream que ignora os novos campos continua funcionando inalterado.
+    """
+
+    def __init__(self, use_v2_locator: bool = False,
+                 use_pipeline: bool = False) -> None:
+        self._use_v2 = bool(use_v2_locator)
+        self._use_pipeline = bool(use_pipeline)
+        self._v2_extractor = None
+        if self._use_v2:
+            from .locator import LocatorExtractor
+            self._v2_extractor = LocatorExtractor()
+        # H22b: diagnosticos de dedup por instancia. Lido por testes + o
+        # futuro comando CLI que mostra quantas vezes setter_hook ainda
+        # contribui apos H22a. Reiniciado a cada chamada `normalize()`.
+        self.ir_dedupe_stats: dict = self._fresh_dedupe_stats()
+
+    def _build_load_dedup_compact_pipeline(self):
+        """Fase 5: constroi pipeline Pipes&Filters lazy.
+
+        Importado lazy para evitar import circular entre stages e
+        este modulo (stages referenciam metodos de RecordingNormalizer).
+        """
+        from .stages import (
+            CompactStage, DedupStage, LoadStage, Pipeline,
+        )
+        return Pipeline([LoadStage(), DedupStage(self), CompactStage(self)])
+
+    def _build_audit_pipeline(self):
+        from .stages import AuditStage, Pipeline
+        return Pipeline([AuditStage(self)])
+
+    def normalize(self, recording_dir: str, test_id: str = "",
+                  application: str = "", base_url: str = "") -> SemanticTestCase:
+        # Hotfix BUG 13: lembra diretorio de gravacao para _merge_user_supplied_values
+        # localizar field_value_map.json sem alterar a assinatura do metodo
+        # publico consumido por todos os chamadores.
+        self._current_recording_dir = recording_dir
+        # H22b: estatisticas de dedup frescas por chamada para consumidores
+        # lerem sem vazamento de estado entre gravacoes.
+        self.ir_dedupe_stats = self._fresh_dedupe_stats()
+        # H22 followup: avisar se gravacao foi produzida por um gravador
+        # com esquema de captura diferente. Evita atribuir bugs a
+        # artefatos que o gravador atual nao produz mais.
+        self._verify_recording_fingerprint(recording_dir)
+        # Fase 5: pipeline opcional Pipes & Filters para estagios load + dedup
+        # + compact. Saida eh byte-identica ao caminho legado.
+        if self._use_pipeline:
+            from .stages import NormalizationContext
+            ctx = NormalizationContext(
+                recording_dir=recording_dir, test_id=test_id,
+                application=application, base_url=base_url,
+            )
+            ctx = self._build_load_dedup_compact_pipeline().run(ctx)
+            raw_events = ctx.raw_events
+            pre_dedup = ctx.initial_event_count
+            logger.info("Normalizing (pipeline) recording_dir=%s raw_events=%d",
+                         os.path.basename(recording_dir), pre_dedup)
+        else:
+            events_path = os.path.join(recording_dir, "raw_events.jsonl")
+            if not os.path.exists(events_path):
+                raise FileNotFoundError(f"raw_events.jsonl nao encontrado em {recording_dir}")
+
+            with open(events_path) as f:
+                raw_events = [json.loads(line) for line in f if line.strip()]
+
+            # Hotfix 22: raw_events.jsonl pode ter navigation ANTES do click
+            # que a disparou — Python drains overlay queue async, framework
+            # detector emite sync. File order = ordem de processamento, nao
+            # timestamp real. Ordena por (timestamp, event_id) para que a
+            # cadeia causal fique correta (click DISPARA navigation).
+            def _sort_key(e):
+                ts = e.get("timestamp", "") or ""
+                eid = e.get("event_id", "") or ""
+                # Normaliza timestamps (JS ISOString "Z" vs Python isoformat
+                # "+00:00") para comparar corretamente. Ambos convergem se
+                # substituirmos "Z" por "+00:00" antes de comparar.
+                ts_norm = ts.replace("Z", "+00:00") if ts.endswith("Z") else ts
+                return (ts_norm, eid)
+            raw_events.sort(key=_sort_key)
+
+            logger.info("Normalizing recording_dir=%s raw_events=%d",
+                         os.path.basename(recording_dir), len(raw_events))
+            # Log da quebra por tipo antes do dedup
+            type_counts = {}
+            for ev in raw_events:
+                et = ev.get("type", "unknown")
+                type_counts[et] = type_counts.get(et, 0) + 1
+            logger.debug("Raw event types: %s", type_counts)
+
+            # Executa dedup ANTES da compactacao: remove ciclos periodicos de
+            # snapshot DOM (ex.: spam de radio button) para que fills consecutivos
+            # no mesmo campo fiquem adjacentes e sejam colapsados corretamente.
+            pre_dedup = len(raw_events)
+            raw_events = self._remove_snapshot_duplicates(raw_events)
+            after_dedup = len(raw_events)
+            logger.debug("After _remove_snapshot_duplicates: %d → %d (-%d)",
+                          pre_dedup, after_dedup, pre_dedup - after_dedup)
+            # Colapsa sequencias de keypress de tecla individual antes da compactacao.
+            # mat-autocomplete pode emitir um keypress por caractere em vez de
+            # eventos fill acumulados — reconstroi a string digitada completa primeiro.
+            raw_events = self._compact_keypress_sequences(raw_events)
+            raw_events = self._compact_fill_events(raw_events)
+            after_compact = len(raw_events)
+            logger.info("After compaction: %d events (reduced %d%%)",
+                         after_compact,
+                         int((1 - after_compact / max(pre_dedup, 1)) * 100))
+
+        after_compact = len(raw_events)
+        recording_id = os.path.basename(recording_dir)
+        stc = SemanticTestCase(
+            test_id=test_id or f"ST-{recording_id}",
+            source_recording_id=recording_id,
+            application=application,
+            base_url=base_url,
+        )
+
+        # H20: rastreia limites de cenario conforme convertemos eventos. Cada
+        # evento bruto `scenario_boundary` encerra o segmento atual e
+        # inicia o proximo. O limite em si nao eh um passo.
+        _scenario_boundaries: list[dict] = []
+        converted = 0
+        for raw in raw_events:
+            try:
+                if raw.get("type") == "scenario_boundary":
+                    _scenario_boundaries.append({
+                        "step_index": len(stc.steps),
+                        "name": (raw.get("scenario_name") or "").strip(),
+                        "timestamp": raw.get("timestamp", ""),
+                    })
+                    continue
+                # NB-13: skip overlay + carousel auto-fire events
+                if _is_noise_event(raw):
+                    continue
+                action = self._convert_event(raw)
+                if action:
+                    stc.steps.append(action)
+                    converted += 1
+            except Exception as exc:
+                logger.error("Failed to convert event id=%s: %s",
+                              raw.get("event_id", "?"), exc, exc_info=True)
+
+        # Materializa segmentos. Padrao: um segmento cobrindo todos os passos.
+        # Com N limites temos N+1 segmentos.
+        total_steps = len(stc.steps)
+        if _scenario_boundaries:
+            segs: list[dict] = []
+            prev_end = 0
+            for i, b in enumerate(_scenario_boundaries):
+                end = max(prev_end, min(b["step_index"], total_steps))
+                segs.append({
+                    "start_step": prev_end,
+                    "end_step_exclusive": end,
+                    "name": f"scenario_{len(segs) + 1}",
+                })
+                prev_end = end
+            # Ultimo segmento vai ate o fim. Pega nome do limite mais
+            # recente que nomeou o *proximo* cenario.
+            last_name = _scenario_boundaries[-1]["name"] or f"scenario_{len(segs) + 1}"
+            segs.append({
+                "start_step": prev_end,
+                "end_step_exclusive": total_steps,
+                "name": last_name,
+            })
+            # Descarta segmentos vazios (limites consecutivos sem passos
+            # entre eles).
+            stc.scenario_segments = [
+                s for s in segs if s["end_step_exclusive"] > s["start_step"]
+            ]
+        else:
+            stc.scenario_segments = [{
+                "start_step": 0,
+                "end_step_exclusive": total_steps,
+                "name": "default",
+            }] if total_steps else []
+
+        logger.debug("Converted %d/%d raw events to semantic actions", converted, after_compact)
+        if len(stc.scenario_segments) > 1:
+            logger.info("H20: %d scenario segments captured", len(stc.scenario_segments))
+
+        # Hotfix 22: carrega sugestoes de assert do DOM diff auto-capture
+        # (suggested_assertions.jsonl, emitido pelo recorder). Nao vira
+        # step automatico — apenas exposto em stc.suggested_asserts para o
+        # compiler mostrar ao QA como "considere adicionar assert em X".
+        suggestions_path = os.path.join(recording_dir, "suggested_assertions.jsonl")
+        if os.path.exists(suggestions_path):
+            try:
+                with open(suggestions_path) as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            stc.suggested_asserts.append(json.loads(line))
+                        except json.JSONDecodeError:
+                            continue
+                logger.info("Loaded %d suggested asserts from DOM diff",
+                            len(stc.suggested_asserts))
+            except Exception as exc:
+                logger.debug("Failed to load suggested_assertions: %s", exc)
+
+        # Carrega steps (asserts) se existirem
+        steps_path = os.path.join(recording_dir, "steps.jsonl")
+        if os.path.exists(steps_path):
+            with open(steps_path) as f:
+                steps_count = 0
+                loaded_asserts: list = []
+                for line in f:
+                    step = json.loads(line)
+                    converted = self._convert_step(step)
+                    if converted is not None:
+                        loaded_asserts.append(converted)
+                    steps_count += 1
+                logger.debug("Loaded %d steps (asserts) from steps.jsonl", steps_count)
+
+            # Hotfix 22: intercalar asserts com actions por timestamp.
+            # Bug anterior: `stc.steps.append(assert)` empilhava todos os asserts
+            # no final. Ao rodar, o runner verificava R$ 3.333,33 (resultado do
+            # 1o Calcular) APOS o 3o Calcular do fluxo empréstimo — tela ja
+            # nao mostrava esse valor. Merge por timestamp restaura ordem
+            # temporal (assert reflete estado no momento da gravacao).
+            if loaded_asserts:
+                self._merge_asserts_by_timestamp(stc.steps, loaded_asserts)
+
+        # Phase 7: attach known bug references from recording-time bug reports.
+        # A bug report step_idx is recorded in user-step space; map it to the
+        # semantic steps timeline excluding pure navigation events.
+        bug_reports = self._load_bug_reports(recording_dir)
+        if bug_reports:
+            self._attach_bug_refs(stc, bug_reports)
+
+        # Pos-processamento: detecta e marca passos pulados
+        # Detecta overlays PRIMEIRO — dedup exclui passos de overlay
+        self._detect_overlay_steps(stc.steps)
+        self._deduplicate_steps(stc.steps)
+        self._mark_non_actionable(stc.steps)
+        self._detect_step_dependencies(stc.steps)
+        self._detect_navigation_clicks(stc.steps)
+        # Fase B: reconstroi a partir de evidencias ANTES das heuristicas missing_fill
+        self._reconstruct_intents(stc, recording_dir)
+        self._detect_missing_fills(stc.steps)
+        self._build_field_value_map(stc)
+        # Dedup semantico Fase B: handlers de componente + prefill clicks
+        for handler in HANDLERS:
+            handler.normalize(stc.steps)
+        self._eliminate_prefill_clicks(stc.steps, recording_dir)
+        self._skip_dead_fills(stc.steps)
+        # REC-28: agrega assert(visible) + click mesmo target → wait_and_click
+        _aggregate_check_then_act(stc.steps)
+        # Hotfix 22: marca asserts obsoletos por refill posterior. Um assert
+        # sobre resultado de calc que foi seguido por fill do MESMO campo (ou
+        # de qualquer field-de-entrada) verifica estado da UI que o proprio
+        # usuario mudou depois — nao reproduz determinsiticamente no run.
+        self._detect_stale_asserts(stc.steps)
+        self._audit_blind_spots(stc)
+
+        # Log final step breakdown
+        action_types = {}
+        skipped = 0
+        for s in stc.steps:
+            action_types[s.action] = action_types.get(s.action, 0) + 1
+            if s.skip_reason:
+                skipped += 1
+        logger.info("Normalization complete: %d steps actions=%s skipped=%d",
+                     len(stc.steps), action_types, skipped)
+        return stc
+
+    @staticmethod
+    def _severity_rank(severity: str) -> int:
+        sev = (severity or "").lower()
+        if sev == "critical":
+            return 4
+        if sev == "high":
+            return 3
+        if sev == "medium":
+            return 2
+        if sev == "low":
+            return 1
+        return 0
+
+    def _load_bug_reports(self, recording_dir: str) -> list[dict]:
+        path = os.path.join(recording_dir, "bug_report.jsonl")
+        if not os.path.exists(path):
+            return []
+        reports: list[dict] = []
+        try:
+            with open(path, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        item = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if not isinstance(item, dict):
+                        continue
+                    reports.append(item)
+        except Exception as exc:
+            logger.warning("Failed to read bug_report.jsonl: %s", exc)
+            return []
+        return reports
+
+    def _attach_bug_refs(self, stc: SemanticTestCase, bug_reports: list[dict]) -> None:
+        semantic_steps = [s for s in stc.steps if s.action != "navigation"]
+        if not semantic_steps:
+            return
+
+        grouped: dict[int, list[dict]] = {}
+        for report in bug_reports:
+            step_idx = report.get("step_idx")
+            if isinstance(step_idx, int) and step_idx > 0:
+                grouped.setdefault(step_idx, []).append(report)
+
+        for step_idx, reports in grouped.items():
+            if not reports:
+                continue
+            selected = sorted(
+                reports,
+                key=lambda r: (
+                    self._severity_rank(str(r.get("severity", ""))),
+                    str(r.get("timestamp", "")),
+                ),
+                reverse=True,
+            )[0]
+            target_pos = min(step_idx, len(semantic_steps)) - 1
+            target_step = semantic_steps[target_pos]
+            if target_step.context is None:
+                target_step.context = {}
+            target_step.context["has_bug_ref"] = {
+                "bug_id": selected.get("bug_id", "BUG-UNKNOWN"),
+                "user_expected_behavior": selected.get("user_expected_behavior", ""),
+                "observed_behavior": selected.get("observed_behavior", ""),
+                "severity": selected.get("severity", "unknown"),
+                "source": selected.get("source", "unknown"),
+                "timestamp": selected.get("timestamp", ""),
+            }
+
+    @staticmethod
+    def _input_visible_at_click(recording_dir: str, click_step, target_id: str) -> bool:
+        """Sprint A2 (2026-06-30): le field_snapshots.jsonl e retorna True se o
+        input alvo estava VISIVEL durante a janela do click. Quando hidden o
+        click eh REVELADOR (precisa virar fill subordinado, nao prefill noise)
+        — sem ele o input nao aparece no replay e o fill subsequente falha.
+
+        Sprint S: olha 3 snapshots mais proximos; se ALGUM mostrar hidden
+        preserva o click como revelador (mais resiliente a timing de 2s).
+
+        Retorna True conservador (skip permitido) quando snapshot ausente ou
+        ambiguo — mantem comportamento legado se nao houver evidencia.
+        """
+        if not recording_dir or not target_id:
+            return True
+        path = os.path.join(recording_dir, "field_snapshots.jsonl")
+        if not os.path.exists(path):
+            return True
+        click_ts_str = ""
+        if getattr(click_step, "context", None):
+            click_ts_str = (click_step.context.get("timestamp") or "")
+        if not click_ts_str:
+            return True
+        from datetime import datetime as _dt
+        try:
+            click_ts = _dt.fromisoformat(click_ts_str.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            return True
+        # Coleta todos snapshots do target dentro de 5s, ordena por proximidade
+        candidates: list[tuple[float, dict]] = []
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                batch = entry.get("snapshots")
+                items = batch if isinstance(batch, list) else [entry]
+                for snap in items:
+                    snap_ts_str = snap.get("timestamp") or entry.get("timestamp") or ""
+                    if not snap_ts_str:
+                        continue
+                    try:
+                        snap_ts = _dt.fromisoformat(snap_ts_str.replace("Z", "+00:00"))
+                    except ValueError:
+                        continue
+                    fp = snap.get("fingerprint") or ""
+                    if target_id not in fp:
+                        continue
+                    gap = abs((snap_ts - click_ts).total_seconds())
+                    if gap <= 5.0:
+                        candidates.append((gap, snap))
+        if not candidates:
+            return True
+        # Sprint S: top 3 mais proximos; se QUALQUER UM for hidden → click revelador
+        candidates.sort(key=lambda x: x[0])
+        top3 = candidates[:3]
+        for _gap, snap in top3:
+            if (snap.get("visibility") or "").lower() == "hidden":
+                return False
+        return True
+
+    # Sprint F (2026-06-30): roles + tokens em selectors que indicam click
+    # de troca de tab/secao/expansao. Nunca tratar como prefill noise mesmo
+    # se imediatamente seguidos por fill — o click navega container, nao
+    # focuses input.
+    _TAB_LIKE_ROLES = {"tab", "menuitem", "menuitemradio", "menuitemcheckbox", "option"}
+    _TAB_LIKE_SELECTOR_TOKENS = (
+        "mat-tab", "mat-expansion-panel-header", "mat-step-header",
+        "[role=\"tab\"]", "[role='tab']", "aria-controls=",
+        "cdk-step-header",
+    )
+
+    @classmethod
+    def _is_tab_like_click(cls, click_step) -> bool:
+        target = getattr(click_step, "target", None)
+        if target is None:
+            return False
+        role = (getattr(target, "role", "") or "").lower()
+        if role in cls._TAB_LIKE_ROLES:
+            return True
+        candidates = getattr(target, "candidates", None) or []
+        for c in candidates[:5]:
+            sel = (getattr(c, "selector", "") or "").lower()
+            if any(token in sel for token in cls._TAB_LIKE_SELECTOR_TOKENS):
+                return True
+        return False
+
+    def _eliminate_prefill_clicks(self, steps: list, recording_dir: str = "") -> None:
+        """Marca como pulados clicks seguidos imediatamente por fill no mesmo elemento.
+
+        Inputs Angular Material precisam de click para focar antes do fill, mas o
+        fill() do Playwright ja gerencia foco internamente. Gravar click + fill no mesmo
+        elemento produz um passo de click curado a cada execucao — elimina o ruido.
+
+        Sprint A2 (2026-06-30): nao pula click quando o input alvo NAO estava
+        visivel no field_snapshot mais proximo do click — nesse caso o click
+        eh revelador (tab/accordion/scroll) e seu skip quebra o playback. Bug
+        observado em test-pos-hotfix15b/c: step "click Renda mensal" foi pulado
+        + step "fill Renda mensal" REJ porque input estava em tab oculta.
+        """
+        for i in range(len(steps) - 1):
+            curr = steps[i]
+            if curr.skip_reason or curr.action != "click":
+                continue
+            # Sprint F (2026-06-30): clicks de tab/expansion-panel/menu nunca
+            # sao noise — eles trocam de secao do form e revelam inputs em
+            # outra view. Detecta por role ou tokens conhecidos no selector.
+            if self._is_tab_like_click(curr):
+                continue
+            # Find next non-skipped step
+            nxt = None
+            for k in range(i + 1, min(i + 4, len(steps))):
+                if not steps[k].skip_reason:
+                    nxt = steps[k]
+                    break
+            if nxt is None or nxt.action not in ("fill", "select_option"):
+                continue
+            curr_tag = (curr.target.tag or "").lower() if curr.target else ""
+            if nxt.action == "select_option" and curr_tag != "select":
+                continue
+            if nxt.action == "fill" and curr_tag not in ("input", "textarea"):
+                continue
+            # Mesmo elemento: prefere element_id, depois accessible_name, depois selector.
+            # Selector so eh ambiguo quando dois campos distintos compartilham o mesmo
+            # placeholder (ex.: dois inputs "R$0,00" em um formulario).
+            curr_id = (curr.target.element_id or "") if curr.target else ""
+            nxt_id = (nxt.target.element_id or "") if nxt.target else ""
+            curr_name = (curr.target.accessible_name or "") if curr.target else ""
+            nxt_name = (nxt.target.accessible_name or "") if nxt.target else ""
+            curr_sel = curr.target.candidates[0].selector if curr.target and curr.target.candidates else ""
+            nxt_sel = nxt.target.candidates[0].selector if nxt.target and nxt.target.candidates else ""
+            if curr_id and nxt_id:
+                same = curr_id == nxt_id
+            elif curr_name and nxt_name:
+                same = curr_name == nxt_name
+            else:
+                same = bool(curr_sel) and curr_sel == nxt_sel
+            if not same:
+                continue
+            # Sprint A2: input visivel = click eh noise; hidden = click revela.
+            visible_at_click = self._input_visible_at_click(
+                recording_dir, curr, curr_id or nxt_id,
+            )
+            if visible_at_click:
+                curr.skip_reason = "prefill_click_noise"
+            else:
+                # Mantem click; anota razao para diagnostico
+                if curr.context is None:
+                    curr.context = {}
+                curr.context["preserved_reason"] = "input_hidden_at_click_time"
+
+    def _audit_blind_spots(self, stc) -> None:
+        """Detecta padroes onde intencao do usuario provavelmente foi perdida pelo gravador.
+
+        Pontos cegos sao sistematicos, nao aleatorios. Apos reconstrucao Fase B,
+        campos resolvidos via evidencia (setter_hook, snapshot_diff, etc.) sao
+        excluidos do relatorio.
+        """
+        steps = stc.steps
+        blind_spots = []
+        resolved_keys = {
+            k for k, v in (stc.field_values or {}).items()
+            if v.value and v.source != "missing_fill"
+        }
+        from datetime import datetime
+
+        actionable = [(i, s) for i, s in enumerate(steps)
+                      if s.action != "navigation" and not s.skip_reason]
+
+        for ai in range(len(actionable) - 1):
+            i_curr, s_curr = actionable[ai]
+            i_next, s_next = actionable[ai + 1]
+            gap_s = 0
+            try:
+                t1_str = s_curr.context.get("timestamp", "")
+                t2_str = s_next.context.get("timestamp", "")
+                if t1_str and t2_str:
+                    t1 = datetime.fromisoformat(t1_str.replace("Z", "+00:00"))
+                    t2 = datetime.fromisoformat(t2_str.replace("Z", "+00:00"))
+                    gap_s = (t2 - t1).total_seconds()
+            except ValueError:
+                pass
+
+            tag = (s_curr.target.tag or "").lower() if s_curr.target else ""
+            ctx = getattr(s_curr, "context", {}) or {}
+
+            # Pula se reconstrucao por evidencia ja resolveu este passo
+            if ctx.get("_has_reconstructed_values") or (s_curr.value or "").strip():
+                continue
+            field_key = self._canonical_field_key(
+                ctx.get("fill_label")
+                or (s_curr.target.accessible_name if s_curr.target else "")
+                or (s_curr.target.label if s_curr.target else "")
+                or (s_curr.target.placeholder if s_curr.target else "")
+                or (s_curr.target.text if s_curr.target else "")
+            )
+            if field_key in resolved_keys:
+                continue
+
+            # Padrao: click em input com intervalo, sem evento fill entre
+            if s_curr.action == "click" and tag in ("input", "textarea"):
+                if s_next.action != "fill" and gap_s > 2.0:
+                    label = (s_curr.target.accessible_name
+                             or s_curr.target.label
+                             or s_curr.target.placeholder or "")
+                    blind_spots.append({
+                        "step": i_curr + 1,
+                        "pattern": "typing_not_captured",
+                        "element": tag,
+                        "label": label,
+                        "gap_seconds": round(gap_s, 1),
+                        "resolution": "data-file or submit_form_values",
+                    })
+
+            # Padrao: click em label (radio/checkbox) sem valor reconstruido
+            if s_curr.action == "click" and tag == "label":
+                label_text = (s_curr.target.text or s_curr.target.label or "").strip()
+                if label_text and self._canonical_field_key(label_text) not in resolved_keys:
+                    if s_next.action != "fill" and gap_s > 2.0:
+                        blind_spots.append({
+                            "step": i_curr + 1,
+                            "pattern": "typing_not_captured",
+                            "element": "label",
+                            "label": label_text,
+                            "gap_seconds": round(gap_s, 1),
+                            "resolution": "checked_transition or data-file",
+                        })
+
+            # Padrao: click em select, sem evento select_option
+            if s_curr.action == "click" and tag == "select":
+                if s_next.action != "select_option":
+                    blind_spots.append({
+                        "step": i_curr + 1,
+                        "pattern": "select_not_captured",
+                        "resolution": "data-file",
+                    })
+
+            # Padrao: intervalo longo entre dois clicks (provavelmente interacao complexa)
+            if gap_s > 10.0:
+                blind_spots.append({
+                    "step": i_curr + 1,
+                    "pattern": "long_gap",
+                    "gap_seconds": round(gap_s, 1),
+                    "resolution": "review manually",
+                })
+
+            # GT-01: Shadow DOM modo fechado — elemento customizado (tag com hifen)
+            # eh um potencial host shadow. O gravador captura clicks no host
+            # mas eventos fill dentro de shadow root fechado sao invisiveis.
+            if s_curr.action in ("click", "fill") and tag and "-" in tag:
+                # Custom element names contain at least one hyphen per HTML spec.
+                # If there's no fill event following this step, the internal
+                # field might be inside closed shadow DOM.
+                if s_next.action != "fill" and gap_s > 1.0:
+                    blind_spots.append({
+                        "step": i_curr + 1,
+                        "pattern": "shadow_dom_closed",
+                        "element": tag,
+                        "label": (s_curr.target.accessible_name
+                                  or s_curr.target.label
+                                  or s_curr.target.text or ""),
+                        "gap_seconds": round(gap_s, 1),
+                        "resolution": "shadow-root agent or data-file",
+                    })
+
+            # GT-02: Clique em iframe — gravador nao pode injetar JS dentro
+            # de iframes cross-origin. Eventos internos sao invisiveis.
+            if s_curr.action == "click" and tag == "iframe":
+                blind_spots.append({
+                    "step": i_curr + 1,
+                    "pattern": "iframe_cross_origin",
+                    "element": "iframe",
+                    "label": s_curr.target.text or s_curr.target.name or "",
+                    "resolution": "manual curation in steps.jsonl or same-origin required",
+                })
+
+        # GT-01 (cont.): Tambem varre todos os passos por elementos customizados
+        # com acoes fill que podem indicar interacao com campo shadow DOM
+        for i, step in enumerate(steps):
+            if step.skip_reason:
+                continue
+            tag = (step.target.tag or "").lower() if step.target else ""
+            if tag and "-" in tag and step.action == "fill":
+                # Custom element being filled — check if value was captured
+                if not (step.value or "").strip():
+                    ctx = getattr(step, "context", {}) or {}
+                    if not ctx.get("_has_reconstructed_values"):
+                        blind_spots.append({
+                            "step": i + 1,
+                            "pattern": "shadow_dom_fill_missed",
+                            "element": tag,
+                            "label": (step.target.accessible_name
+                                      or step.target.label
+                                      or step.target.text or ""),
+                            "resolution": "final_state or data-file",
+                        })
+
+        stc.blind_spots = blind_spots
+        if blind_spots:
+            import sys
+            print(f"[TestForge] [AVISO] {len(blind_spots)} ponto(s) cego(s) detectado(s):", file=sys.stderr)
+            for bs in blind_spots:
+                print(f"  Passo {bs['step']}: {bs['pattern']} ({bs.get('label', bs.get('gap_seconds', ''))}) → {bs['resolution']}", file=sys.stderr)
+
+    def _reconstruct_intents(self, stc, recording_dir: str) -> None:
+        """Reconstroi intencoes de fill a partir de fontes de evidencia (IntentReconstructor inline).
+
+        Fontes: value_mutations, snapshots, form_values, network, final_state, polling.
+        """
+        entries = self._ir_all(recording_dir, stc.steps)
+
+        for entry in entries:
+            source = entry.get("source", "")
+            value = entry.get("value", "")
+            field_key = entry.get("field_key", "")
+            step_idx = entry.get("step_index", 0)
+            intention = entry.get("intention", "")
+            identifiers = entry.get("identifiers", {})
+
+            target_indices = {step_idx}
+            # Tambem corresponde clicks em label/radio por similaridade de texto
+            entry_label = (identifiers.get("label") or value or "").strip().lower()
+            if not entry_label:
+                logger.info(
+                    "entry_label vazio, marcando unanchored",
+                    extra={"entry_source": source, "step_idx": step_idx},
+                )
+                MetricsRepository.record_silent_skip_global("entry_label_empty")
+                entry["unanchored"] = True
+            for i, step in enumerate(stc.steps):
+                if step.action != "click" or not step.target:
+                    continue
+                step_text = (step.target.text or step.target.label or "").strip().lower()
+                if entry_label and step_text and (
+                    entry_label in step_text or step_text in entry_label
+                ):
+                    target_indices.add(i)
+
+            for idx in target_indices:
+                if not (0 <= idx < len(stc.steps)):
+                    continue
+                step = stc.steps[idx]
+                ctx = getattr(step, "context", {}) or {}
+                if "_reconstructed_values" not in ctx:
+                    ctx["_reconstructed_values"] = []
+                ctx["_reconstructed_values"].append({
+                    "field_key": field_key,
+                    "value": value,
+                    "source": source,
+                    "intention": intention,
+                    "identifiers": identifiers,
+                })
+                ctx["_has_reconstructed_values"] = True
+                step.context = ctx
+
+                tag = (step.target.tag or "").lower() if step.target else ""
+                if step.action in ("click",) and tag in ("input", "textarea", "select", "label"):
+                    step.value = value
+                    step.context["reconstructed_source"] = source
+                    step.context.pop("missing_fill", None)
+
+        if entries:
+            import sys
+            sources = {}
+            for e in entries:
+                src = e.get("source", "unknown")
+                sources[src] = sources.get(src, 0) + 1
+            src_desc = ", ".join(f"{k}={v}" for k, v in sources.items())
+            print(f"[TestForge] [RECONSTRUCAO] IntentReconstructor: {len(entries)} campo(s) reconstituido(s) ({src_desc})", file=sys.stderr)
+
+    def _skip_dead_fills(self, steps: list) -> None:
+        """5.7.6: marca fills que não têm nenhum identificador de alvo utilizável.
+
+        Um fill é "morto" quando o target não tem accessible_name, label, placeholder,
+        element_id, name ou text — apenas um css_path estrutural de baixa confiança.
+        Esses fills chegam do overlay quando o recorder captura alterações de valor em
+        elementos que não foram identificados corretamente (ex.: inputs dentro de
+        shadow DOM ou iframes não reconhecidos pós-load).
+        """
+        for step in steps:
+            if step.action != "fill" or step.skip_reason:
+                continue
+            tgt = step.target
+            if not tgt:
+                step.skip_reason = "dead_fill_no_target"
+                MetricsRepository.record_silent_skip_global("dead_fill.no_target")
+                continue
+            has_id = bool(
+                tgt.accessible_name or tgt.label or tgt.placeholder
+                or tgt.element_id or tgt.name or tgt.test_id
+            )
+            if has_id:
+                continue
+            # Only css_path candidates remain — check if all are structural/positional
+            cands = tgt.candidates or []
+            has_stable = any(
+                c.strategy not in ("css_path", "nth_child") and c.score > 0.40
+                for c in cands
+            )
+            if not has_stable and not (tgt.text or "").strip():
+                step.skip_reason = "dead_fill_no_identifier"
+                logger.info(
+                    "dead fill skipped: no stable identifier",
+                    extra={"value": step.value, "candidates": len(cands)},
+                )
+                MetricsRepository.record_silent_skip_global("dead_fill.no_identifier")
+
+    def _build_field_value_map(self, stc) -> None:
+        """Constroi field_value_map ligando identificadores de campo, valores e intencoes.
+
+        Cada passo que envolve campo de formulario (input/textarea/select) contribui
+        para o mapa. Fontes em prioridade:
+        1. form_values: capturado no submit (mais confiavel)
+        2. fill events: valores gravados (polling ou input nativo)
+        3. missing_fill: lacuna detectada, valor de form_values ou vazio (precisa data_file)
+
+        O mapa eh armazenado em stc.field_values: chave_canonica -> FieldValueMap.
+        """
+        from .model import FieldValueMap
+
+        # Primeira passada: coleta eventos fill com seus identificadores
+        fill_registry = {}  # canonical_key -> {identifiers, value, step_index}
+        for i, step in enumerate(stc.steps):
+            if step.action not in ("fill", "click"):
+                continue
+            if step.action == "click":
+                tag = (step.target.tag or "").lower() if step.target else ""
+                if tag not in ("input", "textarea"):
+                    continue
+                # Check if this click has form_values (propagated from submit)
+                ctx = getattr(step, "context", {}) or {}
+                if ctx.get("form_values"):
+                    # Convert form_values into FieldValueMap entries
+                    for fname, fval in ctx["form_values"].items():
+                        canonical = self._canonical_field_key(fname)
+                        # Build identifiers from the step target
+                        ids = {}
+                        if step.target:
+                            if step.target.name: ids["name"] = step.target.name
+                            if step.target.accessible_name: ids["aria_label"] = step.target.accessible_name
+                            if step.target.placeholder: ids["placeholder"] = step.target.placeholder
+                            if step.target.element_id: ids["id"] = step.target.element_id
+                            if step.target.label: ids["label"] = step.target.label
+                            if step.target.form_control_name: ids["form_control_name"] = step.target.form_control_name
+                            if step.target.material_field_label: ids["material_field_label"] = step.target.material_field_label
+                        # Include the form_values key itself
+                        ids.setdefault("form_name", fname)
+                        intention = self._build_fill_intention(step, fname, fval, i)
+                        if canonical not in fill_registry:
+                            fill_registry[canonical] = {
+                                "value": fval,
+                                "intention": intention,
+                                "identifiers": ids,
+                                "source": "form_values",
+                                "step_index": i,
+                            }
+                        elif fill_registry[canonical]["source"] != "form_values":
+                            # Prefer form_values over other sources
+                            fill_registry[canonical] = {
+                                "value": fval,
+                                "intention": intention,
+                                "identifiers": ids,
+                                "source": "form_values",
+                                "step_index": i,
+                            }
+                    continue
+
+                # Check missing_fill
+                if ctx.get("missing_fill"):
+                    fill_label = ctx.get("fill_label", "") or ""
+                    canonical = self._canonical_field_key(fill_label)
+                    if canonical not in fill_registry:
+                        ids = {}
+                        if step.target:
+                            if step.target.name: ids["name"] = step.target.name
+                            if step.target.accessible_name: ids["aria_label"] = step.target.accessible_name
+                            if step.target.placeholder: ids["placeholder"] = step.target.placeholder
+                            if step.target.element_id: ids["id"] = step.target.element_id
+                            if step.target.label: ids["label"] = step.target.label
+                            if step.target.form_control_name: ids["form_control_name"] = step.target.form_control_name
+                            if step.target.material_field_label: ids["material_field_label"] = step.target.material_field_label
+                        fill_registry[canonical] = {
+                            "value": "",
+                            "intention": self._build_fill_intention(step, fill_label, "", i),
+                            "identifiers": ids,
+                            "source": "missing_fill",
+                            "step_index": i,
+                        }
+                    continue
+
+            # Recorded fill events
+            if step.action == "fill" and step.target:
+                val = (step.value or "").strip()
+                if not val:
+                    continue
+                # Build identifiers from target
+                ids = {}
+                if step.target.name: ids["name"] = step.target.name
+                if step.target.accessible_name: ids["aria_label"] = step.target.accessible_name
+                if step.target.placeholder: ids["placeholder"] = step.target.placeholder
+                if step.target.element_id: ids["id"] = step.target.element_id
+                if step.target.label: ids["label"] = step.target.label
+                if step.target.text: ids["text"] = step.target.text
+                if step.target.form_control_name: ids["form_control_name"] = step.target.form_control_name
+                if step.target.material_field_label: ids["material_field_label"] = step.target.material_field_label
+
+                # Determine canonical key from best identifier
+                canonical = (
+                    step.target.name
+                    or step.target.accessible_name
+                    or step.target.placeholder
+                    or step.target.element_id
+                    or step.target.label
+                    or f"step_{i+1}"
+                )
+                canonical = self._canonical_field_key(canonical)
+                intention = self._build_fill_intention(step, canonical, val, i)
+                if canonical not in fill_registry:
+                    fill_registry[canonical] = {
+                        "value": val,
+                        "intention": intention,
+                        "identifiers": ids,
+                        "source": "fill_event",
+                        "step_index": i,
+                    }
+                else:
+                    # Update value if we only had missing_fill placeholder
+                    existing = fill_registry[canonical]
+                    if existing["source"] == "missing_fill" or not existing["value"]:
+                        existing["value"] = val
+                        existing["source"] = "fill_event"
+                        existing["step_index"] = i
+
+        # Tambem verifica se form_values foram capturados fora de contexto de click em input
+        # (alguns eventos submit carregam form_values sem clicks precedentes em input)
+        for i, step in enumerate(stc.steps):
+            ctx = getattr(step, "context", {}) or {}
+            form_vals = ctx.get("form_values") or {}
+            if not form_vals:
+                continue
+            for fname, fval in form_vals.items():
+                canonical = self._canonical_field_key(fname)
+                if canonical not in fill_registry:
+                    fill_registry[canonical] = {
+                        "value": fval,
+                        "intention": f"fill field '{fname}'",
+                        "identifiers": {"form_name": fname},
+                        "source": "form_values",
+                        "step_index": i,
+                    }
+
+        # Sprint 4: incorpora valores reconstruidos (snapshot_diff, network_payload)
+        # Estes vem de _reconstruct_intents() armazenados em step.context["_reconstructed_values"]
+        for i, step in enumerate(stc.steps):
+            ctx = getattr(step, "context", {}) or {}
+            rec_vals = ctx.get("_reconstructed_values") or []
+            if not rec_vals:
+                continue
+            for rv in rec_vals:
+                canonical = self._canonical_field_key(rv.get("field_key", ""))
+                source = rv.get("source", "unknown")
+                value = rv.get("value", "")
+                intention = rv.get("intention", "")
+                identifiers = rv.get("identifiers", {})
+                if canonical and value:
+                    if canonical not in fill_registry:
+                        fill_registry[canonical] = {
+                            "value": value,
+                            "intention": intention,
+                            "identifiers": identifiers,
+                            "source": source,
+                            "step_index": i,
+                        }
+                    else:
+                        existing = fill_registry[canonical]
+                        # H22a: fonte unica da verdade em IR_SOURCE_PRIORITY.
+                        existing_priority = RecordingNormalizer.IR_SOURCE_PRIORITY.get(existing["source"], 0)
+                        new_priority = RecordingNormalizer.IR_SOURCE_PRIORITY.get(source, 0)
+                        if new_priority > existing_priority or not existing["value"]:
+                            existing["value"] = value
+                            existing["intention"] = intention
+                            existing["identifiers"] = identifiers
+                            existing["source"] = source
+                            existing["step_index"] = i
+
+        # Dedup secundario: mesmo campo fisico com chaves canonicas diferentes (por element_id).
+        # fill_event chaveia por placeholder, setter_hook por element_id — mesmo elemento, duas entradas.
+        # H22a: fonte unica da verdade em IR_SOURCE_PRIORITY.
+        _source_priority_map = RecordingNormalizer.IR_SOURCE_PRIORITY
+        el_id_to_key: dict[str, str] = {}
+        keys_to_drop: set = set()
+        # Rastreia pares perdedor→vencedor para mesclar identificadores apos decisao
+        merge_pairs: list[tuple[str, str]] = []  # (loser_key, winner_key)
+        for canonical, entry in fill_registry.items():
+            el_id = (entry.get("identifiers") or {}).get("id", "").strip()
+            if not el_id:
+                continue
+            existing_canonical = el_id_to_key.get(el_id)
+            if existing_canonical is None:
+                el_id_to_key[el_id] = canonical
+            else:
+                existing_entry = fill_registry[existing_canonical]
+                old_p = _source_priority_map.get(existing_entry["source"], 0)
+                new_p = _source_priority_map.get(entry["source"], 0)
+                if new_p > old_p or (new_p == old_p and len(entry.get("value", "")) > len(existing_entry.get("value", ""))):
+                    keys_to_drop.add(existing_canonical)
+                    merge_pairs.append((existing_canonical, canonical))
+                    el_id_to_key[el_id] = canonical
+                else:
+                    keys_to_drop.add(canonical)
+                    merge_pairs.append((canonical, existing_canonical))
+        # Mescla identificadores de entradas descartadas nos vencedores para que
+        # _resolve_field_value ainda encontre campos por aria_label/label/placeholder
+        # mesmo quando vencedor so tem element_id em seus identificadores.
+        for loser_key, winner_key in merge_pairs:
+            loser = fill_registry.get(loser_key) or {}
+            winner = fill_registry.get(winner_key)
+            if winner is None:
+                continue
+            for id_k, id_v in (loser.get("identifiers") or {}).items():
+                if id_v and not winner["identifiers"].get(id_k):
+                    winner["identifiers"][id_k] = id_v
+        for k in keys_to_drop:
+            fill_registry.pop(k, None)
+
+        # Convert to FieldValueMap and store in stc
+        stc.field_values = {}
+        for key, entry in fill_registry.items():
+            if entry["value"] or entry["source"] == "missing_fill":
+                stc.field_values[key] = FieldValueMap(
+                    field_key=key,
+                    value=entry["value"],
+                    intention=entry["intention"],
+                    identifiers=entry["identifiers"],
+                    source=entry["source"],
+                    step_index=entry["step_index"],
+                )
+
+        # Hotfix BUG 13: mescla valores fornecidos pelo usuario de field_value_map.json.
+        # `--complete` escreve esse arquivo mas o normalizador historicamente ignorava
+        # ele em execucoes subsequentes, entao a segunda invocacao re-reportava todo
+        # campo como ausente. Agora sobrepomos entradas user_supplied_cli com
+        # prioridade sobre fill events mas sem sobrescrever form_values verificados.
+        self._merge_user_supplied_values(stc)
+
+    def _merge_user_supplied_values(self, stc) -> None:
+        """CS-4a: le field_value_map.json escrito pelo prompt `--complete`.
+
+        O escritor (`_save_field_value_map` em _interactive_completion.py)
+        armazena valores em dois formatos:
+
+            { "fields": { "<chave>": "<valor>", ... },
+              "entries": [ {"field_key": ..., "value": ..., ...}, ... ],
+              "_meta": { ... } }
+
+        O leitor anterior iterava `data.items()` esperando um mapa plano
+        `{ "<chave>": {"value": ..., "source": ...}, ... }` e portanto
+        pulava toda entrada (as unicas chaves do dict sao "fields",
+        "entries", "_meta" — nenhuma corresponde ao formato esperado).
+        Isso perdia silenciosamente todo valor que o testador digitou via --complete,
+        que aparecia em run-incremental como `fill [FALHA]` em
+        `input[aria-label="CPF"]` porque stc.field_values nao tinha entrada CPF,
+        o runner caia para el.fill em string vazia, e o campo ficava em branco.
+
+        Correcao: consumir lista "entries" primeiro (payload mais rico), depois
+        mapa "fields" (compatibilidade retroativa). Pular chave "_meta"
+        explicitamente para que mudancas futuras de formato nao a peguem acidentalmente.
+        """
+        from .model import FieldValueMap
+        rec_dir = getattr(self, "_current_recording_dir", "") or ""
+        if not rec_dir:
+            return
+        path = os.path.join(rec_dir, "field_value_map.json")
+        if not os.path.exists(path):
+            return
+        try:
+            data = json.loads(open(path, encoding="utf-8").read())
+        except Exception:
+            return
+        if not isinstance(data, dict):
+            return
+
+        merged = 0
+
+        def _apply(raw_key: str, value: str, *,
+                   source: str = "user_supplied_cli",
+                   intention: str = "",
+                   identifiers: Optional[dict] = None,
+                   step_index: int = -1) -> bool:
+            nonlocal merged
+            if not raw_key or not value:
+                return False
+            # B30: quando o escritor armazenou o valor sob chave sintetica
+            # `step_N` / `field_step_N` (fallback do normalizador quando
+            # placeholders missing_fill nao tinham identificador resolvido),
+            # reassocia ao label real / element_id do passo no momento da
+            # aplicacao. Assim o _resolve_field_value do runner consegue
+            # corresponder a entrada pelo aria-label ou element_id do
+            # SemanticAction em vez da chave sintetica.
+            rebound_key = raw_key
+            rebound_identifiers = dict(identifiers or {})
+            looks_synthetic = (
+                raw_key.startswith("step_")
+                or raw_key.startswith("field_step_")
+                or raw_key.startswith("select_step_")
+            )
+            if looks_synthetic and 0 <= step_index < len(stc.steps):
+                tgt = getattr(stc.steps[step_index], "target", None)
+                if tgt is not None:
+                    candidate = (
+                        getattr(tgt, "accessible_name", None)
+                        or getattr(tgt, "label", None)
+                        or getattr(tgt, "name", None)
+                        or getattr(tgt, "placeholder", None)
+                        or getattr(tgt, "element_id", None)
+                        or ""
+                    )
+                    if candidate:
+                        rebound_key = candidate
+                    # Preserva identificadores descobertos para que runner
+                    # possa resolver por qualquer um deles.
+                    if not rebound_identifiers.get("label") and getattr(tgt, "label", None):
+                        rebound_identifiers["label"] = tgt.label
+                    if not rebound_identifiers.get("aria_label") and getattr(tgt, "accessible_name", None):
+                        rebound_identifiers["aria_label"] = tgt.accessible_name
+                    if not rebound_identifiers.get("placeholder") and getattr(tgt, "placeholder", None):
+                        rebound_identifiers["placeholder"] = tgt.placeholder
+                    if not rebound_identifiers.get("id") and getattr(tgt, "element_id", None):
+                        rebound_identifiers["id"] = tgt.element_id
+                    if not rebound_identifiers.get("name") and getattr(tgt, "name", None):
+                        rebound_identifiers["name"] = tgt.name
+            canonical = self._canonical_field_key(rebound_key)
+            existing = stc.field_values.get(canonical)
+            if existing and existing.source == "form_values":
+                return False
+            stc.field_values[canonical] = FieldValueMap(
+                field_key=canonical,
+                value=str(value),
+                intention=intention or f"fill {rebound_key} with '{value}' (user supplied)",
+                identifiers=rebound_identifiers,
+                source=source,
+                step_index=step_index,
+            )
+            merged += 1
+            return True
+
+        # 1. Novo formato: lista "entries" com metadados completos por item.
+        entries = data.get("entries") or []
+        if isinstance(entries, list):
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+                _apply(
+                    entry.get("field_key", ""),
+                    entry.get("value", ""),
+                    source=entry.get("source", "user_supplied_cli"),
+                    intention=entry.get("intention", ""),
+                    identifiers=entry.get("identifiers", {}) or {},
+                    step_index=entry.get("step_index", -1),
+                )
+
+        # 2. Novo formato: mapa "fields" (chave → valor) — cobre entradas que
+        #    podem existir la sem parceiro em "entries".
+        fields = data.get("fields") or {}
+        if isinstance(fields, dict):
+            for raw_key, value in fields.items():
+                if not isinstance(value, str):
+                    continue
+                _apply(raw_key, value)
+
+        # 3. Formato legado: dict top-level onde cada chave eh um campo e
+        #    cada valor eh um dict payload. Pula chaves reservadas "_meta",
+        #    "fields", "entries" que ja tratamos.
+        reserved = {"_meta", "fields", "entries"}
+        for raw_key, payload in data.items():
+            if raw_key in reserved or raw_key.startswith("_"):
+                continue
+            if not isinstance(payload, dict):
+                continue
+            _apply(
+                raw_key,
+                payload.get("value", ""),
+                source=payload.get("source", "user_supplied_cli"),
+                intention=payload.get("intention", ""),
+                identifiers=payload.get("identifiers", {}) or {},
+                step_index=payload.get("step_index", -1),
+            )
+
+        if merged:
+            logger.info(
+                "Merged %d user-supplied value(s) from field_value_map.json",
+                merged,
+            )
+
+        # Report
+        if stc.field_values:
+            import sys
+            source_icons = {
+                "form_values": "[OK]", "fill_event": "[O]", "missing_fill": "[AVISO]",
+                "setter_hook": "[RAIO]", "checked_transition": "[DIA]",
+                "snapshot_diff": "[DIF]", "network_payload": "[REDE]", "final_state": "[FIM]",
+            }
+            print(f"[TestForge] [LISTA] {len(stc.field_values)} campo(s) mapeado(s):", file=sys.stderr)
+            for key, fvm in stc.field_values.items():
+                icon = source_icons.get(fvm.source, "?")
+                val_display = fvm.value if fvm.value else "<pendente>"
+                print(f"  {icon} {key}: {val_display} ({fvm.source})", file=sys.stderr)
+            missing = [k for k, v in stc.field_values.items() if not v.value]
+            if missing:
+                print(f"  [DICA] {len(missing)} campo(s) sem valor — usar --data data.json", file=sys.stderr)
+
+    @staticmethod
+    def _canonical_field_key(key: str) -> str:
+        """Normaliza identificador de campo para chave canonica de correspondencia."""
+        if not key:
+            return "unknown"
+        k = key.strip().lower()
+        # Remove common prefixes/suffixes
+        k = _re.sub(r'^(input|field|txt|inp)[-_]?', '', k)
+        k = _re.sub(r'[-_\s]+', '_', k)
+        return k.strip('_')
+
+    @staticmethod
+    def _build_fill_intention(step, field_key: str, value: str, step_index: int) -> str:
+        """Constroi string de intencao legivel para acao de fill em campo."""
+        tag = (step.target.tag or "").lower() if step.target else ""
+        label = (
+            (step.target.accessible_name or "")
+            or (step.target.label or "")
+            or (step.target.placeholder or "")
+            or field_key
+        )
+        parts = [f"fill {label}"]
+        if value:
+            parts.append(f"with '{value}'")
+        if tag:
+            parts.append(f"on {tag}")
+        parts.append(f"step {step_index + 1}")
+        return " ".join(parts)
+
+    def _compact_keypress_sequences(self, raw_events: list) -> list:
+        """Converte sequencias de eventos keypress de caractere unico em evento fill acumulado.
+
+        Alguns gravadores emitem eventos de tecla individual (valor=caractere unico ou vazio,
+        tecla=caractere unico) em vez de eventos fill acumulados. Este metodo detecta tais
+        sequencias e reconstroi o valor completo concatenando teclas individuais.
+
+        - Backspace: remove ultimo caractere acumulado.
+        - Enter / Tab: termina a sequencia (cria o fill e para).
+        - Eventos fill acumulados (valor > 1 caractere): passam inalterados para que
+          _compact_fill_events possa trata-los normalmente.
+
+        Deve executar ANTES de _compact_fill_events.
+        """
+        if not raw_events:
+            return raw_events
+
+        def _is_individual_keypress(event: dict) -> bool:
+            if event.get("type") != "keypress":
+                return False
+            value = event.get("value") or ""
+            key = event.get("key") or ""
+            # Fill acumulado: valor > 1 char — nao eh keypress individual
+            if len(value) > 1:
+                return False
+            return True
+
+        def _target_key(t) -> tuple:
+            if not t:
+                return ("__none__",)
+            return (
+                t.get("tag", ""),
+                t.get("id", "") or (t.get("all_attributes") or {}).get("id", ""),
+                t.get("name", ""),
+                t.get("placeholder", ""),
+                t.get("accessible_name", ""),
+            )
+
+        result: list = []
+        i = 0
+        while i < len(raw_events):
+            event = raw_events[i]
+
+            if not _is_individual_keypress(event):
+                result.append(event)
+                i += 1
+                continue
+
+            current_target = _target_key(event.get("target"))
+            accumulated = ""
+            j = i
+            last_event = event
+
+            while j < len(raw_events):
+                ev = raw_events[j]
+                if not _is_individual_keypress(ev):
+                    break
+                if _target_key(ev.get("target")) != current_target:
+                    break
+
+                value = ev.get("value") or ""
+                key = ev.get("key") or ""
+                char = value if value else key
+
+                if char in ("Backspace", "\b"):
+                    accumulated = accumulated[:-1]
+                elif char in ("Enter", "Tab", "\r", "\n", "\t"):
+                    last_event = ev
+                    j += 1
+                    break
+                elif len(char) == 1:
+                    accumulated += char
+
+                last_event = ev
+                j += 1
+
+            # So sintetiza evento fill quando 2+ eventos foram consumidos E
+            # construimos string nao vazia. Senao passa inalterado.
+            if j > i + 1 and accumulated:
+                synthetic = dict(last_event)
+                synthetic["type"] = "fill"
+                synthetic["value"] = accumulated
+                result.append(synthetic)
+                i = j
+            else:
+                result.append(event)
+                i += 1
+
+        return result
+
+    def _compact_fill_events(self, raw_events: list) -> list:
+        """Compacta eventos fill sequenciais no mesmo elemento.
+
+        Quando usuario digita em um campo, o gravador captura cada tecla como
+        evento fill/keypress separado. Eventos consecutivos no mesmo alvo
+        sao colapsados — apenas o evento final (que contem o valor completo
+        digitado) eh mantido.
+
+        Nota: agrupamento por tempo (janela 500ms) foi REMOVIDO porque
+        digitadores lentos produzem intervalos de tecla excedendo 500ms. Usar
+        heuristica do mesmo alvo eh mais seguro: se proximo evento tem mesmo
+        alvo, faz parte da mesma sequencia de digitacao, independente do intervalo.
+        """
+        if not raw_events:
+            return raw_events
+
+        FILL_TYPES = {"fill", "keypress", "select_option"}
+
+        def _target_key(target: dict | None) -> tuple:
+            """Derive stable key from target to identify same element."""
+            if not target:
+                return ("__none__",)
+            return (
+                target.get("tag", ""),
+                target.get("id", "") or (target.get("all_attributes") or {}).get("id", ""),
+                target.get("name", ""),
+                target.get("test_id", ""),
+                target.get("placeholder", ""),
+                target.get("accessible_name", ""),
+            )
+
+        compacted: list = []
+        i = 0
+        while i < len(raw_events):
+            event = raw_events[i]
+            event_type = event.get("type", "")
+
+            if event_type not in FILL_TYPES:
+                compacted.append(event)
+                i += 1
+                continue
+
+            # Start of a potential fill group on the same target
+            current_key = _target_key(event.get("target"))
+            group_end = i
+
+            j = i + 1
+            while j < len(raw_events):
+                next_event = raw_events[j]
+                next_type = next_event.get("type", "")
+
+                if next_type not in FILL_TYPES:
+                    # Allow a same-element click (focus) to pass through without breaking
+                    if next_type == "click" and _target_key(next_event.get("target")) == current_key:
+                        j += 1
+                        continue
+                    break
+
+                next_key = _target_key(next_event.get("target"))
+
+                if next_key != current_key:
+                    break
+
+                group_end = j
+                j += 1
+
+            # Keep only the final event (holds the complete typed value)
+            compacted.append(raw_events[group_end])
+            i = j
+
+        return compacted
+
+    def _remove_snapshot_duplicates(self, raw_events: list) -> list:
+        """Remove eventos fill de snapshot periodico DOM (ciclos duplicados).
+
+        O gravador captura snapshots periodicos de TODOS os campos de formulario
+        visiveis. Isso produz eventos fill duplicados para o mesmo elemento com
+        mesmo valor, ciclando pelos campos em padrao previsivel.
+        Mantem apenas primeira ocorrencia de cada par (elemento, valor).
+
+        Re-preenchimentos com valores diferentes (ex.: moeda: 10000 -> 100000)
+        sao preservados porque o valor difere. Apenas duplicatas verdadeiras
+        (mesmo elemento, mesmo valor) sao removidas.
+        """
+        if not raw_events:
+            return raw_events
+
+        FILL_TYPES = {"fill", "keypress", "select_option"}
+        seen: set = set()
+        result: list = []
+
+        for event in raw_events:
+            event_type = event.get("type", "")
+            target = event.get("target") or {}
+
+            if event_type in FILL_TYPES:
+                # Hotfix 22: chave de dedup precisa distinguir campos que
+                # compartilham id/name vazios (comum em Angular Material
+                # currencymask onde varios inputs usam placeholder R$0,00).
+                # Antes: Prestação=1.000,00 anulava Renda=1.000,00 → fill de
+                # Renda perdia valor final. Agora inclui accessible_name +
+                # placeholder + element_id no key.
+                attrs = target.get("attributes") or {}
+                all_attrs = target.get("all_attributes") or {}
+                # Hotfix 22: formControlName eh a chave mais estavel entre runs
+                # em apps Angular (SIMULADOR banco). Se presente, evita colisao mesmo
+                # quando id/name/placeholder repetem.
+                fcn = (target.get("form_control_name", "")
+                       or attrs.get("formcontrolname", "")
+                       or all_attrs.get("formcontrolname", ""))
+                key = (
+                    target.get("id", "") or target.get("element_id", "") or attrs.get("id", "") or all_attrs.get("id", ""),
+                    target.get("name", "") or attrs.get("name", "") or all_attrs.get("name", ""),
+                    target.get("placeholder", "") or attrs.get("placeholder", ""),
+                    target.get("accessible_name", "") or target.get("aria_label", ""),
+                    fcn,
+                    event.get("value", "") or "",
+                )
+                if key in seen:
+                    continue
+                seen.add(key)
+
+            result.append(event)
+
+        return result
+
+    def _convert_event(self, raw: dict) -> Optional[SemanticAction]:
+        event_type = raw.get("type", "")
+        target_data = raw.get("target") or {}
+
+        # Normaliza nomes de campos de target_data do formato do gravador para
+        # formato esperado por _build_target().
+        # Gravador armazena element_id + dict attributes; _build_target
+        # espera campos planos: id, name, placeholder, label, etc.
+        if target_data:
+            if "element_id" in target_data and "id" not in target_data:
+                target_data["id"] = target_data["element_id"]
+            attrs = target_data.get("attributes") or {}
+            all_attrs = target_data.get("all_attributes") or {}
+            for flat_key in ("name", "placeholder", "type"):
+                if flat_key not in target_data:
+                    val = attrs.get(flat_key) or all_attrs.get(flat_key) or ""
+                    if val:
+                        target_data[flat_key] = val
+
+        if event_type == "navigation":
+            nav_ctx = {}
+            if raw.get("timestamp"):
+                nav_ctx["timestamp"] = raw["timestamp"]
+            return SemanticAction(
+                action="navigation",
+                url=raw.get("url"),
+                page_title=raw.get("page_title"),
+                context=nav_ctx,
+            )
+
+        # RC-12: postback = SSO/server-side page reload. Emit wait_for_navigation so
+        # Playwright knows to wait for the reload before proceeding to the next step.
+        if event_type == "postback":
+            postback_url = raw.get("postback_url") or raw.get("url") or ""
+            logger.info("RC-12: postback → wait_for_navigation url=%s", postback_url)
+            return SemanticAction(
+                action="wait_for_navigation",
+                target=None,
+                value=postback_url,
+                url=postback_url,
+                context={"postback": True, "timestamp": raw.get("timestamp", "")},
+            )
+
+        target = self._build_target(target_data)
+
+        # Pula eventos click sem candidatos de alvo — artefatos de gravacao
+        # (clicks fora de elemento reconhecivel, ex.: fundo/espaco em branco).
+        if event_type == "click" and (not target or not target.candidates):
+            logger.info(
+                "click event dropped, no candidates identified",
+                extra={
+                    "raw_event_ts": raw.get("timestamp"),
+                    "event_url": raw.get("url"),
+                },
+            )
+            MetricsRepository.record_silent_skip_global("click_no_candidates")
+            return None
+
+        # Inputs radio e checkbox: Playwright fill() nao suporta
+        # estes tipos de elemento. Converte para acao click — o seletor
+        # de alvo (label:has-text ou baseado em nome) encontrara o elemento
+        # e clicar no label propaga para o radio/checkbox nativo.
+        attrs = target_data.get("attributes") or {}
+        if event_type == "fill" and attrs.get("type") in ("radio", "checkbox"):
+            event_type = "click"
+
+        # RC-11: file input — browser prefixes value with C:\fakepath\ (security sandboxing),
+        # which Playwright rejects. Intercept before action_map and emit set_input_files
+        # using the real filename from file_upload metadata captured by the overlay.
+        if event_type == "fill" and attrs.get("type") == "file":
+            file_upload = raw.get("file_upload") or []
+            if file_upload:
+                filename = file_upload[0].get("name", "")
+            else:
+                # Strip browser-added fakepath prefix from value
+                raw_val = (raw.get("value") or "")
+                filename = raw_val.replace("C:\\fakepath\\", "").replace("C:/fakepath/", "").split("\\")[-1].split("/")[-1]
+            if filename:
+                logger.info("RC-11: file input → set_input_files filename=%s", filename)
+                return SemanticAction(
+                    action="set_input_files",
+                    target=target,
+                    value=filename,
+                    url=raw.get("url", ""),
+                    page_title=raw.get("page_title", ""),
+                    context={"file_upload": file_upload, "timestamp": raw.get("timestamp", "")},
+                )
+
+        action_map = {
+            "click": "click",
+            "fill": "fill",
+            "keypress": "fill",
+            "contenteditable": "fill",  # contenteditable div changes mapped to fill
+            "submit": "click",  # submit is a click on a submit button
+            "select_option": "select_option",
+        }
+        action = action_map.get(event_type)
+        if not action:
+            return None
+
+        is_submit = event_type == "submit"
+        context = {}
+        if raw.get("timestamp"):
+            context["timestamp"] = raw["timestamp"]
+        if is_submit:
+            context["is_submit"] = True
+            if raw.get("submit_method"):
+                context["submit_method"] = raw["submit_method"]
+            if raw.get("postback_url"):
+                context["postback_url"] = raw["postback_url"]
+            if raw.get("is_postback"):
+                context["is_postback"] = True
+            # Carrega valores de campos de formulario capturados no submit
+            if raw.get("form_values"):
+                context["form_values"] = raw["form_values"]
+        # Sprint Q: prefer raw_value (unmasked) over value when mask lib detected
+        fill_value = raw.get("value")
+        raw_mask_val = raw.get("raw_value")
+        # Hotfix 22 (direct-fill mode): NAO substitui value com raw_value quando
+        # target eh datepicker input. Direct-fill precisa do valor formatado
+        # (DD/MM/YYYY) para type direto no input Material. Recordings legacy
+        # com raw_value="01011968" pre-fix continuam funcionando via detect
+        # abaixo (placeholder DD/MM/AAAA / mat-datepicker-input).
+        _is_datepicker_target = False
+        _tgt = target_data or {}
+        _ph = (_tgt.get("placeholder") or "").strip()
+        if _ph and _re.match(r'^\s*[DdMmAaYy][DdMmAaYyHhSs/\-\.:]{4,}', _ph):
+            _is_datepicker_target = True
+        _cls = _tgt.get("class_list") or []
+        if isinstance(_cls, list) and "mat-datepicker-input" in _cls:
+            _is_datepicker_target = True
+
+        if (action == "fill" and raw_mask_val is not None
+                and raw_mask_val != fill_value
+                and not _is_datepicker_target):
+            fill_value = raw_mask_val
+            context["masked_display_value"] = raw.get("value")
+        return SemanticAction(
+            action=action,
+            target=target,
+            value=fill_value,
+            url=raw.get("url"),
+            page_title=raw.get("page_title"),
+            context=context,
+        )
+
+    # CSS class tokens that indicate a layout container, not a specific element.
+    # Asserts on these targets are usually wrong — the QA clicked a wrapper div
+    # instead of the actual text/button inside it.
+    _GENERIC_CONTAINER_TOKENS = (
+        "container-fluid", "container-", "wrapper", "row col-", "layout-",
+        "page-content", "main-content", "app-root", "router-outlet",
+    )
+
+    def _convert_step(self, step: dict) -> Optional[SemanticAction]:
+        step_action = step.get("action", "")
+        if step_action == "assert":
+            attrs = step.get("attrs", {})
+            expected = _clean_text(step.get("expected_value", ""), max_len=200)
+            assert_type = step.get("assert_type", "textual")
+            # Hotfix 22: para asserts textual/automatico, expected_value E o texto
+            # esperado — usa como target.text para gerar has-text candidato limpo.
+            # Para visivel/estado, expected_value e um flag ("visible" / "checked"),
+            # NAO um texto de tela; preserva o texto real do elemento p/ locator.
+            if assert_type in ("textual", "automatico"):
+                text_for_target = expected or step.get("accessible_name", "") or step.get("text", "")
+            else:
+                # visivel/estado: mantem texto real (accessible label ou visible text)
+                text_for_target = step.get("accessible_name", "") or step.get("text", "") or expected
+            target_data = {
+                "tag": step.get("tag_name", "") or step.get("tagName", ""),
+                "text": text_for_target,
+                "id": step.get("element_id", ""),
+                "accessible_name": step.get("aria_label", "") or step.get("accessible_name", "") or attrs.get("aria-label", ""),
+                "role": step.get("role", "") or attrs.get("role", ""),
+                "css_path": step.get("css_path", "") or step.get("selector", ""),
+            }
+            # RC-14a: assert textual sem expected_value nao pode ser validado — skip.
+            if assert_type in ("textual", "automatico") and not expected:
+                logger.info(
+                    "assert step skipped: textual assert missing expected_value",
+                    extra={"css_path": target_data.get("css_path"), "tag": target_data.get("tag")},
+                )
+                MetricsRepository.record_silent_skip_global("assert.missing_expected_value")
+                target = self._build_target(target_data)
+                assert_state = step.get("assert_state", "")
+                ctx = {"assert_type": assert_type, "assert_state": assert_state}
+                ts = step.get("timestamp", "")
+                if ts:
+                    ctx["timestamp"] = ts
+                return SemanticAction(
+                    action="assert",
+                    target=target,
+                    value=expected,
+                    context=ctx,
+                    skip_reason="assert_missing_expected",
+                )
+            # RC-14b: assert em container genérico — alvo provavelmente errado.
+            css_path = target_data.get("css_path") or ""
+            if any(tok in css_path for tok in self._GENERIC_CONTAINER_TOKENS):
+                logger.warning(
+                    "assert on generic container element — target may be too broad",
+                    extra={"css_path": css_path, "assert_type": assert_type},
+                )
+                MetricsRepository.record_silent_skip_global("assert.generic_container_warn")
+            target = self._build_target(target_data)
+            assert_state = step.get("assert_state", "")
+            ctx = {"assert_type": assert_type, "assert_state": assert_state}
+            ts = step.get("timestamp", "")
+            if ts:
+                ctx["timestamp"] = ts
+            return SemanticAction(
+                action="assert",
+                target=target,
+                value=expected,
+                context=ctx,
+            )
+        # Passos curados nao-assert (fill, click, select_option, etc.)
+        if step_action in ("fill", "click", "select_option", "navigation"):
+            target_data = {
+                "tag": step.get("tagName", ""),
+                "text": step.get("text", ""),
+                "id": step.get("selector", "").lstrip("#"),
+                "role": step.get("role", ""),
+                "accessible_name": step.get("accessible_name", ""),
+                "label": step.get("label", ""),
+                "placeholder": step.get("placeholder", ""),
+                "name": step.get("name", ""),
+                "test_id": step.get("test_id", ""),
+            }
+            target = self._build_target(target_data)
+            return SemanticAction(
+                action=step_action,
+                target=target,
+                value=step.get("value", ""),
+                url=step.get("url", ""),
+                page_title=step.get("page_title", ""),
+                context=step.get("context", {}),
+                blocking=step.get("blocking", False),
+                depends_on=step.get("depends_on", ""),
+            )
+        return None
+
+    def _finalize_target_with_candidates(
+        self,
+        target: SemanticTarget,
+        candidates: list[LocatorCandidate],
+        context: dict,
+    ) -> Optional[SemanticTarget]:
+        """Ensures target exits with candidates, synthesizing a CSS fallback when possible."""
+        if not candidates:
+            raw_css = (
+                context.get("raw_css_selector")
+                or context.get("css_path")
+                or context.get("selector")
+                or ""
+            )
+            if raw_css:
+                candidates.append(
+                    LocatorCandidate(
+                        "css_fallback_synth",
+                        raw_css,
+                        0.20,
+                        "synthesized from raw css selector",
+                    )
+                )
+                logger.info(
+                    "target sem candidates — synthesized CSS fallback",
+                    extra={"raw_css": raw_css},
+                )
+                MetricsRepository.record_silent_skip_global("normalizer.empty_candidates_synth")
+            else:
+                logger.info(
+                    "target sem candidates e sem raw_css — retornando None",
+                    extra={
+                        "tag": context.get("tag"),
+                        "role": context.get("role"),
+                        "accessible_name": context.get("accessible_name"),
+                    },
+                )
+                MetricsRepository.record_silent_skip_global("normalizer.target_dropped")
+                return None
+
+        target.candidates = candidates
+        return target
+
+    def _build_target(self, target_data: dict) -> Optional[SemanticTarget]:
+        candidates = []
+        text = target_data.get("text") or ""
+        tag = (target_data.get("tag") or "").lower()
+
+        # 0. data-testid (mais estavel)
+        if target_data.get("test_id"):
+            tid = target_data["test_id"]
+            candidates.append(LocatorCandidate("test_id", f"[data-testid=\"{tid}\"]", 0.80, f"test_id={tid}"))
+            candidates.extend(_attr_css_variants("test_id", tid, tag, 0.80, "test_id"))
+
+        # 0.1 Atributos data-* (genericos)
+        data_attrs = target_data.get("data_attrs") or {}
+        for attr_name, attr_value in data_attrs.items():
+            if attr_name.startswith("data-") and attr_value and len(attr_value) < 60:
+                sel = f"[{attr_name}='{attr_value}']"
+                candidates.append(LocatorCandidate("data_attr", sel, 0.65, f"{attr_name}={attr_value}"))
+
+        # 0.2 <a href="..."> — localizador baseado em rota estavel entre mudancas de classe Tailwind
+        if tag == "a":
+            _href = (target_data.get("all_attributes") or {}).get("href") or ""
+            if _href and not _href.startswith("javascript:") and not _href.startswith("#") and len(_href) < 200:
+                _href_score = 0.87 if (_href.startswith("/") or _href.startswith("http")) else 0.65
+                candidates.append(LocatorCandidate("href", f'a[href="{_href}"]', _href_score, f"href={_href}"))
+                candidates.extend(_attr_css_variants("href", _href, "a", _href_score, "href"))
+
+        # Para elementos <select>: prefere name/id, NUNCA usa label + input
+        if tag == "select":
+            if target_data.get("name"):
+                sel = f"select[name='{target_data['name']}']"
+                candidates.append(LocatorCandidate("name", sel, 0.93, f"select name={target_data['name']}"))
+            if target_data.get("id"):
+                candidates.append(LocatorCandidate("id", f"#{target_data['id']}", 0.90, f"select id={target_data['id']}"))
+            if target_data.get("label"):
+                candidates.append(LocatorCandidate("label", f"select[aria-label='{target_data['label']}']", 0.75, f"select aria-label={target_data['label']}"))
+            # Fallback: conteudo de texto (texto das opcoes)
+            # RC-10: se o texto bruto é longo (>60 chars), é provável que seja
+            # concatenação de todas as options — seletor frágil, skip.
+            if text and len(target_data.get("text") or "") <= 60:
+                select_text = _clean_text(text)[:40]
+                select_score = 0.10 if _is_generic_text(select_text) else 0.35
+                candidates.append(LocatorCandidate("text", f"select:has-text('{select_text}')", select_score, "select containing text"))
+            elif text:
+                logger.debug(
+                    "select text candidate skipped: raw text too long (likely all options concatenated)",
+                    extra={"text_len": len(target_data.get("text") or "")},
+                )
+
+        # Prioridade de estrategias (score deterministico)
+        if target_data.get("role"):
+            role = target_data["role"]
+            name = (_clean_text(target_data.get("accessible_name") or "")
+                    or _clean_text(target_data.get("text") or "")
+                    or _clean_text((target_data.get("all_attributes") or {}).get("aria-label", "")))
+            selector = f"role={role}"
+            has_name = bool(name and len(name) <= 40)
+            if has_name:
+                selector += f"[name=\"{name}\"]"
+            # RC-9: role=menuitem sem accessible_name é altamente ambíguo — menus
+            # têm múltiplos menuitems e o seletor sem name clica no primeiro encontrado.
+            # Demovido para 0.25 para forçar fallback para text ou css_path.
+            if role == "menuitem" and not has_name:
+                logger.warning(
+                    "role=menuitem without accessible_name — demoted to score=0.25; "
+                    "ax_snapshot role may differ from DOM role",
+                    extra={"css_path": target_data.get("css_path")},
+                )
+                candidates.append(LocatorCandidate("role", selector, 0.25, "role=menuitem (no name, demoted)"))
+            else:
+                # Role so (sem accessible name no seletor) eh ambiguo — prioriza abaixo de seletores baseados em texto.
+                # Em paginas com multiplos elementos role=button, role so clica elemento errado.
+                candidates.append(LocatorCandidate("role", selector, 0.95 if has_name else 0.45, "role + accessible name"))
+
+        if target_data.get("label") and target_data.get("id"):
+            label = target_data["label"]
+            el_id = target_data["id"]
+            if el_id.startswith("mat-radio-"):
+                candidates.insert(0, LocatorCandidate(
+                    "angular_material", f"mat-radio-button:has-text(\"{label}\")",
+                    0.92, f"Angular Material radio by label={label}",
+                ))
+                candidates.append(LocatorCandidate("label", f"label[for=\"{el_id}\"]", 0.30, f"label for={el_id} (mat-radio degraded)"))
+            else:
+                candidates.append(LocatorCandidate("label", f"label[for=\"{el_id}\"]", 0.90, f"label for={el_id}"))
+        elif target_data.get("label"):
+            label = target_data["label"]
+            # Irmao adjacente: <label>Texto</label> + <input> (maioria formularios HTML)
+            candidates.append(LocatorCandidate("label", f"label:has-text(\"{label}\") + input", 0.85, f"label adjacent={label}"))
+            # APENAS o proprio elemento label — clicar no label dispara eventos nativos de input.
+            # Captura Material Design onde input esta ANINHADO dentro do label:
+            #   <label>Texto <input type="radio"></label>
+            # Tambem captura casos onde clique no label propaga corretamente.
+            candidates.append(LocatorCandidate("label", f"label:has-text(\"{label}\")", 0.80, f"label click={label}"))
+
+        if target_data.get("placeholder"):
+            ph = target_data["placeholder"]
+            ptag = (target_data.get("tag") or "").lower()
+            # Prefere input[placeholder] em vez de [placeholder] simples — wrappers Angular
+            # (dsc-input-currency) compartilham placeholders com inputs nativos, causando
+            # violacoes de strict mode e falhas de fill() em elementos nao-input.
+            if ptag in ("input", "textarea", "select"):
+                sel = f"{ptag}[placeholder=\"{ph}\"]"
+            else:
+                sel = f"[placeholder=\"{ph}\"]"
+            candidates.append(LocatorCandidate("placeholder", sel, 0.85, f"placeholder={ph}"))
+            candidates.extend(_attr_css_variants("placeholder", ph, ptag, 0.85, "placeholder"))
+
+        # Hotfix 22: Angular reactive form control name — ancora estavel
+        # entre runs. Emitido pelo overlay como form_control_name; tambem
+        # pode aparecer como formcontrolname em attributes.
+        fcn = (target_data.get("form_control_name")
+               or (target_data.get("attributes") or {}).get("formcontrolname")
+               or (target_data.get("all_attributes") or {}).get("formcontrolname")
+               or "")
+        if fcn:
+            candidates.append(LocatorCandidate(
+                "form_control_name", f'[formcontrolname="{fcn}"]', 0.92,
+                f"Angular formcontrolname={fcn}",
+            ))
+
+        if target_data.get("id"):
+            el_id = target_data["id"]
+            # Hotfix 22: id dinamico Material (mat-input-N, mat-mdc-error-N,
+            # mat-option-N, cdk-overlay-N) muda entre runs. Score baixo
+            # (0.30) para que outras estrategias vencam.
+            is_dynamic = bool(target_data.get("element_id_dynamic")) or bool(_re.match(
+                r"^(mat-(input|mdc-error|option|select|dialog|autocomplete|slider|expansion|checkbox|radio|tab|menu)|cdk-overlay|cdk-drop)-\d+$",
+                el_id
+            ))
+            is_generic_id = el_id.lower() in _GENERIC_ID_BLACKLIST
+            if is_dynamic:
+                id_score = 0.30
+                reason = f"id={el_id} (dynamic, low confidence)"
+            elif is_generic_id:
+                id_score = 0.35
+                reason = f"id={el_id} (generic, demoted)"
+                logger.debug("id=%s in generic blacklist — demoted to score=0.35", el_id)
+            else:
+                id_score = 0.75
+                reason = f"id={el_id}"
+            candidates.append(LocatorCandidate("id", f"#{el_id}", id_score, reason))
+            if not is_dynamic and not is_generic_id:
+                candidates.extend(_attr_css_variants("id", el_id, tag, 0.75, "id"))
+
+        if target_data.get("name"):
+            name_val = target_data["name"]
+            candidates.append(LocatorCandidate("name", f"[name=\"{name_val}\"]", 0.70, f"name={name_val}"))
+            candidates.extend(_attr_css_variants("name", name_val, tag, 0.70, "name"))
+
+        # RC-10: <select> text is handled in the tag=="select" block above.
+        # Falling through here would generate a duplicate (and fragile) :has-text
+        # candidate for concatenated all-options text. Skip for select tags.
+        _tag_for_text = (target_data.get("tag") or "").lower()
+        if target_data.get("text") and _tag_for_text != "select":
+            text = _clean_text(target_data["text"])
+            if text:
+                # Penaliza texto generico como "OK", "Cancelar", "Selecione" — localizadores fragieis
+                text_score = 0.10 if _is_generic_text(text) else 0.55
+                # Penalidade de tamanho: has-text() longo eh fragil (texto truncado, correspondencias parciais)
+                # 0-20 chars: 0, 20-40: -0.05, 40-60: -0.10
+                if len(text) > 40:
+                    text_score -= 0.10
+                elif len(text) > 20:
+                    text_score -= 0.05
+                # Sempre inclui tag quando disponivel — :has-text() puro clica em elementos
+                # filho em vez do link/botao, quebrando navegacao SPA.
+                # Quando elemento tem role interativo, adiciona restricao de role: containers
+                # pai tambem tem o mesmo texto, entao div:has-text() encontra eles e clica
+                # no irmao errado (ex.: card central de 3). div[role="button"]:has-text()
+                # eh inequivoco porque containers nao carregam role="button".
+                tag = (target_data.get("tag") or "").lower()
+                elem_role = (target_data.get("role") or "").lower()
+                _interactive_roles = {"button", "listitem", "option", "menuitem", "tab", "radio", "checkbox", "link", "menuitemcheckbox", "menuitemradio"}
+                if tag and elem_role and elem_role in _interactive_roles:
+                    candidates.append(LocatorCandidate("text", f'{tag}[role="{elem_role}"]:has-text("{text}")', text_score + 0.10, f"role+text in {tag}[role={elem_role}]"))
+                elif tag:
+                    candidates.append(LocatorCandidate("text", f"{tag}:has-text(\"{text}\")", text_score, f"text in {tag}"))
+                else:
+                    candidates.append(LocatorCandidate("text", f":has-text(\"{text}\")", text_score, "visible text"))
+
+
+        # -- Deteccao de contenteditable (GT-08) --
+        # Quando elemento tem contenteditable=true e nenhum localizador estavel foi encontrado,
+        # gera seletor de atributo direto. Playwright suporta fill() em [contenteditable].
+        # Deve verificar EXISTENCIA da chave antes de checar valor: .get("contenteditable", "") retorna ""
+        # para elementos sem o atributo, fazendo "" in ("true","") → True para todos
+        # os elementos (falso positivo). So dispara quando chave esta realmente presente no DOM.
+        _attrs_dict = target_data.get("attributes") or {}
+        _all_attrs_dict = target_data.get("all_attributes") or {}
+        if "contenteditable" in _attrs_dict:
+            _contenteditable_attrs = _attrs_dict["contenteditable"] or ""
+        elif "contenteditable" in _all_attrs_dict:
+            _contenteditable_attrs = _all_attrs_dict["contenteditable"] or ""
+        else:
+            _contenteditable_attrs = None  # attribute absent — do not generate CE candidate
+        if _contenteditable_attrs is not None and _contenteditable_attrs in ("true", "") and tag:
+            # Buttons with contenteditable="" are an Angular Material quirk (ripple layer).
+            # For buttons, contenteditable selector is unreliable — generate at low score
+            # so that button:has-text() candidates ranked above it take precedence.
+            _is_button_like = tag in ("button", "a", "summary")
+            _ce_base_score = 0.25 if _is_button_like else 0.50
+            _ce_text_score = 0.30 if _is_button_like else 0.60
+            contenteditable_sel = f'{tag}[contenteditable="{_contenteditable_attrs}"]'
+            candidates.append(LocatorCandidate("contenteditable", contenteditable_sel, _ce_base_score, "contenteditable element"))
+            # Also add text-based variant if text is available for disambiguation
+            ce_text = _clean_text(target_data.get("text") or target_data.get("accessible_name") or "")
+            if ce_text and len(ce_text) <= 40 and not _is_generic_text(ce_text):
+                candidates.append(LocatorCandidate(
+                    "contenteditable", f'{tag}[contenteditable="{_contenteditable_attrs}"]:has-text("{ce_text}")',
+                    _ce_text_score, f"contenteditable with text: {ce_text}"
+                ))
+
+        # Fallback de caminho CSS estrutural — caminho relativo estavel na arvore DOM
+        css_path = target_data.get("css_path") or ""
+        if css_path and len(css_path) > 4 and ">" in css_path:
+            # RC-9: .mat-button-wrapper é um elemento interno do Angular Material Button.
+            # O alvo real é o <button> ancestral — promove ao pai para Playwright não
+            # precisar penetrar a shadow-like structure do ripple layer.
+            if "mat-button-wrapper" in css_path or "mat-mdc-button-touch-target" in css_path:
+                # Generate button:has-text() instead of the internal-node css_path.
+                _btn_text = _clean_text(target_data.get("text") or target_data.get("accessible_name") or "")
+                if _btn_text and not _is_generic_text(_btn_text):
+                    candidates.append(LocatorCandidate(
+                        "css_path", f'button:has-text("{_btn_text}")', 0.70,
+                        "mat-button-wrapper promoted to button ancestor",
+                    ))
+                else:
+                    # Fallback: button without text — still better than internal node path
+                    candidates.append(LocatorCandidate("css_path", "button", 0.30, "mat-button-wrapper promoted (no text)"))
+            else:
+                candidates.append(LocatorCandidate("css_path", css_path, 0.60, "css_path"))
+                # RC-9: tr:nth-of-type(N) é posicional — add has_text variant alongside
+                # so healing can find the correct row even when row order changes.
+                if "nth-of-type" in css_path:
+                    _row_text = _clean_text(target_data.get("text") or "")
+                    if _row_text and not _is_generic_text(_row_text):
+                        _has_text_sel = css_path.rsplit(">", 1)[0].strip() + f':has-text("{_row_text}")' if ">" in css_path else f'tr:has-text("{_row_text}")'
+                        candidates.append(LocatorCandidate(
+                            "css_path", _has_text_sel, 0.55,
+                            f"nth-of-type css_path with has_text variant",
+                        ))
+
+        # nth-child para desambiguacao — sempre adiciona quando disponivel para healing
+        # usar fallback posicional para botoes/abas irmaos com texto similar
+        nth = target_data.get("nth_child") or 0
+        tag = target_data.get("tag") or ""
+        if nth > 0 and tag:
+            candidates.append(LocatorCandidate("nth_child", f"{tag}:nth-child({nth})", 0.35, "nth-child position"))
+
+        # aria-label para input/textarea quando role nao disponivel
+        if not target_data.get("role"):
+            aria_label = (target_data.get("aria_attrs", {}).get("aria-label", "") or
+                         (target_data.get("all_attributes") or {}).get("aria-label", "") or
+                         target_data.get("accessible_name", "") or "")
+            if aria_label and len(aria_label) < 60:
+                al_tag = (target_data.get("tag") or "").lower()
+                if al_tag in ("input", "textarea"):
+                    sel = f'{al_tag}[aria-label="{aria_label}"]'
+                    candidates.append(LocatorCandidate("aria_label", sel, 0.90, f"{al_tag} aria-label={aria_label}"))
+                    candidates.extend(_attr_css_variants("aria_label", aria_label, al_tag, 0.90, "aria-label"))
+
+        # Compound selectors: combine 2 attributes for higher specificity
+        candidates.extend(_compound_candidates(target_data, tag))
+
+        # Constroi fingerprint: dict plano de todos atributos disponiveis para healing em runtime
+        _nth = target_data.get("nth_child", 0) or 0
+        _class_list = target_data.get("class_list") or []
+        _parent_tag = target_data.get("parent_tag") or ""
+        fingerprint = {
+            "tag": target_data.get("tag", ""),
+            "role": target_data.get("role", ""),
+            "accessible_name": target_data.get("accessible_name", ""),
+            "placeholder": target_data.get("placeholder", ""),
+            "label": target_data.get("label", ""),
+            "name": target_data.get("name", ""),
+            "test_id": target_data.get("test_id", ""),
+            "id": target_data.get("id", ""),
+            "text": target_data.get("text", ""),
+            "nth_child": _nth,
+            "class_list": _class_list[:5],
+            "parent_tag": _parent_tag,
+            "href": (target_data.get("all_attributes") or {}).get("href", "")
+                     or target_data.get("href", ""),
+        }
+        # Remove valores vazios para manter fingerprint compacto
+        fingerprint = {k: v for k, v in fingerprint.items() if v}
+
+        # Ordena candidatos por score (descendente) para ordenacao deterministica
+        candidates.sort(key=lambda c: c.score, reverse=True)
+
+        # Fase 2: anexa candidatos v2 de super-seletor quando ativado.
+        # Candidatos v2 carregam intent_text + estabilidade por atributo;
+        # candidatos legados permanecem primeiro para preservar selecao atual.
+        intent_text = None
+        if self._use_v2 and self._v2_extractor is not None:
+            try:
+                v2 = self._v2_extractor.extract(target_data)
+                candidates.extend(v2)
+                if v2 and v2[0].intent_text:
+                    intent_text = v2[0].intent_text
+            except Exception as exc:
+                logger.warning("v2 locator extractor failed: %s", exc)
+
+        # Hotfix 22b / padrao P3: o JS do overlay emite o id do elemento
+        # sob a chave `element_id` (veja overlay_inject.js _extractTarget).
+        # O leitor anterior procurava por `id` e recebia None para todo
+        # input, entao correlacao por id em _ir_value_mutations sempre
+        # caia para nearest-by-timestamp e os valores fill por pagina
+        # ficavam sob chaves fingerprint (mat_input_N) em vez das chaves
+        # canonicas aria-label. Le ambas chaves por seguranca.
+        # B14/B17: expoe o shadow host quando gravador notou que o
+        # elemento vivia dentro de um shadow root aberto. Adiciona
+        # candidato de alta prioridade que escopa o localizador pelo
+        # host para Playwright nao precisar penetrar arvore profunda
+        # cegamente. Shadow roots fechados chegam aqui como None e
+        # permanecem como ponto cego.
+        shadow_host = target_data.get("shadow_host")
+        if shadow_host and isinstance(shadow_host, dict):
+            host_sel = shadow_host.get("host_selector") or ""
+            if host_sel:
+                # The Playwright locator API treats `page.locator(host)
+                # .locator(child)` as automatically piercing open shadow
+                # roots. Encode the chain as a single string so the
+                # existing _sels-loop in the compiler still works.
+                inner = target_data.get("test_id") or target_data.get("element_id") or ""
+                if target_data.get("test_id"):
+                    inner_sel = f'[data-testid="{target_data["test_id"]}"]'
+                elif target_data.get("element_id"):
+                    inner_sel = f'#{target_data["element_id"]}'
+                elif target_data.get("accessible_name"):
+                    inner_sel = f'[aria-label="{target_data["accessible_name"]}"]'
+                else:
+                    inner_sel = (target_data.get("tag") or "*")
+                shadow_chain = f"{host_sel} >> {inner_sel}"
+                candidates.insert(0, LocatorCandidate(
+                    "shadow_host_chain",
+                    shadow_chain,
+                    0.93,
+                    f"shadow host {host_sel} -> {inner_sel}",
+                ))
+
+        material_label = target_data.get("material_field_label")
+        # Sprint J (2026-06-30): emite locator estrutural baseado no
+        # mat-form-field como TOPO da cascata. Cobre o caso comum SIMULADOR:
+        # aria-label volatiliza apos blur, mat-input-N renumera entre
+        # sessoes; mat-label dentro do mat-form-field eh estavel.
+        if material_label:
+            inner_tag = (target_data.get("tag") or "input").lower()
+            esc = (material_label.replace("\\", "\\\\").replace('"', '\\"'))
+            mat_sel = (
+                f'mat-form-field:has(mat-label:has-text("{esc}")) {inner_tag}'
+            )
+            # Hotfix 22: era 0.99 (topo), mas o seletor estrutural
+            # `mat-form-field:has(mat-label:has-text("X")) input` falha em
+            # SIMULADOR banco quando o mat-label contem mat-icon (hint) que
+            # quebra o has-text match. Rebaixado para 0.87 — logo abaixo
+            # de aria-label (0.9) e compound (0.9), acima de placeholder
+            # (0.85). Vira fallback confiavel quando aria-label esta
+            # ausente. Nao insere no topo; append normal.
+            candidates.append(LocatorCandidate(
+                "material_form_field",
+                mat_sel,
+                0.87,
+                f"mat-form-field anchor mat-label='{material_label}'",
+            ))
+
+        target = SemanticTarget(
+            role=target_data.get("role"),
+            accessible_name=target_data.get("accessible_name"),
+            label=target_data.get("label"),
+            placeholder=target_data.get("placeholder"),
+            test_id=target_data.get("test_id"),
+            text=target_data.get("text"),
+            tag=target_data.get("tag"),
+            element_id=(target_data.get("element_id")
+                        or target_data.get("id") or ""),
+            name=target_data.get("name"),
+            candidates=[],
+            fingerprint=fingerprint,
+            intent_text=intent_text,
+            shadow_host=shadow_host if isinstance(shadow_host, dict) else None,
+            material_field_label=material_label,
+            form_control_name=(target_data.get("form_control_name")
+                               or (target_data.get("attributes") or {}).get("formcontrolname")
+                               or (target_data.get("all_attributes") or {}).get("formcontrolname")
+                               or None),
+            element_id_dynamic=bool(target_data.get("element_id_dynamic")),
+            capture_confidence=target_data.get("capture_confidence"),
+        )
+        return self._finalize_target_with_candidates(target, candidates, target_data)
+
+    def _steps_identical(self, a: SemanticAction, b: SemanticAction) -> bool:
+        """Verifica se dois passos sao identicos (mesma action, value, target candidates)."""
+        if a.action != b.action:
+            return False
+        if (a.value or "") != (b.value or ""):
+            return False
+        # Compare target candidates (selectors and scores)
+        a_cands = a.target.candidates if a.target else []
+        b_cands = b.target.candidates if b.target else []
+        if len(a_cands) != len(b_cands):
+            return False
+        for ac, bc in zip(a_cands, b_cands):
+            if ac.selector != bc.selector or ac.score != bc.score:
+                return False
+        return True
+
+    def _detect_stale_asserts(self, steps: list) -> None:
+        """Anota asserts potencialmente obsoletos por refill posterior.
+
+        Hotfix 22 (revisado): em apps calculadora, o padrao valido eh
+        `fill A → submit → assert R1 → fill B → submit → assert R2`. Nao
+        podemos marcar R1 como stale — o proprio teste E verificar delta
+        de entrada→saida. Portanto: NAO seta skip_reason. So adiciona
+        `context.may_be_stale=True` como pista para o QA/relatorio.
+
+        Regra: candidato a stale se um fill posterior mudar o mesmo target
+        (mesma accessible_name) SEM que haja submit intermediario. Casos
+        onde submit ocorre entre assert e refill NAO sao marcados.
+        """
+        _SUBMIT_TEXTS = ("calcular", "enviar", "confirmar", "submit", "salvar",
+                         "buscar", "pesquisar", "consultar", "aplicar")
+        _SUBMIT_CLASSES = ("mat-mdc-unelevated-button", "mat-mdc-raised-button",
+                           "mdc-button--raised", "btn-primary")
+
+        def _is_submit_click(step) -> bool:
+            if step.action != "click" or step.skip_reason:
+                return False
+            tgt = step.target
+            if tgt is None:
+                return False
+            text = ((getattr(tgt, "text", "") or "")
+                    + " " + (getattr(tgt, "accessible_name", "") or "")).lower()
+            if any(s in text for s in _SUBMIT_TEXTS):
+                return True
+            # Fallback: primary button class em qualquer candidato.
+            cands = getattr(tgt, "candidates", None) or []
+            for c in cands:
+                sel = (getattr(c, "selector", "") or "").lower()
+                if any(cls in sel for cls in _SUBMIT_CLASSES):
+                    return True
+            return False
+
+        def _is_meaningful_fill(step) -> bool:
+            if step.action != "fill":
+                return False
+            if step.skip_reason in ("datepicker_picker_echo_fill",):
+                return False
+            if step.skip_reason and "prefill" in step.skip_reason:
+                return False
+            return True
+
+        for i, step in enumerate(steps):
+            if step.action != "assert" or step.skip_reason:
+                continue
+
+            saw_submit = False
+            has_later_refill = False
+            for j in range(i + 1, len(steps)):
+                nxt = steps[j]
+                if nxt.action == "navigation":
+                    break
+                if _is_submit_click(nxt):
+                    saw_submit = True
+                    continue
+                if _is_meaningful_fill(nxt):
+                    if not saw_submit:
+                        has_later_refill = True
+                    break
+
+            if has_later_refill:
+                ctx = getattr(step, "context", {}) or {}
+                ctx["may_be_stale"] = True
+                step.context = ctx
+
+    def _merge_asserts_by_timestamp(self, steps: list, asserts: list) -> None:
+        """Intercala asserts no lugar cronologico correto entre os steps.
+
+        Hotfix 22: pre-fix `stc.steps.append(assert)` empilhava todos os
+        asserts no fim do script. Ao rodar, cada assert verificava o estado
+        FINAL da UI (apos o ultimo Calcular), mas foram gravados apos
+        Calculars intermediarios com valores/telas diferentes. Merge por
+        timestamp garante que cada assert executa no estado que existia
+        durante a gravacao.
+
+        Steps sem timestamp ou asserts sem timestamp caem no final (mantem
+        o comportamento antigo como fallback).
+        """
+        def _ts(step) -> str:
+            ctx = getattr(step, "context", {}) or {}
+            return ctx.get("timestamp", "") or ""
+
+        assert_bucket = [(_ts(a), a) for a in asserts]
+        # Ordena asserts por timestamp (asserts sem ts vao pro final)
+        assert_bucket.sort(key=lambda p: (not p[0], p[0]))
+
+        merged: list = []
+        assert_idx = 0
+        n_asserts = len(assert_bucket)
+
+        for step in steps:
+            step_ts = _ts(step)
+            # Insere todos asserts com ts < step_ts antes do step atual
+            while (
+                assert_idx < n_asserts
+                and assert_bucket[assert_idx][0]
+                and step_ts
+                and assert_bucket[assert_idx][0] <= step_ts
+            ):
+                merged.append(assert_bucket[assert_idx][1])
+                assert_idx += 1
+            merged.append(step)
+
+        # Resto (asserts com ts > ultimo step, ou sem ts) vao pro fim
+        while assert_idx < n_asserts:
+            merged.append(assert_bucket[assert_idx][1])
+            assert_idx += 1
+
+        # Reescreve lista in-place para preservar referencia
+        steps.clear()
+        steps.extend(merged)
+
+    def _deduplicate_steps(self, steps: list) -> None:
+        """Marca passos duplicados consecutivos com skip_reason.
+
+        Passos consecutivos com mesma action, value e target candidates
+        sao marcados como duplicatas. Apenas primeira ocorrencia permanece ativa;
+        subsequentes recebem skip_reason = 'Passo N: pulado — duplicado'.
+
+        NAO deduplica passos de overlay (calendario, modal, dialog) onde
+        clicks repetidos sao navegacao incremental intencional (ex.: clicar
+        mes-anterior multiplas vezes para alcancar ano distante).
+        """
+        for i in range(1, len(steps)):
+            prev = steps[i - 1]
+            curr = steps[i]
+            if (not prev.skip_reason and not curr.skip_reason
+                    and self._steps_identical(prev, curr)):
+                # Skip deduplication for overlay steps — repeated clicks are intentional
+                if curr.context.get("overlay_step") or prev.context.get("overlay_step"):
+                    continue
+                curr.skip_reason = f"Passo {i + 1}: pulado — duplicado"
+
+    def _mark_non_actionable(self, steps: list) -> None:
+        """Marca passos sem alto acionavel como pulados.
+
+        Passos com action em (click, fill) que tem target mas zero
+        candidatos de localizador nao podem ser executados confiavelmente.
+        """
+        ACTIONABLE_ACTIONS = {"click", "fill"}
+        for i, step in enumerate(steps):
+            if step.skip_reason:
+                continue
+            if step.action not in ACTIONABLE_ACTIONS:
+                continue
+            if step.target and len(step.target.candidates) == 0:
+                step.skip_reason = "non-actionable target"
+
+    def _detect_step_dependencies(self, steps: list) -> None:
+        """Detecta dependencias entre passos para prevencao de falha em cascata.
+
+        Quando acoes consecutivas de entrada de dados (fill, click, select_option)
+        ocorrem na mesma pagina com pelo menos um elemento <select> envolvido,
+        elas sao provavelmente dependentes: o primeiro select popula o proximo
+        dropdown (ex.: UF → Edificio → Data no CONSULTA).
+
+        O primeiro passo da cadeia eh marcado `blocking: True`. Passos
+        subsequentes recebem `depends_on` referenciando o passo bloqueante
+        pelo seu indice baseado em 1 (ex.: 'passo_0003').
+
+        Passos que ja tem `depends_on` ou `blocking` explicto (via steps.jsonl
+        curado) sao preservados e nao auto-detectados.
+        """
+        # Find groups of consecutive data-entry steps between navigation
+        # boundaries. Only create dependency when at least one <select>
+        # element is involved (CONSULTA pattern: UF → Edifício → Data).
+        DEPENDENT_ACTIONS = {"select_option", "fill", "click"}
+
+        i = 0
+        while i < len(steps):
+            step = steps[i]
+            # Skip steps that already have explicit dependency annotations
+            if step.depends_on or step.blocking:
+                i += 1
+                continue
+            if step.action not in DEPENDENT_ACTIONS:
+                i += 1
+                continue
+            if step.skip_reason:
+                i += 1
+                continue
+
+            # Find the end of this dependent chain (stops at navigation or assert)
+            chain_start = i
+            j = i + 1
+            while j < len(steps):
+                next_step = steps[j]
+                if next_step.action == "navigation":
+                    break
+                if next_step.action == "assert":
+                    break
+                if next_step.skip_reason:
+                    break
+                if next_step.depends_on or next_step.blocking:
+                    break
+                if next_step.action not in DEPENDENT_ACTIONS:
+                    j += 1
+                    continue
+                j += 1
+
+            chain_end = j
+            chain_length = chain_end - chain_start
+
+            # Only create dependency if chain has 2+ steps AND at least one
+            # involves a <select> element (the CONSULTA cascading dropdown pattern).
+            if chain_length >= 2:
+                has_select = any(
+                    steps[k].target and (steps[k].target.tag or "").lower() == "select"
+                    for k in range(chain_start, chain_end)
+                )
+                if has_select:
+                    # First step in chain is blocking
+                    steps[chain_start].blocking = True
+                    # Subsequent steps depend on the first
+                    for k in range(chain_start + 1, chain_end):
+                        step_num = chain_start + 1  # 1-based index
+                        steps[k].depends_on = f"passo_{step_num:04d}"
+
+            i = chain_end
+
+    def _detect_overlay_steps(self, steps: list) -> None:
+        """Detecta passos dentro de containers overlay (calendario, modal, dialog)."""
+        OVERLAY_PATTERNS = ['cdk-overlay', 'mat-calendar', 'mat-datepicker', 'modal', 'dialog']
+
+        for i, step in enumerate(steps):
+            if not step.target or not step.target.candidates:
+                logger.info(
+                    "overlay detect skip",
+                    extra={"step_idx": i, "action": step.action},
+                )
+                MetricsRepository.record_silent_skip_global("overlay_detect")
+                continue
+            # Verifica se algum seletor candidato tem como alvo elemento overlay
+            is_overlay = any(
+                any(p in c.selector for p in OVERLAY_PATTERNS)
+                for c in step.target.candidates
+            )
+            if is_overlay:
+                step.context["overlay_step"] = True
+                # Marca passo ANTERIOR como gatilho do overlay
+                if i > 0 and steps[i-1].action == "click" and not steps[i-1].context.get("overlay_step"):
+                    steps[i-1].context["overlay_trigger"] = True
+
+    def _detect_navigation_clicks(self, steps: list) -> None:
+        """Detecta clicks que causam mudancas de URL (navegacao SPA).
+
+        Compara passos consecutivos nao-navegacao: se URL muda entre
+        passo A e passo B, marca passo A com causes_navigation=True para
+        compilador injetar wait_for_load_state('networkidle') apos o click.
+        """
+        # Build list of (index, step) for non-navigation steps
+        actionable = [(i, s) for i, s in enumerate(steps)
+                      if s.action != "navigation" and not s.skip_reason]
+
+        for ai in range(len(actionable) - 1):
+            i_prev, s_prev = actionable[ai]
+            i_next, s_next = actionable[ai + 1]
+
+            prev_url = self._normalize_url(s_prev.url or "")
+            next_url = self._normalize_url(s_next.url or "")
+
+            if prev_url and next_url and prev_url != next_url:
+                s_prev.context["causes_navigation"] = True
+
+    @staticmethod
+    def _normalize_url(url: str) -> str:
+        """Remove barra final e params de consulta para comparacao de URL."""
+        if not url:
+            return ""
+        parsed = urlparse(url)
+        # Reconstruct without query, fragment, trailing slash
+        path = parsed.path.rstrip("/")
+        return urlunparse((parsed.scheme, parsed.netloc, path, "", "", ""))
+
+    def _detect_missing_fills(self, steps: list) -> None:
+        """Detecta clicks em inputs sem eventos fill (campos com mascara de moeda).
+
+        Fase B: executa APOS _reconstruct_intents. Pula passos ja resolvidos
+        por evidencia (setter_hook, snapshot_diff, checked_transition, etc.).
+        """
+        from datetime import datetime
+
+        # Primeiro: propaga form_values de eventos submit para clicks em input precedentes
+        for i, step in enumerate(steps):
+            ctx = getattr(step, "context", {}) or {}
+            form_vals = ctx.get("form_values") or {}
+            if form_vals:
+                for j in range(i - 1, -1, -1):
+                    prev = steps[j]
+                    prev_tag = (prev.target.tag or "").lower() if prev.target else ""
+                    if prev_tag in ("input", "textarea") and prev.action == "click":
+                        prev_ctx = getattr(prev, "context", {})
+                        prev_ctx["form_values"] = form_vals
+                        prev.context = prev_ctx
+
+        actionable = [(i, s) for i, s in enumerate(steps)
+                      if s.action != "navigation" and not s.skip_reason]
+
+        for ai in range(len(actionable) - 1):
+            i_curr, s_curr = actionable[ai]
+            i_next, s_next = actionable[ai + 1]
+
+            if s_curr.action != "click":
+                continue
+            tag = (s_curr.target.tag or "").lower() if s_curr.target else ""
+            if tag not in ("input", "textarea"):
+                continue
+            if s_next.action == "fill":
+                continue
+
+            ctx = getattr(s_curr, "context", {}) or {}
+            if ctx.get("form_values"):
+                continue
+            if ctx.get("_has_reconstructed_values") or (s_curr.value or "").strip():
+                continue
+
+            t1_str = ctx.get("timestamp", "")
+            t2_str = s_next.context.get("timestamp", "")
+            if not t1_str or not t2_str:
+                continue
+            try:
+                t1 = datetime.fromisoformat(t1_str.replace("Z", "+00:00"))
+                t2 = datetime.fromisoformat(t2_str.replace("Z", "+00:00"))
+                gap_s = (t2 - t1).total_seconds()
+            except ValueError:
+                continue
+
+            if gap_s > 2.0:
+                s_curr.context["missing_fill"] = True
+                if s_curr.target:
+                    s_curr.context["fill_label"] = (
+                        s_curr.target.accessible_name
+                        or s_curr.target.label
+                        or s_curr.target.placeholder
+                        or ""
+                    )
+
+    # ── Reconstrucao de Intencao (mesclado de intent_reconstructor.py) ──────
+
+    # H22a (2026-06-27): final_state promovido acima de setter_hook.
+    #
+    # O spike Material currencymask mostrou que digitacao real de teclado
+    # nunca dispara o value setter (digitacao nativa do navegador o contorna).
+    # `setter_hook` (value_mutations.jsonl) so captura escritas via JS
+    # de mascaras que delegam ao setter do prototipo. Para o padrao de
+    # sobrescrita apenas de instancia (ng2-currency-mask, SIMULADOR), nao
+    # captura nada.
+    #
+    # `final_state` (final_state_snapshot.json) le `el.value` ao final
+    # da sessao, que passa pelo getter de instancia que a mascara expoe
+    # — entao retorna o valor formatado canonico independente de como
+    # a mascara esta conectada. Portanto eh uma fonte primaria de maior
+    # fidelidade para qualquer input que o usuario realmente terminou
+    # de digitar.
+    #
+    # Veja .planning/spikes/SPIKE-keyboard-type-mask.md (secao H22)
+    # e entrada H22 de 2026-06-27 em DECISIONS-LOG.md.
+    IR_SOURCE_PRIORITY = {
+        "form_values": 100,
+        # H21: usuario digitou valor no prompt inline do gravador
+        # logo apos a mascara intercepta-lo. Maior confianca de fonte
+        # unica abaixo de submit real.
+        "user_supplied_inline": 90,
+        # B30: prompt CLI retrospectivo --complete. Usuario digitou valor
+        # mas teve que recorda-lo apos o fato, entao ligeiramente menor
+        # que o prompt inline fresco.
+        "user_supplied_cli": 89,
+        "fill_event": 80,
+        "final_state": 79,      # H22a: promovido de 55, agora acima de setter_hook
+        "setter_hook": 78,
+        "checked_transition": 72,
+        "snapshot_diff": 70,
+        "network_payload": 60,
+        "polling": 50,
+        "missing_fill": 10,
+    }
+
+    def _ir_all(self, recording_dir: str, steps: list) -> list[dict]:
+        """Executa todas estrategias IR, retorna entradas FieldValueMap deduplicadas."""
+        entries = []
+        entries.extend(self._ir_value_mutations(recording_dir, steps))
+        entries.extend(self._ir_snapshots(recording_dir, steps))
+        entries.extend(self._ir_form_values(steps))
+        entries.extend(self._ir_network(recording_dir, steps))
+        entries.extend(self._ir_final_state(recording_dir, steps))
+        entries.extend(self._ir_polling(recording_dir, steps))
+        entries.extend(self._ir_inline_field_values(recording_dir, steps))
+        entries.extend(self._ir_keystroke_buffer(recording_dir, steps))
+        return self._ir_dedupe_entries(entries)
+
+    def _ir_keystroke_buffer(self, recording_dir: str, steps: list) -> list[dict]:
+        """Sprint L (2026-06-30): le keystroke_buffer.jsonl e reconstroi o
+        valor que o usuario REALMENTE digitou, bypassando setter hook e mask.
+
+        Estrategia:
+        1. Agrupa keystrokes por (fingerprint, sessao de digitacao).
+           Sessao = sequencia de keystrokes com gap < 1500ms.
+        2. Aplica edits: Backspace, Delete, ctrl+a, etc para reconstruir
+           string final.
+        3. Filtra modifier keys e named keys (Tab, Enter, Shift, etc).
+        4. Resultado: ultima sessao por fingerprint vira candidato
+           field_value_map com source='keystroke'.
+        """
+        path = os.path.join(recording_dir, "keystroke_buffer.jsonl")
+        if not os.path.exists(path):
+            return []
+        entries: list[dict] = []
+        keystrokes: list[dict] = []
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    keystrokes.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+        if not keystrokes:
+            return []
+
+        from datetime import datetime as _dt
+        by_fp: dict[str, list[dict]] = {}
+        for k in keystrokes:
+            fp = (k.get("fingerprint") or "").strip()
+            if not fp:
+                continue
+            by_fp.setdefault(fp, []).append(k)
+
+        for fp, ks_list in by_fp.items():
+            ks_list.sort(key=lambda d: d.get("timestamp", ""))
+            # Particiona em sessoes (gap >= 1500ms)
+            sessions: list[list[dict]] = [[]]
+            last_ts = None
+            for k in ks_list:
+                ts_str = k.get("timestamp", "")
+                try:
+                    ts = _dt.fromisoformat(ts_str.replace("Z", "+00:00"))
+                except (ValueError, AttributeError):
+                    sessions[-1].append(k)
+                    continue
+                if last_ts is not None and (ts - last_ts).total_seconds() >= 1.5:
+                    sessions.append([])
+                sessions[-1].append(k)
+                last_ts = ts
+            if not sessions[-1]:
+                sessions.pop()
+            if not sessions:
+                continue
+            # Pega ultima sessao — ground-truth do que ficou no campo
+            last_session = sessions[-1]
+            value = self._ir_reconstruct_from_keystrokes(last_session)
+            if not value:
+                continue
+
+            last_ks = last_session[-1]
+            aria = (last_ks.get("accessible_name") or "").strip()
+            placeholder = (last_ks.get("placeholder") or "").strip()
+            canonical = self._canonical_field_key(aria or placeholder or fp)
+
+            step_idx = self._ir_find_nearest_step_index(
+                steps, last_ks.get("timestamp", "")
+            )
+
+            entries.append({
+                "field_key": canonical,
+                "value": value,
+                "intention": (
+                    f"fill {aria or placeholder or fp} with '{value}' "
+                    f"(reconstructed from keystroke_buffer)"
+                ),
+                "identifiers": {
+                    "aria_label": aria,
+                    "placeholder": placeholder,
+                    "fingerprint": fp,
+                },
+                "source": "keystroke",
+                "step_index": step_idx,
+                "fingerprint": fp,
+            })
+        return entries
+
+    @staticmethod
+    def _ir_reconstruct_from_keystrokes(session: list[dict]) -> str:
+        """Aplica eventos keydown sequenciais para reconstruir string final.
+        Trata Backspace, Delete, e named keys. Ignora modifiers puros."""
+        buf: list[str] = []
+        cursor = 0
+        for k in session:
+            ctrl = bool(k.get("ctrl") or k.get("meta"))
+            key = k.get("key") or ""
+            kind = k.get("kind", "")
+            if ctrl and key.lower() in ("a", "x"):
+                # Select-all + delete = clear
+                buf.clear()
+                cursor = 0
+                continue
+            if ctrl and key.lower() == "v":
+                # Paste — sem evento input nao da pra recuperar conteudo.
+                # Marca placeholder pra normalizer indicar fallback.
+                continue
+            if kind == "named":
+                if key == "Backspace":
+                    if cursor > 0 and buf:
+                        cursor -= 1
+                        del buf[cursor]
+                elif key == "Delete":
+                    if cursor < len(buf):
+                        del buf[cursor]
+                # Tab/Enter/Arrow/Escape/Shift/etc nao afetam buffer
+                continue
+            if kind == "char" and key:
+                buf.insert(cursor, key)
+                cursor += 1
+        return "".join(buf).strip()
+
+    def _ir_inline_field_values(self, recording_dir: str, steps: list) -> list[dict]:
+        """H21: le eventos inline_field_value de raw_events.jsonl
+        (emitidos pelo overlay quando usuario forneceu valor pelo
+        prompt de interceptacao de mascara). Fonte = user_supplied_inline."""
+        path = os.path.join(recording_dir, "raw_events.jsonl")
+        if not os.path.exists(path):
+            return []
+        entries: list[dict] = []
+        try:
+            with open(path, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        ev = json.loads(line)
+                    except Exception:
+                        continue
+                    if ev.get("type") != "inline_field_value":
+                        continue
+                    value = (ev.get("value") or "").strip()
+                    if not value:
+                        continue
+                    label = (ev.get("label") or "").strip()
+                    name = (ev.get("name") or "").strip()
+                    placeholder = (ev.get("placeholder") or "").strip()
+                    aria_label = (ev.get("aria_label") or "").strip()
+                    element_id = (ev.get("element_id") or "").strip()
+                    fp = (ev.get("fingerprint") or "").strip()
+                    canonical = self._canonical_field_key(
+                        label or aria_label or name or placeholder or element_id or fp
+                    )
+                    display = label or aria_label or placeholder or name or element_id or fp
+                    step_idx = self._ir_find_nearest_step_index(
+                        steps, ev.get("timestamp", "")
+                    )
+                    entries.append({
+                        "field_key": canonical,
+                        "value": value,
+                        "intention": f"fill {display} with '{value}' (user supplied inline)",
+                        "identifiers": {
+                            "label": label,
+                            "aria_label": aria_label,
+                            "placeholder": placeholder,
+                            "name": name,
+                            "id": element_id,
+                            "fingerprint": fp,
+                            "tag": ev.get("tag") or "",
+                        },
+                        "source": "user_supplied_inline",
+                        "step_index": step_idx,
+                        "fingerprint": fp,
+                    })
+        except Exception:
+            return entries
+        return entries
+
+    # ── Polling ─────────────────────────────────────────────────────────────
+
+    def _ir_polling(self, recording_dir: str, steps: list) -> list[dict]:
+        """Extrai valores de field_snapshots.jsonl com fonte=polling."""
+        snapshots_path = os.path.join(recording_dir, "field_snapshots.jsonl")
+        if not os.path.exists(snapshots_path):
+            return []
+        polling_entries = []
+        with open(snapshots_path) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                source = entry.get("source", "")
+                interval_ms = entry.get("interval_ms", 0) or 0
+                is_polling = source == "polling" or interval_ms > 0
+                if not is_polling:
+                    for snap in entry.get("snapshots", []):
+                        snap_source = snap.get("source", "")
+                        snap_interval = snap.get("interval_ms", 0) or 0
+                        if snap_source == "polling" or snap_interval > 0:
+                            snap["_batch_ts"] = entry.get("timestamp", "")
+                            polling_entries.append(snap)
+                    continue
+                if "snapshots" in entry and isinstance(entry["snapshots"], list):
+                    for snap in entry["snapshots"]:
+                        snap["_batch_ts"] = entry.get("timestamp", "")
+                        polling_entries.append(snap)
+                else:
+                    polling_entries.append(entry)
+        if not polling_entries:
+            return []
+        by_fp: dict[str, dict] = {}
+        for snap in polling_entries:
+            fp = snap.get("fingerprint") or snap.get("identifiers", {}).get("css_path", "")
+            value = (snap.get("value") or "").strip()
+            if not fp or not value:
+                continue
+            by_fp[fp] = snap
+        entries = []
+        for fp, snap in by_fp.items():
+            value = (snap.get("value") or "").strip()
+            if not value:
+                continue
+            ids = snap.get("identifiers", {})
+            tag = snap.get("tag", "input")
+            name = ids.get("name") or ""
+            label = ids.get("label") or ids.get("aria-label") or ""
+            placeholder = ids.get("placeholder") or ""
+            element_id = ids.get("id") or ""
+            ts = snap.get("timestamp") or snap.get("_batch_ts", "")
+            step_idx = self._ir_find_nearest_step_index(steps, ts)
+            canonical = self._canonical_field_key(name or label or placeholder or fp)
+            display = label or name or placeholder or fp
+            entries.append({
+                "field_key": canonical, "value": value,
+                "intention": f"fill {display} with '{value}' (reconstructed from polling)",
+                "identifiers": {"name": name, "id": element_id, "label": label,
+                                "placeholder": placeholder, "aria_label": ids.get("aria-label") or "",
+                                "fingerprint": fp, "tag": tag},
+                "source": "polling", "step_index": step_idx, "fingerprint": fp,
+            })
+        return entries
+
+    # ── Mutacoes de valor (setter hooks) ────────────────────────────────────
+
+    def _ir_value_mutations(self, recording_dir: str, steps: list) -> list[dict]:
+        """Le value_mutations.jsonl — mudancas programaticas de valor.
+
+        Hotfix 22 / padrao P3: o JS do overlay (overlay_inject.js
+        _hookValue) escreve mutacoes com este esquema exato:
+
+            {"type": "value_mutation",
+             "timestamp": "ISO",
+             "fingerprint": "<tag>#<id>[name=<nome>]",
+             "value": "<valor digitado>"}
+
+        O leitor anterior procurava por `new_value`, `tag`, `id`, `name`,
+        e `old_value` — campos que o overlay nunca emite. A chave
+        `value` so era consultada para `type == "content_edit"`, entao
+        todo fluxo de mutacoes de input em campos com mascara (banco
+        moeda, CPF, etc.) era descartado como se nao tivesse valor. Por
+        isso prestacao_desejada_*, renda_mensal_*, valor_do_imovel_*
+        e amigos iam para --complete e forcavam o testador a redigitar
+        9 valores que ja tinham digitado durante gravacao.
+
+        Novo comportamento:
+
+        - Le `value` de toda mutacao (fonte unica da verdade).
+        - Deriva tag/id/name do fingerprint
+          (`<tag>#<id>[name=<nome>]`).
+        - Mantem ULTIMO valor nao vazio por fingerprint — a formatacao
+          progressiva da mascara significa que valores anteriores sao
+          parciais ("100,00" → "1.000,00" → "10.000,00"), so o final
+          eh o valor pretendido pelo usuario.
+        - Deteccao de mascara aplicada ao valor final para que o
+          resolvedor downstream saiba se deve esperar digitacao apenas
+          numerica em runtime.
+        """
+        path = os.path.join(recording_dir, "value_mutations.jsonl")
+        if not os.path.exists(path):
+            return []
+        mutations: list[dict] = []
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    mutations.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+        if not mutations:
+            return []
+
+        # Mantem ultimo valor nao vazio por fingerprint (ordem cronologica
+        # eh ordem do arquivo — _hookValue anexa sincronamente).
+        by_fp: dict[str, dict] = {}
+        for mut in mutations:
+            fp = (mut.get("fingerprint") or "").strip()
+            if not fp:
+                continue
+            # Tanto "value_mutation" quanto "content_edit" carregam o valor
+            # sob a chave "value". O codigo anterior tratava content_edit
+            # como caso especial e perdia value_mutation.
+            value = (mut.get("value") or "").strip()
+            if not value:
+                # Pula mutacoes vazias (estado inicial do campo); mantem
+                # anterior nao vazio se houver.
+                continue
+            by_fp[fp] = {
+                "value": value,
+                "timestamp": mut.get("timestamp", ""),
+                "fingerprint": fp,
+            }
+
+        if not by_fp:
+            return []
+
+        # Analisa `<tag>#<id>[name=<nome>]` para recuperar identificadores.
+        fp_re = _re.compile(
+            r"^(?P<tag>[a-z]+)#(?P<id>[^\[]*)\[name=(?P<name>[^\]]*)\]$"
+        )
+
+        entries: list[dict] = []
+        for fp, mut in by_fp.items():
+            value = mut["value"]
+            tag = "input"
+            el_id = ""
+            name = ""
+            m = fp_re.match(fp)
+            if m:
+                tag = m.group("tag") or "input"
+                el_id = m.group("id") or ""
+                name = m.group("name") or ""
+            ts = mut["timestamp"]
+            is_masked = self._ir_detect_masked_field(value)
+
+            # Hotfix 22: o fingerprint por si so produz chave canonica
+            # como "mat_input_5" que o resolvedor runtime nao consegue
+            # corresponder ao aria-label / placeholder da pagina ativa.
+            # Prefere o passo cujo target.element_id iguala o campo `id`
+            # da mutacao — o aria-label desse passo eh o que o resolvedor
+            # runtime vera. Cai para nearest-by-timestamp quando nao
+            # ha correspondencia de id.
+            step_idx = -1
+            if el_id:
+                id_token = f"#{el_id}"
+                for i, s in enumerate(steps):
+                    target = getattr(s, "target", None)
+                    if target is None:
+                        continue
+                    if (getattr(target, "element_id", "") or "") == el_id:
+                        step_idx = i
+                        break
+                    # Tambem corresponde quando cadeia de seletores do passo
+                    # referencia o elemento (clicks em toggle datepicker -> id
+                    # do input aparece no seletor de passo irmao, mas o input
+                    # subjacente eh o qual queremos labels).
+                    candidates = getattr(target, "candidates", None) or []
+                    for c in candidates:
+                        sel = getattr(c, "selector", "") or ""
+                        if id_token in sel:
+                            step_idx = i
+                            break
+                    if step_idx >= 0:
+                        break
+            if step_idx < 0:
+                step_idx = self._ir_find_nearest_step_index(steps, ts)
+
+            aria_label = ""
+            placeholder = ""
+            label_text = ""
+            target_id = ""
+            if 0 <= step_idx < len(steps):
+                step = steps[step_idx]
+                target = getattr(step, "target", None)
+                if target is not None:
+                    aria_label = (getattr(target, "accessible_name", "") or "")
+                    placeholder = (getattr(target, "placeholder", "") or "")
+                    label_text = (getattr(target, "label", "") or "")
+                    target_id = (getattr(target, "element_id", "") or "")
+
+            # Escolhe chave semantica mais forte disponivel. O resolvedor
+            # runtime tenta aria_label > label > placeholder > id, entao
+            # correspondemos sua prioridade aqui.
+            canonical_source = (
+                aria_label or label_text or placeholder
+                or name or target_id or el_id or fp
+            )
+            canonical = self._canonical_field_key(canonical_source)
+
+            entries.append({
+                "field_key": canonical,
+                "value": value,
+                "intention": (
+                    f"fill {canonical_source} with '{value}' "
+                    f"(reconstructed from setter_hook)"
+                ),
+                "identifiers": {
+                    "name": name, "id": el_id or target_id,
+                    "aria_label": aria_label, "label": label_text,
+                    "placeholder": placeholder,
+                    "fingerprint": fp, "tag": tag,
+                    "is_masked": is_masked,
+                },
+                "source": "setter_hook",
+                "step_index": step_idx,
+                "fingerprint": fp,
+                "is_masked": is_masked,
+            })
+        return entries
+
+    # ── Diff de snapshot + transicoes checked ──────────────────────────────
+
+    def _ir_snapshots(self, recording_dir: str, steps: list) -> list[dict]:
+        """Detecta mudancas de valor/checked entre snapshots de campo."""
+        snapshots_path = os.path.join(recording_dir, "field_snapshots.jsonl")
+        if not os.path.exists(snapshots_path):
+            return []
+        snapshots = []
+        with open(snapshots_path) as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try:
+                        snapshots.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue
+        if not snapshots:
+            return []
+        all_individual = []
+        for entry in snapshots:
+            if "snapshots" in entry and isinstance(entry["snapshots"], list):
+                for s in entry["snapshots"]:
+                    s["_batch_ts"] = entry.get("timestamp", "")
+                    all_individual.append(s)
+            else:
+                all_individual.append(entry)
+        if len(all_individual) < 2:
+            return []
+        all_individual.sort(key=lambda s: s.get("timestamp") or s.get("_batch_ts", ""))
+        groups: dict[str, list[dict]] = {}
+        for s in all_individual:
+            fp = s.get("fingerprint") or s.get("identifiers", {}).get("css_path", "unknown")
+            groups.setdefault(fp, []).append(s)
+        entries = []
+        for fp, items in groups.items():
+            prev_val = ""
+            prev_checked = None
+            has_prev = False
+            for item in items:
+                curr_val = item.get("value", "") or ""
+                curr_checked = item.get("checked")
+                curr_ts = item.get("timestamp") or item.get("_batch_ts", "")
+                ids = item.get("identifiers", {})
+                tag = item.get("tag", "")
+                name = ids.get("name") or ""
+                label = ids.get("label") or ids.get("aria-label") or ""
+                placeholder = ids.get("placeholder") or ""
+                element_id = ids.get("id") or ""
+                if has_prev:
+                    entry = None
+                    if curr_checked is True and prev_checked is not True:
+                        display = label or name or placeholder or fp
+                        entry = self._ir_make_snapshot_entry(
+                            fp, display, ids, tag, name, label, placeholder,
+                            element_id, steps, curr_ts, "checked_transition", "checked transition")
+                    elif curr_val and curr_val != prev_val:
+                        entry = self._ir_make_snapshot_entry(
+                            fp, curr_val, ids, tag, name, label, placeholder,
+                            element_id, steps, curr_ts, "snapshot_diff", "snapshot")
+                    if entry:
+                        entries.append(entry)
+                has_prev = True
+                if curr_val:
+                    prev_val = curr_val
+                if curr_checked is not None:
+                    prev_checked = curr_checked
+        by_key: dict[str, dict] = {}
+        for entry in entries:
+            by_key[entry["field_key"]] = entry
+        return list(by_key.values())
+
+    def _ir_make_snapshot_entry(
+        self, fp, value, ids, tag, name, label, placeholder, element_id,
+        steps, ts, source, suffix,
+    ) -> dict:
+        step_idx = self._ir_find_nearest_step_index(steps, ts)
+        canonical = self._canonical_field_key(name or label or placeholder or fp)
+        display = label or name or placeholder or fp
+        return {
+            "field_key": canonical, "value": value,
+            "intention": f"fill {display} with '{value}' (reconstructed from {suffix})",
+            "identifiers": {"name": name, "id": element_id, "label": label,
+                            "placeholder": placeholder, "aria_label": ids.get("aria-label") or "",
+                            "fingerprint": fp, "tag": tag},
+            "source": source, "step_index": step_idx, "fingerprint": fp,
+        }
+
+    # ── Snapshot de estado final ───────────────────────────────────────────
+
+    def _ir_final_state(self, recording_dir: str, steps: list) -> list[dict]:
+        """Le final_state_snapshot.json como fallback."""
+        path = os.path.join(recording_dir, "final_state_snapshot.json")
+        if not os.path.exists(path):
+            return []
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, ValueError):
+            return []
+        fields = data.get("fields") or []
+        if not fields:
+            return []
+        ts = data.get("timestamp", "")
+        step_idx = self._ir_find_nearest_step_index(steps, ts) if ts else max(0, len(steps) - 1)
+        entries = []
+        for field in fields:
+            ids = field.get("identifiers", {})
+            tag = field.get("tag", "")
+            name = ids.get("name") or ""
+            label = ids.get("label") or ids.get("aria-label") or ""
+            placeholder = ids.get("placeholder") or ""
+            element_id = ids.get("id") or ""
+            fp = field.get("fingerprint", "")
+            checked = field.get("checked")
+            raw_value = field.get("value")
+            value = (raw_value or "").strip() if isinstance(raw_value, str) else ""
+            if checked is True and field.get("type") in ("radio", "checkbox"):
+                value = label or name or "true"
+            elif checked is False:
+                continue
+            if not value:
+                if raw_value is None:
+                    MetricsRepository.record_silent_skip_global("ir_final_state_field_missing")
+                    logger.debug("final_state field missing: %s", fp)
+                else:
+                    MetricsRepository.record_silent_skip_global("ir_final_state_field_empty_at_end")
+                    logger.info("final_state field empty at end: %s", fp)
+                continue
+            canonical = self._canonical_field_key(name or label or placeholder or fp)
+            display = label or name or placeholder or fp
+            entries.append({
+                "field_key": canonical, "value": value,
+                "intention": f"fill {display} with '{value}' (from final_state)",
+                "identifiers": {"name": name, "id": element_id, "label": label,
+                                "placeholder": placeholder, "aria_label": ids.get("aria-label") or "",
+                                "fingerprint": fp, "tag": tag},
+                "source": "final_state", "step_index": step_idx, "fingerprint": fp,
+            })
+        return entries
+
+    # ── Valores de formulario ──────────────────────────────────────────────
+
+    def _ir_form_values(self, steps: list) -> list[dict]:
+        """Extrai form_values de contextos de passos submit."""
+        entries = []
+        for i, step in enumerate(steps):
+            ctx = getattr(step, "context", {}) or {}
+            form_vals = ctx.get("form_values") or {}
+            if not form_vals:
+                continue
+            for fname, fval in form_vals.items():
+                if not fval:
+                    continue
+                canonical = self._canonical_field_key(fname)
+                entries.append({
+                    "field_key": canonical, "value": fval,
+                    "intention": f"fill {fname} with '{fval}' (from submit payload)",
+                    "identifiers": {"form_name": fname},
+                    "source": "form_values", "step_index": i,
+                })
+        return entries
+
+    # ── Payload de rede ────────────────────────────────────────────────────
+
+    def _ir_network(self, recording_dir: str, steps: list) -> list[dict]:
+        """Analisa payloads de requisicoes POST/PUT para valores de campos."""
+        network_path = os.path.join(recording_dir, "network_log.json")
+        if not os.path.exists(network_path):
+            return []
+        with open(network_path) as f:
+            try:
+                network_entries = json.load(f)
+            except (json.JSONDecodeError, ValueError):
+                return []
+        payloads = []
+        for entry in network_entries:
+            if entry.get("type") != "request":
+                continue
+            method = entry.get("method", "").upper()
+            if method not in ("POST", "PUT", "PATCH"):
+                continue
+            post_data = entry.get("post_data")
+            if not post_data:
+                continue
+            parsed = self._ir_parse_payload(post_data, entry.get("url", ""))
+            if parsed:
+                payloads.append({
+                    "url": entry.get("url", ""),
+                    "method": method,
+                    "timestamp": entry.get("timestamp", ""),
+                    "fields": parsed,
+                })
+        if not payloads:
+            return []
+        field_ids = RecordingNormalizer._ir_build_field_identifiers(steps)
+        entries = []
+        for payload in payloads:
+            for key, value in payload["fields"].items():
+                if not value:
+                    continue
+                step_idx, confidence = RecordingNormalizer._ir_correlate_payload_key(
+                    key, value, payload, steps, field_ids)
+                if confidence == 0.0:
+                    continue
+                canonical = self._canonical_field_key(key)
+                entries.append({
+                    "field_key": canonical, "value": str(value),
+                    "intention": f"fill '{key}' with '{value}' (from network payload)",
+                    "identifiers": {"network_key": key, "payload_url": payload["url"],
+                                    "payload_method": payload["method"], "confidence": confidence},
+                    "source": "network_payload", "step_index": step_idx,
+                    "evidence": {"url": payload["url"], "method": payload["method"], "payload_key": key},
+                })
+        return entries
+
+    # ── Auxiliares IR ──────────────────────────────────────────────────────
+
+    @staticmethod
+    def _ir_detect_masked_field(value: str, raw_value: str = "") -> bool:
+        """Detecta se valor corresponde a padrao de campo com mascara."""
+        if not value:
+            return False
+        MASK_PATTERN = _re.compile(r'^[\d\s.,/\-()]+$')
+        if not MASK_PATTERN.match(value):
+            return False
+        has_separator = bool(_re.search(r'[.,/\-]', value))
+        if not has_separator:
+            return False
+        if raw_value and raw_value != value:
+            return True
+        KNOWN_MASKS = [
+            _re.compile(r'^\d{1,3}(\.\d{3})+(,\d{2})?$'),
+            _re.compile(r'^\d{3}\.\d{3}\.\d{3}-\d{2}$'),
+            _re.compile(r'^\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}$'),
+            _re.compile(r'^\(?\d{2}\)?\s?\d{4,5}-?\d{4}$'),
+            _re.compile(r'^\d{2}/\d{2}/\d{4}$'),
+        ]
+        return any(p.match(value) for p in KNOWN_MASKS)
+
+    def _verify_recording_fingerprint(self, recording_dir: str) -> None:
+        """Le recording_metadata.json, compara bloco fingerprint com
+        gravador atual, loga aviso unico + cacheia resultado em
+        `self.fingerprint_check` para chamadores."""
+        from testforge.recorder.capture_fingerprint import verify_fingerprint
+        meta_path = os.path.join(recording_dir, "recording_metadata.json")
+        metadata: dict = {}
+        if os.path.exists(meta_path):
+            try:
+                with open(meta_path, encoding="utf-8") as f:
+                    metadata = json.load(f)
+            except Exception:
+                metadata = {}
+        result = verify_fingerprint(metadata)
+        self.fingerprint_check = result
+        for w in result.get("warnings", []):
+            logger.warning("recording fingerprint: %s", w)
+
+    @staticmethod
+    def _fresh_dedupe_stats() -> dict:
+        """Retorna dict de estatisticas de dedup zerado."""
+        return {
+            "loser_counts": {},
+            "winner_counts": {},
+            "setter_hook_dominated_by_final_state": 0,
+            "final_state_uncontested": 0,
+            "setter_hook_uncontested": 0,
+        }
+
+    def _ir_dedupe_entries(self, entries: list[dict]) -> list[dict]:
+        """Deduplica por field_key, mantendo fonte de maior prioridade.
+
+        H22b: registra diagnosticos por chamada em `self.ir_dedupe_stats` para
+        medir se `setter_hook` ainda eh essencial agora que `final_state` eh
+        primario. Estatisticas informam decisao H22c (deletar _hookValue completamente).
+        """
+        best: dict[str, dict] = {}
+        dropped = []
+        # Conta entradas incontestes (fontes que chegaram primeiro sem
+        # competidor) antes do dedup colapsa-las.
+        seen_sources_per_key: dict[str, set] = {}
+        for entry in entries:
+            key = entry.get("field_key", "")
+            value = entry.get("value")
+            if not key:
+                dropped.append({"reason": "empty_key", "entry": entry})
+                MetricsRepository.record_silent_skip_global("ir_dedupe_empty_key")
+                continue
+            if not value:
+                dropped.append({"reason": "empty_value", "entry": entry})
+                MetricsRepository.record_silent_skip_global("ir_dedupe_empty_value")
+                continue
+            src = entry.get("source", "")
+            seen_sources_per_key.setdefault(key, set()).add(src)
+            existing = best.get(key)
+            if not existing:
+                best[key] = entry
+                continue
+            old_src = existing.get("source", "")
+            old_p = RecordingNormalizer.IR_SOURCE_PRIORITY.get(old_src, 0)
+            new_p = RecordingNormalizer.IR_SOURCE_PRIORITY.get(src, 0)
+            if new_p > old_p:
+                self.ir_dedupe_stats["loser_counts"][old_src] = (
+                    self.ir_dedupe_stats["loser_counts"].get(old_src, 0) + 1
+                )
+                self.ir_dedupe_stats["winner_counts"][src] = (
+                    self.ir_dedupe_stats["winner_counts"].get(src, 0) + 1
+                )
+                if old_src == "setter_hook" and src == "final_state":
+                    self.ir_dedupe_stats["setter_hook_dominated_by_final_state"] += 1
+                best[key] = entry
+            elif new_p == old_p and len(entry.get("value", "")) >= len(existing.get("value", "")):
+                best[key] = entry
+            else:
+                self.ir_dedupe_stats["loser_counts"][src] = (
+                    self.ir_dedupe_stats["loser_counts"].get(src, 0) + 1
+                )
+                self.ir_dedupe_stats["winner_counts"][old_src] = (
+                    self.ir_dedupe_stats["winner_counts"].get(old_src, 0) + 1
+                )
+                if src == "setter_hook" and old_src == "final_state":
+                    self.ir_dedupe_stats["setter_hook_dominated_by_final_state"] += 1
+        # Apos tudo resolvido, conta campos que final_state ou
+        # setter_hook possuiam sozinhos (sem competidor presente para chave).
+        for key, srcs in seen_sources_per_key.items():
+            if srcs == {"final_state"}:
+                self.ir_dedupe_stats["final_state_uncontested"] += 1
+            elif srcs == {"setter_hook"}:
+                self.ir_dedupe_stats["setter_hook_uncontested"] += 1
+        if dropped:
+            logger.info(
+                "IR dedupe dropped %d entries",
+                len(dropped),
+                extra={"dropped_summary": dict(Counter(d["reason"] for d in dropped))},
+            )
+        return list(best.values())
+
+    @staticmethod
+    def _ir_find_nearest_step_index(steps: list, timestamp: str) -> int:
+        """Encontra indice do passo mais proximo dado timestamp."""
+        if not timestamp or not steps:
+            return 0
+        try:
+            from datetime import datetime as dt_dt
+            target = dt_dt.fromisoformat(timestamp.replace("Z", "+00:00"))
+            best_idx = 0
+            best_diff = float("inf")
+            for i, step in enumerate(steps):
+                ctx = getattr(step, "context", {}) or {}
+                ts = ctx.get("timestamp", "")
+                if ts:
+                    try:
+                        step_ts = dt_dt.fromisoformat(ts.replace("Z", "+00:00"))
+                        diff = abs((step_ts - target).total_seconds())
+                        if diff < best_diff:
+                            best_diff = diff
+                            best_idx = i
+                    except (ValueError, TypeError):
+                        continue
+            return best_idx
+        except (ValueError, TypeError):
+            return 0
+
+    @staticmethod
+    def _ir_parse_payload(post_data: str, url: str) -> dict:
+        """Analisa payload POST para extrair pares chave/valor."""
+        if not post_data:
+            return {}
+        post_data = post_data.strip()
+        if post_data.startswith("{") or post_data.startswith("["):
+            try:
+                data = json.loads(post_data)
+                if isinstance(data, dict):
+                    return {k: str(v) for k, v in data.items() if not isinstance(v, (dict, list))}
+                return {}
+            except json.JSONDecodeError:
+                pass
+        try:
+            from urllib.parse import parse_qs
+            parsed = parse_qs(post_data)
+            return {k: v[0] if v else "" for k, v in parsed.items()}
+        except Exception:
+            pass
+        return {}
+
+    @staticmethod
+    def _ir_build_field_identifiers(steps: list) -> dict:
+        """Constroi mapa de identificadores de campo dos passos."""
+        ids = {}
+        for step in steps:
+            if not step.target:
+                continue
+            for key in [step.target.name, step.target.element_id,
+                        step.target.label, step.target.placeholder, step.target.text]:
+                if key:
+                    canonical = key.strip().lower().replace(" ", "_").replace("-", "_")
+                    ids[canonical] = {
+                        "name": step.target.name,
+                        "id": step.target.element_id,
+                        "label": step.target.label,
+                        "placeholder": step.target.placeholder,
+                    }
+        return ids
+
+    @staticmethod
+    def _ir_match_by_url(payload_url: str, steps: list) -> int:
+        """Corresponde URL de payload a passo por URL."""
+        if not payload_url:
+            return -1
+        for i, step in enumerate(steps):
+            step_url = getattr(step, "url", "") or ""
+            if not step_url:
+                continue
+            if step_url == payload_url or step_url.rstrip("/") == payload_url.rstrip("/"):
+                return i
+        return -1
+
+    @staticmethod
+    def _ir_correlate_payload_key(
+        key: str, value: str, payload: dict,
+        steps: list, field_identifiers: dict,
+    ) -> tuple[int, float]:
+        """Correlaciona chave de payload de rede com passo correspondente."""
+        canonical_key = key.strip().lower().replace(" ", "_").replace("-", "_")
+        if canonical_key in field_identifiers:
+            for i, step in enumerate(steps):
+                if not step.target:
+                    continue
+                if step.target.name and step.target.name.lower() == canonical_key:
+                    return i, 1.0
+                if step.target.element_id and step.target.element_id.lower() == canonical_key:
+                    return i, 1.0
+        payload_url = payload.get("url", "")
+        url_match = RecordingNormalizer._ir_match_by_url(payload_url, steps)
+        if url_match >= 0:
+            return url_match, 0.7
+        return 0, 0.0

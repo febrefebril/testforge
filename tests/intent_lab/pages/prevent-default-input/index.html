@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Prevent Default Input</title>
+<style>
+  body { font-family: sans-serif; max-width: 500px; margin: 40px auto; padding: 20px; }
+  label { display: block; margin-top: 16px; font-weight: bold; }
+  input { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
+  button { margin-top: 20px; padding: 10px 24px; background: #991b1b; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+  .note { color: #666; font-size: 0.85em; margin-top: 4px; }
+</style>
+</head>
+<body>
+  <h1>Prevent Default Input</h1>
+  <p>Input where <code>input</code> event is prevented (simulates JS frameworks).</p>
+  <form id="testForm">
+    <label for="campo1">Campo 1</label>
+    <input type="text" id="campo1" name="campo1" placeholder="Digite algo aqui">
+    <p class="note">Este campo usa preventDefault no input event. O valor so e atualizado programaticamente.</p>
+
+    <label for="campo2">Campo 2 (normal)</label>
+    <input type="text" id="campo2" name="campo2" placeholder="Campo de controle">
+    <p class="note">Campo normal para comparacao.</p>
+
+    <button type="submit" id="enviar">Enviar</button>
+  </form>
+
+  <div id="output" style="margin-top: 20px;"></div>
+
+  <script>
+    // Prevent default input on campo1 — simulates currency mask / framework behavior
+    document.getElementById('campo1').addEventListener('input', function(e) {
+      e.preventDefault();
+      // Value is set programmatically instead
+    });
+
+    // Set value programmatically (simulates JS framework like Angular currency mask)
+    document.getElementById('campo1').addEventListener('keyup', function(e) {
+      if (e.key.length === 1) {
+        var current = this.value;
+        var newVal = current + e.key.toUpperCase();
+        // Set via JS — bypasses input event
+        this.value = newVal;
+      }
+    });
+
+    // Also set on blur as final value
+    document.getElementById('campo1').addEventListener('blur', function() {
+      // Value is already set by keyup handler
+    });
+
+    document.getElementById('testForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var c1 = document.getElementById('campo1').value;
+      var c2 = document.getElementById('campo2').value;
+      document.getElementById('output').innerHTML =
+        '<p><strong>Recebido:</strong> Campo1=' + c1 + ', Campo2=' + c2 + '</p>';
+    });
+  </script>
+</body>
+</html>

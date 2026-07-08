@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>FAM-06: Select Simulado</title>
+<script src="../common.js"></script>
+<script src="error.js"></script>
+</head>
+<body>
+  <h1>FAM-06: Select Simulado (Input)</h1>
+  <select id="select-estado" name="estado">
+    <option value="">Selecione...</option>
+    <option value="SP">São Paulo</option>
+    <option value="RJ">Rio de Janeiro</option>
+    <option value="MG">Minas Gerais</option>
+  </select>
+  <button id="btn-confirmar">Confirmar</button>
+  <p id="result"></p>
+  <script>
+    document.getElementById("btn-confirmar").addEventListener("click", function() {
+      var sel = document.getElementById("select-estado");
+      document.getElementById("result").textContent = "Estado: " + sel.options[sel.selectedIndex].text;
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+@startuml
+title TestForge v0.1.0 — Sequencia: Gravacao → MIS → Compilacao → Data-Driven → Execucao → Healing L0→L3 + Handlers
+
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 12
+
+actor "QA" as QA
+participant "CLI\n(record)" as CLI_R
+participant "Recorder\nSensorial" as REC
+participant "Aplicacao\nWeb" as APP
+
+database "recordings/\n(raw_events.jsonl)" as STORE
+
+participant "CLI\n(compile --data)" as CLI_C
+participant "MIS\nNormalizer" as MIS
+participant "Data\nExtractor" as DE
+participant "Compiler\nPlaywright" as COMP
+database "test_data.json" as TDATA
+database "semantic_tests/\n(script.py)" as GEN
+
+participant "CLI\n(run)" as CLI_X
+participant "Runner\nInline" as RUN
+participant "Evidence\nCollector" as EC
+participant "Failure\nClassifier" as FC
+participant "Curador\nAutomatico" as CUR
+participant "L0: Catalog" as L0
+participant "L2: Agents" as L2
+participant "L3: LLM\n(Mock ou Azure)" as L3
+participant "Handler\ndetect_handler()" as HD
+participant "Oracle\n+ Gate" as OG
+
+== Fase 1: Gravacao ==
+
+QA -> CLI_R: record --name "fluxo"
+CLI_R -> REC: start()
+REC -> APP: page.goto(url)
+REC -> REC: inject JS listeners\n(pointerup, input, keydown)
+
+QA -> APP: preenche CPF, clica
+APP -> REC: eventos capturados
+REC -> REC: cria RawRecordedEvent\n(target: role, label, placeholder, text)
+REC -> STORE: salva raw_events.jsonl\n+ screenshots + DOM snapshots
+
+== Fase 2: Compilacao + Data-Driven ==
+
+QA -> CLI_C: compile "fluxo" --data
+CLI_C -> MIS: normalize(rec_dir) → SemanticTestCase
+MIS -> STORE: le raw_events.jsonl
+MIS -> CLI_C: 46 steps (fill/click/assert)
+
+CLI_C -> DE: extract_test_data(rec_dir)
+DE -> STORE: le raw_events.jsonl
+DE -> DE: extrai valores fill\nnomeia por label/placeholder\ndetecta campos sensiveis
+DE -> TDATA: test_data.json\n{"fields":{"cpf":"123"}}
+
+CLI_C -> COMP: compile(stc, data_file=test_data.json)
+COMP -> COMP: gera script com fallback loop\n_data.get("cpf", "123")
+COMP -> GEN: test_st_fluxo.py
+
+== Fase 3: Execucao inline + Healing ==
+
+QA -> CLI_X: run script.py
+CLI_X -> RUN: carrega recording → 46 steps
+
+loop para cada step
+  RUN -> HD: detect_handler(step)
+  HD -> HD: verifica candidates,\nelement_id, tag
+  alt handler encontrado (ex: AngularMaterial)
+    HD --> RUN: handler.execute(page, step)
+    RUN -> APP: action via handler\n(abre overlay, seleciona opcao)
+    APP --> RUN: resultado
+  else sem handler
+    HD --> RUN: None → fallback padrao
+    RUN -> APP: page.goto / fill / click / assert
+    APP --> RUN: resultado
+  end
+
+  alt step OK
+    RUN -> RUN: ✓ Step N: fill 12345678900
+  else step FALHA
+    RUN -> FC: classify(error)
+    FC -> FC: keyword match → group fallback
+    FC --> RUN: FAM-06 / INP-007
+
+    RUN -> EC: build_llm_payload(ctx)
+    EC -> EC: DOM snippet (3k chars)\nconsole errors (last 5)\nnetwork state (last 3)
+    EC --> RUN: EvidencePayload
+
+    RUN -> CUR: cure(step_data, error, payload)
+
+    CUR -> L0: match(family, symptom)
+    L0 --> CUR: null (sem match)
+
+    CUR -> L2: route_to_agent(FAM-06)
+    L2 -> L2: InputAgent: press_sequentially?\nmasked_input_detection?
+    L2 --> CUR: proposal (conf=0.82)
+
+    alt L2 confidence >= 0.7
+      CUR -> CUR: executa step_runner(proposal)
+      CUR --> RUN: PASSED_STEP (L2)
+      CUR -> L0: _register_learned() → recipe
+    else L2 falha
+      CUR -> L3: heal_or_unresolved(payload, error)
+      L3 -> L3: MockLLMHealer\nou Azure GPT-4.1-mini
+      L3 --> CUR: proposal (conf=0.85)
+      CUR -> CUR: executa step_runner(proposal)
+      CUR --> RUN: PASSED_STEP (L3)
+      CUR -> L0: _register_learned() → recipe
+    end
+
+    RUN -> RUN: ✓ curado (L2/L3)
+  end
+end
+
+RUN -> OG: oracle.run_all()
+OG --> RUN: visual_dom ✓, business_state ✓
+
+RUN -> CLI_X: metricas
+CLI_X --> QA: 46 steps, 1 falha curada, L3
+
+@enduml

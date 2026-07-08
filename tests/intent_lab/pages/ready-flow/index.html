@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Ready Flow — Fluxo Feliz Completo</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 2em auto; padding: 0 1em; }
+    label { display: block; margin-top: 1em; }
+    input, select { width: 100%; padding: 0.5em; margin-top: 0.25em; }
+    button { margin-top: 1.5em; padding: 0.5em 2em; }
+    .result { margin-top: 1.5em; padding: 1em; background: #e8f5e9; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Fluxo Feliz Completo</h1>
+  <form id="main-form">
+    <label for="nome">Nome completo</label>
+    <input id="nome" name="nome" type="text" placeholder="Digite seu nome" />
+
+    <label for="cidade">Cidade</label>
+    <select id="cidade" name="cidade">
+      <option value="">Selecione</option>
+      <option value="sp">São Paulo</option>
+      <option value="rj">Rio de Janeiro</option>
+      <option value="mg">Belo Horizonte</option>
+    </select>
+
+    <label for="aceite">
+      <input id="aceite" name="aceite" type="checkbox" value="sim" />
+      Aceito os termos
+    </label>
+
+    <button id="btn-enviar" type="submit">Enviar</button>
+  </form>
+
+  <div class="result" id="resultado" style="display:none">
+    <p>✅ Formulário enviado com sucesso!</p>
+    <p id="result-text"></p>
+  </div>
+
+  <script>
+    document.getElementById('main-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const nome = document.getElementById('nome').value;
+      const cidade = document.getElementById('cidade').value;
+      const aceite = document.getElementById('aceite').checked;
+      document.getElementById('result-text').textContent =
+        `Nome: ${nome} | Cidade: ${cidade} | Aceite: ${aceite ? 'Sim' : 'Não'}`;
+      document.getElementById('resultado').style.display = 'block';
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+version: "0.2.0"
+kind: SemanticTestCase
+description: "Schema do MIS. Cada teste é sequência de ações semânticas com intenção, alvo, contexto, candidatos e critérios de sucesso."

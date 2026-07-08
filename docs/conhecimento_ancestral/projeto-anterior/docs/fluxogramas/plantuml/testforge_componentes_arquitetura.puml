@@ -1,0 +1,673 @@
+@startuml
+title TestForge - Diagrama de Componentes da Arquitetura
+<size:14>Azul (#lightblue) = implementado | Vermelho (#lightpink) = planejado (backlog)</size>
+
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+package "1. Interface e entrada" as P1 {
+  [CLIRecord] as CLIRecord
+  [InputValidator] as InputValidator
+  [SettingsLoader] as SettingsLoader
+  [WorkspaceManager] as WorkspaceManager
+}
+
+package "2. Camada de navegador e observabilidade" as P2 {
+  [BrowserContextManager] as BrowserContextManager
+  [PlaywrightAdapter] as PlaywrightAdapter
+  [EventListener] as EventListener
+  [TraceManager] as TraceManager
+  [ScreenshotManager] as ScreenshotManager
+  [NetworkObserver] as NetworkObserver
+  [ConsoleObserver] as ConsoleObserver
+  [FrameObserver] as FrameObserver
+  [DialogObserver] as DialogObserver
+}
+
+package "3. Camada de gravação" as P3 {
+  [SmartRecorder] as SmartRecorder
+  [JSInjector] as JSInjector
+  [RecorderOverlay] as RecorderOverlay #lightblue
+  note right of RecorderOverlay
+    ✅ Evidence Collector (Epic F.1):
+    generateStrategies(el) → N selectors
+    captureAttributes(el) → elementRect,
+    elementParentChain, framework
+    addTFStep() → strategies + fallbacks
+  end note
+  [MutationObserverBridge] as MutationObserverBridge
+  [DOMEventCollector] as DOMEventCollector
+  [AssertHintCollector] as AssertHintCollector
+  [CheckpointCollector] as CheckpointCollector
+}
+
+package "4. Camada de reconhecimento/fingerprint" as P4 {
+  [FingerprintEngine] as FingerprintEngine
+  [TechnologyDetector] as TechnologyDetector
+  [JSFPrimeFacesDetector] as JSFPrimeFacesDetector #lightblue
+  note right of JSFPrimeFacesDetector
+    ✅ detectFramework(): 
+    .ui-selectonemenu, .ui-autocomplete,
+    PrimeFaces.widgets
+  end note
+  [JQueryDetector] as JQueryDetector #lightblue
+  note right of JQueryDetector
+    ✅ detectFramework():
+    .ui-selectmenu-button,
+    jQuery.ui detection
+  end note
+  [AngularDetector] as AngularDetector #lightblue
+  note right of AngularDetector
+    ✅ detectFramework():
+    mat-select, [role="listbox"],
+    .mat-option detection
+  end note
+  [KendoDetector] as KendoDetector #lightblue
+  note right of KendoDetector
+    ✅ detectFramework():
+    .k-dropdownlist, span.k-widget,
+    [data-role="dropdownlist"]
+  end note
+  [LegacyJSPDetector] as LegacyJSPDetector
+  [IonicCordovaDetector] as IonicCordovaDetector
+  [ComponentCataloger] as ComponentCataloger
+  [DynamicIdDetector] as DynamicIdDetector
+  [FrameShadowScanner] as FrameShadowScanner
+}
+
+package "5. Camada de evidências" as P5 {
+  [EvidenceCollector] as EvidenceCollector #lightblue
+  note right of EvidenceCollector
+    ✅ overlay.js captura elementRect,
+    elementParentChain, pageTechnology
+    por step. Pacote de evidências
+    disponível para self-healing.
+  end note
+  [DOMSnapshotCollector] as DOMSnapshotCollector
+  [LocatorCandidateCollector] as LocatorCandidateCollector #lightblue
+  note right of LocatorCandidateCollector
+    ✅ generateStrategies(el):
+    data-testid → id → name →
+    aria-label → placeholder →
+    has-text → href → alt →
+    class → dom-path
+  end note
+
+package "6. Camada de sessão e normalização" as P6 {
+  [SessionSerializer] as SessionSerializer
+  [SessionParser] as SessionParser
+  [StepNormalizer] as StepNormalizer
+  [StepMerger] as StepMerger
+  [RecordingValidator] as RecordingValidator
+  [CanonicalStepModel] as CanonicalStepModel
+}
+
+package "7. Camada de geração" as P7 {
+  [ScriptGenerator] as ScriptGenerator
+  [PlaywrightTemplateRenderer] as PlaywrightTemplateRenderer #lightblue
+  note right of PlaywrightTemplateRenderer
+    ✅ Fallback loop (2026-06-12):
+    Gera for/else/try/except para click e fill
+    testando TODAS as estratégias do data.json.
+    select/upload: seletor único (fallback via runner).
+    Templates via ast.parse() — mais simples que AST manual.
+  end note
+  [LocatorStrategyBuilder] as LocatorStrategyBuilder
+  [WaitStrategyBuilder] as WaitStrategyBuilder
+  [ScriptMetadataGenerator] as ScriptMetadataGenerator
+}
+
+package "8. Camada de execução diagnóstica" as P8 {
+  [ExecutorAgent] as ExecutorAgent
+  [ExecutionCollector] as ExecutionCollector
+  [FailureDiagnostic] as FailureDiagnostic
+  [FailureSignatureBuilder] as FailureSignatureBuilder
+  [RunRepository] as RunRepository
+}
+
+package "9. Pipeline de Cura (3 Layers + Recipe)" as P9 {
+  [RecipeLayer] as RecipeLayer #lightblue
+  note right of RecipeLayer
+    ✅ Layer 0 (novo): Recipe Auto-Healing.
+    Antes de Layer 1, consulta receitas LLM
+    que modificam COMO a ação é executada.
+    Ex: fill + angular → dispatch blur
+    Receitas são geradas por falhas reais
+    e armazenadas no healing-catalog.jsonl.
+  end note
+  note right of RecipeLayer
+    Fluxo: recipe → pre_action → action →
+    post_action → validate → success/fail.
+    recipe.match(): action + framework + symptom.
+    RecipeLayer é chamado por _try_with_recipes()
+    no runner.py, antes de _try_with_fallbacks().
+  end note
+  [CatalogLayer] as CatalogLayer
+  note right of CatalogLayer
+    Layer 1: consulta ao catálogo (49 entradas P0).
+    Custo zero — nunca chama LLM.
+    Auto-registro de novas curas como 'learned'.
+    Stale detection: 90+ dias sem uso.
+  end note
+  [CuradorAutomatico] as CuradorAutomatico
+  note right of CuradorAutomatico
+    Orquestrador da cura.
+    __init__(): load_llm_config() lê env vars.
+    AZURE_OPENAI_KEY + AZURE_OPENAI_ENDPOINT
+      → LLMHealer real (Azure OpenAI)
+    Env vars ausentes → MockLLMHealer
+    cure() → L1 → L2 → L3 (_run_healing_cycle)
+    MAX_RETRY_DEPTH = 1 (ERROR_CHANGED retry)
+  end note
+  [AgentOrchestrator] as AgentOrchestrator
+  [FailureClassifier] as FailureClassifier
+  [SelectorAgent (FAM-01)] as SelectorAgent
+  note right of SelectorAgent
+    heal(): regras determinísticas primeiro.
+    _llm_fallback() ao final via _build_prompt().
+  end note
+  [TimingAgent (FAM-02/05)] as TimingAgent
+  note right of TimingAgent
+    heal(): regras determinísticas primeiro.
+    _llm_fallback() ao final via _build_prompt().
+  end note
+  [ContextAgent (FAM-03)] as ContextAgent
+  note right of ContextAgent
+    heal(): regras determinísticas primeiro.
+    _llm_fallback() ao final via _build_prompt().
+  end note
+  [StateAgent (FAM-04)] as StateAgent
+  note right of StateAgent
+    heal(): regras determinísticas primeiro.
+    _llm_fallback() ao final via _build_prompt().
+  end note
+  [InputAgent (FAM-06/07)] as InputAgent
+  note right of InputAgent
+    FAM-07 (capture/file) também roteia aqui.
+    heal(): regras determinísticas primeiro.
+    _llm_fallback() ao final via _build_prompt().
+  end note
+  [PrimeFacesAgent (FAM-08)] as PrimeFacesAgent #lightpink
+  note right of PrimeFacesAgent
+    Planejado (Epic F.3): agente especialista
+    para widgets PrimeFaces, Kendo, Angular Material.
+    Detecta falhas em .ui-selectonemenu,
+    .ui-autocomplete-panel, k-dropdownlist, mat-select.
+  end note
+  [LLMHealer (Layer 3)] as LLMHealer
+  note right of LLMHealer
+    Layer 3: _run_healing_cycle().
+    Azure OpenAI (model=gpt-4.1-mini default).
+    Prompt enxuto ~500 tok.
+    FAMILY_PROMPTS selecionado por family="".
+    Confidence gate >= 0.5 para aceitar proposta.
+    ALLOWED_STRATEGIES valida estratégia.
+    heal_or_unresolved() → LLMHealingProposal.
+  end note
+  [MockLLMHealer] as MockLLMHealer
+  note right of MockLLMHealer
+    Fallback quando env vars ausentes.
+    Confiança fixa 0.85 simulada.
+    strategy=semantic_locator_conversion.
+    Sem chamada Azure OpenAI.
+  end note
+  note right of P9
+    FAM-08 (PrimeFaces) → Agente especialista (F.3 planejado)
+    FAM-09 (recorder), FAM-10 (execution), FAM-11 (browser):
+    sem agente L2 → fallthrough direto L3.
+  end note
+}
+
+package "10. Camada de controle de patch" as P10 {
+  [PatchGenerator] as PatchGenerator
+  [PatchValidator] as PatchValidator
+  [ProgressDetector] as ProgressDetector
+  [RollbackManager] as RollbackManager
+  [VersionManager] as VersionManager
+  [AttemptHistoryRepository] as AttemptHistoryRepository
+}
+
+package "11. Camada de estabilização (Epics A/B)" as P11 {
+  [DeterministicSelfHealingAgent] as DeterministicSelfHealingAgent
+  [LocatorRegistry] as LocatorRegistry
+  [HealingRuleRegistry] as HealingRuleRegistry
+}
+
+package "11b. Epic C (postergado)" as P11b {
+  [DataSeparationAgent] as DataSeparationAgent
+  note right of DataSeparationAgent
+    Extrai dados variáveis para massa de teste.
+    Postergado para Epic C.
+  end note
+  [PerformanceOptimizerAgent] as PerformanceOptimizerAgent
+  note right of PerformanceOptimizerAgent
+    Otimiza estabilidade/performance.
+    Postergado para Epic C.
+  end note
+}
+
+package "12. Catálogo e entrega" as P12 {
+  [HealingCatalog] as HealingCatalog
+  note right of HealingCatalog
+    Catálogo de cura — Layer 1 do pipeline.
+    Consulta custo zero, sem LLM.
+    Auto-registro de padrões resolvidos.
+  end note
+  [FailurePatternRepository] as FailurePatternRepository
+  [HealingRuleRepository] as HealingRuleRepository
+  [FinalArtifactBuilder] as FinalArtifactBuilder
+  [ReportGenerator] as ReportGenerator
+}
+
+package "13. Configuração [Feature 006]" as P-Config {
+  [ConfigLoader] as ConfigLoader
+  [TestForgeConfig] as TestForgeConfig
+}
+
+package "14. Validação de implementação [Feature 006]" as P-Validation {
+  [ImplementationAuditor] as ImplementationAuditor
+}
+
+package "15. Orquestração LangGraph [Feature 006]" as P-LangGraph {
+  [LangGraphWorkflow] as LangGraphWorkflow
+  [CurationOrchestrator] as CurationOrchestrator
+  LangGraphWorkflow --> CurationOrchestrator : encapsula fluxo de 14 nós
+}
+
+database "output/{slug}/recording" as RecordingArtifacts {
+  [session_raw.json] as SessionRaw
+  [session_normalized.json] as SessionNormalized
+  [fingerprint_initial.json] as FingerprintInitial
+  [fingerprint_final.json] as FingerprintFinal
+  [recording_summary.md] as RecordingSummary
+  [sensitive_data_report.json] as SensitiveDataReport
+}
+
+database "output/{slug}/evidence" as EvidenceArtifacts {
+  [screenshots/] as EvidenceScreenshots
+  [dom/] as EvidenceDOM
+  [network/] as EvidenceNetwork
+  [console/] as EvidenceConsole
+  [storage/] as EvidenceStorage
+  [frames/] as EvidenceFrames
+  [selectors/] as EvidenceSelectors
+  [components/] as EvidenceComponents
+}
+
+database "output/{slug}/generated" as GeneratedArtifacts {
+  [script_v0.py] as ScriptV0
+  [script_metadata.json] as ScriptMetadata
+  [steps_normalized.json] as StepsNormalized
+  [selector_candidates.json] as SelectorCandidates
+}
+
+database "output/{slug}/runs/run_N" as RunArtifacts {
+  [execution.json] as ExecutionJson
+  [failure_signature.json] as FailureSignatureJson
+  [trace.zip] as TraceZip
+  [screenshot_failure.png] as ScreenshotFailure
+  [dom_failure.html] as DOMFailure
+  [console_network.json] as ConsoleNetwork
+}
+
+database "output/{slug}/agents" as AgentArtifacts {
+  [selector_agent/] as AgentSelector
+  [timing_agent/] as AgentTiming
+  [context_agent/] as AgentContext
+  [state_agent/] as AgentState
+  [input_agent/] as AgentInput
+  [llm_healer/] as AgentLLMHealer
+  [curador_automatico/] as AgentCurador
+}
+
+database "output/{slug}/healing-catalog" as HealingCatalogArtifacts {
+  [failure_signatures.jsonl] as FailureSignaturesJsonl
+  [resolved_patterns.jsonl] as ResolvedPatternsJsonl
+  [healing_rules.json] as HealingCatalogRules
+}
+
+database "output/{slug}/final" as FinalArtifacts {
+  [script_final.py] as ScriptFinal
+  [test_data.json] as TestData
+  [locators.json] as LocatorsJson
+  [healing_rules.json] as FinalHealingRules
+  [execution_report.json] as ExecutionReport
+  [agent_history.json] as AgentHistory
+  [fingerprint_summary.json] as FingerprintSummary
+}
+
+CLIRecord --> InputValidator : valida parâmetros
+CLIRecord --> SettingsLoader : carrega configurações
+CLIRecord --> WorkspaceManager : cria workspace
+SettingsLoader --> WorkspaceManager : fornece políticas e paths
+InputValidator --> WorkspaceManager : autoriza criação
+WorkspaceManager --> RecordingArtifacts : cria estrutura
+WorkspaceManager --> EvidenceArtifacts : cria estrutura
+WorkspaceManager --> GeneratedArtifacts : cria estrutura
+WorkspaceManager --> RunArtifacts : cria estrutura
+WorkspaceManager --> AgentArtifacts : cria estrutura
+WorkspaceManager --> HealingCatalogArtifacts : cria estrutura
+WorkspaceManager --> FinalArtifacts : cria estrutura
+
+BrowserContextManager --> PlaywrightAdapter : controla browser/context/page
+BrowserContextManager --> TraceManager : ativa tracing
+BrowserContextManager --> ScreenshotManager : ativa screenshots
+BrowserContextManager --> EventListener : registra listeners nativos
+EventListener --> NetworkObserver : request/response
+EventListener --> ConsoleObserver : console/pageerror
+EventListener --> FrameObserver : frameattached/framenavigated
+EventListener --> DialogObserver : dialog/popup
+TraceManager --> TraceZip : persiste trace
+ScreenshotManager --> EvidenceScreenshots : persiste screenshots
+NetworkObserver --> EvidenceNetwork : persiste rede
+ConsoleObserver --> EvidenceConsole : persiste console
+FrameObserver --> EvidenceFrames : persiste frames
+
+FingerprintEngine --> TechnologyDetector : solicita detecção tecnológica
+TechnologyDetector --> JSFPrimeFacesDetector : detecta JSF/PrimeFaces
+TechnologyDetector --> JQueryDetector : detecta jQuery/jQuery UI
+TechnologyDetector --> AngularDetector : detecta Angular
+TechnologyDetector --> LegacyJSPDetector : detecta JSP legado
+TechnologyDetector --> IonicCordovaDetector : detecta Ionic/Cordova
+FingerprintEngine --> ComponentCataloger : cataloga componentes ricos
+FingerprintEngine --> DynamicIdDetector : identifica IDs dinâmicos
+FingerprintEngine --> FrameShadowScanner : mapeia frames e shadow DOM
+FingerprintEngine --> FingerprintInitial : salva fingerprint inicial
+FingerprintEngine --> FingerprintFinal : salva fingerprint final
+ComponentCataloger --> EvidenceComponents : persiste catálogo
+FrameShadowScanner --> EvidenceFrames : persiste escopos
+
+SmartRecorder --> JSInjector : injeta recorder JS
+SmartRecorder --> RecorderOverlay : injeta overlay
+SmartRecorder --> MutationObserverBridge : observa mutações
+SmartRecorder --> DOMEventCollector : coleta eventos DOM
+SmartRecorder --> AssertHintCollector : coleta assert hints
+SmartRecorder --> CheckpointCollector : coleta checkpoints
+JSInjector --> PlaywrightAdapter : injeta scripts via page/context
+RecorderOverlay --> PlaywrightAdapter : injeta interface visual
+MutationObserverBridge --> EvidenceDOM : persiste mutações relevantes
+DOMEventCollector --> SessionSerializer : envia eventos brutos
+AssertHintCollector --> SessionSerializer : envia hints
+CheckpointCollector --> SessionSerializer : envia checkpoints
+
+SmartRecorder --> BrowserContextManager : depende do contexto de navegador
+SmartRecorder --> EventListener : usa eventos nativos
+SmartRecorder --> NetworkObserver : associa sinais de rede
+SmartRecorder --> ConsoleObserver : associa sinais de console
+SmartRecorder --> FrameObserver : associa contexto de frame
+SmartRecorder --> FingerprintEngine : usa fingerprint inicial e incremental
+SmartRecorder --> TechnologyDetector : ajusta coleta por tecnologia
+SmartRecorder --> FrameShadowScanner : usa escopo frame/shadow
+SmartRecorder --> EvidenceCollector : solicita coleta enriquecida
+SmartRecorder --> LocatorCandidateCollector : coleta locators alternativos
+SmartRecorder --> SensitiveDataGuard : aplica política de mascaramento
+
+EvidenceCollector --> DOMSnapshotCollector : coleta DOM
+EvidenceCollector --> LocatorCandidateCollector : coleta candidatos de locator
+EvidenceCollector --> VisualContextCollector : coleta screenshot/contexto visual
+EvidenceCollector --> StorageCollector : coleta storage/cookies
+EvidenceCollector --> SensitiveDataGuard : mascara dados sensíveis
+EvidenceCollector --> EvidenceRepository : persiste pacote de evidências
+DOMSnapshotCollector --> EvidenceDOM : persiste snapshots
+LocatorCandidateCollector --> EvidenceSelectors : persiste candidatos
+VisualContextCollector --> EvidenceScreenshots : persiste contexto visual
+StorageCollector --> EvidenceStorage : persiste estado
+SensitiveDataGuard --> SensitiveDataReport : registra mascaramento
+EvidenceRepository --> EvidenceArtifacts : organiza evidências
+
+SessionSerializer --> SessionRaw : salva eventos brutos
+SessionSerializer --> RecordingSummary : atualiza resumo
+SessionParser --> SessionRaw : lê sessão bruta
+RecordingValidator --> SessionRaw : valida integridade
+RecordingValidator --> FingerprintInitial : valida baseline
+RecordingValidator --> FingerprintFinal : valida fechamento
+StepNormalizer --> SessionParser : consome eventos parseados
+StepNormalizer --> StepMerger : agrupa eventos redundantes
+StepNormalizer --> CanonicalStepModel : produz steps canônicos
+StepMerger --> CanonicalStepModel : consolida intenção
+StepNormalizer --> SessionNormalized : salva sessão normalizada
+StepNormalizer --> StepsNormalized : salva steps normalizados
+LocatorCandidateCollector --> SelectorCandidates : salva candidatos
+
+ScriptGenerator --> SessionParser : lê sessão
+ScriptGenerator --> StepNormalizer : usa steps canônicos
+ScriptGenerator --> LocatorStrategyBuilder : constrói estratégia de locators
+ScriptGenerator --> WaitStrategyBuilder : constrói esperas observáveis
+ScriptGenerator --> PlaywrightTemplateRenderer : renderiza Playwright Python
+ScriptGenerator --> ScriptMetadataGenerator : gera metadados
+LocatorStrategyBuilder --> SelectorCandidates : consome locators candidatos
+WaitStrategyBuilder --> EvidenceNetwork : usa hints de rede
+WaitStrategyBuilder --> EvidenceDOM : usa hints de DOM
+ScriptMetadataGenerator --> ScriptMetadata : salva metadados
+PlaywrightTemplateRenderer --> ScriptV0 : gera script bruto
+ScriptGenerator --> ScriptV0 : publica script_v0.py
+
+ExecutorAgent --> ScriptV0 : executa script bruto
+ExecutorAgent --> PlaywrightAdapter : executa via Playwright
+ExecutorAgent --> ExecutionCollector : coleta execução
+ExecutionCollector --> RunRepository : persiste run_N
+ExecutionCollector --> ExecutionJson : salva resultado
+ExecutionCollector --> TraceZip : salva trace
+ExecutionCollector --> ScreenshotFailure : salva screenshot de falha
+ExecutionCollector --> DOMFailure : salva DOM de falha
+ExecutionCollector --> ConsoleNetwork : salva console/rede
+ExecutorAgent --> FailureDiagnostic : alimenta diagnóstico quando falha
+FailureDiagnostic --> FailureSignatureBuilder : constrói assinatura
+FailureSignatureBuilder --> FailureSignatureJson : salva assinatura
+ExecutorAgent --> FailureDiagnostic : envia evidências da falha
+ExecutorAgent --> FailureClassifier : envia status e assinatura preliminar
+FailureDiagnostic --> FailureClassifier : fornece failure_signature
+
+RecipeLayer --> CatalogLayer : Layer 0 sem recipe → tenta L1
+CuradorAutomatico --> RecipeLayer : cure(): tenta Layer 0 (recipe) PRIMEIRO
+CuradorAutomatico --> CatalogLayer : recipe sem match → tenta L1
+CatalogLayer --> AgentOrchestrator : Layer 1: match no catálogo → cura imediata
+CuradorAutomatico --> AgentOrchestrator : L1 sem match → tenta L2
+CuradorAutomatico --> LLMHealer : L2 sem match → _run_healing_cycle()
+CuradorAutomatico --> MockLLMHealer : fallback se env vars ausentes
+RecipeLayer --> HealingCatalog : consulta/salva receitas (match_recipes/add_recipe) : fallback se env vars ausentes
+FailureClassifier --> CuradorAutomatico : classifica família da falha
+AgentOrchestrator --> SelectorAgent : Layer 2: roteia FAM-01 (seletores)
+AgentOrchestrator --> TimingAgent : Layer 2: roteia FAM-02/05 (timing/DOM)
+AgentOrchestrator --> ContextAgent : Layer 2: roteia FAM-03 (contexto)
+AgentOrchestrator --> StateAgent : Layer 2: roteia FAM-04 (estado)
+AgentOrchestrator --> InputAgent : Layer 2: roteia FAM-06/07 (input/capture)
+AgentOrchestrator --> LLMHealer : Layer 3: FAM-08/09/10/11 sem agente → direto
+SelectorAgent --> PatchGenerator : propõe correção de locator\n_llm_fallback() se regras exauridas
+TimingAgent --> PatchGenerator : propõe wait/retry/stabilization\n_llm_fallback() se regras exauridas
+ContextAgent --> PatchGenerator : propõe frame/shadow/context reacquire\n_llm_fallback() se regras exauridas
+StateAgent --> PatchGenerator : propõe recuperação de estado\n_llm_fallback() se regras exauridas
+InputAgent --> PatchGenerator : propõe interação especializada\n_llm_fallback() se regras exauridas
+LLMHealer --> PatchGenerator : propõe patch via Azure OpenAI\nconfidence >= 0.5 para aceitar
+
+PatchGenerator --> PatchValidator : envia patch candidato
+PatchValidator --> VersionManager : cria versão temporária se válido
+VersionManager --> ExecutorAgent : executa versão temporária
+ExecutorAgent --> ProgressDetector : envia resultado comparativo
+ProgressDetector --> AttemptHistoryRepository : registra tentativa
+ProgressDetector --> RunRepository : consulta execuções anteriores
+ProgressDetector --> FailureDiagnostic : compara assinaturas
+ProgressDetector --> FailureClassifier : solicita reclassificação quando necessário
+ProgressDetector --> RollbackManager : aciona rollback em regressão
+RollbackManager --> VersionManager : restaura versão anterior
+AttemptHistoryRepository --> AgentArtifacts : persiste histórico por agente
+ProgressDetector --> PatchValidator : aceita patch se PASSED_STEP ou PROGRESSED
+ProgressDetector --> RollbackManager : rollback se REGRESSED
+ProgressDetector --> FailureClassifier : reclassifica se ERROR_CHANGED
+ProgressDetector --> AgentOrchestrator : solicita nova tentativa se STAGNATED ou UNRESOLVED
+
+note right of ProgressDetector
+  Estados de progresso:
+  - PASSED_STEP
+  - PROGRESSED
+  - STAGNATED
+  - REGRESSED
+  - ERROR_CHANGED
+  - UNRESOLVED
+
+  A decisão controla aceitar patch,
+  fazer rollback ou reclassificar.
+end note
+
+DeterministicSelfHealingAgent --> AttemptHistoryRepository : consolida patches aceitos
+DeterministicSelfHealingAgent --> LocatorRegistry : registra locators finais
+DeterministicSelfHealingAgent --> HealingRuleRegistry : registra regras determinísticas
+DeterministicSelfHealingAgent --> PatchValidator : valida regras finais
+DeterministicSelfHealingAgent --> VersionManager : consolida script curado
+LocatorRegistry --> LocatorsJson : salva locators finais
+HealingRuleRegistry --> FinalHealingRules : salva regras finais
+HealingRuleRegistry --> HealingCatalogRules : sincroniza regras do catálogo
+
+HealingCatalog --> FailurePatternRepository : consulta padrões de falha
+HealingCatalog --> HealingRuleRepository : consulta regras de healing
+FailurePatternRepository --> FailureSignaturesJsonl : persiste assinaturas
+FailurePatternRepository --> ResolvedPatternsJsonl : persiste padrões resolvidos
+HealingRuleRepository --> HealingCatalogRules : persiste regras
+FailureDiagnostic --> HealingCatalog : envia nova assinatura
+ProgressDetector --> HealingCatalog : envia resultado da tentativa
+CatalogLayer --> HealingCatalog : Layer 1: consulta catálogo (sem LLM)
+CuradorAutomatico --> HealingCatalog : _register_learned() / _register_unresolved()
+AgentOrchestrator --> HealingCatalog : consulta histórico para roteamento
+SelectorAgent --> HealingCatalog : consulta padrões resolvidos
+TimingAgent --> HealingCatalog : consulta padrões resolvidos
+ContextAgent --> HealingCatalog : consulta padrões resolvidos
+StateAgent --> HealingCatalog : consulta padrões resolvidos
+InputAgent --> HealingCatalog : consulta padrões resolvidos
+LLMHealer --> HealingCatalog : consulta via _run_healing_cycle()
+HealingCatalog --> AgentOrchestrator : fornece histórico para seleção de agente
+HealingCatalog --> DeterministicSelfHealingAgent : fornece regras consolidadas
+HealingCatalog --> HealingRuleRegistry : fornece regras conhecidas
+
+FinalArtifactBuilder --> ScriptFinal : publica script final
+FinalArtifactBuilder --> TestData : publica massa separada
+FinalArtifactBuilder --> LocatorsJson : publica locators
+FinalArtifactBuilder --> FinalHealingRules : publica healing rules
+FinalArtifactBuilder --> ExecutionReport : publica relatório de execução
+FinalArtifactBuilder --> AgentHistory : publica histórico dos agentes
+FinalArtifactBuilder --> FingerprintSummary : publica resumo de fingerprint
+ReportGenerator --> RecordingSummary : usa resumo da gravação
+ReportGenerator --> ExecutionReport : gera relatório final
+ReportGenerator --> AgentHistory : gera histórico rastreável
+ReportGenerator --> FingerprintSummary : gera resumo técnico
+
+CLIRecord --> BrowserContextManager : inicia sessão validada
+BrowserContextManager --> FingerprintEngine : fornece página inicial
+FingerprintEngine --> SmartRecorder : fornece fingerprint e tecnologia
+SmartRecorder --> SessionSerializer : produz sessão bruta
+SmartRecorder --> EvidenceCollector : produz evidências enriquecidas
+SessionSerializer --> RecordingValidator : encaminha gravação
+RecordingValidator --> StepNormalizer : libera normalização
+StepNormalizer --> ScriptGenerator : fornece steps canônicos
+ScriptGenerator --> ExecutorAgent : fornece script_v0
+ExecutorAgent --> FailureDiagnostic : se falhar
+CuradorAutomatico --> CatalogLayer : cure(): tenta L1 catálogo
+FailureClassifier --> CuradorAutomatico : classifica família
+CuradorAutomatico --> AgentOrchestrator : L1 sem match → L2 agentes
+CuradorAutomatico --> LLMHealer : L2 sem match → _run_healing_cycle()
+AgentOrchestrator --> PatchGenerator : coordena proposta L2
+PatchValidator --> ProgressDetector : valida evolução
+ProgressDetector --> DeterministicSelfHealingAgent : entrega patches aceitos
+DeterministicSelfHealingAgent --> FinalArtifactBuilder : entrega script curado
+FinalArtifactBuilder --> ReportGenerator : consolida entrega
+
+note bottom of SmartRecorder
+  SmartRecorder não grava apenas ações.
+  Ele coordena contexto técnico, evidência,
+  fingerprint, locators alternativos,
+  sinais de rede, DOM, console, frame,
+  shadow DOM e estado da aplicação.
+end note
+
+note bottom of ScriptGenerator
+  ScriptGenerator depende de:
+  - SessionParser
+  - StepNormalizer
+  - LocatorStrategyBuilder
+  - WaitStrategyBuilder
+
+  O script_v0.py é diagnóstico,
+  não é o artefato final.
+end note
+
+note bottom of DeterministicSelfHealingAgent
+  O self-healing final deve ser:
+  - determinístico
+  - rastreável
+  - validado por execução
+  - reversível via rollback
+  - baseado nas evidências da gravação
+end note
+
+note bottom of HealingCatalog
+  HealingCatalog — Layer 1 do pipeline.
+  Catálogo pré-povoado (49 entradas P0).
+  Custo zero: nunca chama LLM.
+  Auto-registro de novas curas como 'learned'.
+  Stale detection: 90+ dias sem uso.
+  Fornece match imediato ou delega para Layer 2.
+end note
+
+ConfigLoader --> TestForgeConfig : instancia e valida
+ConfigLoader --> SettingsLoader : substitui/complementa carregamento
+LangGraphWorkflow --> CurationOrchestrator : coordena via StateGraph 14 nós
+LangGraphWorkflow --> AgentOrchestrator : nó curate_failures delega para multiagentes
+ImplementationAuditor --> CurationOrchestrator : valida implementação antes de executar
+
+' ============================================================
+' BUG-020: Componentes adicionados em BUG-007–BUG-014
+' ============================================================
+
+package "P-Debug: src/testforge/debug/" as P_Debug {
+  [DebugLogger] as DebugLogger
+  note right of DebugLogger
+    Singleton. configure(slug, output_dir, debug_mode).
+    event(name, payload) → stderr + debug/debug.log.
+    Sanitiza campos sensíveis (password/token/api_key/secret).
+    Ativado por recording.debug_mode=True / --debug CLI.
+  end note
+}
+
+package "P-Recording-BUG018: Recorder + RecorderOverlay (atualizado)" as P_RecBug018 {
+  [Recorder] as Recorder
+  note right of Recorder
+    BrowserConfig.navigation_timeout_ms (padrão 60000 ms).
+    Recorder.finish() verifica page.is_closed() antes de
+    chamar FingerprintCollector.collect_final() — BUG-019.
+    BrowserManager.close() envolvido em try/except — BUG-019.
+    ScreenshotCollector.capture_screenshot() e
+    DOMSnapshotCollector.capture_dom_snapshot() verificam
+    page.is_closed() + try/except antes de chamar API
+    Playwright — BUG-021.
+  end note
+  [RecorderOverlay_BUG018] as RecorderOverlay_BUG018
+  note right of RecorderOverlay_BUG018
+    OVERLAY_JS usa window.__tfRecordingActive (+ sessionStorage)
+    para persistir estado entre full-page navigations — BUG-018.
+    updateUI() chamado ao final da inicialização da IIFE para
+    sincronizar statusEl.textContent com state restaurado — BUG-021.
+    _event_queue: queue.Queue para comunicação thread-safe
+    entre OVERLAY_JS e Python collect_step.
+  end note
+}
+
+package "P-Node-Recording: collect_step (atualizado)" as P_NodeRec {
+  [CollectStep] as CollectStep
+  note right of CollectStep
+    Pull-based: page.evaluate("window.__tfEventQueue.splice(0)").
+    Loop 300×100ms. Pacing via time.sleep() (síncrono) — BUG-021
+    (wait_for_timeout criava coroutines asyncio órfãs).
+    Verifica page.is_closed() no início de cada
+    iteração (BUG-019). DebugLogger instrumentado a cada 10 iter.
+    Transição page.on("close") → finish_requested=True.
+  end note
+}
+
+DebugLogger --> Recorder : instrumenta browser_launch
+DebugLogger --> CollectStep : instrumenta collect_step_poll
+DebugLogger --> RecorderOverlay_BUG018 : instrumenta overlay_event
+Recorder --> RecorderOverlay_BUG018 : injeta OVERLAY_JS + page.on("close")
+RecorderOverlay_BUG018 --> CollectStep : window.__tfEventQueue (pull-based)
+CollectStep --> Recorder : finish_requested → Recorder.finish()
+
+@enduml

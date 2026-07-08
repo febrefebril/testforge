@@ -1,0 +1,102 @@
+@startuml sequencia-resolver-ALVO
+title Resolver — estado ALVO (Fase 3 fix)\nRetry-with-next-candidate: quando fill/click rejeita,\nexecutor pede próximo candidate ao resolver antes de escalar para healing.
+
+skinparam BackgroundColor #F0FDF4
+skinparam SequenceGroupBackgroundColor #DCFCE7
+
+actor "test_*.py" as TEST
+participant "step.fill()\nruntime/step.py" as STEP
+participant "StepExecutor\n(NOVO wrapper)" as EXEC
+participant "LocatorResolver\nresolver.py" as RES
+participant "Page (Playwright)" as PAGE
+participant "Locator" as LOC
+participant "SQLite Catalog" as SQL
+participant "Healing\nL2/L3" as HEAL
+
+TEST -> STEP: step.fill(page, intent="Renda mensal",\n  value="1000", candidates_file=...)
+activate STEP
+STEP -> EXEC: execute_fill(intent, candidates, value)
+activate EXEC
+
+EXEC -> EXEC: exclude_indices = set()
+
+loop retry chain (até candidates esgotarem ou execute OK)
+  EXEC -> RES: resolve(intent, candidates,\n  action="fill", exclude=exclude_indices)
+  activate RES
+
+  alt L0a in-memory winning_idx_cache
+    RES -> RES: idx = winning_idx_cache[intent]
+    note right of RES #DCFCE7
+      ⚡ Cache promove candidate vencedor
+      da última execução para prioridade máxima.
+      Speedup steps subsequentes.
+    end note
+    RES -> PAGE: build(candidates[idx])
+    PAGE --> RES: locator
+    RES --> EXEC: ResolveResult(locator, idx, level="L0_promoted")
+  else L1 candidates walk
+    loop for idx, c in enumerate(candidates) if idx ∉ exclude
+      RES -> PAGE: build(c)
+      PAGE --> RES: locator
+      RES -> LOC: _exists(locator) = count() > 0
+      alt existe
+        LOC --> RES: True
+        RES --> EXEC: ResolveResult(locator, idx)
+        break
+      else não existe
+        LOC --> RES: False
+      end
+    end
+    alt nenhum candidate resolve
+      RES --> EXEC: raise LocatorNotFoundError
+    end
+  end
+  deactivate RES
+
+  EXEC -> PAGE: locator.fill(value, timeout=1500)
+  alt fill EXECUTA (OK)
+    PAGE --> EXEC: sucesso
+    EXEC -> RES: promote_cache(intent, idx)
+    RES -> RES: winning_idx_cache[intent] = idx
+    RES -> SQL: record_success(intent, candidates[idx])
+    note right of RES #DCFCE7
+      ✅ Só persiste após EXECUÇÃO OK.
+      Recipe catalog aprende fix real.
+    end note
+    EXEC --> STEP: StepResult(passed=True,\n  winning_idx=idx,\n  attempted_indices=[...])
+    break
+  else fill REJEITA
+    PAGE --> EXEC: TimeoutError / ElementInterceptedError
+    EXEC -> EXEC: exclude_indices.add(idx)
+    note right of EXEC #DCFCE7
+      🔁 GAP-01 fix: adiciona idx à exclude,
+      volta ao topo do loop, resolver pega
+      próximo candidate elegível.
+    end note
+    alt exclude_indices == set(range(len(candidates)))
+      EXEC -> HEAL: escalate(step, all_indices_failed)
+      HEAL --> EXEC: healed OR unresolved
+      EXEC --> STEP: StepResult(...)
+      break
+    end
+  end
+end
+
+deactivate EXEC
+deactivate STEP
+STEP --> TEST: passed / rejected
+
+legend right #D1FAE5
+  <b>Contrato do fix (Fase 3)</b>:
+  1. LocatorResolver.resolve() aceita `exclude_indices: set[int]`.
+  2. StepExecutor (novo/estendido) wrapping: resolve → execute → retry se falha.
+  3. Cache in-memory `winning_idx_cache: dict[intent_hash, int]`.
+  4. `record_success` só após execução confirmada, não após existência.
+  5. Escalação para healing SOMENTE quando todos candidates esgotaram.
+
+  <b>Regressão testável</b>:
+  tests/regression/resolver/test_gap01_first_candidate_exists_but_fill_fails.py
+  Pré-fix: FALHA. Pós-fix: PASSA.
+end legend
+
+@enduml

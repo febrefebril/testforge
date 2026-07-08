@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>FAM-08: Assertion</title>
+<script src="../common.js"></script>
+<script src="error.js"></script>
+</head>
+<body>
+  <h1>FAM-08: Assertion</h1>
+  <button id="btn-processar">Processar</button>
+  <p id="status">Status: aguardando</p>
+  <script>
+    document.getElementById("btn-processar").addEventListener("click", function() {
+      document.getElementById("status").textContent = "Status: Salvo com sucesso";
+    });
+  </script>
+</body>
+</html>

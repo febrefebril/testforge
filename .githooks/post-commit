@@ -1,0 +1,13 @@
+#!/bin/bash
+# post-commit hook: verify pipeline state after commit
+
+# Check if GSD state exists and remind about phase
+if [ -f ".planning/STATE.md" ]; then
+    echo ""
+    echo "📋 GSD Pipeline: verifique /gsd-progress para status da fase"
+fi
+
+# Count commits in this session  
+COMMITS_TODAY=$(git log --since="midnight" --oneline 2>/dev/null | wc -l)
+echo "✓  Commit #$COMMITS_TODAY hoje. Pipeline: BMAD->GSD->GIT"
+exit 0

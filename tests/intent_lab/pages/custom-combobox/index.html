@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Custom Combobox — role=combobox</title>
+  <style>
+    body { font-family: sans-serif; max-width: 500px; margin: 2em auto; }
+    .combobox-container { position: relative; margin-top: 0.5em; }
+    #combobox-input { width: 100%; padding: 0.5em; box-sizing: border-box; }
+    #listbox { display: none; position: absolute; top: 100%; left: 0; right: 0;
+               border: 1px solid #ccc; background: #fff; max-height: 200px; overflow-y: auto; z-index: 10; }
+    #listbox div { padding: 0.5em; cursor: pointer; }
+    #listbox div:hover, #listbox div.active { background: #e3f2fd; }
+    .result { margin-top: 1.5em; padding: 1em; background: #e8f5e9; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Custom Combobox</h1>
+  <label for="combobox-input">Escolha uma fruta</label>
+  <div class="combobox-container">
+    <input id="combobox-input" role="combobox" aria-expanded="false"
+           aria-controls="listbox" aria-activedescendant=""
+           placeholder="Digite ou selecione" />
+    <div id="listbox" role="listbox">
+      <div role="option" data-value="maca">Maçã</div>
+      <div role="option" data-value="banana">Banana</div>
+      <div role="option" data-value="laranja">Laranja</div>
+      <div role="option" data-value="uva">Uva</div>
+      <div role="option" data-value="abacaxi">Abacaxi</div>
+    </div>
+  </div>
+  <p id="selected-value">Selecionado: <span id="selection">—</span></p>
+
+  <button id="btn-confirmar">Confirmar</button>
+  <div class="result" id="resultado" style="display:none">Combobox confirmado</div>
+
+  <script>
+    const input = document.getElementById('combobox-input');
+    const listbox = document.getElementById('listbox');
+    const options = listbox.querySelectorAll('div[role="option"]');
+    const selection = document.getElementById('selection');
+
+    input.addEventListener('focus', () => { listbox.style.display = 'block'; });
+    input.addEventListener('blur', () => setTimeout(() => { listbox.style.display = 'none'; }, 200));
+    input.addEventListener('input', () => {
+      const q = input.value.toLowerCase();
+      options.forEach(opt => {
+        opt.style.display = opt.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+      listbox.style.display = 'block';
+    });
+
+    options.forEach(opt => {
+      opt.addEventListener('click', () => {
+        input.value = opt.textContent;
+        selection.textContent = opt.getAttribute('data-value');
+        listbox.style.display = 'none';
+      });
+    });
+
+    document.getElementById('btn-confirmar').addEventListener('click', () => {
+      document.getElementById('resultado').style.display = 'block';
+    });
+  </script>
+</body>
+</html>

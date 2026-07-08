@@ -1,0 +1,475 @@
+@startuml
+title TestForge - Fluxo completo: gravação, execução e cura em 3 camadas
+
+start
+
+partition "0. Preparação da sessão" {
+  :CLIRecord recebe parâmetros da gravação;
+  :InputValidator valida endpoint inicial, slug, credenciais permitidas,\npolíticas, diretórios, browser, locale, timezone e viewport;
+
+  if (Entradas válidas?) then (sim)
+    :Criar workspace output/{slug}/;
+    :Criar manifest.json;
+    :Carregar políticas de gravação e mascaramento;
+    :Salvar config_snapshot.yaml;
+    :Criar estrutura de artefatos:\nrecording/, evidence/, generated/,\nruns/, agents/, knowledge/, final/;
+  else (não)
+    :Registrar erro de validação no manifest.json;
+    :Encerrar sem iniciar navegador;
+    stop
+  endif
+
+  note right
+    A gravação NÃO é considerada concluída aqui.
+    A sessão começa como pipeline de coleta de evidências,
+    não apenas como captura de eventos.
+  end note
+}
+
+partition "1. Bootstrap do navegador e observabilidade" {
+  :BrowserContextManager inicia Playwright;
+  :Criar browser context isolado;
+  :Configurar locale, timezone, viewport,\npermissões e storage state inicial;
+  :Ativar tracing, screenshots e snapshots;
+  :Registrar handlers nativos:\nrequest, response, console, dialog,\npopup, framenavigated, frameattached, pageerror;
+  :Navegar para endpoint inicial;
+  :Capturar baseline inicial:\nDOM, URL, storage, cookies, frames,\nconsole, rede e screenshot;
+  :Salvar baseline em evidence/;
+}
+
+partition "2. Reconhecimento e fingerprint inicial" {
+  :FingerprintEngine executa fingerprint antes da primeira interação;
+  :TechnologyDetector detecta tecnologias:\nJSF, PrimeFaces, jQuery, jQuery UI,\nAngular, JSP legado, Ionic/Cordova;
+
+  if (JSF ou PrimeFaces detectado?) then (sim)
+    :Ativar coletores para ViewState,\nIDs dinâmicos, AJAX parcial,\nforms e componentes ricos;
+  else (não)
+  endif
+
+  if (jQuery ou jQuery UI detectado?) then (sim)
+    :Ativar coletores para dialogs,\noverlays, datepicker, autocomplete\ne elementos fora do form;
+  else (não)
+  endif
+
+  if (Angular detectado?) then (sim)
+    :Ativar coletores para data-*,\ncomponentes assíncronos,\natributos estáveis e mudanças reativas;
+  else (não)
+  endif
+
+  if (JSP legado ou JavaScript manual detectado?) then (sim)
+    :Ativar coletores para XHR manual,\ntiming imprevisível e mutações tardias;
+  else (não)
+  endif
+
+  if (Ionic ou Cordova detectado?) then (sim)
+    :Ativar coletores para webview híbrido,\ncomponentes mobile-like e assincronismo;
+  else (não)
+  endif
+
+  :Detectar iframes, shadow DOM,\nformulários, componentes ricos,\noverlays e padrões de IDs dinâmicos;
+  :Salvar recording/fingerprint_initial.json;
+
+  note right
+    O fingerprint inicial orienta quais evidências
+    serão coletadas durante toda a sessão.
+    Ele também reduz dependência futura de LLM.
+  end note
+}
+
+partition "3. Instrumentação da página" {
+  :JSInjector injeta recorder JS;
+  :RecorderOverlay injeta overlay visual de gravação;
+  :Ativar MutationObserver;
+  :Ativar coleta de eventos DOM:\nclick, input, change, submit,\nkeydown, selection, focus e blur;
+  :LocatorCandidateCollector ativa coleta de candidatos;
+  :EvidenceCollector ativa proteção contra dados sensíveis;
+  :Aplicar mascaramento por política;
+  :Registrar instrumentação em recording_summary.md;
+
+  note right
+    Dados sensíveis devem ser mascarados,
+    tokenizados ou excluídos conforme política.
+    A massa real não deve ser acoplada ao script final.
+  end note
+}
+
+partition "4. Loop de gravação enriquecida" {
+  note left
+    BUG-010/BUG-019/BUG-021 fix — collect_step pull-based:
+    page.evaluate("(window.__tfEventQueue||[]).splice(0)")
+    Loop 300 iterações × 100ms = 30s máx por ciclo.
+    Pacing: time.sleep(0.1) — não wait_for_timeout (BUG-021).
+    is_closed() verificado no início de cada iteração.
+    Qualquer exceção ou is_closed()==True dispara
+    finish_requested=True e encerra o loop.
+    DebugLogger.event("collect_step_poll") a cada 10 iter.
+  end note
+  repeat
+    :SmartRecorder aguarda ação humana observável;
+    :Capturar ação do usuário;
+    :Capturar contexto ANTES da ação:\nDOM parcial, screenshot, URL,\nframes, shadow roots, storage,\nconsole recente e rede recente;
+    :EventListener registra evento bruto;
+    :Classificar tipo de step:\nnavegação, click, input,\nselect, upload, dialog,\nassertion hint ou interação especial;
+    :Gerar candidatos de locator:\nrole, label, text, placeholder,\ntest id, CSS, XPath, proximidade,\nshadow path e frame path;
+    :Pontuar estabilidade dos locators;
+    :Executar ação observada ou confirmar ação já aplicada;
+    :Capturar contexto DEPOIS da ação;
+    :Associar sinais de rede, DOM,\nconsole, frame, shadow DOM\ne componente especializado;
+    :Registrar checkpoints e assert hints;
+    :Persistir step incremental em recording/session_raw.json.partial;
+    :Atualizar fingerprint incremental;
+    :Atualizar recording_summary.md;
+
+    if (Evento contém dado sensível?) then (sim)
+      :Mascarar valor bruto;
+      :Registrar ocorrência em recording/sensitive_data_report.json;
+      :Manter placeholder seguro para DataSeparationAgent;
+    else (não)
+    endif
+
+    if (Mudança relevante detectada?) then (sim)
+      :Registrar mutation hints, network hints\ne state transition hints;
+    else (não)
+      :Marcar como possível ruído;
+    endif
+
+  repeat while (Usuário continua gravando?) is (sim)
+  ->não;
+}
+
+partition "5. Fechamento e validação da gravação" {
+  note left
+    BUG-019 fix — Recorder.finish():
+    Verifica page.is_closed() antes de FingerprintCollector.collect_final().
+    BrowserManager.close() em try/except (browser pode já estar fechado).
+    BUG-018 fix — OVERLAY_JS:
+    window.__tfRecordingActive + sessionStorage persistem estado
+    entre full-page navigations dentro da mesma aba.
+  end note
+  :Coletar eventos pendentes;
+  :Flush de rede, console, DOM,\nframes, screenshots e storage;
+  :Salvar recording/session_raw.json;
+  :Executar fingerprint final;
+  :Salvar recording/fingerprint_final.json;
+  :RecordingValidator valida integridade da gravação;
+
+  if (Gravação íntegra?) then (sim)
+    :Marcar sessão como pronta para normalização;
+  else (não)
+    if (Problemas são corrigíveis?) then (sim)
+      :Corrigir timestamps, gaps menores,\nordenação de eventos e referências ausentes;
+      :Registrar correções em recording_summary.md;
+    else (não)
+      :Marcar gravação como insuficiente;
+      :Registrar evidências do motivo;
+      :Encerrar sem gerar script;
+      stop
+    endif
+  endif
+
+  note right
+    A gravação só avança se houver evidência suficiente
+    para reconstruir intenção, contexto e estado.
+  end note
+}
+
+partition "6. Normalização" {
+  :SessionParser carrega session_raw.json;
+  :StepNormalizer converte eventos brutos em steps canônicos;
+  :Remover ruído observacional;
+  :Agrupar eventos redundantes;
+  :Preservar checkpoints, network hints,\nmutation hints, frame hints e shadow hints;
+  :Normalizar ações especializadas:\ndatepicker, autocomplete, dialog,\nupload, rich component e webview;
+  :Gerar recording/session_normalized.json;
+  :Gerar generated/steps_normalized.json;
+  :Gerar generated/selector_candidates.json;
+
+  if (Steps canônicos são suficientes?) then (sim)
+    :Aprovar normalização;
+  else (não)
+    :Registrar lacunas na gravação;
+    :Encerrar para nova gravação ou curadoria manual explícita;
+    stop
+  endif
+}
+
+partition "7. Geração do script bruto" {
+  :ScriptGenerator gera generated/script_v0.py;
+  :Gerar mapa step_id para linha do script;
+  :Gerar generated/script_metadata.json;
+  :Referenciar massa provisória sem fixar dados sensíveis;
+  :Adicionar hooks diagnósticos e captura de evidências;
+  :**Gerar fallback loop p/ click e fill**:
+  \nfor/else/try/except testando TODAS as estratégias
+  \ndo data.json (primary + alt) — não apenas o primeiro seletor;
+  :**Nome compatível com pytest**:
+  \nfilename = test_*.py, class = Test*;
+
+  note right
+    ✅ Fallback loop implementado (2026-06-12):
+    - CLICK_TEMPLATE / FILL_TEMPLATE → for/else/try/except
+    - select/upload: seletor único (já têm fallback via runner)
+    - assert/navigate/download: sem fallback
+    ✅ pytest naming:
+    - serializer.py: prefixa test_ no filename
+    - builder.py: prefixa Test na class name
+
+    Limitação: framework-specific healing só no testforge run,
+    não no pytest. O fallback cobre apenas falhas de seletor.
+  end note
+}
+
+partition "8. Execução diagnóstica" {
+  :ExecutorAgent executa generated/script_v0.py;
+  :Coletar trace.zip, screenshots,\nDOM, rede, console, storage e erros;
+  :Salvar runs/run_N/execution.json;
+  :Salvar runs/run_N/trace.zip;
+  :Salvar runs/run_N/console_network.json;
+
+  if (Execução passou ponta a ponta?) then (sim)
+    :Promover para estabilização;
+  else (não)
+    :Capturar screenshot_failure.png;
+    :Capturar dom_failure.html;
+    :FailureDiagnostic gera failure_signature.json;
+    :Salvar runs/run_N/failure_signature.json;
+  endif
+}
+
+partition "9. Classificação taxonômica da falha" {
+  if (Execução passou ponta a ponta?) then (sim)
+    :Pular classificação de falha;
+  else (não)
+    :FailureClassifier classifica falha em família e caso taxonômico;
+    :Coletar evidências:\nscreenshot, DOM, console, network, trace;
+    :Salvar runs/run_N/failure_signature.json\ncom family + taxonomy + evidências;
+  endif
+}
+
+partition "10. CuradorAutomatico — init" {
+  if (Execução passou ponta a ponta?) then (sim)
+    :Nenhuma cura necessária;
+  else (não)
+    :CuradorAutomatico.__init__()\nchama load_llm_config();
+
+    if (AZURE_OPENAI_KEY + AZURE_OPENAI_ENDPOINT definidos?) then (sim)
+      :Instanciar LLMHealer real:\nAzure OpenAI, model=gpt-4.1-mini\napi_version=2024-08-01-preview;
+    else (não)
+      :Instanciar MockLLMHealer\n(fallback sem LLM real,\nconfiança simulada 0.85);
+    endif
+
+    :Montar pacote mínimo de evidências:\nstep normalizado, DOM, trace, console, rede, screenshot;
+
+    partition "Layer 0 — Recipe Auto-Healing (Runner Runtime)" {
+      :_try_with_recipes() consulta healing-catalog.jsonl
+      \npor action + framework + sintoma;
+      if (Recipe match encontrado?) then (sim)
+        :Aplicar recipe:\npre_action_eval → ação original →\npost_action_eval → validate_eval;
+        if (Recipe validou?) then (sim)
+          :Registrar sucesso no catálogo\n(increment_recipe_success);
+          :Step resolvido por recipe;\n
+        else (não)
+          :Ação executou mas validação falhou.\nStep prossegue (ação ok);
+          :Registrar falha no catálogo\n(increment_recipe_fail);
+        endif
+      else (não)
+        :Sem recipe compatível → continuar\npara Layer 1 (Catálogo);
+      endif
+      note right
+        Recipes são geradas automaticamente
+        quando um step falha mesmo após
+        todas as estratégias hardcoded.
+        _generate_recipe_from_failure()
+        usa LLM para criar nova recipe.
+        Recipe inclui: trigger_action,
+        trigger_framework, trigger_symptom,
+        pre_action_eval, post_action_eval,
+        validate_eval.
+      end note
+    }
+
+    partition "Layer 1 — Catálogo de Cura" {
+      :Consultar healing-catalog.jsonl\npor família + sintoma (match exato);
+      if (Match encontrado?) then (sim)
+        :Aplicar estratégia primária do catálogo;
+        :ExecutorAgent reexecuta step;
+        :ProgressDetector valida resultado;
+
+        if (Resultado = PASSED_STEP?) then (sim)
+          :Atualizar contador de acertos no catálogo;
+          :Registrar sucesso no relatório;
+        else (não)
+          -> Layer 2;
+        endif
+      else (não)
+        -> Layer 2;
+      endif
+    }
+
+    partition "Layer 2 — Agente Especialista" {
+      :Roteia para agente da família conforme classificação;
+
+      if (Família = FAM-01?) then (sim)
+        :SelectorAgent.heal():
+        \nregras determinísticas primeiro\n(prioridade data-testid > id > name...);
+        :Ao final, _llm_fallback()\nchama LLM via _build_prompt();
+      elseif (Família = FAM-02 ou FAM-05?) then (sim)
+        :TimingAgent / DynamicDOMAgent:
+        \nwait semântico sem waitForTimeout fixo;
+        :Ao final, _llm_fallback()\nchama LLM via _build_prompt();
+      elseif (Família = FAM-06 ou FAM-07?) then (sim)
+        :InputAgent: estratégia de interação\nalternativa (fill→pressSequentially→native);
+        :Ao final, _llm_fallback()\nchama LLM via _build_prompt();
+      elseif (Família = FAM-03?) then (sim)
+        :ContextAgent: reaquisição de frame,\nshadow DOM ou escopo correto;
+        :Ao final, _llm_fallback()\nchama LLM via _build_prompt();
+      elseif (Família = FAM-04?) then (sim)
+        :StateAgent: diagnóstico de sessão,\noverlay ou dialog bloqueante;
+        :Ao final, _llm_fallback()\nchama LLM via _build_prompt();
+      elseif (Família = FAM-08, FAM-09,\nFAM-10 ou FAM-11?) then (sim)
+        :Pular layer 2 (sem agente especialista\npara asserts, recorder,\nexecução ou browser);
+      else
+        :Pular layer 2 (família sem agente especialista);
+      endif
+
+      :Agente propõe cura com prompt otimizado (~200 tok);
+      :PatchValidator valida;
+      :ExecutorAgent reexecuta;
+      :ProgressDetector classifica resultado;
+
+      if (PASSED_STEP?) then (sim)
+        :Registrar cura no catálogo\ncomo learned (fix_type = learned);
+        :Registrar sucesso no relatório;
+      else (não)
+        -> Layer 3;
+      endif
+    }
+
+    partition "Layer 3 — _run_healing_cycle()" {
+      :LLMHealer.heal_or_unresolved()\ncom Azure OpenAI API;
+      :Se family fornecido → seleciona\nFAMILY_PROMPTS[family];
+      :Senão → CURATION_PROMPT_TEMPLATE genérico;
+      :Parse resposta → LLMHealingProposal\ncom taxonomy_id, strategy, confidence;
+
+      if (Confiança >= 0.5?) then (sim)
+        :_build_step_copy() → patch\ncom novo locator;
+        :_try_execute_step(patched_step);
+        :classify_step_result() compara\nerro original vs novo erro;
+
+        if (PASSED_STEP?) then (sim)
+          :_register_learned()\nentrada fix_type=learned no catálogo;
+          :Registrar sucesso no relatório;
+        elseif (ERROR_CHANGED e depth < 1?) then (sim)
+          :Retry: _run_healing_cycle()\ncom novo erro, depth+1;
+        else (não)
+          :_should_rollback() → true\npara REGRESSED ou STAGNATED;
+          :Rollback: restaurar step anterior;
+          :_register_unresolved();
+          :Marcar como UNRESOLVED;
+          :Preservar evidências para revisão manual;
+          :Gerar relatório de não resolução;
+        endif
+      else (não)
+        :Confiança baixa (< 0.5)\nou taxonomia inválida;
+        :Marcar como UNRESOLVED;
+        :Preservar evidências para revisão manual;
+      endif
+    }
+
+    if (Cura bem-sucedida?) then (sim)
+      :Promover para estabilização;
+    else (não)
+      stop
+    endif
+  endif
+}
+
+note right
+  ProgressDetector estados:
+  PASSED_STEP → aceitar cura, _register_learned()
+  PROGRESSED → aceitar provisório, continuar
+  STAGNATED → rollback (_should_rollback)
+  REGRESSED → rollback obrigatório
+  ERROR_CHANGED → retry _run_healing_cycle()\n  (max depth = 1, CuradorAutomatico.MAX_RETRY_DEPTH)
+  UNRESOLVED → evidências preservadas
+
+  CuradorAutomatico:
+  - __init__: load_llm_config() → LLMHealer ou MockLLMHealer
+  - cure() → L1 → L2 → L3 (_run_healing_cycle)
+  - _run_healing_cycle: heal → confidence≥0.5 → execute → classify
+end note
+
+partition "11. Estabilização e self-healing determinístico" {
+  :DeterministicSelfHealingAgent consolida patches aceitos;
+  :Gerar script_curado.py temporário;
+  :Aplicar estratégias determinísticas finais:\nlabel_proximity, text_content_match,\naria_role_strategy, shadow_pierce,\nframe_reacquire, network_idle_wait,\nresponse_intercept, dom_stabilization,\noverlay_dismiss e re_auth_hook;
+  :Remover sleeps frágeis;
+  :Substituir esperas fixas por condições observáveis;
+  :Gerar final/locators.json;
+  :Gerar final/healing_rules.json;
+  :Atualizar knowledge/healing_rules.json;
+
+  if (Self-healing final é determinístico?) then (sim)
+    :Aprovar script curado;
+  else (não)
+    :Rejeitar regra não determinística;
+    :Registrar pendência;
+    stop
+  endif
+
+  note right
+    O self-healing final deve ser rastreável,
+    reproduzível e baseado em evidências.
+    Nenhuma correção opaca deve entrar no final.
+  end note
+}
+
+partition "12. Estabilização e entrega" {
+  :Consolidar patches aceitos no script;
+  :Remover sleeps frágeis e waits fixos;
+  :Substituir por waits semânticos;\nnetwork_idle, dom_content_loaded, selector visível;
+  :Gerar script_final.py;
+  :Gerar final/execution_report.json\ncom classificação taxonômica e camadas usadas;
+  :Atualizar healing-catalog.jsonl\ncom contadores de acertos e datas de uso;
+
+  note right
+    Otimização de performance e separação
+    de massa de dados postergados para Epic C.
+    Esta partição produz script funcional
+    e relatório, sem data.json separado.
+  end note
+}
+
+partition "13. Entrega" {
+  :Empacotar artefatos finais:
+  \nscript_final.py, execution_report.json;
+  :Atualizar healing-catalog.jsonl
+  \ncom novas entradas aprendidas;
+  :Registrar rastreabilidade:
+  \nmanifest, gravação, evidências,
+  \nexecuções, curas e rollbacks;
+  :Marcar entrega como pronta para execução;
+
+  note right
+    Entrega pós-Epic A/B:
+    - script_final.py
+    - execution_report.json
+    - healing-catalog.jsonl (atualizado)
+
+    Artefatos adicionais (Epic C):
+    - test_data.json
+    - locators.json
+    - agent_history.json
+    - diff/patch
+  end note
+}
+
+note
+  BUG-007: BrowserConfig.navigation_timeout_ms=60000 (padrão).
+  Usado em BrowserManager.launch() ao navegar para o endpoint inicial.
+  DebugLogger.configure() chamado na partição "0. Preparação da sessão".
+  RecorderOverlay.inject() chamado na partição "3. Instrumentação da página".
+end note
+
+stop
+@enduml

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><title>Página Lenta (10s)</title>
+<style>body{font-family:system-ui,sans-serif;padding:24px;}</style>
+</head>
+<body>
+<h1>Página Lenta (TIM-001)</h1>
+<p id="status">Carregando... (simulando recurso pesado por 10s)</p>
+<script>
+  setTimeout(function(){
+    document.getElementById('status').textContent = '✅ Página carregada após 10s';
+    var btn = document.createElement('button');
+    btn.textContent = 'OK';
+    btn.onclick = function(){ alert('TIM-001: Página lenta carregada') };
+    btn.style.cssText = 'padding:8px 16px;border:none;border-radius:4px;background:#4a90d9;color:#fff;cursor:pointer;margin-top:12px;';
+    document.body.appendChild(btn);
+  }, 10000);
+</script>
+</body>
+</html>

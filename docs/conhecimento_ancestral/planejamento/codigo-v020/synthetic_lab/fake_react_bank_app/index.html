@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"/><title>Fake React Bank App - TestForge Synthetic Lab</title>
+<style>body{font-family:Arial,sans-serif;margin:32px}.card{border:1px solid #ddd;padding:16px;border-radius:8px;max-width:760px}label{display:block;margin-top:12px}input{padding:8px;width:260px}button{padding:8px 14px;margin-top:16px;cursor:pointer}#overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px}table{margin-top:20px;border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:8px}.hidden{display:none}</style></head>
+<body>
+<main class="card" aria-label="Consulta de clientes"><h1>Consulta de Cliente</h1>
+<form id="searchForm"><label for="cpfInput">CPF</label>
+<input id="cpfInput" name="cpf" aria-label="CPF" placeholder="Informe o CPF"/>
+<div id="buttons"></div></form>
+<section id="result" class="hidden" aria-label="Resultado da consulta">
+<h2>Resultado da consulta</h2>
+<table aria-label="Resultado da consulta"><thead><tr><th>CPF</th><th>Cliente</th><th>Status</th></tr></thead>
+<tbody><tr><td id="resultCpf"></td><td>Cliente Sintético</td><td>Ativo</td></tr></tbody></table></section></main>
+<script>
+const params=new URLSearchParams(location.search),mutation=params.get('mutation')||'none',buttons=document.getElementById('buttons');
+function mkBtn({id,text,testId,disabled=false}){const b=document.createElement('button');b.id=id;b.type='submit';b.textContent=text;b.setAttribute('aria-label',text);if(testId)b.setAttribute('data-testid',testId);if(disabled)b.disabled=true;return b}
+let sb;
+if(mutation==='change_id')sb=mkBtn({id:'btnNovo',text:'Pesquisar',testId:'btn-search-client'});
+else if(mutation==='change_accessible_name')sb=mkBtn({id:'btnPesquisar',text:'Consultar',testId:'btn-search-client'});
+else if(mutation==='duplicate_button_text'){buttons.appendChild(mkBtn({id:'btnA',text:'Pesquisar',testId:'btn-search-client'}));buttons.appendChild(document.createTextNode(' '));buttons.appendChild(mkBtn({id:'btnB',text:'Pesquisar',testId:'btn-search-contract'}))}
+else if(mutation==='disabled_button')sb=mkBtn({id:'btnPesquisar',text:'Pesquisar',testId:'btn-search-client',disabled:true});
+else if(mutation==='overlay_blocks_click'){sb=mkBtn({id:'btnPesquisar',text:'Pesquisar',testId:'btn-search-client'});const o=document.createElement('div');o.id='overlay';o.textContent='Carregando...';document.body.appendChild(o);setTimeout(()=>o.remove(),3000)}
+else sb=mkBtn({id:'btnPesquisar',text:'Pesquisar',testId:'btn-search-client'});
+if(sb)buttons.appendChild(sb);
+document.getElementById('searchForm').addEventListener('submit',async e=>{e.preventDefault();const cpf=document.getElementById('cpfInput').value;try{await fetch('/api/clientes?cpf='+encodeURIComponent(cpf))}catch(x){}document.getElementById('resultCpf').textContent=cpf;document.getElementById('result').classList.remove('hidden')});
+</script></body></html>

@@ -1,0 +1,37 @@
+## ASSERT STRATEGY GUIDE
+
+Use this guide to decide the best assertion for a given test scenario.
+
+### Authentication / Login
+- Successful login → `expect(page).to_have_url(re.compile(r"/dashboard|/home|/app"))`
+- Failed login → `expect(page.get_by_text("invalid|incorrect|wrong", case_insensitive=True)).to_be_visible()`
+- Password reset → `expect(page.get_by_text("email sent|check your inbox", case_insensitive=True)).to_be_visible()`
+
+### Forms
+- Validation error → `expect(page.locator(".error, .alert, [role='alert'], .invalid-feedback")).to_be_visible()`
+- Success message → `expect(page.get_by_role("alert")).to_contain_text("success|saved|submitted")`
+- Required field → `expect(page.locator(":invalid")).to_have_count(count_gt=0)`
+
+### Navigation
+- Page change → `expect(page).to_have_url(re.compile(expected_url_pattern))`
+- Tab/section change → `expect(page.locator(".active, [aria-selected='true']")).to_contain_text(expected_label)`
+
+### Modals / Dialogs
+- Open → `expect(page.locator("[role='dialog'], .modal")).to_be_visible()`
+- Close → `expect(page.locator("[role='dialog'], .modal")).to_be_hidden()`
+
+### Data / Tables
+- Record created → `expect(page.locator("table tbody tr")).to_have_count(expected_count)`
+- Record deleted → `expect(page.get_by_text(deleted_text)).not_to_be_visible()`
+- Search results → `expect(page.locator(".result-item, [data-testid='result']")).to_have_count_greater_than(0)`
+
+### Notifications / Toasts
+- Success → `expect(page.locator(".toast, .notification, .snackbar")).to_contain_text(expected_message)`
+- Error → `expect(page.locator(".toast-error, [class*='error']")).to_be_visible()`
+
+### File Operations
+- Upload → `expect(page.get_by_text(filename)).to_be_visible()`
+- Download → assert via `page.expect_download()`
+
+When the explicit assert hint from the user directly names a text or element,
+ALWAYS prioritize that over generic patterns. The user's hint is the ground truth.

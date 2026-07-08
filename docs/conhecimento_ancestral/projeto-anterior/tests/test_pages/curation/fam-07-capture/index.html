@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>FAM-07: Capture</title>
+<script src="../common.js"></script>
+<script src="error.js"></script>
+</head>
+<body>
+  <h1>FAM-07: Upload</h1>
+  <input type="file" id="file-upload" name="arquivo" accept=".txt,.pdf">
+  <button id="btn-enviar">Enviar</button>
+  <p id="result"></p>
+  <script>
+    document.getElementById("btn-enviar").addEventListener("click", function() {
+      var files = document.getElementById("file-upload").files;
+      document.getElementById("result").textContent = files.length > 0 ? "Arquivo: " + files[0].name : "Nenhum arquivo";
+    });
+  </script>
+</body>
+</html>
