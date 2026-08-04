@@ -1,0 +1,57 @@
+{
+  "candidates": {
+    "step_001.json": {
+      "action": "click",
+      "candidates": [
+        {
+          "reason": "role + accessible name",
+          "score": 0.95,
+          "selector": "role=button[name=\"Calcular\"]",
+          "strategy": "role"
+        },
+        {
+          "reason": "role+text in button[role=button]",
+          "score": 0.65,
+          "selector": "button[role=\"button\"]:has-text(\"Calcular\")",
+          "strategy": "text"
+        }
+      ],
+      "intent_text": "click button \"Calcular\"",
+      "step_id": "step_001",
+      "url": "https://assert.exemplo/calculadora",
+      "value": ""
+    },
+    "step_002.json": {
+      "action": "assert",
+      "candidates": [
+        {
+          "reason": "text in output",
+          "score": 0.55,
+          "selector": "output:has-text(\"R$ 3.333,33\")",
+          "strategy": "text"
+        }
+      ],
+      "intent_text": "assert \"R$ 3.333,33\"",
+      "step_id": "step_002",
+      "url": "",
+      "value": "R$ 3.333,33"
+    },
+    "step_003.json": {
+      "action": "assert",
+      "candidates": [
+        {
+          "reason": "text in button",
+          "score": 0.55,
+          "selector": "button:has-text(\"Continuar\")",
+          "strategy": "text"
+        }
+      ],
+      "intent_text": "assert \"Continuar\"",
+      "step_id": "step_003",
+      "url": "",
+      "value": "enabled"
+    }
+  },
+  "script": "\"\"\"Compilado pelo TestForge v2 — cadeia de fallback executa no LocatorResolver em runtime.\"\"\"\nfrom playwright.sync_api import Page\nfrom testforge.runtime import step\n\nBASE_URL = \"https://assert.exemplo/\"\n\ndef test_golden_assertion_immutable(page: Page):\n    \"\"\"web — source: assertion_immutable.\"\"\"\n    step.go(page, BASE_URL)\n    step.click(page, intent=\"click button \\\"Calcular\\\"\", candidates_file=\"step_001.json\")\n    step.assert_text(page, intent=\"assert \\\"R$ 3.333,33\\\"\", expected=\"R$ 3.333,33\", candidates_file=\"step_002.json\")\n    step.assert_text(page, intent=\"assert \\\"Continuar\\\"\", expected=\"Continuar\", candidates_file=\"step_003.json\")\n",
+  "script_name": "test_golden_assertion_immutable.py"
+}

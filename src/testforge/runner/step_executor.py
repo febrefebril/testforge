@@ -44,6 +44,7 @@ class StepExecutor:
 
     def __init__(self, page):
         self.page = page
+        self._specialized_state: dict = {}
 
     def _primary_selector(self, step) -> str:
         cands = self._all_selectors(step)
@@ -171,6 +172,18 @@ class StepExecutor:
                 field_value_map: Optional[dict] = None) -> str:
         data_values = data_values or {}
         field_value_map = field_value_map or {}
+
+        # Ações especializadas (file_upload, redirect, frame, etc.)
+        spec = getattr(step, "specialized_action", None)
+        if spec:
+            from testforge.semantic.specialized_actions import (
+                SpecializedAction, default_specialized_registry,
+            )
+            registry = default_specialized_registry()
+            sa = SpecializedAction.from_dict(spec)
+            result = registry.execute(sa, page=self.page, state=self._specialized_state)
+            return str(result) if result is not None else ""
+
         action = step.action
         selectors = self._all_selectors(step)
         selector = selectors[0] if selectors else ""

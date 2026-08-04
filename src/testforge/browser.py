@@ -33,13 +33,25 @@ _FALLBACK_CHAIN: list[tuple[str, Callable[..., dict]]] = [
 
 
 def _preferred_name(browser_type: str) -> str:
-    if browser_type == "edge":
+    """Resolve o navegador preferido, respeitando o ambiente corporativo.
+
+    Neste ambiente os bundles do Playwright nao podem ser baixados: usa-se
+    sempre o navegador ja instalado no sistema, pelo `channel`. A variavel
+    TESTFORGE_BROWSER fixa a escolha (edge/chrome/chromium) sem exigir que o
+    QA lembre de passar --browser. Um --browser explicito continua vencendo,
+    porque so consultamos o ambiente quando o valor recebido e o padrao.
+    """
+    explicit = {"edge": "msedge", "chrome": "chrome", "chromium": "chromium"}
+    if browser_type in explicit and browser_type != "chromium":
+        return explicit[browser_type]
+
+    override = os.environ.get("TESTFORGE_BROWSER", "").strip().lower()
+    if override in {"edge", "msedge"}:
         return "msedge"
-    if browser_type == "chrome":
-        return "chrome"
-    if browser_type == "chromium":
-        return "chromium"
-    return "chromium"
+    if override in {"chrome", "chromium"}:
+        return explicit[override]
+
+    return explicit.get(browser_type, "chromium")
 
 
 def _reorder_chain(browser_type: str, headless: bool) -> list[tuple[str, dict]]:
@@ -59,7 +71,9 @@ def launch_browser(pw, browser_type: BrowserType = "chromium", headless: bool = 
     The function intentionally keeps a stable, testable launch contract:
     launch kwargs are limited to ``headless`` and optional ``channel``.
     """
-    del verify_ssl  # Kept for backward-compatible signature.
+    extra_args: list[str] = []
+    if not verify_ssl:
+        extra_args.append("--ignore-certificate-errors")
 
     errors: list[str] = []
 
@@ -71,6 +85,9 @@ def launch_browser(pw, browser_type: BrowserType = "chromium", headless: bool = 
             errors.append(f"cdp_env: {exc}")
 
     for name, kwargs in _reorder_chain(browser_type, headless=headless):
+        if extra_args:
+            kwargs = dict(kwargs)
+            kwargs["args"] = list(kwargs.get("args", [])) + extra_args
         try:
             browser = pw.chromium.launch(**kwargs)
             logger.info("Browser launched via %s", name)

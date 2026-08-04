@@ -1,0 +1,24 @@
+# TestForge — configuracao Git canonica.
+# Copie para testforge_git.yml e preencha. NUNCA coloque credencial na URL.
+#
+# Dois perfis independentes e intencionalmente separados:
+#   update       -> de onde a APLICACAO se atualiza
+#   publication  -> para onde as GRAVACOES sao enviadas
+#
+# Substitui testforge_update.yml e .testforge/config.yml.
+
+git:
+  update:
+    enabled: true
+    url: https://alm.ceaus.df.caixa/CEGTI/AUTOMATA-PRIMUS/_git/AUTOMATA-PRIMUS
+    branch: update-gravador
+    remote: origin
+
+  publication:
+    enabled: false
+    url: https://alm.ceaus.df.caixa/CEGTI/AUTOMATA-PRIMUS/_git/TESTFORGE-GRAVACOES
+    branch: pilot-recordings
+    remote: origin
+    path_prefix: recordings
+    # Nome da variavel de ambiente que guarda o PAT. O valor nunca fica aqui.
+    credential_env: TESTFORGE_PUBLICATION_PAT

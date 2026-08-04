@@ -17,6 +17,7 @@ _bmad/_config/
 .bmad/_config/
 *.pyo
 *.egg-info/
+*.tsbuildinfo
 .eggs/
 .pytest_cache/
 .mypy_cache/
@@ -32,4 +33,3 @@ generated_tests/
 .testforge/
 evidencias/
 runs/
-

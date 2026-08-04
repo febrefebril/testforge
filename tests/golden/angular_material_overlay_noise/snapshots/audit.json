@@ -1,0 +1,502 @@
+{
+  "blind_spots": [],
+  "stats": {
+    "blind_spot_count": 0
+  },
+  "test_case": {
+    "application": "web",
+    "base_url": "https://angular-des.exemplo/",
+    "blind_spots": [],
+    "field_values": {
+      "cpf_/_cnpj": {
+        "field_key": "cpf_/_cnpj",
+        "identifiers": {
+          "form_control_name": "cpfCnpj",
+          "label": "CPF / CNPJ",
+          "material_field_label": "CPF / CNPJ",
+          "placeholder": "CPF / CNPJ"
+        },
+        "intention": "fill CPF / CNPJ with '<CPF_MASCARADO>' on input step 2",
+        "source": "fill_event",
+        "step_index": 1,
+        "value": "<CPF_MASCARADO>"
+      }
+    },
+    "preconditions": [],
+    "scenario_segments": [
+      {
+        "end_step_exclusive": 4,
+        "name": "default",
+        "start_step": 0
+      }
+    ],
+    "source_recording_id": "angular_material_overlay_noise",
+    "steps": [
+      {
+        "action": "click",
+        "blocking": false,
+        "context": {
+          "causes_navigation": true,
+          "timestamp": "2026-07-01T12:00:01Z"
+        },
+        "depends_on": "",
+        "page_title": "Aplicacao de teste",
+        "skip_reason": "",
+        "specialized_action": null,
+        "target": {
+          "accessible_name": null,
+          "ancestor_roles": [],
+          "ax_path": [],
+          "candidates": [
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "id=tf-panel",
+              "role": null,
+              "score": 0.75,
+              "selector": "#tf-panel",
+              "strategy": "id"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "id (starts-with)",
+              "role": null,
+              "score": 0.6,
+              "selector": "[id^=\"tf-panel\"]",
+              "strategy": "id_starts"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "id (ends-with)",
+              "role": null,
+              "score": 0.55,
+              "selector": "[id$=\"tf-panel\"]",
+              "strategy": "id_ends"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "text in div",
+              "role": null,
+              "score": 0.55,
+              "selector": "div:has-text(\"Gravando\")",
+              "strategy": "text"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "id (contains)",
+              "role": null,
+              "score": 0.5,
+              "selector": "[id*=\"tf-panel\" i]",
+              "strategy": "id_contains"
+            }
+          ],
+          "capture_confidence": null,
+          "element_id": "tf-panel",
+          "element_id_dynamic": false,
+          "fingerprint": {
+            "id": "tf-panel",
+            "tag": "div",
+            "text": "Gravando"
+          },
+          "form_control_name": null,
+          "intent_text": null,
+          "label": null,
+          "material_field_label": null,
+          "name": null,
+          "placeholder": null,
+          "role": null,
+          "shadow_host": null,
+          "tag": "div",
+          "test_id": null,
+          "text": "Gravando"
+        },
+        "url": "https://angular-des.exemplo/inicio",
+        "value": null
+      },
+      {
+        "action": "fill",
+        "blocking": false,
+        "context": {
+          "timestamp": "2026-07-01T12:00:02Z"
+        },
+        "depends_on": "",
+        "page_title": "Aplicacao de teste",
+        "skip_reason": "",
+        "specialized_action": null,
+        "target": {
+          "accessible_name": null,
+          "ancestor_roles": [],
+          "ax_path": [],
+          "candidates": [
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "Angular formcontrolname=cpfCnpj",
+              "role": null,
+              "score": 0.92,
+              "selector": "[formcontrolname=\"cpfCnpj\"]",
+              "strategy": "form_control_name"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "label adjacent=CPF / CNPJ",
+              "role": null,
+              "score": 0.85,
+              "selector": "label:has-text(\"CPF / CNPJ\") + input",
+              "strategy": "label"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "placeholder=CPF / CNPJ",
+              "role": null,
+              "score": 0.85,
+              "selector": "input[placeholder=\"CPF / CNPJ\"]",
+              "strategy": "placeholder"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "label click=CPF / CNPJ",
+              "role": null,
+              "score": 0.8,
+              "selector": "label:has-text(\"CPF / CNPJ\")",
+              "strategy": "label"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "placeholder (starts-with)",
+              "role": null,
+              "score": 0.7,
+              "selector": "input[placeholder^=\"CPF / CNPJ\"]",
+              "strategy": "placeholder_starts"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "placeholder (ends-with)",
+              "role": null,
+              "score": 0.65,
+              "selector": "input[placeholder$=\"CPF / CNPJ\"]",
+              "strategy": "placeholder_ends"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "placeholder (contains)",
+              "role": null,
+              "score": 0.6,
+              "selector": "input[placeholder*=\"CPF / CNPJ\" i]",
+              "strategy": "placeholder_contains"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "mat-form-field anchor mat-label='CPF / CNPJ'",
+              "role": null,
+              "score": 0.87,
+              "selector": "mat-form-field:has(mat-label:has-text(\"CPF / CNPJ\")) input",
+              "strategy": "material_form_field"
+            }
+          ],
+          "capture_confidence": null,
+          "element_id": "",
+          "element_id_dynamic": false,
+          "fingerprint": {
+            "label": "CPF / CNPJ",
+            "placeholder": "CPF / CNPJ",
+            "tag": "input"
+          },
+          "form_control_name": "cpfCnpj",
+          "intent_text": null,
+          "label": "CPF / CNPJ",
+          "material_field_label": "CPF / CNPJ",
+          "name": null,
+          "placeholder": "CPF / CNPJ",
+          "role": null,
+          "shadow_host": null,
+          "tag": "input",
+          "test_id": null,
+          "text": null
+        },
+        "url": "https://angular-des.exemplo/consulta",
+        "value": "<CPF_MASCARADO>"
+      },
+      {
+        "action": "click",
+        "blocking": false,
+        "context": {
+          "timestamp": "2026-07-01T12:00:03Z"
+        },
+        "depends_on": "",
+        "page_title": "Aplicacao de teste",
+        "skip_reason": "",
+        "specialized_action": null,
+        "target": {
+          "accessible_name": "Consultar",
+          "ancestor_roles": [],
+          "ax_path": [],
+          "candidates": [
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "role + accessible name",
+              "role": null,
+              "score": 0.95,
+              "selector": "role=button[name=\"Consultar\"]",
+              "strategy": "role"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "id=btnBuscar",
+              "role": null,
+              "score": 0.75,
+              "selector": "#btnBuscar",
+              "strategy": "id"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "role+text in button[role=button]",
+              "role": null,
+              "score": 0.65,
+              "selector": "button[role=\"button\"]:has-text(\"Consultar\")",
+              "strategy": "text"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "id (starts-with)",
+              "role": null,
+              "score": 0.6,
+              "selector": "[id^=\"btnBuscar\"]",
+              "strategy": "id_starts"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "id (ends-with)",
+              "role": null,
+              "score": 0.55,
+              "selector": "[id$=\"btnBuscar\"]",
+              "strategy": "id_ends"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "id (contains)",
+              "role": null,
+              "score": 0.5,
+              "selector": "[id*=\"btnBuscar\" i]",
+              "strategy": "id_contains"
+            }
+          ],
+          "capture_confidence": null,
+          "element_id": "btnBuscar",
+          "element_id_dynamic": false,
+          "fingerprint": {
+            "accessible_name": "Consultar",
+            "class_list": [
+              "mat-mdc-button"
+            ],
+            "id": "btnBuscar",
+            "role": "button",
+            "tag": "button",
+            "text": "search Consultar"
+          },
+          "form_control_name": null,
+          "intent_text": null,
+          "label": null,
+          "material_field_label": null,
+          "name": null,
+          "placeholder": null,
+          "role": "button",
+          "shadow_host": null,
+          "tag": "button",
+          "test_id": null,
+          "text": "search Consultar"
+        },
+        "url": "https://angular-des.exemplo/consulta",
+        "value": null
+      },
+      {
+        "action": "assert",
+        "blocking": false,
+        "context": {
+          "assert_state": "",
+          "assert_type": "visivel",
+          "timestamp": "2026-07-01T12:00:04Z"
+        },
+        "depends_on": "",
+        "page_title": null,
+        "skip_reason": "",
+        "specialized_action": null,
+        "target": {
+          "accessible_name": "",
+          "ancestor_roles": [],
+          "ax_path": [],
+          "candidates": [
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "text in h1",
+              "role": null,
+              "score": 0.55,
+              "selector": "h1:has-text(\"Tela Unica PF\")",
+              "strategy": "text"
+            }
+          ],
+          "capture_confidence": null,
+          "element_id": "",
+          "element_id_dynamic": false,
+          "fingerprint": {
+            "tag": "h1",
+            "text": "Tela Unica PF"
+          },
+          "form_control_name": null,
+          "intent_text": null,
+          "label": null,
+          "material_field_label": null,
+          "name": null,
+          "placeholder": null,
+          "role": "",
+          "shadow_host": null,
+          "tag": "h1",
+          "test_id": null,
+          "text": "Tela Unica PF"
+        },
+        "url": null,
+        "value": "visible"
+      }
+    ],
+    "suggested_asserts": [],
+    "test_id": "golden_angular_overlay"
+  }
+}

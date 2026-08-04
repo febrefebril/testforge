@@ -1,0 +1,258 @@
+{
+  "candidates": {
+    "step_001.json": {
+      "action": "fill",
+      "candidates": [
+        {
+          "reason": "label for=username",
+          "score": 0.9,
+          "selector": "label[for=\"username\"]",
+          "strategy": "label"
+        },
+        {
+          "reason": "placeholder=c999999",
+          "score": 0.85,
+          "selector": "input[placeholder=\"c999999\"]",
+          "strategy": "placeholder"
+        },
+        {
+          "reason": "id=username",
+          "score": 0.75,
+          "selector": "#username",
+          "strategy": "id"
+        },
+        {
+          "reason": "compound placeholder=c999999 + name=username",
+          "score": 0.75,
+          "selector": "input[placeholder=\"c999999\"][name=\"username\"]",
+          "strategy": "compound"
+        },
+        {
+          "reason": "placeholder (starts-with)",
+          "score": 0.7,
+          "selector": "input[placeholder^=\"c999999\"]",
+          "strategy": "placeholder_starts"
+        },
+        {
+          "reason": "name=username",
+          "score": 0.7,
+          "selector": "[name=\"username\"]",
+          "strategy": "name"
+        },
+        {
+          "reason": "placeholder (ends-with)",
+          "score": 0.65,
+          "selector": "input[placeholder$=\"c999999\"]",
+          "strategy": "placeholder_ends"
+        },
+        {
+          "reason": "placeholder (contains)",
+          "score": 0.6,
+          "selector": "input[placeholder*=\"c999999\" i]",
+          "strategy": "placeholder_contains"
+        },
+        {
+          "reason": "id (starts-with)",
+          "score": 0.6,
+          "selector": "[id^=\"username\"]",
+          "strategy": "id_starts"
+        },
+        {
+          "reason": "id (ends-with)",
+          "score": 0.55,
+          "selector": "[id$=\"username\"]",
+          "strategy": "id_ends"
+        },
+        {
+          "reason": "name (starts-with)",
+          "score": 0.55,
+          "selector": "input[name^=\"username\"]",
+          "strategy": "name_starts"
+        },
+        {
+          "reason": "id (contains)",
+          "score": 0.5,
+          "selector": "[id*=\"username\" i]",
+          "strategy": "id_contains"
+        },
+        {
+          "reason": "name (ends-with)",
+          "score": 0.5,
+          "selector": "input[name$=\"username\"]",
+          "strategy": "name_ends"
+        },
+        {
+          "reason": "name (contains)",
+          "score": 0.45,
+          "selector": "input[name*=\"username\" i]",
+          "strategy": "name_contains"
+        }
+      ],
+      "intent_text": "fill \"Usuario\"",
+      "step_id": "step_001",
+      "url": "https://login-des.exemplo/auth",
+      "value": "<USUARIO_TESTE>"
+    },
+    "step_002.json": {
+      "action": "fill",
+      "candidates": [
+        {
+          "reason": "label for=password",
+          "score": 0.9,
+          "selector": "label[for=\"password\"]",
+          "strategy": "label"
+        },
+        {
+          "reason": "placeholder=Senha",
+          "score": 0.85,
+          "selector": "input[placeholder=\"Senha\"]",
+          "strategy": "placeholder"
+        },
+        {
+          "reason": "id=password",
+          "score": 0.75,
+          "selector": "#password",
+          "strategy": "id"
+        },
+        {
+          "reason": "compound placeholder=Senha + name=password",
+          "score": 0.75,
+          "selector": "input[placeholder=\"Senha\"][name=\"password\"]",
+          "strategy": "compound"
+        },
+        {
+          "reason": "placeholder (starts-with)",
+          "score": 0.7,
+          "selector": "input[placeholder^=\"Senha\"]",
+          "strategy": "placeholder_starts"
+        },
+        {
+          "reason": "name=password",
+          "score": 0.7,
+          "selector": "[name=\"password\"]",
+          "strategy": "name"
+        },
+        {
+          "reason": "placeholder (ends-with)",
+          "score": 0.65,
+          "selector": "input[placeholder$=\"Senha\"]",
+          "strategy": "placeholder_ends"
+        },
+        {
+          "reason": "placeholder (contains)",
+          "score": 0.6,
+          "selector": "input[placeholder*=\"Senha\" i]",
+          "strategy": "placeholder_contains"
+        },
+        {
+          "reason": "id (starts-with)",
+          "score": 0.6,
+          "selector": "[id^=\"password\"]",
+          "strategy": "id_starts"
+        },
+        {
+          "reason": "id (ends-with)",
+          "score": 0.55,
+          "selector": "[id$=\"password\"]",
+          "strategy": "id_ends"
+        },
+        {
+          "reason": "name (starts-with)",
+          "score": 0.55,
+          "selector": "input[name^=\"password\"]",
+          "strategy": "name_starts"
+        },
+        {
+          "reason": "id (contains)",
+          "score": 0.5,
+          "selector": "[id*=\"password\" i]",
+          "strategy": "id_contains"
+        },
+        {
+          "reason": "name (ends-with)",
+          "score": 0.5,
+          "selector": "input[name$=\"password\"]",
+          "strategy": "name_ends"
+        },
+        {
+          "reason": "name (contains)",
+          "score": 0.45,
+          "selector": "input[name*=\"password\" i]",
+          "strategy": "name_contains"
+        }
+      ],
+      "intent_text": "fill \"Senha\"",
+      "step_id": "step_002",
+      "url": "https://login-des.exemplo/auth",
+      "value": "<SEGREDO_MASCARADO>"
+    },
+    "step_003.json": {
+      "action": "click",
+      "candidates": [
+        {
+          "reason": "role + accessible name",
+          "score": 0.95,
+          "selector": "role=button[name=\"Entrar\"]",
+          "strategy": "role"
+        },
+        {
+          "reason": "id=kc-login",
+          "score": 0.75,
+          "selector": "#kc-login",
+          "strategy": "id"
+        },
+        {
+          "reason": "role+text in button[role=button]",
+          "score": 0.65,
+          "selector": "button[role=\"button\"]:has-text(\"Entrar\")",
+          "strategy": "text"
+        },
+        {
+          "reason": "id (starts-with)",
+          "score": 0.6,
+          "selector": "[id^=\"kc-login\"]",
+          "strategy": "id_starts"
+        },
+        {
+          "reason": "id (ends-with)",
+          "score": 0.55,
+          "selector": "[id$=\"kc-login\"]",
+          "strategy": "id_ends"
+        },
+        {
+          "reason": "id (contains)",
+          "score": 0.5,
+          "selector": "[id*=\"kc-login\" i]",
+          "strategy": "id_contains"
+        }
+      ],
+      "intent_text": "click button \"Entrar\"",
+      "step_id": "step_003",
+      "url": "https://login-des.exemplo/auth",
+      "value": ""
+    },
+    "step_004.json": {
+      "action": "assert",
+      "candidates": [
+        {
+          "reason": "role + accessible name",
+          "score": 0.95,
+          "selector": "role=heading[name=\"Pagina inicial\"]",
+          "strategy": "role"
+        },
+        {
+          "reason": "text in h1",
+          "score": 0.1,
+          "selector": "h1:has-text(\"Pagina inicial\")",
+          "strategy": "text"
+        }
+      ],
+      "intent_text": "assert heading \"Pagina inicial\"",
+      "step_id": "step_004",
+      "url": "",
+      "value": "Pagina inicial"
+    }
+  },
+  "script": "\"\"\"Compilado pelo TestForge v2 — cadeia de fallback executa no LocatorResolver em runtime.\"\"\"\nfrom playwright.sync_api import Page\nfrom testforge.runtime import step\n\nBASE_URL = \"https://app-des.exemplo/\"\n\ndef test_golden_sso_keycloak_redirect(page: Page):\n    \"\"\"web — source: sso_keycloak_redirect.\"\"\"\n    step.go(page, BASE_URL)\n    step.fill(page, intent=\"fill \\\"Usuario\\\"\", value=\"<USUARIO_TESTE>\", candidates_file=\"step_001.json\")\n    step.fill(page, intent=\"fill \\\"Senha\\\"\", value=\"<SEGREDO_MASCARADO>\", candidates_file=\"step_002.json\")\n    step.click(page, intent=\"click button \\\"Entrar\\\"\", candidates_file=\"step_003.json\")\n    step.assert_text(page, intent=\"assert heading \\\"Pagina inicial\\\"\", expected=\"Pagina inicial\", candidates_file=\"step_004.json\")\n",
+  "script_name": "test_golden_sso_keycloak_redirect.py"
+}

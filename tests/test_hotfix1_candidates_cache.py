@@ -107,7 +107,7 @@ class TestDetectionCache:
         result = det.detect()
         # cache servido, primary preservado
         assert result["primary"] == "angular-material"
-        assert any("page_eval_failed_at_finalize: served from cache" in e
+        assert any("page_eval_failed_at_finalize: servido do cache" in e
                     for e in result["evidence"])
 
     def test_no_cache_when_first_call_already_unknown(self):

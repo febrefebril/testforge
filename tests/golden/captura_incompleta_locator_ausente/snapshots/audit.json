@@ -1,0 +1,306 @@
+{
+  "blind_spots": [],
+  "stats": {
+    "blind_spot_count": 0
+  },
+  "test_case": {
+    "application": "web",
+    "base_url": "https://app-des.exemplo/",
+    "blind_spots": [],
+    "field_values": {},
+    "preconditions": [],
+    "scenario_segments": [
+      {
+        "end_step_exclusive": 5,
+        "name": "default",
+        "start_step": 0
+      }
+    ],
+    "source_recording_id": "captura_incompleta_locator_ausente",
+    "steps": [
+      {
+        "action": "navigation",
+        "blocking": false,
+        "context": {
+          "timestamp": "2026-07-01T12:00:01Z"
+        },
+        "depends_on": "",
+        "page_title": "Aplicacao de teste",
+        "skip_reason": "",
+        "specialized_action": null,
+        "target": null,
+        "url": "https://app-des.exemplo/inicio",
+        "value": null
+      },
+      {
+        "action": "fill",
+        "blocking": false,
+        "context": {
+          "timestamp": "2026-07-01T12:00:02Z"
+        },
+        "depends_on": "",
+        "page_title": "Aplicacao de teste",
+        "skip_reason": "",
+        "specialized_action": null,
+        "target": null,
+        "url": "https://app-des.exemplo/consulta",
+        "value": "valor_teste"
+      },
+      {
+        "action": "click",
+        "blocking": false,
+        "context": {
+          "timestamp": "2026-07-01T12:00:03Z"
+        },
+        "depends_on": "",
+        "page_title": "Aplicacao de teste",
+        "skip_reason": "",
+        "specialized_action": null,
+        "target": {
+          "accessible_name": null,
+          "ancestor_roles": [],
+          "ax_path": [],
+          "candidates": [
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "id=next",
+              "role": null,
+              "score": 0.75,
+              "selector": "#next",
+              "strategy": "id"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "id (starts-with)",
+              "role": null,
+              "score": 0.6,
+              "selector": "[id^=\"next\"]",
+              "strategy": "id_starts"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "id (ends-with)",
+              "role": null,
+              "score": 0.55,
+              "selector": "[id$=\"next\"]",
+              "strategy": "id_ends"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "text in button",
+              "role": null,
+              "score": 0.1,
+              "selector": "button:has-text(\"Next\")",
+              "strategy": "text"
+            }
+          ],
+          "capture_confidence": null,
+          "element_id": "next",
+          "element_id_dynamic": false,
+          "fingerprint": {
+            "id": "next",
+            "tag": "button",
+            "text": "Next"
+          },
+          "form_control_name": null,
+          "intent_text": null,
+          "label": null,
+          "material_field_label": null,
+          "name": null,
+          "placeholder": null,
+          "role": null,
+          "shadow_host": null,
+          "tag": "button",
+          "test_id": null,
+          "text": "Next"
+        },
+        "url": "https://app-des.exemplo/consulta",
+        "value": null
+      },
+      {
+        "action": "click",
+        "blocking": false,
+        "context": {
+          "timestamp": "2026-07-01T12:00:04Z"
+        },
+        "depends_on": "",
+        "page_title": "Aplicacao de teste",
+        "skip_reason": "Passo 4: pulado — duplicado",
+        "specialized_action": null,
+        "target": {
+          "accessible_name": null,
+          "ancestor_roles": [],
+          "ax_path": [],
+          "candidates": [
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "id=next",
+              "role": null,
+              "score": 0.75,
+              "selector": "#next",
+              "strategy": "id"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "id (starts-with)",
+              "role": null,
+              "score": 0.6,
+              "selector": "[id^=\"next\"]",
+              "strategy": "id_starts"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "id (ends-with)",
+              "role": null,
+              "score": 0.55,
+              "selector": "[id$=\"next\"]",
+              "strategy": "id_ends"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "text in button",
+              "role": null,
+              "score": 0.1,
+              "selector": "button:has-text(\"Next\")",
+              "strategy": "text"
+            }
+          ],
+          "capture_confidence": null,
+          "element_id": "next",
+          "element_id_dynamic": false,
+          "fingerprint": {
+            "id": "next",
+            "tag": "button",
+            "text": "Next"
+          },
+          "form_control_name": null,
+          "intent_text": null,
+          "label": null,
+          "material_field_label": null,
+          "name": null,
+          "placeholder": null,
+          "role": null,
+          "shadow_host": null,
+          "tag": "button",
+          "test_id": null,
+          "text": "Next"
+        },
+        "url": "https://app-des.exemplo/consulta",
+        "value": null
+      },
+      {
+        "action": "assert",
+        "blocking": false,
+        "context": {
+          "assert_state": "",
+          "assert_type": "textual",
+          "timestamp": "2026-07-01T12:00:05Z"
+        },
+        "depends_on": "",
+        "page_title": null,
+        "skip_reason": "",
+        "specialized_action": null,
+        "target": {
+          "accessible_name": "",
+          "ancestor_roles": [],
+          "ax_path": [],
+          "candidates": [
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "text in div",
+              "role": null,
+              "score": 0.5,
+              "selector": "div:has-text(\"Falha esperada de baseline\")",
+              "strategy": "text"
+            }
+          ],
+          "capture_confidence": null,
+          "element_id": "",
+          "element_id_dynamic": false,
+          "fingerprint": {
+            "tag": "div",
+            "text": "Falha esperada de baseline"
+          },
+          "form_control_name": null,
+          "intent_text": null,
+          "label": null,
+          "material_field_label": null,
+          "name": null,
+          "placeholder": null,
+          "role": "",
+          "shadow_host": null,
+          "tag": "div",
+          "test_id": null,
+          "text": "Falha esperada de baseline"
+        },
+        "url": null,
+        "value": "Falha esperada de baseline"
+      }
+    ],
+    "suggested_asserts": [],
+    "test_id": "golden_incomplete_locator"
+  }
+}

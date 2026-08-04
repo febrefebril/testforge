@@ -1,0 +1,194 @@
+{
+  "blind_spots": [],
+  "stats": {
+    "blind_spot_count": 0
+  },
+  "test_case": {
+    "application": "web",
+    "base_url": "https://simax.exemplo/simax/",
+    "blind_spots": [],
+    "field_values": {},
+    "preconditions": [],
+    "scenario_segments": [
+      {
+        "end_step_exclusive": 2,
+        "name": "default",
+        "start_step": 0
+      }
+    ],
+    "source_recording_id": "simax_datatable_dedup",
+    "steps": [
+      {
+        "action": "click",
+        "blocking": false,
+        "context": {
+          "timestamp": "2026-07-01T12:00:01Z"
+        },
+        "depends_on": "",
+        "page_title": "Aplicacao de teste",
+        "skip_reason": "",
+        "specialized_action": null,
+        "target": {
+          "accessible_name": null,
+          "ancestor_roles": [],
+          "ax_path": [],
+          "candidates": [
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "id=btnNovoAgendamento",
+              "role": null,
+              "score": 0.75,
+              "selector": "#btnNovoAgendamento",
+              "strategy": "id"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "id (starts-with)",
+              "role": null,
+              "score": 0.6,
+              "selector": "[id^=\"btnNovoAgendamento\"]",
+              "strategy": "id_starts"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "id (ends-with)",
+              "role": null,
+              "score": 0.55,
+              "selector": "[id$=\"btnNovoAgendamento\"]",
+              "strategy": "id_ends"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "text in button",
+              "role": null,
+              "score": 0.55,
+              "selector": "button:has-text(\"Novo agendamento\")",
+              "strategy": "text"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "id (contains)",
+              "role": null,
+              "score": 0.5,
+              "selector": "[id*=\"btnNovoAgendamento\" i]",
+              "strategy": "id_contains"
+            }
+          ],
+          "capture_confidence": null,
+          "element_id": "btnNovoAgendamento",
+          "element_id_dynamic": false,
+          "fingerprint": {
+            "id": "btnNovoAgendamento",
+            "tag": "button",
+            "text": "Novo agendamento"
+          },
+          "form_control_name": null,
+          "intent_text": null,
+          "label": null,
+          "material_field_label": null,
+          "name": null,
+          "placeholder": null,
+          "role": null,
+          "shadow_host": null,
+          "tag": "button",
+          "test_id": null,
+          "text": "Novo agendamento"
+        },
+        "url": "https://simax.exemplo/simax/",
+        "value": null
+      },
+      {
+        "action": "assert",
+        "blocking": false,
+        "context": {
+          "assert_state": "",
+          "assert_type": "textual",
+          "timestamp": "2026-07-01T12:00:06Z"
+        },
+        "depends_on": "",
+        "page_title": null,
+        "skip_reason": "",
+        "specialized_action": null,
+        "target": {
+          "accessible_name": "",
+          "ancestor_roles": [],
+          "ax_path": [],
+          "candidates": [
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "text in td",
+              "role": null,
+              "score": 0.55,
+              "selector": "td:has-text(\"Reservar\")",
+              "strategy": "text"
+            }
+          ],
+          "capture_confidence": null,
+          "element_id": "",
+          "element_id_dynamic": false,
+          "fingerprint": {
+            "tag": "td",
+            "text": "Reservar"
+          },
+          "form_control_name": null,
+          "intent_text": null,
+          "label": null,
+          "material_field_label": null,
+          "name": null,
+          "placeholder": null,
+          "role": "",
+          "shadow_host": null,
+          "tag": "td",
+          "test_id": null,
+          "text": "Reservar"
+        },
+        "url": null,
+        "value": "Reservar"
+      }
+    ],
+    "suggested_asserts": [],
+    "test_id": "golden_simax_datatable"
+  }
+}

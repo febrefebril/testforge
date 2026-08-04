@@ -45,10 +45,10 @@ def _click(idx: int, label: str = "Continuar") -> dict:
     }
 
 
-def _boundary(name: str = "") -> dict:
+def _boundary(name: str = "", ts: str = "2026-06-27T22:00:02.500Z") -> dict:
     return {
         "type": "scenario_boundary",
-        "timestamp": "2026-06-27T22:01:00Z",
+        "timestamp": ts,
         "url": "https://example.test/page",
         "page_title": "Page",
         "scenario_name": name,
@@ -95,9 +95,9 @@ class TestBoundaryPartitions:
     def test_two_boundaries_make_three_segments(self, tmp_path):
         rec = _write_raw_events(tmp_path, [
             _click(1),
-            _boundary("b"),
+            _boundary("b", ts="2026-06-27T22:00:01.500Z"),
             _click(2),
-            _boundary("c"),
+            _boundary("c", ts="2026-06-27T22:00:02.500Z"),
             _click(3),
         ])
         n = RecordingNormalizer()

@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """tf — ferramenta unica do TestForge: snapshot, patch, commit, rollback e log.
 
@@ -1236,4 +1235,3 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -1,0 +1,220 @@
+{
+  "blind_spots": [],
+  "stats": {
+    "blind_spot_count": 0
+  },
+  "test_case": {
+    "application": "web",
+    "base_url": "https://assert.exemplo/",
+    "blind_spots": [],
+    "field_values": {},
+    "preconditions": [],
+    "scenario_segments": [
+      {
+        "end_step_exclusive": 4,
+        "name": "default",
+        "start_step": 0
+      }
+    ],
+    "source_recording_id": "assertion_immutable",
+    "steps": [
+      {
+        "action": "navigation",
+        "blocking": false,
+        "context": {
+          "timestamp": "2026-07-01T12:00:01Z"
+        },
+        "depends_on": "",
+        "page_title": "Aplicacao de teste",
+        "skip_reason": "",
+        "specialized_action": null,
+        "target": null,
+        "url": "https://assert.exemplo/calculadora",
+        "value": null
+      },
+      {
+        "action": "click",
+        "blocking": false,
+        "context": {
+          "timestamp": "2026-07-01T12:00:02Z"
+        },
+        "depends_on": "",
+        "page_title": "Aplicacao de teste",
+        "skip_reason": "",
+        "specialized_action": null,
+        "target": {
+          "accessible_name": "Calcular",
+          "ancestor_roles": [],
+          "ax_path": [],
+          "candidates": [
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "role + accessible name",
+              "role": null,
+              "score": 0.95,
+              "selector": "role=button[name=\"Calcular\"]",
+              "strategy": "role"
+            },
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "role+text in button[role=button]",
+              "role": null,
+              "score": 0.65,
+              "selector": "button[role=\"button\"]:has-text(\"Calcular\")",
+              "strategy": "text"
+            }
+          ],
+          "capture_confidence": null,
+          "element_id": "",
+          "element_id_dynamic": false,
+          "fingerprint": {
+            "accessible_name": "Calcular",
+            "role": "button",
+            "tag": "button",
+            "text": "Calcular"
+          },
+          "form_control_name": null,
+          "intent_text": null,
+          "label": null,
+          "material_field_label": null,
+          "name": null,
+          "placeholder": null,
+          "role": "button",
+          "shadow_host": null,
+          "tag": "button",
+          "test_id": null,
+          "text": "Calcular"
+        },
+        "url": "https://assert.exemplo/calculadora",
+        "value": null
+      },
+      {
+        "action": "assert",
+        "blocking": false,
+        "context": {
+          "assert_state": "",
+          "assert_type": "textual",
+          "timestamp": "2026-07-01T12:00:03Z"
+        },
+        "depends_on": "",
+        "page_title": null,
+        "skip_reason": "",
+        "specialized_action": null,
+        "target": {
+          "accessible_name": "",
+          "ancestor_roles": [],
+          "ax_path": [],
+          "candidates": [
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "text in output",
+              "role": null,
+              "score": 0.55,
+              "selector": "output:has-text(\"R$ 3.333,33\")",
+              "strategy": "text"
+            }
+          ],
+          "capture_confidence": null,
+          "element_id": "",
+          "element_id_dynamic": false,
+          "fingerprint": {
+            "tag": "output",
+            "text": "R$ 3.333,33"
+          },
+          "form_control_name": null,
+          "intent_text": null,
+          "label": null,
+          "material_field_label": null,
+          "name": null,
+          "placeholder": null,
+          "role": "",
+          "shadow_host": null,
+          "tag": "output",
+          "test_id": null,
+          "text": "R$ 3.333,33"
+        },
+        "url": null,
+        "value": "R$ 3.333,33"
+      },
+      {
+        "action": "assert",
+        "blocking": false,
+        "context": {
+          "assert_state": "enabled",
+          "assert_type": "estado",
+          "timestamp": "2026-07-01T12:00:04Z"
+        },
+        "depends_on": "",
+        "page_title": null,
+        "skip_reason": "",
+        "specialized_action": null,
+        "target": {
+          "accessible_name": "Continuar",
+          "ancestor_roles": [],
+          "ax_path": [],
+          "candidates": [
+            {
+              "accessible_name": null,
+              "ancestor_roles": [],
+              "attribute_stability": {},
+              "attributes": {},
+              "ax_path": [],
+              "backend_node_id": null,
+              "intent_text": null,
+              "playwright_call": null,
+              "reason": "text in button",
+              "role": null,
+              "score": 0.55,
+              "selector": "button:has-text(\"Continuar\")",
+              "strategy": "text"
+            }
+          ],
+          "capture_confidence": null,
+          "element_id": "",
+          "element_id_dynamic": false,
+          "fingerprint": {
+            "accessible_name": "Continuar",
+            "tag": "button",
+            "text": "Continuar"
+          },
+          "form_control_name": null,
+          "intent_text": null,
+          "label": null,
+          "material_field_label": null,
+          "name": null,
+          "placeholder": null,
+          "role": "",
+          "shadow_host": null,
+          "tag": "button",
+          "test_id": null,
+          "text": "Continuar"
+        },
+        "url": null,
+        "value": "enabled"
+      }
+    ],
+    "suggested_asserts": [],
+    "test_id": "golden_assertion_immutable"
+  }
+}

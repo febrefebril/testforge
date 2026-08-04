@@ -1,0 +1,153 @@
+{
+  "candidates": {
+    "step_001.json": {
+      "action": "fill",
+      "candidates": [
+        {
+          "reason": "label for=form:cpf",
+          "score": 0.9,
+          "selector": "label[for=\"form:cpf\"]",
+          "strategy": "label"
+        },
+        {
+          "reason": "id=form:cpf",
+          "score": 0.75,
+          "selector": "#form:cpf",
+          "strategy": "id"
+        },
+        {
+          "reason": "name=form:cpf",
+          "score": 0.7,
+          "selector": "[name=\"form:cpf\"]",
+          "strategy": "name"
+        },
+        {
+          "reason": "id (starts-with)",
+          "score": 0.6,
+          "selector": "[id^=\"form:cpf\"]",
+          "strategy": "id_starts"
+        },
+        {
+          "reason": "id (ends-with)",
+          "score": 0.55,
+          "selector": "[id$=\"form:cpf\"]",
+          "strategy": "id_ends"
+        },
+        {
+          "reason": "name (starts-with)",
+          "score": 0.55,
+          "selector": "input[name^=\"form:cpf\"]",
+          "strategy": "name_starts"
+        },
+        {
+          "reason": "id (contains)",
+          "score": 0.5,
+          "selector": "[id*=\"form:cpf\" i]",
+          "strategy": "id_contains"
+        },
+        {
+          "reason": "name (ends-with)",
+          "score": 0.5,
+          "selector": "input[name$=\"form:cpf\"]",
+          "strategy": "name_ends"
+        },
+        {
+          "reason": "name (contains)",
+          "score": 0.45,
+          "selector": "input[name*=\"form:cpf\" i]",
+          "strategy": "name_contains"
+        }
+      ],
+      "intent_text": "fill \"CPF\"",
+      "step_id": "step_001",
+      "url": "https://jsf-des.exemplo/app/consulta.xhtml",
+      "value": "<CPF_MASCARADO>"
+    },
+    "step_002.json": {
+      "action": "click",
+      "candidates": [
+        {
+          "reason": "role + accessible name",
+          "score": 0.95,
+          "selector": "role=button[name=\"Consultar\"]",
+          "strategy": "role"
+        },
+        {
+          "reason": "id=form:consultar",
+          "score": 0.75,
+          "selector": "#form:consultar",
+          "strategy": "id"
+        },
+        {
+          "reason": "role+text in button[role=button]",
+          "score": 0.65,
+          "selector": "button[role=\"button\"]:has-text(\"Consultar\")",
+          "strategy": "text"
+        },
+        {
+          "reason": "id (starts-with)",
+          "score": 0.6,
+          "selector": "[id^=\"form:consultar\"]",
+          "strategy": "id_starts"
+        },
+        {
+          "reason": "id (ends-with)",
+          "score": 0.55,
+          "selector": "[id$=\"form:consultar\"]",
+          "strategy": "id_ends"
+        },
+        {
+          "reason": "id (contains)",
+          "score": 0.5,
+          "selector": "[id*=\"form:consultar\" i]",
+          "strategy": "id_contains"
+        }
+      ],
+      "intent_text": "click button \"Consultar\"",
+      "step_id": "step_002",
+      "url": "https://jsf-des.exemplo/app/consulta.xhtml",
+      "value": ""
+    },
+    "step_003.json": {
+      "action": "assert",
+      "candidates": [
+        {
+          "reason": "id=form:resultado",
+          "score": 0.75,
+          "selector": "#form:resultado",
+          "strategy": "id"
+        },
+        {
+          "reason": "id (starts-with)",
+          "score": 0.6,
+          "selector": "[id^=\"form:resultado\"]",
+          "strategy": "id_starts"
+        },
+        {
+          "reason": "id (ends-with)",
+          "score": 0.55,
+          "selector": "[id$=\"form:resultado\"]",
+          "strategy": "id_ends"
+        },
+        {
+          "reason": "text in span",
+          "score": 0.55,
+          "selector": "span:has-text(\"Resultado encontrado\")",
+          "strategy": "text"
+        },
+        {
+          "reason": "id (contains)",
+          "score": 0.5,
+          "selector": "[id*=\"form:resultado\" i]",
+          "strategy": "id_contains"
+        }
+      ],
+      "intent_text": "assert \"Resultado encontrado\"",
+      "step_id": "step_003",
+      "url": "",
+      "value": "Resultado encontrado"
+    }
+  },
+  "script": "\"\"\"Compilado pelo TestForge v2 — cadeia de fallback executa no LocatorResolver em runtime.\"\"\"\nfrom playwright.sync_api import Page\nfrom testforge.runtime import step\n\nBASE_URL = \"https://jsf-des.exemplo/app/\"\n\ndef test_golden_jsf_primefaces(page: Page):\n    \"\"\"web — source: jsf_primefaces_postback.\"\"\"\n    step.go(page, BASE_URL)\n    step.fill(page, intent=\"fill \\\"CPF\\\"\", value=\"<CPF_MASCARADO>\", candidates_file=\"step_001.json\")\n    step.click(page, intent=\"click button \\\"Consultar\\\"\", candidates_file=\"step_002.json\")\n    step.assert_text(page, intent=\"assert \\\"Resultado encontrado\\\"\", expected=\"Resultado encontrado\", candidates_file=\"step_003.json\")\n",
+  "script_name": "test_golden_jsf_primefaces.py"
+}

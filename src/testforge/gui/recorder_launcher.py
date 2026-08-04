@@ -485,16 +485,44 @@ def _get_application_version() -> str:
         return "dev"
 
 def _bootstrap_auto_update() -> None:
-    """Runs updater before opening GUI, without blocking startup on failures."""
-    try:
-        from testforge.updater import check_and_apply_update
+    """Atualiza a aplicacao e RELANCA o processo antes de montar a GUI.
 
-        # project_root = .../AUTOMATA-PRIMUS from .../src/testforge/gui/recorder_launcher.py
+    Sem o relance, os modulos ja importados continuam sendo os da versao
+    anterior e o usuario opera codigo velho achando que atualizou.
+    A variavel TESTFORGE_UPDATE_CHILD impede laco infinito de relance.
+    """
+    import os
+
+    try:
         project_root = Path(__file__).resolve().parents[3]
-        check_and_apply_update(project_root)
+        if not (project_root / "pyproject.toml").is_file():
+            return
+        if os.getenv("TESTFORGE_NO_UPDATE", "").strip():
+            return
+        if os.getenv("TESTFORGE_UPDATE_CHILD", "") == "1":
+            return
+
+        from testforge.updater import get_update_result
+
+        result = get_update_result(project_root)
+        print("[TestForge] update: " + str(result.status.value) + " - " + str(result.message))
+        if not result.restart_required:
+            return
+
+        env = dict(os.environ)
+        env["TESTFORGE_UPDATE_CHILD"] = "1"
+        popen_hidden(
+            [sys.executable, "-m", "testforge.gui.recorder_launcher"],
+            cwd=str(project_root),
+            env=env,
+        )
+    except SystemExit:
+        raise
     except Exception:
-        # GUI startup must never fail due to update checks.
-        pass
+        # A abertura da GUI nunca pode falhar por causa da atualizacao.
+        return
+    else:
+        sys.exit(0)
 
 
 # -- Main window ---------------------------------------------------------------

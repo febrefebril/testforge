@@ -1,0 +1,32 @@
+{
+  "raw_events": [
+    {
+      "event_id": "evt_00001",
+      "page_title": "Aplicacao de teste",
+      "timestamp": "2026-07-01T12:00:01Z",
+      "type": "navigation",
+      "url": "https://assert.exemplo/calculadora"
+    },
+    {
+      "event_id": "evt_00002",
+      "page_title": "Aplicacao de teste",
+      "target": {
+        "accessible_name": "Calcular",
+        "role": "button",
+        "tag": "button",
+        "text": "Calcular"
+      },
+      "timestamp": "2026-07-01T12:00:02Z",
+      "type": "click",
+      "url": "https://assert.exemplo/calculadora"
+    }
+  ],
+  "stats": {
+    "compact_removed": 0,
+    "dedup_removed": 0,
+    "initial_type_counts": {
+      "click": 1,
+      "navigation": 1
+    }
+  }
+}

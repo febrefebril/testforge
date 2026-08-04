@@ -84,6 +84,7 @@ class SemanticAction:
     skip_reason: str = ""
     blocking: bool = False
     depends_on: str = ""
+    specialized_action: Optional[dict] = None
 
 
 @dataclass

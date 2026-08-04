@@ -1,4 +1,3 @@
-
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 
@@ -408,9 +407,78 @@ echo [OK] Atalho da Area de Trabalho criado: %SHORTCUT_NAME% >> "%LOG_FILE%"
 endlocal & set "SHORTCUT_OK=1"
 exit /b 0
 
+:configure_browser
+rem Politica corporativa: os bundles do Playwright NAO podem ser baixados.
+rem Usamos sempre o navegador ja instalado no sistema, pelo canal do Playwright.
+set "TF_CHANNEL="
+for /f "usebackq delims=" %%C in (`"%VENV_PY%" -c "import testforge.installer_doctor as d;print(d.preferred_channel())"`) do set "TF_CHANNEL=%%C"
+echo [INFO] Canal detectado: [%TF_CHANNEL%] >> "%LOG_FILE%"
+
+set "TF_BROWSER="
+if /I "%TF_CHANNEL%"=="msedge" set "TF_BROWSER=edge"
+if /I "%TF_CHANNEL%"=="chrome" set "TF_BROWSER=chrome"
+if /I "%TF_CHANNEL%"=="chromium" set "TF_BROWSER=chromium"
+
+if defined TF_BROWSER (
+    setx TESTFORGE_BROWSER "%TF_BROWSER%" >nul 2>&1
+    set "TESTFORGE_BROWSER=%TF_BROWSER%"
+    echo [OK] Navegador do sistema: %TF_CHANNEL%. TESTFORGE_BROWSER=%TF_BROWSER%
+    echo [OK] Navegador do sistema: %TF_CHANNEL%. TESTFORGE_BROWSER=%TF_BROWSER% >> "%LOG_FILE%"
+) else (
+    echo [AVISO] Nenhum Microsoft Edge ou Google Chrome foi encontrado.
+    echo         O TestForge nao baixa navegadores neste ambiente: ele usa o que
+    echo         ja esta instalado. Solicite o Edge pelo catalogo corporativo.
+    echo [AVISO] Nenhum navegador do sistema encontrado. >> "%LOG_FILE%"
+)
+exit /b 0
+
+:ensure_git_config
+rem Configuracao Git canonica unica (perfil update x perfil publication).
+if exist "%REPO_ROOT_FINAL%\testforge_git.yml" (
+    echo [OK] testforge_git.yml ja existe.
+    echo [OK] testforge_git.yml ja existe. >> "%LOG_FILE%"
+    exit /b 0
+)
+if not exist "%REPO_ROOT_FINAL%\testforge_git.example.yml" (
+    echo [AVISO] testforge_git.example.yml nao encontrado. >> "%LOG_FILE%"
+    exit /b 0
+)
+copy /Y "%REPO_ROOT_FINAL%\testforge_git.example.yml" "%REPO_ROOT_FINAL%\testforge_git.yml" >> "%LOG_FILE%" 2>&1
+if errorlevel 1 (
+    echo [AVISO] Nao foi possivel criar testforge_git.yml. >> "%LOG_FILE%"
+    exit /b 0
+)
+echo [OK] testforge_git.yml criado a partir do exemplo.
+echo [OK] testforge_git.yml criado a partir do exemplo. >> "%LOG_FILE%"
+exit /b 0
+
+:run_doctor
+echo.
+echo ==========================================================
+echo  Verificacao final do ambiente
+echo ==========================================================
+"%VENV_PY%" -m testforge.cli.app doctor
+set "DOCTOR_RC=%ERRORLEVEL%"
+echo [INFO] doctor rc=%DOCTOR_RC% >> "%LOG_FILE%"
+echo ===== DOCTOR JSON ===== >> "%LOG_FILE%"
+"%VENV_PY%" -m testforge.cli.app doctor --json >> "%LOG_FILE%" 2>&1
+echo ===== FIM DOCTOR JSON ===== >> "%LOG_FILE%"
+if not "%DOCTOR_RC%"=="0" (
+    echo.
+    echo [AVISO] O doctor encontrou itens bloqueantes acima.
+    echo         A instalacao terminou, mas a gravacao pode falhar.
+    echo         Envie este log ao time: %LOG_FILE%
+)
+exit /b 0
+
 :success
+call :log "Configurando navegador do sistema"
+call :configure_browser
+call :log "Garantindo configuracao Git canonica"
+call :ensure_git_config
 call :log "Criando atalho na Area de Trabalho"
 call :create_desktop_shortcut
+call :run_doctor
 
 echo.
 echo ==========================================================
@@ -475,4 +543,3 @@ exit /b 1
 :log
 echo [INFO] %~1 >> "%LOG_FILE%"
 exit /b 0
-

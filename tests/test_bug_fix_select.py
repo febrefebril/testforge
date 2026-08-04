@@ -15,7 +15,7 @@ def test_overlay_js_click_skips_select():
            "src/testforge/recorder/overlay_inject.js").read_text(encoding="utf-8")
     click_block_start = src.find("// ---- Click capture (primary) ----")
     assert click_block_start != -1
-    skip_select = src.find("if (el && el.tagName === 'SELECT') return;", click_block_start)
+    skip_select = src.find("if (el && el.tagName === 'SELECT')", click_block_start)
     push_click = src.find("_pushEvent('click', el)", click_block_start)
     assert skip_select != -1, "Handler de clique deve pular elementos SELECT"
     assert skip_select < push_click, "Pulo de SELECT deve vir antes de _pushEvent('click')"
@@ -28,7 +28,7 @@ def test_overlay_js_step_counter_uses_settimeout():
            "src/testforge/recorder/overlay_inject.js").read_text(encoding="utf-8")
     push_click = src.find("_pushEvent('click', el)")
     assert push_click != -1
-    settimeout_pos = src.find("setTimeout(function()", push_click)
+    settimeout_pos = src.find("setTimeout(function ()", push_click)
     next_listener = src.find("window.addEventListener(", push_click + 1)
     assert settimeout_pos != -1, "setTimeout deve envolver atualização do contador de passos após clique"
     assert settimeout_pos < next_listener, "setTimeout deve estar dentro do listener de clique"

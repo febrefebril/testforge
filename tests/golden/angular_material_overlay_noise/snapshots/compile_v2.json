@@ -1,0 +1,162 @@
+{
+  "candidates": {
+    "step_001.json": {
+      "action": "click",
+      "candidates": [
+        {
+          "reason": "id=tf-panel",
+          "score": 0.75,
+          "selector": "#tf-panel",
+          "strategy": "id"
+        },
+        {
+          "reason": "id (starts-with)",
+          "score": 0.6,
+          "selector": "[id^=\"tf-panel\"]",
+          "strategy": "id_starts"
+        },
+        {
+          "reason": "id (ends-with)",
+          "score": 0.55,
+          "selector": "[id$=\"tf-panel\"]",
+          "strategy": "id_ends"
+        },
+        {
+          "reason": "text in div",
+          "score": 0.55,
+          "selector": "div:has-text(\"Gravando\")",
+          "strategy": "text"
+        },
+        {
+          "reason": "id (contains)",
+          "score": 0.5,
+          "selector": "[id*=\"tf-panel\" i]",
+          "strategy": "id_contains"
+        }
+      ],
+      "intent_text": "click \"Gravando\"",
+      "step_id": "step_001",
+      "url": "https://angular-des.exemplo/inicio",
+      "value": ""
+    },
+    "step_002.json": {
+      "action": "fill",
+      "candidates": [
+        {
+          "reason": "Angular formcontrolname=cpfCnpj",
+          "score": 0.92,
+          "selector": "[formcontrolname=\"cpfCnpj\"]",
+          "strategy": "form_control_name"
+        },
+        {
+          "reason": "label adjacent=CPF / CNPJ",
+          "score": 0.85,
+          "selector": "label:has-text(\"CPF / CNPJ\") + input",
+          "strategy": "label"
+        },
+        {
+          "reason": "placeholder=CPF / CNPJ",
+          "score": 0.85,
+          "selector": "input[placeholder=\"CPF / CNPJ\"]",
+          "strategy": "placeholder"
+        },
+        {
+          "reason": "label click=CPF / CNPJ",
+          "score": 0.8,
+          "selector": "label:has-text(\"CPF / CNPJ\")",
+          "strategy": "label"
+        },
+        {
+          "reason": "placeholder (starts-with)",
+          "score": 0.7,
+          "selector": "input[placeholder^=\"CPF / CNPJ\"]",
+          "strategy": "placeholder_starts"
+        },
+        {
+          "reason": "placeholder (ends-with)",
+          "score": 0.65,
+          "selector": "input[placeholder$=\"CPF / CNPJ\"]",
+          "strategy": "placeholder_ends"
+        },
+        {
+          "reason": "placeholder (contains)",
+          "score": 0.6,
+          "selector": "input[placeholder*=\"CPF / CNPJ\" i]",
+          "strategy": "placeholder_contains"
+        },
+        {
+          "reason": "mat-form-field anchor mat-label='CPF / CNPJ'",
+          "score": 0.87,
+          "selector": "mat-form-field:has(mat-label:has-text(\"CPF / CNPJ\")) input",
+          "strategy": "material_form_field"
+        }
+      ],
+      "intent_text": "fill \"CPF / CNPJ\"",
+      "step_id": "step_002",
+      "url": "https://angular-des.exemplo/consulta",
+      "value": "<CPF_MASCARADO>"
+    },
+    "step_003.json": {
+      "action": "click",
+      "candidates": [
+        {
+          "reason": "role + accessible name",
+          "score": 0.95,
+          "selector": "role=button[name=\"Consultar\"]",
+          "strategy": "role"
+        },
+        {
+          "reason": "id=btnBuscar",
+          "score": 0.75,
+          "selector": "#btnBuscar",
+          "strategy": "id"
+        },
+        {
+          "reason": "role+text in button[role=button]",
+          "score": 0.65,
+          "selector": "button[role=\"button\"]:has-text(\"Consultar\")",
+          "strategy": "text"
+        },
+        {
+          "reason": "id (starts-with)",
+          "score": 0.6,
+          "selector": "[id^=\"btnBuscar\"]",
+          "strategy": "id_starts"
+        },
+        {
+          "reason": "id (ends-with)",
+          "score": 0.55,
+          "selector": "[id$=\"btnBuscar\"]",
+          "strategy": "id_ends"
+        },
+        {
+          "reason": "id (contains)",
+          "score": 0.5,
+          "selector": "[id*=\"btnBuscar\" i]",
+          "strategy": "id_contains"
+        }
+      ],
+      "intent_text": "click button \"Consultar\"",
+      "step_id": "step_003",
+      "url": "https://angular-des.exemplo/consulta",
+      "value": ""
+    },
+    "step_004.json": {
+      "action": "assert",
+      "candidates": [
+        {
+          "reason": "text in h1",
+          "score": 0.55,
+          "selector": "h1:has-text(\"Tela Unica PF\")",
+          "strategy": "text"
+        }
+      ],
+      "intent_text": "assert \"Tela Unica PF\"",
+      "step_id": "step_004",
+      "url": "",
+      "value": "visible"
+    }
+  },
+  "script": "\"\"\"Compilado pelo TestForge v2 — cadeia de fallback executa no LocatorResolver em runtime.\"\"\"\nfrom playwright.sync_api import Page\nfrom testforge.runtime import step\n\nBASE_URL = \"https://angular-des.exemplo/\"\n\ndef test_golden_angular_overlay(page: Page):\n    \"\"\"web — source: angular_material_overlay_noise.\"\"\"\n    step.go(page, BASE_URL)\n    step.click(page, intent=\"click \\\"Gravando\\\"\", candidates_file=\"step_001.json\")\n    step.fill(page, intent=\"fill \\\"CPF / CNPJ\\\"\", value=\"<CPF_MASCARADO>\", candidates_file=\"step_002.json\")\n    step.click(page, intent=\"click button \\\"Consultar\\\"\", candidates_file=\"step_003.json\")\n    step.assert_text(page, intent=\"assert \\\"Tela Unica PF\\\"\", expected=\"Tela Unica PF\", candidates_file=\"step_004.json\")\n",
+  "script_name": "test_golden_angular_overlay.py"
+}

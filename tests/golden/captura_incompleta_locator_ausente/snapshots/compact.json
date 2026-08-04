@@ -1,0 +1,55 @@
+{
+  "raw_events": [
+    {
+      "event_id": "evt_00001",
+      "page_title": "Aplicacao de teste",
+      "timestamp": "2026-07-01T12:00:01Z",
+      "type": "navigation",
+      "url": "https://app-des.exemplo/inicio"
+    },
+    {
+      "event_id": "evt_00002",
+      "page_title": "Aplicacao de teste",
+      "target": {
+        "tag": "input"
+      },
+      "timestamp": "2026-07-01T12:00:02Z",
+      "type": "fill",
+      "url": "https://app-des.exemplo/consulta",
+      "value": "valor_teste"
+    },
+    {
+      "event_id": "evt_00003",
+      "page_title": "Aplicacao de teste",
+      "target": {
+        "element_id": "next",
+        "tag": "button",
+        "text": "Next"
+      },
+      "timestamp": "2026-07-01T12:00:03Z",
+      "type": "click",
+      "url": "https://app-des.exemplo/consulta"
+    },
+    {
+      "event_id": "evt_00004",
+      "page_title": "Aplicacao de teste",
+      "target": {
+        "element_id": "next",
+        "tag": "button",
+        "text": "Next"
+      },
+      "timestamp": "2026-07-01T12:00:04Z",
+      "type": "click",
+      "url": "https://app-des.exemplo/consulta"
+    }
+  ],
+  "stats": {
+    "compact_removed": 0,
+    "dedup_removed": 0,
+    "initial_type_counts": {
+      "click": 2,
+      "fill": 1,
+      "navigation": 1
+    }
+  }
+}

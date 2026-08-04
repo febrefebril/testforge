@@ -1,0 +1,151 @@
+"""Sprint 0 commit 2 — ReplayCheck.
+
+Right after the recorder captures a user action, immediately try the
+generated primary selector against the live DOM and record whether it
+resolves. Catches selector-fragility at *record time* — the team sees
+the bug before they ever try to play the test back.
+
+Modes:
+- "immediate" (B1)  probe synchronously; ~50-200 ms per step
+- "batched"   (B4)  queue probes, drain on demand or at stop
+
+Probing reuses LocatorResolver (Phase 3) so the result is consistent
+with what the runtime would do.
+"""
+from __future__ import annotations
+
+import logging
+import time
+from datetime import datetime, timezone
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+
+class ReplayCheck:
+    # H17 perf: default to batched. Immediate mode probes synchronously on the
+    # recorder thread; on SIMAX (mat-select expansion → many DOM events) it
+    # blocked the overlay for 5-20s of cumulative probes per recording.
+    def __init__(self, page, mode: str = "batched",
+                 probe_timeout_ms: int = 600) -> None:
+        self._page = page
+        self._mode = mode if mode in ("immediate", "batched") else "batched"
+        self._probe_timeout_ms = probe_timeout_ms
+        self._pending: list[tuple[str, list, str]] = []
+        self._records: list[dict] = []
+        # Reuse a single LocatorResolver across probes so the in-memory
+        # L0 cache survives between events.
+        self._resolver = None
+
+    # ------------------------------------------------------------------
+    def check(self, step_id: str, candidates: list) -> Optional[dict]:
+        """Testa imediatamente (B1) ou enfileira para depois (B4)."""
+        if self._mode == "batched":
+            capture_url = getattr(self._page, "url", "") or ""
+            self._pending.append((step_id, list(candidates), capture_url))
+            return None
+        return self._do_check(step_id, candidates)
+
+    def drain(self) -> list[dict]:
+        """Processa testes enfileirados (chamado no stop em modo batched)."""
+        out: list[dict] = []
+        for sid, cands, capture_url in self._pending:
+            current_url = getattr(self._page, "url", "") or ""
+            if capture_url and capture_url != current_url:
+                try:
+                    self._page.goto(capture_url, timeout=5000, wait_until="domcontentloaded")
+                except Exception as exc:
+                    out.append({
+                        "step_id": sid,
+                        "resolved": False,
+                        "error": f"url_context_unavailable: {exc}",
+                    })
+                    continue
+            rec = self._do_check(sid, cands)
+            if rec:
+                out.append(rec)
+        self._pending.clear()
+        return out
+
+    @property
+    def records(self) -> list[dict]:
+        return list(self._records)
+
+    # ------------------------------------------------------------------
+    def _do_check(self, step_id: str, candidates: list) -> dict:
+        from ..runtime.resolver import LocatorResolver
+        from ..runtime.errors import LocatorNotFoundError
+        if self._resolver is None:
+            self._resolver = LocatorResolver(
+                self._page, probe_timeout_ms=self._probe_timeout_ms,
+            )
+        resolver = self._resolver
+        t0 = time.perf_counter()
+        primary_selector = self._first_selector(candidates)
+        attempted_dicts = [self._candidate_dict(c) for c in candidates]
+        try:
+            result = resolver.resolve(
+                intent=f"replay_check:{step_id}",
+                candidates=attempted_dicts,
+                action="probe",
+            )
+            elapsed = (time.perf_counter() - t0) * 1000
+            rec = {
+                "step_id": step_id,
+                "ts_checked": datetime.now(timezone.utc).isoformat(),
+                "delay_after_record_ms": 0,
+                "selector_attempted": primary_selector,
+                "resolved": True,
+                "fallback_resolved_at_index": result.candidate_index,
+                "fallback_strategy": result.strategy
+                    if result.candidate_index > 0 else None,
+                "fallback_selector": attempted_dicts[result.candidate_index].get("selector")
+                    if result.candidate_index > 0 else None,
+                "elapsed_ms": round(elapsed, 1),
+                "error": None,
+            }
+        except LocatorNotFoundError as exc:
+            elapsed = (time.perf_counter() - t0) * 1000
+            rec = {
+                "step_id": step_id,
+                "ts_checked": datetime.now(timezone.utc).isoformat(),
+                "delay_after_record_ms": 0,
+                "selector_attempted": primary_selector,
+                "resolved": False,
+                "fallback_resolved_at_index": -1,
+                "fallback_strategy": None,
+                "fallback_selector": None,
+                "elapsed_ms": round(elapsed, 1),
+                "error": str(exc.last_error or "")[:200],
+            }
+        except Exception as exc:
+            elapsed = (time.perf_counter() - t0) * 1000
+            rec = {
+                "step_id": step_id,
+                "ts_checked": datetime.now(timezone.utc).isoformat(),
+                "selector_attempted": primary_selector,
+                "resolved": False,
+                "elapsed_ms": round(elapsed, 1),
+                "error": f"probe_failed: {exc}",
+            }
+        self._records.append(rec)
+        return rec
+
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _first_selector(candidates) -> Optional[str]:
+        if not candidates:
+            return None
+        first = candidates[0]
+        return getattr(first, "selector", None) or first.get("selector")
+
+    @staticmethod
+    def _candidate_dict(c) -> dict:
+        if isinstance(c, dict):
+            return c
+        return {
+            "strategy": getattr(c, "strategy", "?"),
+            "selector": getattr(c, "selector", ""),
+            "score": getattr(c, "score", 0.0),
+            "playwright_call": getattr(c, "playwright_call", None),
+        }

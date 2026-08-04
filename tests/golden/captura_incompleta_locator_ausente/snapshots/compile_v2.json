@@ -1,0 +1,62 @@
+{
+  "candidates": {
+    "step_001.json": {
+      "action": "fill",
+      "candidates": [],
+      "intent_text": "fill",
+      "step_id": "step_001",
+      "url": "https://app-des.exemplo/consulta",
+      "value": "valor_teste"
+    },
+    "step_002.json": {
+      "action": "click",
+      "candidates": [
+        {
+          "reason": "id=next",
+          "score": 0.75,
+          "selector": "#next",
+          "strategy": "id"
+        },
+        {
+          "reason": "id (starts-with)",
+          "score": 0.6,
+          "selector": "[id^=\"next\"]",
+          "strategy": "id_starts"
+        },
+        {
+          "reason": "id (ends-with)",
+          "score": 0.55,
+          "selector": "[id$=\"next\"]",
+          "strategy": "id_ends"
+        },
+        {
+          "reason": "text in button",
+          "score": 0.1,
+          "selector": "button:has-text(\"Next\")",
+          "strategy": "text"
+        }
+      ],
+      "intent_text": "click \"Next\"",
+      "step_id": "step_002",
+      "url": "https://app-des.exemplo/consulta",
+      "value": ""
+    },
+    "step_003.json": {
+      "action": "assert",
+      "candidates": [
+        {
+          "reason": "text in div",
+          "score": 0.5,
+          "selector": "div:has-text(\"Falha esperada de baseline\")",
+          "strategy": "text"
+        }
+      ],
+      "intent_text": "assert \"Falha esperada de baseline\"",
+      "step_id": "step_003",
+      "url": "",
+      "value": "Falha esperada de baseline"
+    }
+  },
+  "script": "\"\"\"Compilado pelo TestForge v2 — cadeia de fallback executa no LocatorResolver em runtime.\"\"\"\nfrom playwright.sync_api import Page\nfrom testforge.runtime import step\n\nBASE_URL = \"https://app-des.exemplo/\"\n\ndef test_golden_incomplete_locator(page: Page):\n    \"\"\"web — source: captura_incompleta_locator_ausente.\"\"\"\n    step.go(page, BASE_URL)\n    step.fill(page, intent=\"fill\", value=\"valor_teste\", candidates_file=\"step_001.json\")\n    step.click(page, intent=\"click \\\"Next\\\"\", candidates_file=\"step_002.json\")\n    step.assert_text(page, intent=\"assert \\\"Falha esperada de baseline\\\"\", expected=\"Falha esperada de baseline\", candidates_file=\"step_003.json\")\n",
+  "script_name": "test_golden_incomplete_locator.py"
+}

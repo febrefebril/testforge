@@ -15,7 +15,6 @@ from typing import Optional
 import uuid
 
 from playwright.sync_api import Page, Request, Response
-from pytest_playwright.pytest_playwright import page
 
 from testforge.diagnostic.framework_detector import FrameworkDetector
 from testforge.metrics.metrics_repository import MetricsRepository

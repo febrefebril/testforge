@@ -1,0 +1,60 @@
+{
+  "candidates": {
+    "step_001.json": {
+      "action": "click",
+      "candidates": [
+        {
+          "reason": "id=btnNovoAgendamento",
+          "score": 0.75,
+          "selector": "#btnNovoAgendamento",
+          "strategy": "id"
+        },
+        {
+          "reason": "id (starts-with)",
+          "score": 0.6,
+          "selector": "[id^=\"btnNovoAgendamento\"]",
+          "strategy": "id_starts"
+        },
+        {
+          "reason": "id (ends-with)",
+          "score": 0.55,
+          "selector": "[id$=\"btnNovoAgendamento\"]",
+          "strategy": "id_ends"
+        },
+        {
+          "reason": "text in button",
+          "score": 0.55,
+          "selector": "button:has-text(\"Novo agendamento\")",
+          "strategy": "text"
+        },
+        {
+          "reason": "id (contains)",
+          "score": 0.5,
+          "selector": "[id*=\"btnNovoAgendamento\" i]",
+          "strategy": "id_contains"
+        }
+      ],
+      "intent_text": "click \"Novo agendamento\"",
+      "step_id": "step_001",
+      "url": "https://simax.exemplo/simax/",
+      "value": ""
+    },
+    "step_002.json": {
+      "action": "assert",
+      "candidates": [
+        {
+          "reason": "text in td",
+          "score": 0.55,
+          "selector": "td:has-text(\"Reservar\")",
+          "strategy": "text"
+        }
+      ],
+      "intent_text": "assert \"Reservar\"",
+      "step_id": "step_002",
+      "url": "",
+      "value": "Reservar"
+    }
+  },
+  "script": "\"\"\"Compilado pelo TestForge v2 — cadeia de fallback executa no LocatorResolver em runtime.\"\"\"\nfrom playwright.sync_api import Page\nfrom testforge.runtime import step\n\nBASE_URL = \"https://simax.exemplo/simax/\"\n\ndef test_golden_simax_datatable(page: Page):\n    \"\"\"web — source: simax_datatable_dedup.\"\"\"\n    step.go(page, BASE_URL)\n    step.click(page, intent=\"click \\\"Novo agendamento\\\"\", candidates_file=\"step_001.json\")\n    step.assert_text(page, intent=\"assert \\\"Reservar\\\"\", expected=\"Reservar\", candidates_file=\"step_002.json\")\n",
+  "script_name": "test_golden_simax_datatable.py"
+}
