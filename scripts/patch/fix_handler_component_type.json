@@ -1,0 +1,32 @@
+
+{
+  "version": 1,
+  "metadata": {
+    "name": "fix-handler-component-type",
+    "description": "Corrige o contrato abstrato ComponentHandler nos handlers PrimeFaces e React MUI."
+  },
+  "changes": [
+    {
+      "type": "regex_replace",
+      "file": "src/testforge/handlers/primeFaces.py",
+      "pattern": "class PrimeFacesHandler\\(ComponentHandler\\):",
+      "replacement": "class PrimeFacesHandler(ComponentHandler):\n    component_type = \"primefaces\"",
+      "count": 1,
+      "dotall": false
+    },
+    {
+      "type": "regex_replace",
+      "file": "src/testforge/handlers/react_mui.py",
+      "pattern": "class ReactMUIHandler\\(ComponentHandler\\):",
+      "replacement": "class ReactMUIHandler(ComponentHandler):\n    component_type = \"react-mui\"",
+      "count": 1,
+      "dotall": false
+    },
+    {
+      "type": "add_file",
+      "file": "tests/handlers/test_handler_contracts.py",
+      "content": "from testforge.handlers.primeFaces import PrimeFacesHandler\nfrom testforge.handlers.react_mui import ReactMUIHandler\n\n\ndef test_primefaces_handler_satisfies_component_contract():\n    handler = PrimeFacesHandler()\n    assert handler.component_type == \"primefaces\"\n\n\ndef test_react_mui_handler_satisfies_component_contract():\n    handler = ReactMUIHandler()\n    assert handler.component_type == \"react-mui\"\n"
+    }
+  ]
+}
+

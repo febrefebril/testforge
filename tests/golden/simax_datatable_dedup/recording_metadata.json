@@ -1,0 +1,11 @@
+
+{
+  "recording_id": "simax_datatable_dedup",
+  "application": "web",
+  "base_url": "https://simax.exemplo/simax/",
+  "status": "completed_raw",
+  "fingerprint": {
+    "capture_schema_version": 4
+  }
+}
+

@@ -1,0 +1,320 @@
+
+============================= test session starts =============================
+platform win32 -- Python 3.13.2, pytest-9.1.1, pluggy-1.6.0 -- C:\Desenvolvimento\AUTOMATA-PRIMUS\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Desenvolvimento\AUTOMATA-PRIMUS
+configfile: pyproject.toml
+plugins: anyio-4.14.1, base-url-2.1.0, playwright-0.8.0
+collecting ... collected 1 item
+
+tests/test_recorder_submit.py::TestIsSubmitTriggerJS::test_span_is_not_trigger[chromium] 
+SETUP    S base_url
+SETUP    S _verify_url (fixtures used: base_url)
+SETUP    S pytestconfig
+SETUP    S delete_output_dir (fixtures used: pytestconfig)
+SETUP    S browser_type_launch_args (fixtures used: pytestconfig)
+SETUP    S playwright
+SETUP    S browser_name['chromium']
+SETUP    S browser_type (fixtures used: browser_name, playwright)
+SETUP    S connect_options
+SETUP    S launch_browser (fixtures used: browser_type, browser_type_launch_args, connect_options)
+SETUP    S browser (fixtures used: launch_browser)ERROR
+TEARDOWN S browser
+TEARDOWN S launch_browser
+TEARDOWN S connect_options
+TEARDOWN S browser_type
+TEARDOWN S browser_name['chromium']
+TEARDOWN S playwright
+TEARDOWN S browser_type_launch_args
+TEARDOWN S delete_output_dir
+TEARDOWN S pytestconfig
+TEARDOWN S _verify_url
+TEARDOWN S base_url
+
+=================================== ERRORS ====================================
+_ ERROR at setup of TestIsSubmitTriggerJS.test_span_is_not_trigger[chromium] __
+
+launch_browser = <function launch_browser.<locals>.launch at 0x000001A414FBCE00>
+
+    @pytest.fixture(scope="session")
+    def browser(launch_browser: Callable[[], Browser]) -> Generator[Browser, None, None]:
+>       browser = launch_browser()
+                  ^^^^^^^^^^^^^^^^
+
+.venv\Lib\site-packages\pytest_playwright\pytest_playwright.py:316: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+kwargs = {}
+
+    def launch(**kwargs: Dict) -> Browser:
+        launch_options = {**browser_type_launch_args, **kwargs}
+        if connect_options:
+            browser = browser_type.connect(
+                **(
+                    {
+                        **connect_options,
+                        "headers": {
+                            "x-playwright-launch-options": json.dumps(launch_options),
+                            **(connect_options.get("headers") or {}),
+                        },
+                    }
+                )
+            )
+        else:
+>           browser = browser_type.launch(**launch_options)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.venv\Lib\site-packages\pytest_playwright\pytest_playwright.py:308: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <BrowserType name=chromium executable_path=C:\Users\c160698\AppData\Local\ms-playwright\chromium-1228\chrome-win64\chrome.exe>
+executable_path = None, channel = None, args = None, ignore_default_args = None
+handle_sigint = None, handle_sigterm = None, handle_sighup = None
+timeout = None, env = None, headless = None, proxy = None, downloads_path = None
+slow_mo = None, traces_dir = None, artifacts_dir = None, chromium_sandbox = None
+firefox_user_prefs = None
+
+    def launch(
+        self,
+        *,
+        executable_path: typing.Optional[typing.Union[pathlib.Path, str]] = None,
+        channel: typing.Optional[str] = None,
+        args: typing.Optional[typing.Sequence[str]] = None,
+        ignore_default_args: typing.Optional[
+            typing.Union[bool, typing.Sequence[str]]
+        ] = None,
+        handle_sigint: typing.Optional[bool] = None,
+        handle_sigterm: typing.Optional[bool] = None,
+        handle_sighup: typing.Optional[bool] = None,
+        timeout: typing.Optional[typing.Union[float, datetime.timedelta]] = None,
+        env: typing.Optional[typing.Dict[str, typing.Union[str, float, bool]]] = None,
+        headless: typing.Optional[bool] = None,
+        proxy: typing.Optional[ProxySettings] = None,
+        downloads_path: typing.Optional[typing.Union[pathlib.Path, str]] = None,
+        slow_mo: typing.Optional[float] = None,
+        traces_dir: typing.Optional[typing.Union[pathlib.Path, str]] = None,
+        artifacts_dir: typing.Optional[typing.Union[pathlib.Path, str]] = None,
+        chromium_sandbox: typing.Optional[bool] = None,
+        firefox_user_prefs: typing.Optional[
+            typing.Dict[str, typing.Union[str, float, bool]]
+        ] = None,
+    ) -> "Browser":
+        """BrowserType.launch
+    
+        Returns the browser instance.
+    
+        **Usage**
+    
+        You can use `ignoreDefaultArgs` to filter out `--mute-audio` from default arguments:
+    
+        ```py
+        browser = playwright.chromium.launch( # or \"firefox\" or \"webkit\".
+            ignore_default_args=[\"--mute-audio\"]
+        )
+        ```
+    
+        > **Chromium-only** Playwright can also be used to control the Google Chrome or Microsoft Edge browsers, but it
+        works best with the version of Chromium it is bundled with. There is no guarantee it will work with any other
+        version. Use `executablePath` option with extreme caution.
+        >
+        > If Google Chrome (rather than Chromium) is preferred, a
+        [Chrome Canary](https://www.google.com/chrome/browser/canary.html) or
+        [Dev Channel](https://www.chromium.org/getting-involved/dev-channel) build is suggested.
+        >
+        > Stock browsers like Google Chrome and Microsoft Edge are suitable for tests that require proprietary media codecs
+        for video playback. See
+        [this article](https://www.howtogeek.com/202825/what%E2%80%99s-the-difference-between-chromium-and-chrome/) for
+        other differences between Chromium and Chrome.
+        [This article](https://chromium.googlesource.com/chromium/src/+/lkgr/docs/chromium_browser_vs_google_chrome.md)
+        describes some differences for Linux users.
+    
+        Parameters
+        ----------
+        executable_path : Union[pathlib.Path, str, None]
+            Path to a browser executable to run instead of the bundled one. If `executablePath` is a relative path, then it is
+            resolved relative to the current working directory. Note that Playwright only works with the bundled Chromium,
+            Firefox or WebKit, use at your own risk.
+        channel : Union[str, None]
+            Browser distribution channel.
+    
+            Use "chromium" to [opt in to new headless mode](../browsers.md#chromium-new-headless-mode).
+    
+            Use "chrome", "chrome-beta", "chrome-dev", "chrome-canary", "msedge", "msedge-beta", "msedge-dev", or
+            "msedge-canary" to use branded [Google Chrome and Microsoft Edge](../browsers.md#google-chrome--microsoft-edge).
+        args : Union[Sequence[str], None]
+            **NOTE** Use custom browser args at your own risk, as some of them may break Playwright functionality.
+    
+            Additional arguments to pass to the browser instance. The list of Chromium flags can be found
+            [here](https://peter.sh/experiments/chromium-command-line-switches/).
+        ignore_default_args : Union[Sequence[str], bool, None]
+            If `true`, Playwright does not pass its own configurations args and only uses the ones from `args`. If an array is
+            given, then filters out the given default arguments. Dangerous option; use with care. Defaults to `false`.
+        handle_sigint : Union[bool, None]
+            Close the browser process on Ctrl-C. Defaults to `true`.
+        handle_sigterm : Union[bool, None]
+            Close the browser process on SIGTERM. Defaults to `true`.
+        handle_sighup : Union[bool, None]
+            Close the browser process on SIGHUP. Defaults to `true`.
+        timeout : Union[float, None]
+            Maximum time in milliseconds to wait for the browser instance to start. Defaults to `30000` (30 seconds). Pass `0`
+            to disable timeout.
+        env : Union[Dict[str, Union[bool, float, str]], None]
+            Specify environment variables that will be visible to the browser. Defaults to `process.env`.
+        headless : Union[bool, None]
+            Whether to run browser in headless mode. More details for
+            [Chromium](https://developers.google.com/web/updates/2017/04/headless-chrome) and
+            [Firefox](https://hacks.mozilla.org/2017/12/using-headless-mode-in-firefox/). Defaults to `true`.
+        proxy : Union[{server: str, bypass: Union[str, None], username: Union[str, None], password: Union[str, None]}, None]
+            Network proxy settings.
+        downloads_path : Union[pathlib.Path, str, None]
+            If specified, accepted downloads are downloaded into this directory. Otherwise, temporary directory is created and
+            is deleted when browser is closed. In either case, the downloads are deleted when the browser context they were
+            created in is closed.
+        slow_mo : Union[float, None]
+            Slows down Playwright operations by the specified amount of milliseconds. Useful so that you can see what is going
+            on.
+        traces_dir : Union[pathlib.Path, str, None]
+            If specified, traces are saved into this directory.
+        artifacts_dir : Union[pathlib.Path, str, None]
+            If specified, artifacts (traces, videos, downloads, HAR files, etc.) are saved into this directory. The directory
+            is not cleaned up when the browser closes. If not specified, a temporary directory is used and cleaned up when the
+            browser closes.
+        chromium_sandbox : Union[bool, None]
+            Enable Chromium sandboxing. Defaults to `false`.
+        firefox_user_prefs : Union[Dict[str, Union[bool, float, str]], None]
+            Firefox user preferences. Learn more about the Firefox user preferences at
+            [`about:config`](https://support.mozilla.org/en-US/kb/about-config-editor-firefox).
+    
+            You can also provide a path to a custom [`policies.json` file](https://mozilla.github.io/policy-templates/) via
+            `PLAYWRIGHT_FIREFOX_POLICIES_JSON` environment variable.
+    
+        Returns
+        -------
+        Browser
+        """
+    
+        return mapping.from_impl(
+>           self._sync(
+                self._impl_obj.launch(
+                    executablePath=executable_path,
+                    channel=channel,
+                    args=mapping.to_impl(args),
+                    ignoreDefaultArgs=mapping.to_impl(ignore_default_args),
+                    handleSIGINT=handle_sigint,
+                    handleSIGTERM=handle_sigterm,
+                    handleSIGHUP=handle_sighup,
+                    timeout=to_milliseconds(timeout),
+                    env=mapping.to_impl(env),
+                    headless=headless,
+                    proxy=proxy,
+                    downloadsPath=downloads_path,
+                    slowMo=slow_mo,
+                    tracesDir=traces_dir,
+                    artifactsDir=artifacts_dir,
+                    chromiumSandbox=chromium_sandbox,
+                    firefoxUserPrefs=mapping.to_impl(firefox_user_prefs),
+                )
+            )
+        )
+
+.venv\Lib\site-packages\playwright\sync_api\_generated.py:16515: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <BrowserType name=chromium executable_path=C:\Users\c160698\AppData\Local\ms-playwright\chromium-1228\chrome-win64\chrome.exe>
+executablePath = None, channel = None, args = None, ignoreDefaultArgs = None
+handleSIGINT = None, handleSIGTERM = None, handleSIGHUP = None, timeout = None
+env = None, headless = None, proxy = None, downloadsPath = None, slowMo = None
+tracesDir = None, artifactsDir = None, chromiumSandbox = None
+firefoxUserPrefs = None
+
+    async def launch(
+        self,
+        executablePath: Union[str, Path] = None,
+        channel: str = None,
+        args: Sequence[str] = None,
+        ignoreDefaultArgs: Union[bool, Sequence[str]] = None,
+        handleSIGINT: bool = None,
+        handleSIGTERM: bool = None,
+        handleSIGHUP: bool = None,
+        timeout: float = None,
+        env: Env = None,
+        headless: bool = None,
+        proxy: ProxySettings = None,
+        downloadsPath: Union[str, Path] = None,
+        slowMo: float = None,
+        tracesDir: Union[pathlib.Path, str] = None,
+        artifactsDir: Union[pathlib.Path, str] = None,
+        chromiumSandbox: bool = None,
+        firefoxUserPrefs: Dict[str, Union[str, float, bool]] = None,
+    ) -> Browser:
+        params = locals_to_params(locals())
+        normalize_launch_params(params)
+        browser = cast(
+            Browser,
+            from_channel(
+>               await self._channel.send(
+                    "launch", TimeoutSettings.launch_timeout, params
+                )
+            ),
+        )
+
+.venv\Lib\site-packages\playwright\_impl\_browser_type.py:97: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <playwright._impl._connection.Channel object at 0x000001A414F4A210>
+method = 'launch'
+timeout_calculator = <function TimeoutSettings.launch_timeout at 0x000001A4142BAE80>
+params = {'timeout': 180000}, is_internal = False, title = None
+
+    async def send(
+        self,
+        method: str,
+        timeout_calculator: TimeoutCalculator,
+        params: Dict = None,
+        is_internal: bool = False,
+        title: str = None,
+    ) -> Any:
+>       return await self._connection.wrap_api_call(
+            lambda: self._inner_send(method, timeout_calculator, params, False),
+            is_internal,
+            title,
+        )
+
+.venv\Lib\site-packages\playwright\_impl\_connection.py:69: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <playwright._impl._connection.Connection object at 0x000001A416075940>
+cb = <function Channel.send.<locals>.<lambda> at 0x000001A414FBEC00>
+is_internal = False, title = None
+
+    async def wrap_api_call(
+        self, cb: Callable[[], Any], is_internal: bool = False, title: str = None
+    ) -> Any:
+        if self._api_zone.get():
+            return await cb()
+        task = asyncio.current_task(self._loop)
+        st: List[inspect.FrameInfo] = getattr(
+            task, "__pw_stack__", None
+        ) or inspect.stack(0)
+    
+        parsed_st = _extract_stack_trace_information_from_stack(st, is_internal, title)
+        self._api_zone.set(parsed_st)
+        try:
+            return await cb()
+        except Exception as error:
+>           raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E           playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at C:\Users\c160698\AppData\Local\ms-playwright\chromium_headless_shell-1228\chrome-headless-shell-win64\chrome-headless-shell.exe
+E           \u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557
+E           \u2551 Looks like Playwright was just installed or updated.       \u2551
+E           \u2551 Please run the following command to download new browsers: \u2551
+E           \u2551                                                            \u2551
+E           \u2551     playwright install                                     \u2551
+E           \u2551                                                            \u2551
+E           \u2551 <3 Playwright Team                                         \u2551
+E           \u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d
+
+.venv\Lib\site-packages\playwright\_impl\_connection.py:563: Error
+=========================== short test summary info ===========================
+ERROR tests/test_recorder_submit.py::TestIsSubmitTriggerJS::test_span_is_not_trigger[chromium] - playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at C:\\Users\\c160698\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1228\\chrome-headless-shell-win64\\chrome-headless-shell.exe\n\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557\n\u2551 Looks like Playwright was just installed or updated.       \u2551\n\u2551 Please run the following command to download new browsers: \u2551\n\u2551                                                            \u2551\n\u2551     playwright install                                     \u2551\n\u2551                                                            \u2551\n\u2551 <3 Playwright Team                                         \u2551\n\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d
+============================== 1 error in 0.75s ===============================
+

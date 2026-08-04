@@ -1,0 +1,11 @@
+
+{
+  "recording_id": "jsf_primefaces_postback",
+  "application": "web",
+  "base_url": "https://jsf-des.exemplo/app/",
+  "status": "completed_raw",
+  "fingerprint": {
+    "capture_schema_version": 4
+  }
+}
+

@@ -1,0 +1,7 @@
+
+{
+  "test_id": "golden_assertion_immutable",
+  "application": "web",
+  "base_url": "https://assert.exemplo/"
+}
+

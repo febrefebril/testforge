@@ -1,0 +1,19 @@
+
+{
+  "version": 1,
+  "metadata": {
+    "name": "fix-overlay-submit-trigger-test-hook",
+    "description": "Expõe o helper já existente _isSubmitTrigger como window._tf_isSubmitTrigger para o contrato de testes do overlay, sem alterar sua lógica."
+  },
+  "changes": [
+    {
+      "type": "regex_replace",
+      "file": "src/testforge/recorder/overlay_inject.js",
+      "pattern": "(\\n  // ---- Push event to queue ----\\n)",
+      "replacement": "\n  // Test hook/compatibility API: preserve helper behavior while exposing a stable name.\n  window._tf_isSubmitTrigger = _isSubmitTrigger;\n\\1",
+      "count": 1,
+      "dotall": false
+    }
+  ]
+}
+

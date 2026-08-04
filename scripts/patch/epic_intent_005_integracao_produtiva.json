@@ -1,0 +1,96 @@
+
+{
+  "version": 1,
+  "metadata": {
+    "name": "EPIC-INTENT-005-productive-integration",
+    "description": "Conecta ações especializadas ao normalizador, compilador e runtime."
+  },
+  "changes": [
+    {
+      "type": "regex_replace",
+      "file": "src/testforge/semantic/model.py",
+      "pattern": "(    context: dict = field\\(default_factory=dict\\)\\n)",
+      "replacement": "\\1    specialized_action: Optional[dict] = None\\n",
+      "count": 1,
+      "dotall": false
+    },
+    {
+      "type": "regex_replace",
+      "file": "src/testforge/semantic/specialized_actions.py",
+      "pattern": "(    def as_dict\\(self\\) -> dict\\[str, Any\\]:\\n)",
+      "replacement": "    @classmethod\n    def from_dict(cls, data: Mapping[str, Any]) -> \"SpecializedAction\":\n        if not isinstance(data, Mapping):\n            raise SpecializedActionError(\"specialized_action deve ser um mapping\")\n        raw_kind = str(data.get(\"kind\") or \"\")\n        kind = _normalize_kind(raw_kind)\n        if kind is None:\n            raise SpecializedActionError(f\"Tipo especializado desconhecido: {raw_kind!r}\")\n        return cls(\n            kind=kind,\n            event_id=str(data.get(\"event_id\") or \"\"),\n            page_id=str(data.get(\"page_id\") or \"\"),\n            frame_id=str(data.get(\"frame_id\") or \"\"),\n            parent_frame_id=str(data.get(\"parent_frame_id\") or \"\"),\n            selector=str(data.get(\"selector\") or \"\"),\n            url=str(data.get(\"url\") or \"\"),\n            value=data.get(\"value\"),\n            payload=dict(data.get(\"payload\") or {}),\n            limitations=tuple(data.get(\"limitations\") or ()),\n        )\n\n\\1",
+      "count": 1,
+      "dotall": false
+    },
+    {
+      "type": "regex_replace",
+      "file": "src/testforge/semantic/specialized_actions.py",
+      "pattern": "download\\.save_as\\(str\\(Path\\(\\{_py\\(destination\\)\\}\\) / download\\.suggested_filename\\)\\)",
+      "replacement": "download.save_as(os.path.join({_py(destination)}, download.suggested_filename))",
+      "count": 1,
+      "dotall": false
+    },
+    {
+      "type": "regex_replace",
+      "file": "src/testforge/semantic/recording_normalizer.py",
+      "pattern": "(from \\.model import LocatorCandidate, SemanticAction, SemanticTarget, SemanticTestCase\\n)",
+      "replacement": "\\1from .specialized_actions import normalize_specialized_event\\n",
+      "count": 1,
+      "dotall": false
+    },
+    {
+      "type": "regex_replace",
+      "file": "src/testforge/semantic/recording_normalizer.py",
+      "pattern": "(\\n        if event_type == \"navigation\":\\n)",
+      "replacement": "\n        specialized = normalize_specialized_event(raw)\n        if specialized is not None:\n            context = dict(raw.get(\"context\") or {})\n            if raw.get(\"timestamp\"):\n                context.setdefault(\"timestamp\", raw[\"timestamp\"])\n            context[\"specialized_type\"] = specialized.kind.value\n            target = self._build_target(target_data) if target_data else None\n            return SemanticAction(\n                action=specialized.kind.value,\n                target=target,\n                value=raw.get(\"value\"),\n                url=raw.get(\"url\"),\n                page_title=raw.get(\"page_title\"),\n                context=context,\n                specialized_action=specialized.as_dict(),\n            )\n\\1",
+      "count": 1,
+      "dotall": false
+    },
+    {
+      "type": "regex_replace",
+      "file": "src/testforge/semantic/compiler.py",
+      "pattern": "(from \\.model import FieldValueMap, SemanticAction, SemanticTarget, SemanticTestCase\\n)",
+      "replacement": "\\1from .specialized_actions import (\n    SpecializedAction,\n    SpecializedActionType,\n    emit_specialized_python,\n)\n",
+      "count": 1,
+      "dotall": false
+    },
+    {
+      "type": "regex_replace",
+      "file": "src/testforge/semantic/compiler.py",
+      "pattern": "(            for action in tc\\.steps\\[start:end\\]:\\n)",
+      "replacement": "\\1                specialized_data = getattr(action, \"specialized_action\", None)\n                if specialized_data:\n                    specialized = SpecializedAction.from_dict(specialized_data)\n                    if not isinstance(specialized.kind, SpecializedActionType):\n                        raise TypeError(\"kind especializado inválido\")\n                    step_idx += 1\n                    lines.append(f\"    # Step {step_idx}: {specialized.kind.value}\")\n                    lines.extend(emit_specialized_python(\n                        specialized, page_var=\"page\", indent=\"    \",\n                    ))\n                    continue\n\n",
+      "count": 1,
+      "dotall": false
+    },
+    {
+      "type": "regex_replace",
+      "file": "src/testforge/runner/step_executor.py",
+      "pattern": "(from typing import Optional\\n)",
+      "replacement": "\\1from testforge.semantic.specialized_actions import (\n    SpecializedAction,\n    default_specialized_registry,\n)\n",
+      "count": 1,
+      "dotall": false
+    },
+    {
+      "type": "regex_replace",
+      "file": "src/testforge/runner/step_executor.py",
+      "pattern": "(    def __init__\\(self, page\\):\\n        self\\.page = page\\n)",
+      "replacement": "\\1        self._specialized_registry = default_specialized_registry()\n        self._specialized_state = {\n            \"page\": page, \"page_stack\": [], \"frame\": None,\n            \"frame_id\": \"\", \"limitations\": [],\n        }\n",
+      "count": 1,
+      "dotall": false
+    },
+    {
+      "type": "regex_replace",
+      "file": "src/testforge/runner/step_executor.py",
+      "pattern": "(    def execute\\(self, step, base_url: str = \"\", data_values: Optional\\[dict\\] = None,\\n                field_value_map: Optional\\[dict\\] = None\\) -> str:\\n        data_values = data_values or \\{\\}\\n        field_value_map = field_value_map or \\{\\}\\n)",
+      "replacement": "\\1        specialized_data = getattr(step, \"specialized_action\", None)\n        if specialized_data:\n            specialized = SpecializedAction.from_dict(specialized_data)\n            active_page = self._specialized_state.get(\"page\") or self.page\n            outcome = self._specialized_registry.execute(\n                specialized, page=active_page, state=self._specialized_state,\n            )\n            promoted = self._specialized_state.get(\"page\")\n            if promoted is not None:\n                self.page = promoted\n            return str(outcome) if outcome is not None else specialized.selector\n\n",
+      "count": 1,
+      "dotall": false
+    },
+    {
+      "type": "add_file",
+      "file": "tests/semantic/test_specialized_pipeline_integration.py",
+      "content": "from testforge.runner.step_executor import StepExecutor\nfrom testforge.semantic.model import SemanticAction\nfrom testforge.semantic.recording_normalizer import RecordingNormalizer\nfrom testforge.semantic.specialized_actions import SpecializedAction\n\n\ndef test_normalizer_promotes_file_upload_before_generic_fill():\n    action = RecordingNormalizer()._convert_event({\n        \"event_id\": \"upload-1\", \"type\": \"fill\",\n        \"target\": {\"element_id\": \"arquivo\"},\n        \"file_upload\": [{\"name\": \"massa.csv\", \"path\": \"fixtures/massa.csv\"}],\n    })\n    assert action.action == \"file_upload\"\n    assert action.specialized_action[\"kind\"] == \"file_upload\"\n    assert action.specialized_action[\"selector\"] == \"#arquivo\"\n\n\ndef test_specialized_contract_round_trip():\n    data = {\"kind\": \"authentication_redirect\", \"event_id\": \"auth-1\",\n            \"url\": \"**/home\", \"payload\": {\"url_pattern\": \"**/home\"}}\n    assert SpecializedAction.from_dict(data).as_dict()[\"kind\"] == \"authentication_redirect\"\n\n\nclass _RedirectPage:\n    def __init__(self):\n        self.url = \"https://example.test/login\"\n        self.waited = []\n    def wait_for_url(self, pattern):\n        self.waited.append(pattern)\n        self.url = \"https://example.test/home\"\n    def wait_for_load_state(self, state):\n        self.waited.append(state)\n\n\ndef test_step_executor_routes_specialized_action_through_registry():\n    page = _RedirectPage()\n    executor = StepExecutor(page)\n    step = SemanticAction(action=\"authentication_redirect\", url=\"**/home\",\n        specialized_action={\"kind\": \"authentication_redirect\", \"url\": \"**/home\",\n                            \"payload\": {\"url_pattern\": \"**/home\"}})\n    executor.execute(step)\n    assert page.waited == [\"**/home\", \"domcontentloaded\"]\n    assert executor._specialized_state[\"url\"].endswith(\"/home\")\n"
+    }
+  ]
+}
+

@@ -1,0 +1,11 @@
+
+{
+  "recording_id": "captura_incompleta_locator_ausente",
+  "application": "web",
+  "base_url": "https://app-des.exemplo/",
+  "status": "completed_raw",
+  "fingerprint": {
+    "capture_schema_version": 4
+  }
+}
+

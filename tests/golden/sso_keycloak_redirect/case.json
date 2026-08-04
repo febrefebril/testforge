@@ -1,0 +1,7 @@
+
+{
+  "test_id": "golden_sso_keycloak_redirect",
+  "application": "web",
+  "base_url": "https://app-des.exemplo/"
+}
+

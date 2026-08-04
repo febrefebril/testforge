@@ -1,0 +1,11 @@
+
+{
+  "recording_id": "assertion_immutable",
+  "application": "web",
+  "base_url": "https://assert.exemplo/",
+  "status": "completed_raw",
+  "fingerprint": {
+    "capture_schema_version": 4
+  }
+}
+

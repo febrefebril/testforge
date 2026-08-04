@@ -1,0 +1,84 @@
+
+"""TestForge — StateAgent (FAM-04).
+
+Manipula falhas de estado da aplicação: sobreposição, diálogo, desabilitado, sessão expirada.
+Estratégias: overlay_dismiss, dialog_handler, re_auth_hook.
+"""
+from __future__ import annotations
+
+import logging
+from typing import Optional
+
+from ..evidence_payload import EvidencePayload
+from ..llm_healer import LLMHealer, LLMHealingProposal, MockLLMHealer
+from .dom_introspection import dom_has_dialog_handler, dom_has_role
+
+
+logger = logging.getLogger(__name__)
+
+
+class StateAgent:
+    """Especialista em falhas de estado da aplicação (FAM-04)."""
+
+    def __init__(self, llm_healer: Optional[LLMHealer] = None):
+        self._llm = llm_healer or MockLLMHealer()
+
+    def heal(
+        self,
+        payload: EvidencePayload,
+        error_message: str = "",
+    ) -> Optional[LLMHealingProposal]:
+        ctx = payload.step_context
+        sel = ctx.get("selector", "")
+        error_lower = error_message.lower()
+
+        # 1. Alert/Confirm/Dialog
+        if "dialog" in error_lower or "alert" in error_lower or "confirm" in error_lower:
+            confidence = 0.85
+            if not (dom_has_dialog_handler(payload) or dom_has_role(payload, "dialog")):
+                logger.info(
+                    "state_agent dialog proposal downgraded — no dom evidence",
+                    extra={"error": error_message[:200]},
+                )
+                confidence = 0.4
+            return LLMHealingProposal(
+                taxonomy_id="STA-004", family="FAM-04",
+                strategy="dialog_handler",
+                new_locator=sel,
+                confidence=confidence,
+                rationale="Dialog detectado — registre page.on('dialog') antes de interagir",
+            )
+
+        # 2. Overlay / obscured
+        if "overlay" in error_lower or "obscured" in error_lower or "intercept" in error_lower:
+            return LLMHealingProposal(
+                taxonomy_id="STA-002", family="FAM-04",
+                strategy="overlay_dismiss",
+                new_locator=sel,
+                confidence=0.75,
+                rationale="Overlay detectado — feche o overlay ou aguarde ele desaparecer",
+            )
+
+        # 3. Session expired
+        if "session" in error_lower or "expired" in error_lower or "401" in error_lower or "unauthorized" in error_lower:
+            return LLMHealingProposal(
+                taxonomy_id="STA-001", family="FAM-04",
+                strategy="re_auth_hook",
+                new_locator=sel,
+                confidence=0.60,
+                rationale="Sessao pode ter expirado — re-autentique antes de tentar novamente",
+            )
+
+        # 4. Disabled element
+        if "disabled" in error_lower or "not enabled" in error_lower:
+            return LLMHealingProposal(
+                taxonomy_id="INP-007", family="FAM-04",
+                strategy="label_click",
+                new_locator=sel,
+                confidence=0.45,
+                rationale="Elemento desabilitado — aguarde habilitar ou clique no label",
+            )
+
+        # 5. LLM fallback
+        return self._llm.heal_or_unresolved(payload, error_message, family="FAM-04")
+
