@@ -1,7 +1,5 @@
-
 {
   "test_id": "golden_angular_overlay",
   "application": "web",
   "base_url": "https://angular-des.exemplo/"
 }
-

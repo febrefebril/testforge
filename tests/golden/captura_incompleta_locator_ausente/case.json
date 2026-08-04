@@ -1,7 +1,5 @@
-
 {
   "test_id": "golden_incomplete_locator",
   "application": "web",
   "base_url": "https://app-des.exemplo/"
 }
-

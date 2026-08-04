@@ -1,0 +1,2 @@
+{"action": "assert", "assert_type": "textual", "css_path": "#resultado", "expected_value": "R$ 3.333,33", "tag_name": "output", "text": "R$ 3.333,33", "timestamp": "2026-07-01T12:00:03Z"}
+{"accessible_name": "Continuar", "action": "assert", "assert_state": "enabled", "assert_type": "estado", "css_path": "#continuar", "expected_value": "enabled", "tag_name": "button", "timestamp": "2026-07-01T12:00:04Z"}

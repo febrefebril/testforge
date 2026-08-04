@@ -19,9 +19,10 @@ import types
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-PACKAGE_PARENT = REPO_ROOT.parent
-if str(PACKAGE_PARENT) not in sys.path:
-    sys.path.insert(0, str(PACKAGE_PARENT))
+# Garante que src/ aparece antes no path (layout src/)
+_src = str(REPO_ROOT / "src")
+if _src not in sys.path:
+    sys.path.insert(0, _src)
 
 # O normalizador importa capture_fingerprint por um pacote cujo __init__ carrega
 # pytest-playwright. Golden tests nao abrem navegador; o stub mantem o harness

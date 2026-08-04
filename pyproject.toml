@@ -9,7 +9,7 @@ dependencies = [
     "playwright>=1.40",
     "pyyaml>=6.0",
     "typer>=0.9",
-    "Pillow>=11.0.0"
+    "Pillow>=11.0.0",
     "pydantic>=2,<3",
 ]
 

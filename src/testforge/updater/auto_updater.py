@@ -1,6 +1,7 @@
 
 """TestForge auto-updater — git pull na inicializacao quando configurado em testforge_update.yml."""
 import logging
+import subprocess
 from pathlib import Path
 
 import yaml

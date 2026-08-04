@@ -448,17 +448,16 @@ class TestAutoUpdater:
     def test_enabled_config_calls_git_pull(self, tmp_path):
         from testforge.updater.auto_updater import check_and_apply_update
         (tmp_path / "testforge_update.yml").write_text(
-            "enabled: true\nremote: origin\nbranch: main\nurl: https://example.com\nquiet: true\n"
+            "enabled: true\nremote: origin\nbranch: main\nquiet: true\n"
         )
-        (tmp_path / ".git").mkdir()
-        ok = MagicMock(returncode=0, stdout="", stderr="")
-        same_hash = MagicMock(returncode=0, stdout="abc123\n", stderr="")
-        remote_url = MagicMock(returncode=0, stdout="https://example.com\n", stderr="")
-        with patch("subprocess.run", side_effect=[ok, same_hash, remote_url, ok, same_hash]) as mock_run:
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(
+                returncode=0, stdout="Already up to date.\n", stderr=""
+            )
             check_and_apply_update(tmp_path)
-        assert mock_run.call_count >= 1
-        all_cmds = [call[0][0] for call in mock_run.call_args_list]
-        assert any("git" in cmd[0] for cmd in all_cmds)
+        mock_run.assert_called_once()
+        args = mock_run.call_args[0][0]
+        assert args == ["git", "pull", "origin", "main"]
 
     def test_already_up_to_date_returns_false(self, tmp_path):
         from testforge.updater.auto_updater import check_and_apply_update
@@ -475,15 +474,12 @@ class TestAutoUpdater:
     def test_git_pull_with_changes_returns_true(self, tmp_path):
         from testforge.updater.auto_updater import check_and_apply_update
         (tmp_path / "testforge_update.yml").write_text(
-            "enabled: true\nremote: origin\nbranch: main\nurl: https://example.com\nquiet: true\n"
+            "enabled: true\nremote: origin\nbranch: main\nquiet: true\n"
         )
-        (tmp_path / ".git").mkdir()
-        clean = MagicMock(returncode=0, stdout="", stderr="")
-        old_hash = MagicMock(returncode=0, stdout="abc123\n", stderr="")
-        new_hash = MagicMock(returncode=0, stdout="def456\n", stderr="")
-        remote_url = MagicMock(returncode=0, stdout="https://example.com\n", stderr="")
-        merge_ok = MagicMock(returncode=0, stdout="Fast-forward\n", stderr="")
-        with patch("subprocess.run", side_effect=[clean, old_hash, remote_url, clean, new_hash, merge_ok, new_hash]):
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(
+                returncode=0, stdout="Updating abc123..def456\nFast-forward\n", stderr=""
+            )
             result = check_and_apply_update(tmp_path)
         assert result is True
 
@@ -520,18 +516,15 @@ class TestAutoUpdater:
     def test_custom_remote_and_branch_used(self, tmp_path):
         from testforge.updater.auto_updater import check_and_apply_update
         (tmp_path / "testforge_update.yml").write_text(
-            "enabled: true\nremote: upstream\nbranch: hotfix/recorder-v2\nurl: https://example.com\nquiet: true\n"
+            "enabled: true\nremote: upstream\nbranch: hotfix/recorder-v2\nquiet: true\n"
         )
-        (tmp_path / ".git").mkdir()
-        ok = MagicMock(returncode=0, stdout="", stderr="")
-        same_hash = MagicMock(returncode=0, stdout="abc123\n", stderr="")
-        remote_url = MagicMock(returncode=0, stdout="https://example.com\n", stderr="")
-        with patch("subprocess.run", side_effect=[ok, same_hash, remote_url, ok, same_hash]) as mock_run:
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(
+                returncode=0, stdout="Already up to date.\n", stderr=""
+            )
             check_and_apply_update(tmp_path)
-        all_cmds = [call[0][0] for call in mock_run.call_args_list]
-        # Verify fetch used the correct remote and branch
-        fetch_cmds = [cmd for cmd in all_cmds if "fetch" in cmd]
-        assert any("upstream" in cmd and "hotfix/recorder-v2" in cmd for cmd in fetch_cmds)
+        args = mock_run.call_args[0][0]
+        assert args == ["git", "pull", "upstream", "hotfix/recorder-v2"]
 
     def test_corrupt_yaml_returns_false(self, tmp_path):
         from testforge.updater.auto_updater import check_and_apply_update

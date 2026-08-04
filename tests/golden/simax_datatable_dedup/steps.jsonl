@@ -1,0 +1,1 @@
+{"action": "assert", "assert_type": "textual", "css_path": "table tbody tr td.status", "expected_value": "Reservar", "tag_name": "td", "text": "Reservar", "timestamp": "2026-07-01T12:00:06Z"}

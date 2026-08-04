@@ -1,0 +1,1 @@
+{"action": "assert", "assert_type": "textual", "css_path": "#mensagem", "expected_value": "Falha esperada de baseline", "tag_name": "div", "timestamp": "2026-07-01T12:00:05Z"}

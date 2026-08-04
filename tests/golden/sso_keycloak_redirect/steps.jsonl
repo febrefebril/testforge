@@ -1,0 +1,1 @@
+{"accessible_name": "Pagina inicial", "action": "assert", "assert_type": "textual", "css_path": "h1", "expected_value": "Pagina inicial", "role": "heading", "tag_name": "h1", "timestamp": "2026-07-01T12:00:06Z"}

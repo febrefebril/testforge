@@ -1,7 +1,5 @@
-
 {
   "test_id": "golden_jsf_primefaces",
   "application": "web",
   "base_url": "https://jsf-des.exemplo/app/"
 }
-
